@@ -1,14 +1,25 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { Inject, Injectable } from '@nestjs/common';
+import { and, count, eq } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import {
   restaurants,
   type Restaurant,
-  type NewRestaurant,
 } from '@/module/restaurant-catalog/restaurant/restaurant.schema';
 import { CreateRestaurantDto, UpdateRestaurantDto } from './dto/restaurant.dto';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '@/drizzle/schema';
+
+export interface FindAllOptions {
+  offset?: number;
+  limit?: number;
+  /** When true, only approved restaurants are returned (public-facing endpoint). */
+  approvedOnly?: boolean;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+}
 
 @Injectable()
 export class RestaurantRepository {
@@ -16,8 +27,33 @@ export class RestaurantRepository {
     @Inject(DB_CONNECTION) readonly db: NodePgDatabase<typeof schema>,
   ) {}
 
-  async findAll(): Promise<Restaurant[]> {
-    return this.db.select().from(restaurants).orderBy(restaurants.createdAt);
+  async findAll(
+    opts: FindAllOptions = {},
+  ): Promise<PaginatedResult<Restaurant>> {
+    const { offset, limit, approvedOnly } = opts;
+
+    // Build the WHERE conditions based on options.
+    const conditions = approvedOnly ? [eq(restaurants.isApproved, true)] : [];
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Run count and data queries in parallel for efficiency.
+    const [countResult, rows] = await Promise.all([
+      this.db.select({ total: count() }).from(restaurants).where(whereClause),
+      this.db
+        .select()
+        .from(restaurants)
+        .where(whereClause)
+        .orderBy(restaurants.createdAt)
+        .offset(offset ?? 0)
+        // limit is always supplied by RestaurantService (DEFAULT_PAGE_SIZE / MAX_PAGE_SIZE),
+        // but we fall back to 20 here so the repository remains usable in isolation.
+        .limit(limit ?? 20),
+    ]);
+
+    return {
+      data: rows,
+      total: countResult[0]?.total ?? 0,
+    };
   }
 
   async findById(id: string): Promise<Restaurant | null> {
@@ -29,10 +65,7 @@ export class RestaurantRepository {
     return result[0] ?? null;
   }
 
-  async create(
-    ownerId: string,
-    dto: CreateRestaurantDto,
-  ): Promise<NewRestaurant> {
+  async create(ownerId: string, dto: CreateRestaurantDto): Promise<Restaurant> {
     const [row] = await this.db
       .insert(restaurants)
       .values({ ...dto, ownerId })
@@ -40,7 +73,14 @@ export class RestaurantRepository {
     return row;
   }
 
-  async update(id: string, dto: UpdateRestaurantDto): Promise<NewRestaurant> {
+  /**
+   * Returns `undefined` when no row with the given `id` exists.
+   * Callers are responsible for handling the not-found case.
+   */
+  async update(
+    id: string,
+    dto: UpdateRestaurantDto,
+  ): Promise<Restaurant | undefined> {
     const [row] = await this.db
       .update(restaurants)
       .set({ ...dto, updatedAt: new Date() })
