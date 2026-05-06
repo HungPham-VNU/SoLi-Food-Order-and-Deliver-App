@@ -53,6 +53,25 @@ export const router = createBrowserRouter([
         ],
       },
       {
+        path: 'orders',
+        handle: {
+          breadcrumb: 'Orders',
+        },
+        children: [
+          {
+            index: true,
+            element: <OrdersPage />,
+          },
+          {
+            path: ':orderId',
+            element: <OrderDetailPage />,
+            handle: {
+              breadcrumb: 'Order Detail',
+            },
+          },
+        ],
+      },
+      {
         path: 'menu',
         handle: {
           breadcrumb: 'Menu',
