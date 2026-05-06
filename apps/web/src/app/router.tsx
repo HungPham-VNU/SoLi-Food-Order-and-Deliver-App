@@ -5,6 +5,8 @@ import { RegisterPendingPage } from '@/app/pages/auth/register/RegisterPendingPa
 import { LoginPage } from '@/app/pages/auth/login/LoginPage';
 import { MenuManagementPage } from '@/app/pages/menu/MenuManagementPage';
 import CreateMenuItemPage from '@/app/pages/menu/CreateMenuItemPage';
+import { OrdersPage } from '@/app/pages/orders/OrdersPage';
+import { OrderDetailPage } from '@/app/pages/orders/OrderDetailPage';
 import { MainLayout } from '@/components/layout/MainLayout';
 
 export const router = createBrowserRouter([
@@ -31,6 +33,25 @@ export const router = createBrowserRouter([
       breadcrumb: 'Home',
     },
     children: [
+      {
+        path: 'orders',
+        handle: {
+          breadcrumb: 'Orders',
+        },
+        children: [
+          {
+            index: true,
+            element: <OrdersPage />,
+          },
+          {
+            path: ':orderId',
+            element: <OrderDetailPage />,
+            handle: {
+              breadcrumb: 'Order Detail',
+            },
+          },
+        ],
+      },
       {
         path: 'menu',
         handle: {
