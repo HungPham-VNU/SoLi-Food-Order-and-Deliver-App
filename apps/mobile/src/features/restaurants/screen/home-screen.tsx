@@ -24,6 +24,21 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
+  const homeImages = {
+    banner:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuDEAydfvb_RwKuGVoiWBAmVZ32xwiLP9xHMtHn2whqI0PKEhU7Q-tfnfGyPJu5SgYm8691I5cgNfiKvulJmI_DcfAETV9xex0q-z94DSPKtHADmgoMzVJMx7dFmSpyNZlQcYTrpWcaINQzDLvqiK1rTLS6Rk7U916Hl2XzXrN9KkbVdPLXkjbaEfPzdDVMoL746jlIrfs_jU-aWS1sUVwJiOc-A6E-blYjQwz-f3QV_DeHX8I6eg1kFUVyTAr7blKVOyRDYJzAGYe-p',
+    broccoli:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuDtEmU9jDk593mfx2xlxQ1an7t-f0x87YcXQ-XyXgQmbb1oGEAoNNfWixmZjzDaDbGT7JUTLictc9W4eEoJxMvXOAAnI6CbrV_Cvae0yWD2f5NB6focKolG3UQTRmcvbgaf1cW2ABbgUIGz3SnKvH3wWK73Xm1OZ69pD60sXsWqTIhlTPjpFMP5r-D3sxqjD1W5C0fM_7vO5mOimWwQPQxSbk7RyczkgGaV0ja2NLpd4s41eI5Z5aAsavCnfrBoWYIMoWPOIY7paENN',
+    salmon:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuCly3watQ-rlq7AM1QbBUdmplFMV4ZLiuoJGZXZgforRLaccyviNN6ur9cB1mvlCYdZF6tNFGsq3W5syqhl0RtNByh0MeXD9Z2ELqVEM-kZrhKUugmnDglJ3Q4cCA0nkguFShEGuB8ygANBYHb5T-NyMM0-Ogp8TnBRAj13xSfbShJWaDiaecX2hhQ85sXbZKbsKaNEdp6MBvctVA_W9LUkI57-gYf8nJ9lNSxIxGskMaV0KUMXZ8mEugOqycjjDE9zvHEDZ-0ghi02',
+    oranges:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuAjlXlyIiJTPQ3L60YhdFuHexUYqfDfB3sTMle7zCI-KY7_CRIQ8mSRNMatrRmVzyOYEpStgl4WurymBXJ_VlgW58HkBlVBHslBCiFmOsqnI2cIG-QXn6pePVxrjTcvjgvzTwlo021y3HRmU5LHkDy5jNmP-Woa0JADQUan8h_7oNQteY6scJ-ukqUoJAdHoGSwIFzBOtQFlXlRBUpEoekfMLugNweQ3TkxyvfNI69561UY4TXot8L3OkaqG0eG4NzfXLXPvXM5rooR',
+    peppers:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuAhiMzBCnCrPM88ANvoddbGlB-cJvrscRyDnPfW0VpAz6e98MGmq_VjcA5Rl9fxMuWS_iCfD4uF6lPAIhabzcgM-gNL99q7aSmV4PnNWdQuoQFf2QZE61lv5rzdany4dyh5jOggKUNMi_SZ3g-SVdSZBxz0MfHx6FzoX_ZsjOgIIUvs7Fug2YCU7T6lsXUaoz7BFyUjXxpnJWX9EZKgwD5Na2_QWN9_7UJeIqQCJadfCZxikMMrBssLFTDiS3feWjHZnJVPAvEhg-oS',
+    freshFromFarm:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuAwoqCQHBPd1w2eRe7igfOW3p7shNxsjt3JiAcWkHDkiV9sSvH1DdxwBgSmycz1tesT9tJussYHGppIDKv-ohYbFJbnlgYaMJnvBwKdsgv9bGC0VVOYCdPXOD6aSj2hflYXXBSSvUCBECdRmTuz-oZK_Y0AqKCb5GCTzsGfusOhNkTjmYe_ogvHDW4xn1bsf6Veo9uwkHo4642ldt9ByGndRcfzydmzUpMWTucBfLweMk2ZgmHqG4tsZ3u6Nh6wDmaathXFFzJBNW0w',
+  };
+
   const handleProductPress = (productId: string) => {
     router.push({ pathname: '/product/[id]', params: { id: productId } });
   };
@@ -116,7 +131,7 @@ export function HomeScreen() {
         <View className="mt-8 relative w-full h-48 rounded-3xl overflow-hidden bg-primary-container">
           <Image
             source={{
-              uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDEAydfvb_RwKuGVoiWBAmVZ32xwiLP9xHMtHn2whqI0PKEhU7Q-tfnfGyPJu5SgYm8691I5cgNfiKvulJmI_DcfAETV9xex0q-z94DSPKtHADmgoMzVJMx7dFmSpyNZlQcYTrpWcaINQzDLvqiK1rTLS6Rk7U916Hl2XzXrN9KkbVdPLXkjbaEfPzdDVMoL746jlIrfs_jU-aWS1sUVwJiOc-A6E-blYjQwz-f3QV_DeHX8I6eg1kFUVyTAr7blKVOyRDYJzAGYe-p',
+              uri: homeImages.banner,
             }}
             className="absolute inset-0 w-full h-full opacity-60"
             contentFit="cover"
@@ -153,7 +168,7 @@ export function HomeScreen() {
           </View>
           <View className="flex-row flex-wrap justify-between gap-y-4">
             <TrendingProductCard
-              imageUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDtEmU9jDk593mfx2xlxQ1an7t-f0x87YcXQ-XyXgQmbb1oGEAoNNfWixmZjzDaDbGT7JUTLictc9W4eEoJxMvXOAAnI6CbrV_Cvae0yWD2f5NB6focKolG3UQTRmcvbgaf1cW2ABbgUIGz3SnKvH3wWK73Xm1OZ69pD60sXsWqTIhlTPjpFMP5r-D3sxqjD1W5C0fM_7vO5mOimWwQPQxSbk7RyczkgGaV0ja2NLpd4s41eI5Z5aAsavCnfrBoWYIMoWPOIY7paENN"
+              imageUrl={homeImages.broccoli}
               badge="-20%"
               category="Organic"
               name="Green Broccoli"
@@ -163,7 +178,7 @@ export function HomeScreen() {
               onPress={() => handleProductPress('green-broccoli')}
             />
             <TrendingProductCard
-              imageUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuCly3watQ-rlq7AM1QbBUdmplFMV4ZLiuoJGZXZgforRLaccyviNN6ur9cB1mvlCYdZF6tNFGsq3W5syqhl0RtNByh0MeXD9Z2ELqVEM-kZrhKUugmnDglJ3Q4cCA0nkguFShEGuB8ygANBYHb5T-NyMM0-Ogp8TnBRAj13xSfbShJWaDiaecX2hhQ85sXbZKbsKaNEdp6MBvctVA_W9LUkI57-gYf8nJ9lNSxIxGskMaV0KUMXZ8mEugOqycjjDE9zvHEDZ-0ghi02"
+              imageUrl={homeImages.salmon}
               category="Fresh Fish"
               name="Norwegian Salmon"
               unit="approx. 200g"
@@ -171,7 +186,7 @@ export function HomeScreen() {
               onPress={() => handleProductPress('norwegian-salmon')}
             />
             <TrendingProductCard
-              imageUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuAjlXlyIiJTPQ3L60YhdFuHexUYqfDfB3sTMle7zCI-KY7_CRIQ8mSRNMatrRmVzyOYEpStgl4WurymBXJ_VlgW58HkBlVBHslBCiFmOsqnI2cIG-QXn6pePVxrjTcvjgvzTwlo021y3HRmU5LHkDy5jNmP-Woa0JADQUan8h_7oNQteY6scJ-ukqUoJAdHoGSwIFzBOtQFlXlRBUpEoekfMLugNweQ3TkxyvfNI69561UY4TXot8L3OkaqG0eG4NzfXLXPvXM5rooR"
+              imageUrl={homeImages.oranges}
               category="Citrus"
               name="Valencia Oranges"
               unit="Pack of 4"
@@ -179,7 +194,7 @@ export function HomeScreen() {
               onPress={() => handleProductPress('valencia-oranges')}
             />
             <TrendingProductCard
-              imageUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuAhiMzBCnCrPM88ANvoddbGlB-cJvrscRyDnPfW0VpAz6e98MGmq_VjcA5Rl9fxMuWS_iCfD4uF6lPAIhabzcgM-gNL99q7aSmV4PnNWdQuoQFf2QZE61lv5rzdany4dyh5jOggKUNMi_SZ3g-SVdSZBxz0MfHx6FzoX_ZsjOgIIUvs7Fug2YCU7T6lsXUaoz7BFyUjXxpnJWX9EZKgwD5Na2_QWN9_7UJeIqQCJadfCZxikMMrBssLFTDiS3feWjHZnJVPAvEhg-oS"
+              imageUrl={homeImages.peppers}
               badge="-10%"
               category="Fresh"
               name="Bell Pepper Mix"
@@ -214,7 +229,7 @@ export function HomeScreen() {
             >
               <Image
                 source={{
-                  uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAwoqCQHBPd1w2eRe7igfOW3p7shNxsjt3JiAcWkHDkiV9sSvH1DdxwBgSmycz1tesT9tJussYHGppIDKv-ohYbFJbnlgYaMJnvBwKdsgv9bGC0VVOYCdPXOD6aSj2hflYXXBSSvUCBECdRmTuz-oZK_Y0AqKCb5GCTzsGfusOhNkTjmYe_ogvHDW4xn1bsf6Veo9uwkHo4642ldt9ByGndRcfzydmzUpMWTucBfLweMk2ZgmHqG4tsZ3u6Nh6wDmaathXFFzJBNW0w',
+                  uri: homeImages.freshFromFarm,
                 }}
                 className="w-full h-full"
                 contentFit="contain"

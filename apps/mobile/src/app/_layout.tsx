@@ -9,20 +9,31 @@ import {
 } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
 import { Stack } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function AppLayout() {
-  // 1. Create the client
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: 2 } },
-  });
+  // 1. Create the client (stable across renders)
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: { queries: { retry: 2 } },
+      }),
+  );
 
   // 2. Setup Online Manager (Detects Wi-Fi/Data changes)
-  onlineManager.setEventListener((setOnline) => {
-    return NetInfo.addEventListener((state) => {
-      setOnline(!!state.isConnected);
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+
+    onlineManager.setEventListener((setOnline) => {
+      unsubscribe = NetInfo.addEventListener((state) => {
+        setOnline(!!state.isConnected);
+      });
+
+      return () => unsubscribe?.();
     });
-  });
+
+    return () => unsubscribe?.();
+  }, []);
 
   // 3. Setup Focus Manager (Detects App background/foreground)
   useEffect(() => {

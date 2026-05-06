@@ -134,7 +134,7 @@ export function ProductDetailScreen({
       </ScrollView>
 
       {/* ── Bottom Navigation ──────────────────────────────────────────────── */}
-      <BottomNav insetBottom={insets.bottom} activeTab="cart" />
+      <BottomNav insetBottom={insets.bottom} activeTab="home" />
     </View>
   );
 }
