@@ -5,11 +5,28 @@ import { AppModule } from './app.module';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import type { Request, Response } from 'express';
 import { ValidationPipe } from '@nestjs/common';
+import { join } from 'path';
+import * as expressStatic from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.setGlobalPrefix('api');
+
+  // Serve static development assets (FCM test page, service worker, etc.)
+  // from the apps/api/public/ directory.
+  //
+  // express.static middleware is intentionally registered WITHOUT a path prefix
+  // so that:
+  //  1. /fcm-test.html is accessible at http://localhost:3000/fcm-test.html
+  //  2. /firebase-messaging-sw.js is accessible at http://localhost:3000/firebase-messaging-sw.js
+  //     (Service workers MUST be served from the origin root, not from /api/*)
+  //
+  // Note: app.setGlobalPrefix('api') only applies to NestJS route handlers,
+  // not to express middleware, so these static files remain at the root path.
+  //
+  // __dirname resolves to src/ (dev) or dist/ (prod) — both one level above public/.
+  app.use(expressStatic.static(join(__dirname, '..', 'public')));
   const config = new DocumentBuilder()
     .setTitle('API')
     .setDescription('API description')

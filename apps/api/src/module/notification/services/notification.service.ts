@@ -4,24 +4,34 @@ import {
   type NotificationChannel,
   type Notification,
 } from '../domain/notification.schema';
+import type { NotificationPreference } from '../domain/notification-preference.schema';
 import {
   DEFAULT_PREFERENCES,
 } from '../domain/notification-preference.schema';
 import { NotificationRepository } from '../repositories/notification.repository';
 import { NotificationPreferenceRepository } from '../repositories/notification-preference.repository';
+import { DeviceTokenRepository } from '../repositories/device-token.repository';
 import { NotificationTemplateService } from './notification-template.service';
+import { ChannelDispatcherService } from './channel-dispatcher.service';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import {
-  WS_NOTIFICATION_CREATED,
   WS_NOTIFICATION_READ,
 } from '../gateway/notification-payload.dto';
-import type { NotificationPayload } from '../gateway/notification-payload.dto';
 import { RedisService } from '@/lib/redis/redis.service';
 import type {
   NotificationInboxQueryDto,
   NotificationInboxResponseDto,
   NotificationItemDto,
 } from '../dto/notification.dto';
+import type {
+  RegisterPushTokenDto,
+  RegisterPushTokenResponseDto,
+  RemovePushTokenResponseDto,
+} from '../dto/device-token.dto';
+import type {
+  UpdateNotificationPreferenceDto,
+  NotificationPreferenceResponseDto,
+} from '../dto/preference.dto';
 
 // ---------------------------------------------------------------------------
 // Input type for sendFromEvent
@@ -50,29 +60,33 @@ export interface SendFromEventParams {
 // ---------------------------------------------------------------------------
 // NotificationService
 //
-// Phase N-1 behaviour:
-//   sendFromEvent() resolves the recipient's preferences, checks opt-outs,
-//   renders templates, and persists one notification row per channel to
-//   `notifications`. No external delivery (push, email, WebSocket) is
-//   performed — those are implemented in later phases.
+// Phase N-4 additions over N-3:
+//   sendFromEvent() now delegates per-channel delivery to ChannelDispatcherService
+//   (fire-and-forget) instead of handling in-app WebSocket directly. The
+//   ChannelDispatcherService routes to InAppChannelService, EmailChannelService,
+//   or PushChannelService and records delivery logs + status updates.
 //
-// Phase N-2 (current):
-//   In-app (WebSocket) delivery is now live. After persisting the DB row,
-//   NotificationService calls NotificationGateway.sendToUser() for in_app
-//   channels. WebSocket delivery is fire-and-forget — a failure never
-//   affects DB persistence. Notifications are always retrievable via the
-//   inbox REST API (Phase N-3).
+//   New public methods (N-4):
+//     getPreferences(userId)          — GET /notifications/my/preferences
+//     updatePreferences(userId, dto)  — PATCH /notifications/my/preferences
+//     registerPushToken(userId, dto)  — POST /notifications/my/push-tokens
+//     removePushToken(userId, token)  — DELETE /notifications/my/push-tokens
 //
-// Phase N-4+: push (FCM) and email (SMTP) delivery channels.
+// Phase N-3 adds:
+//   getInbox, getUnreadCount, markRead, markAllRead (inbox REST API).
+//
+// Phase N-2 adds:
+//   In-app WebSocket delivery (now extracted to InAppChannelService).
 //
 // Architecture decisions:
 //  - NEVER throw from sendFromEvent — it is called from @EventsHandler.
-//    Exceptions are caught, logged, and swallowed here.
-//  - Idempotency key format: notif:{type}:{sourceId}:{recipientId}:{channel}
-//    DB UNIQUE constraint enforces at-most-once persistence per key.
-//    ON CONFLICT DO NOTHING in NotificationRepository.insertIfNotExists().
+//  - Idempotency key: notif:{type}:{sourceId}:{recipientId}:{channel}
+//  - Channel dispatch is fire-and-forget (void) — delivery failures never
+//    propagate back to the originating event handler.
+//  - markRead / markAllRead still emit WS read-state events directly
+//    (they are not "deliveries" — they are cross-tab synchronization).
 //
-// Phase: N-2 — Real-time WebSocket Gateway
+// Phase: N-4 — Multi-Channel Delivery
 // ---------------------------------------------------------------------------
 @Injectable()
 export class NotificationService {
@@ -84,8 +98,10 @@ export class NotificationService {
   constructor(
     private readonly notificationRepo: NotificationRepository,
     private readonly preferenceRepo: NotificationPreferenceRepository,
+    private readonly deviceTokenRepo: DeviceTokenRepository,
     private readonly templateService: NotificationTemplateService,
     private readonly redisService: RedisService,
+    private readonly channelDispatcher: ChannelDispatcherService,
     // @Optional() prevents a hard DI error when NotificationGateway is not
     // yet registered (e.g. in unit tests that only test DB persistence).
     // In production, the gateway is always present in NotificationModule.
@@ -138,6 +154,10 @@ export class NotificationService {
    *
    * Returns the count of rows successfully persisted (0 when all channels
    * are filtered out by preferences or all rows already existed).
+   *
+   * After persisting, dispatches each new row to ChannelDispatcherService
+   * as a fire-and-forget operation. Channel delivery failures never affect
+   * the return value or propagate to the caller.
    */
   async sendFromEvent(params: SendFromEventParams): Promise<number> {
     const {
@@ -151,14 +171,13 @@ export class NotificationService {
     } = params;
 
     this.logger.log(
-      `[Notification] sendFromEvent start: type=${type} recipientId=${recipientId} sourceId=${sourceId} channels=[${channels.join(',')}] gatewayReady=${!!this.notificationGateway}`,
+      `[Notification] sendFromEvent start: type=${type} recipientId=${recipientId} sourceId=${sourceId} channels=[${channels.join(',')}]`,
     );
 
     try {
       // 1. Load preferences (fall back to defaults when no row exists)
-      const prefs =
-        (await this.preferenceRepo.findByUserId(recipientId)) ??
-        DEFAULT_PREFERENCES;
+      const prefRow = await this.preferenceRepo.findByUserId(recipientId);
+      const prefs = prefRow ?? DEFAULT_PREFERENCES;
 
       // 2. Filter to opted-in channels
       const enabledChannels = channels.filter((ch) =>
@@ -179,7 +198,13 @@ export class NotificationService {
       // 3. Render template (compute once for all channels)
       const { title, body } = this.templateService.render(type, templateData);
 
-      // 4. Persist one row per enabled channel (idempotent via ON CONFLICT DO NOTHING)
+      // 4. Build delivery context (resolved once, shared across all channels)
+      const deliveryContext = {
+        recipientId,
+        email: prefRow?.email ?? null,
+      };
+
+      // 5. Persist one row per enabled channel (idempotent via ON CONFLICT DO NOTHING)
       let persisted = 0;
       for (const channel of enabledChannels) {
         const idempotencyKey = `notif:${type}:${sourceId}:${recipientId}:${channel}`;
@@ -212,45 +237,10 @@ export class NotificationService {
             `[Notification] Persisted: id=${row.id} type=${type} channel=${channel} recipient=${recipientId}`,
           );
 
-          if (channel === 'in_app') {
-            // Phase N-3: invalidate the unread count cache so the next
-            // GET /notifications/my/unread-count reflects the new notification.
-            void this.invalidateUnreadCache(recipientId);
-
-            // Phase N-2: dispatch real-time WebSocket delivery for in_app channel.
-            if (this.notificationGateway) {
-              const payload: NotificationPayload = {
-                id: row.id,
-                type: row.type,
-                title: row.title,
-                body: row.body,
-                data: (row.data as Record<string, string> | null) ?? undefined,
-                orderId: row.orderId ?? undefined,
-                createdAt: row.createdAt.toISOString(),
-                isRead: row.isRead,
-              };
-              this.logger.log(
-                `[Notification] Realtime delivery: notificationId=${row.id} userId=${recipientId} event=${WS_NOTIFICATION_CREATED}`,
-              );
-              try {
-                const emitted = this.notificationGateway.sendToUser(
-                  recipientId,
-                  WS_NOTIFICATION_CREATED,
-                  payload,
-                );
-                this.logger.log(
-                  `[Notification] Realtime delivery dispatched: notificationId=${row.id} userId=${recipientId} emitted=${emitted}`,
-                );
-              } catch (wsErr) {
-                // WebSocket delivery failure must never affect DB persistence.
-                // The notification is already persisted — client will fetch it
-                // via the inbox REST API on reconnect.
-                this.logger.warn(
-                  `[Notification] WebSocket delivery failed for id=${row.id}: ${(wsErr as Error).message}`,
-                );
-              }
-            }
-          }
+          // Fire-and-forget: dispatch to channel adapter.
+          // The ChannelDispatcherService handles in_app (WS + cache),
+          // email (SMTP), and push (FCM). Errors are absorbed internally.
+          void this.channelDispatcher.dispatch(row, deliveryContext);
         } else {
           this.logger.debug(
             `[Notification] Skipped duplicate: idempotencyKey=${idempotencyKey}`,
@@ -482,5 +472,161 @@ export class NotificationService {
     }
 
     return count;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Phase N-4 — Push Token Management
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Register (or refresh) a push device token for the current user.
+   *
+   * Uses ON CONFLICT DO UPDATE: re-registering an existing token refreshes
+   * lastSeenAt (prevents premature cleanup by the stale-token cron) and
+   * re-activates it if it was previously deactivated.
+   *
+   * Phase N-4
+   */
+  async registerPushToken(
+    userId: string,
+    dto: RegisterPushTokenDto,
+  ): Promise<RegisterPushTokenResponseDto> {
+    await this.deviceTokenRepo.registerOrRefresh({
+      userId,
+      token: dto.token,
+      platform: dto.platform,
+      isActive: true,
+      lastSeenAt: new Date(),
+    });
+    this.logger.log(
+      `[Notification] Push token registered/refreshed for userId=${userId} platform=${dto.platform}`,
+    );
+    return { registered: true };
+  }
+
+  /**
+   * Deactivate a push device token for the current user.
+   *
+   * Ownership is enforced at the DB level: the UPDATE WHERE clause includes
+   * both `user_id = :userId` AND `token = :token`. A token belonging to
+   * another user is silently ignored (returns { removed: true } regardless —
+   * idempotent and does not leak whether the token exists for another user).
+   *
+   * Phase N-4
+   */
+  async removePushToken(
+    userId: string,
+    token: string,
+  ): Promise<RemovePushTokenResponseDto> {
+    await this.deviceTokenRepo.deactivate(userId, token);
+    this.logger.log(
+      `[Notification] Push token deactivated for userId=${userId}`,
+    );
+    return { removed: true };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Phase N-4 — Notification Preference Management
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Fetch the current user's notification preferences.
+   * Returns system defaults when no preference row exists.
+   *
+   * Phase N-4
+   */
+  async getPreferences(userId: string): Promise<NotificationPreferenceResponseDto> {
+    const row = await this.preferenceRepo.findByUserId(userId);
+    if (!row) {
+      return {
+        pushEnabled: DEFAULT_PREFERENCES.pushEnabled,
+        inAppEnabled: DEFAULT_PREFERENCES.inAppEnabled,
+        emailEnabled: DEFAULT_PREFERENCES.emailEnabled,
+        smsEnabled: DEFAULT_PREFERENCES.smsEnabled,
+        quietHoursStart: DEFAULT_PREFERENCES.quietHoursStart,
+        quietHoursEnd: DEFAULT_PREFERENCES.quietHoursEnd,
+        mutedTypes: DEFAULT_PREFERENCES.mutedTypes ?? [],
+        email: null,
+        timezone: DEFAULT_PREFERENCES.timezone,
+      };
+    }
+    return this.toPreferenceDto(row);
+  }
+
+  /**
+   * Partially update the current user's notification preferences.
+   *
+   * Upserts a preference row (creates it on first update).
+   * Only provided fields are changed — omitted fields retain their current
+   * values (or defaults when the row does not exist yet).
+   *
+   * Phase N-4
+   */
+  async updatePreferences(
+    userId: string,
+    dto: UpdateNotificationPreferenceDto,
+  ): Promise<NotificationPreferenceResponseDto> {
+    const existing = await this.preferenceRepo.findByUserId(userId);
+
+    // Compute effective base values (existing row or system defaults)
+    const base = {
+      pushEnabled: existing?.pushEnabled ?? DEFAULT_PREFERENCES.pushEnabled,
+      inAppEnabled:
+        existing?.inAppEnabled ?? DEFAULT_PREFERENCES.inAppEnabled,
+      emailEnabled:
+        existing?.emailEnabled ?? DEFAULT_PREFERENCES.emailEnabled,
+      smsEnabled: existing?.smsEnabled ?? DEFAULT_PREFERENCES.smsEnabled,
+      quietHoursStart:
+        existing?.quietHoursStart ?? DEFAULT_PREFERENCES.quietHoursStart,
+      quietHoursEnd:
+        existing?.quietHoursEnd ?? DEFAULT_PREFERENCES.quietHoursEnd,
+      mutedTypes: existing?.mutedTypes ?? DEFAULT_PREFERENCES.mutedTypes ?? [],
+      email: existing?.email ?? null,
+      timezone: existing?.timezone ?? DEFAULT_PREFERENCES.timezone,
+    };
+
+    const updated = await this.preferenceRepo.upsert({
+      userId,
+      pushEnabled: dto.pushEnabled ?? base.pushEnabled,
+      inAppEnabled: dto.inAppEnabled ?? base.inAppEnabled,
+      emailEnabled: dto.emailEnabled ?? base.emailEnabled,
+      smsEnabled: dto.smsEnabled ?? base.smsEnabled,
+      quietHoursStart:
+        dto.quietHoursStart !== undefined
+          ? dto.quietHoursStart
+          : base.quietHoursStart,
+      quietHoursEnd:
+        dto.quietHoursEnd !== undefined
+          ? dto.quietHoursEnd
+          : base.quietHoursEnd,
+      mutedTypes: dto.mutedTypes ?? (base.mutedTypes as NotificationType[]),
+      email: dto.email !== undefined ? dto.email : base.email,
+      timezone: dto.timezone ?? base.timezone,
+    });
+
+    this.logger.log(
+      `[Notification] Preferences updated for userId=${userId}`,
+    );
+    return this.toPreferenceDto(updated);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Private helpers
+  // ---------------------------------------------------------------------------
+
+  private toPreferenceDto(
+    row: NotificationPreference,
+  ): NotificationPreferenceResponseDto {
+    return {
+      pushEnabled: row.pushEnabled,
+      inAppEnabled: row.inAppEnabled,
+      emailEnabled: row.emailEnabled,
+      smsEnabled: row.smsEnabled,
+      quietHoursStart: row.quietHoursStart,
+      quietHoursEnd: row.quietHoursEnd,
+      mutedTypes: (row.mutedTypes as string[]) ?? [],
+      email: row.email ?? null,
+      timezone: row.timezone,
+    };
   }
 }

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SoLi FCM Push Test</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 24px;
+      background: #f8f9fa;
+      color: #212529;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 4px; }
+    .subtitle { color: #6c757d; font-size: 0.875rem; margin-bottom: 32px; }
+    .card {
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+    }
+    .card h2 { font-size: 1rem; margin: 0 0 12px; }
+    .status {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    .status.idle     { background: #e9ecef; color: #495057; }
+    .status.loading  { background: #cff4fc; color: #0c5460; }
+    .status.ok       { background: #d1e7dd; color: #0a3622; }
+    .status.error    { background: #f8d7da; color: #58151c; }
+    button {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: opacity 0.15s;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary  { background: #0d6efd; color: #fff; }
+    .btn-success  { background: #198754; color: #fff; }
+    .btn-copy     { background: #6c757d; color: #fff; font-size: 0.75rem; padding: 4px 10px; }
+    .token-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .token-box textarea {
+      flex: 1;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      font-size: 0.72rem;
+      padding: 8px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      resize: vertical;
+      min-height: 72px;
+      background: #f8f9fa;
+    }
+    .log {
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      font-size: 0.78rem;
+      background: #212529;
+      color: #f8f9fa;
+      border-radius: 6px;
+      padding: 12px;
+      min-height: 80px;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log .ts   { color: #6c757d; }
+    .log .info { color: #74c0fc; }
+    .log .ok   { color: #63e6be; }
+    .log .warn { color: #ffd43b; }
+    .log .err  { color: #ff6b6b; }
+    .form-row { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .form-row label { font-size: 0.8rem; font-weight: 600; color: #495057; }
+    .form-row input {
+      padding: 7px 10px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 0.875rem;
+    }
+    .actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .hint { font-size: 0.8rem; color: #6c757d; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+<!-- =========================================================================
+  ORIGIN GUARD (synchronous, runs before module scripts)
+  Service workers are scoped to their origin. If this page is opened from any
+  origin other than http://localhost:3000 (e.g. Live Server on :5500, or
+  file://) then navigator.serviceWorker.register('/firebase-messaging-sw.js')
+  will fetch from the WRONG origin and receive a 404.
+  Solution: always open this page from http://localhost:3000/fcm-test.html
+========================================================================== -->
+<script>
+  (function () {
+    var EXPECTED = 'http://localhost:3000';
+    if (window.location.origin !== EXPECTED) {
+      var correctUrl = EXPECTED + '/fcm-test.html';
+      var b = document.createElement('div');
+      b.id = 'origin-warning';
+      b.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:9999',
+        'background:#dc3545', 'color:#fff',
+        'padding:14px 20px 14px 20px',
+        'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',
+        'font-size:0.9rem', 'text-align:center',
+        'box-shadow:0 2px 8px rgba(0,0,0,.35)',
+        'line-height:1.6'
+      ].join(';');
+      b.innerHTML =
+        '\u26a0\ufe0f <strong>Wrong origin!</strong> ' +
+        'Service worker will 404 from <code style="background:rgba(255,255,255,.2);padding:2px 6px;border-radius:3px">' +
+        window.location.origin + '</code>. ' +
+        'This page <strong>must</strong> be opened from the NestJS server: ' +
+        '<a href="' + correctUrl + '" style="color:#fff;font-weight:700;text-decoration:underline">' + correctUrl + '</a>' +
+        '&nbsp;&nbsp;' +
+        '<button onclick="window.location.href=\'' + correctUrl + '\'" ' +
+        '  style="background:#fff;color:#dc3545;border:none;border-radius:4px;' +
+        '         padding:5px 14px;font-weight:700;cursor:pointer;margin-left:6px">' +
+        '  Go now \u2192</button>' +
+        '<button onclick="document.getElementById(\'origin-warning\').remove();document.documentElement.style.paddingTop=\'0\'" ' +
+        '  style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.7);' +
+        '         border-radius:4px;padding:5px 10px;cursor:pointer;margin-left:6px">' +
+        '  Dismiss</button>';
+      document.body.insertBefore(b, document.body.firstChild);
+      document.documentElement.style.paddingTop = '70px';
+    }
+  })();
+</script>
+
+<h1>SoLi FCM Push Test Page</h1>
+<p class="subtitle">
+  Development tool — generates a browser FCM token and lets you send test push notifications.<br>
+  <strong>Open this page from the NestJS server only:</strong>
+  <a href="http://localhost:3000/fcm-test.html"><code>http://localhost:3000/fcm-test.html</code></a>
+  — <em>not</em> Live Server, <em>not</em> <code>file://</code>.<br>
+  Requires a running backend at <code>http://localhost:3000</code> with Firebase credentials configured.
+</p>
+
+<!-- Step 1: Permission + Token -->
+<div class="card">
+  <h2>Step 1 — Get FCM Token <span id="sw-status" class="status idle">checking SW…</span></h2>
+  <p class="hint">
+    Firebase Messaging requires a registered service worker and notification permission.
+    Click the button below to request permission and retrieve your browser FCM token.
+  </p>
+  <div class="actions">
+    <button id="btn-get-token" class="btn-primary">Request Permission &amp; Get Token</button>
+  </div>
+  <div class="token-box" style="display:none" id="token-row">
+    <textarea id="token-output" readonly></textarea>
+    <button class="btn-copy" id="btn-copy">Copy</button>
+  </div>
+</div>
+
+<!-- Step 2: Send test push via backend API -->
+<div class="card">
+  <h2>Step 2 — Send Test Push via Backend API</h2>
+  <p class="hint">
+    Paste the token above into the field below (or it auto-fills), set a title and body,
+    then click Send. The backend calls Firebase Admin SDK → FCM → your browser.
+  </p>
+  <div class="form-row">
+    <label for="input-token">FCM Token</label>
+    <input id="input-token" type="text" placeholder="Paste FCM token here (auto-filled from Step 1)" />
+  </div>
+  <div class="form-row">
+    <label for="input-title">Title</label>
+    <input id="input-title" type="text" value="Test Push" />
+  </div>
+  <div class="form-row">
+    <label for="input-body">Body</label>
+    <input id="input-body" type="text" value="Hello from Notification BC 🚀" />
+  </div>
+  <div class="actions">
+    <button id="btn-send" class="btn-success">Send via Backend (POST /api/notifications/test/push)</button>
+  </div>
+</div>
+
+<!-- Event log -->
+<div class="card">
+  <h2>Event Log</h2>
+  <div id="log" class="log"><span class="ts">--:--:-- </span><span class="info">Waiting for events…</span></div>
+</div>
+
+<!--
+  Firebase Web SDK (v10 modular)
+  Uses the CDN compat build so this page works without a bundler.
+  DO NOT upgrade to a major version without testing — the service worker
+  compat version must match the app version.
+-->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+  import {
+    getMessaging,
+    getToken,
+    onMessage,
+  } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js';
+
+  // ---------------------------------------------------------------------------
+  // Origin safety-check (mirrors the synchronous guard above)
+  // ---------------------------------------------------------------------------
+  const EXPECTED_ORIGIN = 'http://localhost:3000';
+  if (window.location.origin !== EXPECTED_ORIGIN) {
+    console.error(
+      `[FCM] Wrong origin: ${window.location.origin}\n` +
+      `Service worker registration will 404. Open this page from ${EXPECTED_ORIGIN}/fcm-test.html`
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Firebase project config — safe to include in client-side code.
+  // These values are NOT secrets; they identify the Firebase project to the
+  // Firebase JS SDK. The real secret lives in the server-side service account.
+  // ---------------------------------------------------------------------------
+  const FIREBASE_CONFIG = {
+    apiKey:            'AIzaSyCnWC2VZnrfct6EvdVCcdlG-OUOabgS1dY',
+    authDomain:        'soli-food-delivery.firebaseapp.com',
+    projectId:         'soli-food-delivery',
+    storageBucket:     'soli-food-delivery.firebasestorage.app',
+    messagingSenderId: '344352194360',
+    appId:             '1:344352194360:web:11b0603425d85663fd4bcd',
+  };
+
+  // VAPID public key — used to link the push subscription to this Firebase project.
+  // Obtain from: Firebase Console → Project Settings → Cloud Messaging → Web Push Certificates.
+  const VAPID_KEY = 'BOyGe_nS6JdjOEINj-DDgKCxzZ4cHMe4oVs83__84VXT3Z9h0wtIvAGb-1wEdZMFMBW9sfYOTIl3iBbyBgqQKfs';
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+  const logEl = document.getElementById('log');
+  function log(msg, type = 'info') {
+    const ts = new Date().toLocaleTimeString('en-GB', { hour12: false });
+    const line = document.createElement('div');
+    line.innerHTML = `<span class="ts">${ts} </span><span class="${type}">${msg}</span>`;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+    // Remove the placeholder line on first real entry
+    const placeholder = logEl.querySelector('span.info');
+    if (placeholder && placeholder.textContent === 'Waiting for events…') {
+      placeholder.parentElement?.remove();
+    }
+  }
+
+  function setSwStatus(text, cls) {
+    const el = document.getElementById('sw-status');
+    el.textContent = text;
+    el.className = `status ${cls}`;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Service Worker Registration
+  //
+  // firebase-messaging-sw.js MUST be served from the origin root (/).
+  // The SW scope defaults to its directory, giving it control over all pages
+  // at this origin — required for background message handling.
+  //
+  // We register manually (rather than letting getToken() auto-register) so we
+  // can report registration status to the user in the log.
+  // ---------------------------------------------------------------------------
+  let swRegistration = null;
+
+  async function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) {
+      setSwStatus('SW not supported', 'error');
+      log('Service workers are not supported in this browser.', 'err');
+      return null;
+    }
+    try {
+      setSwStatus('registering…', 'loading');
+      // The SW file is served as a static asset from apps/api/public/
+      const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+        scope: '/',
+      });
+      await navigator.serviceWorker.ready;
+      setSwStatus('registered ✓', 'ok');
+      log('Service worker registered and ready.', 'ok');
+      return reg;
+    } catch (err) {
+      setSwStatus('registration failed', 'error');
+      const is404 = err.message?.includes('404') || err.message?.includes('bad HTTP');
+      if (is404) {
+        log(`SW registration failed (404): firebase-messaging-sw.js not found at this origin.`, 'err');
+        log(`→ You must open this page from http://localhost:3000/fcm-test.html (NestJS), not Live Server or file://.`, 'err');
+      } else {
+        log(`Service worker registration failed: ${err.message}`, 'err');
+      }
+      return null;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Firebase initialisation
+  // ---------------------------------------------------------------------------
+  const firebaseApp = initializeApp(FIREBASE_CONFIG);
+  const messaging = getMessaging(firebaseApp);
+
+  // ---------------------------------------------------------------------------
+  // Foreground message handler
+  //
+  // When the tab is in the foreground, Firebase does NOT display a native
+  // browser notification automatically. Instead, onMessage() fires and we
+  // log it here (and could show a custom in-app toast if needed).
+  //
+  // Background messages (tab hidden or closed) are handled by the service
+  // worker in firebase-messaging-sw.js.
+  // ---------------------------------------------------------------------------
+  onMessage(messaging, (payload) => {
+    log(`📨 Foreground push received!`, 'ok');
+    log(`   title: ${payload.notification?.title ?? '(none)'}`, 'info');
+    log(`   body:  ${payload.notification?.body ?? '(none)'}`, 'info');
+    if (payload.data && Object.keys(payload.data).length > 0) {
+      log(`   data:  ${JSON.stringify(payload.data)}`, 'info');
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Step 1: Get FCM Token
+  // ---------------------------------------------------------------------------
+  document.getElementById('btn-get-token').addEventListener('click', async () => {
+    log('Requesting notification permission…', 'info');
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      log(`Permission denied: ${permission}. Enable notifications in browser settings.`, 'err');
+      return;
+    }
+    log('Notification permission granted.', 'ok');
+
+    if (!swRegistration) {
+      swRegistration = await registerServiceWorker();
+      if (!swRegistration) return;
+    }
+
+    try {
+      log('Fetching FCM registration token…', 'info');
+      const token = await getToken(messaging, {
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: swRegistration,
+      });
+
+      if (!token) {
+        log('getToken() returned empty — check Firebase project config and VAPID key.', 'err');
+        return;
+      }
+
+      log(`FCM token obtained (${token.length} chars).`, 'ok');
+      log(`Token: ${token.substring(0, 30)}…`, 'info');
+
+      // Show token in the UI
+      document.getElementById('token-row').style.display = 'flex';
+      document.getElementById('token-output').value = token;
+      document.getElementById('input-token').value = token;
+    } catch (err) {
+      log(`getToken() failed: ${err.message}`, 'err');
+    }
+  });
+
+  document.getElementById('btn-copy').addEventListener('click', () => {
+    const ta = document.getElementById('token-output');
+    navigator.clipboard.writeText(ta.value).then(() => {
+      log('Token copied to clipboard.', 'ok');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Step 2: Send test push via backend
+  // ---------------------------------------------------------------------------
+  document.getElementById('btn-send').addEventListener('click', async () => {
+    const token = document.getElementById('input-token').value.trim();
+    const title = document.getElementById('input-title').value.trim();
+    const body  = document.getElementById('input-body').value.trim();
+
+    if (!token) { log('No FCM token — complete Step 1 first.', 'warn'); return; }
+    if (!title) { log('Title is required.', 'warn'); return; }
+    if (!body)  { log('Body is required.', 'warn'); return; }
+
+    log(`Calling POST /api/notifications/test/push…`, 'info');
+
+    try {
+      const res = await fetch('/api/notifications/test/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, title, body }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        log(`Backend responded ${res.status}:`, 'ok');
+        log(`  successCount: ${data.successCount}`, 'ok');
+        log(`  failureCount: ${data.failureCount}`, data.failureCount > 0 ? 'warn' : 'ok');
+        if (data.invalidTokens?.length > 0) {
+          log(`  invalidTokens: ${data.invalidTokens.length} (register a fresh token)`, 'warn');
+        }
+        if (data.successCount > 0 && document.visibilityState === 'visible') {
+          log('Tab is in foreground — you should see a foreground push logged above.', 'info');
+        } else if (data.successCount > 0) {
+          log('Tab is in background — a native browser notification should appear.', 'info');
+        }
+      } else {
+        log(`Backend error ${res.status}: ${JSON.stringify(data)}`, 'err');
+      }
+    } catch (err) {
+      log(`Request failed: ${err.message}`, 'err');
+    }
+  });
+
+  // Auto-register service worker on page load for readiness
+  window.addEventListener('load', async () => {
+    swRegistration = await registerServiceWorker();
+  });
+</script>
+</body>
+</html>

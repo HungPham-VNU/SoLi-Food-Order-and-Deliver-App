@@ -73,7 +73,7 @@ export const STATUS_TRANSITION_NOTIFICATION: Partial<
   'delivering→delivered': {
     type: 'order_delivered',
     recipient: 'customer',
-    channels: ['in_app', 'push'],
+    channels: ['in_app', 'push', 'email'],
   },
 
   // T-03: Order cancelled (before payment or COD cancellation)
@@ -81,7 +81,7 @@ export const STATUS_TRANSITION_NOTIFICATION: Partial<
   'pending→cancelled': {
     type: 'order_cancelled',
     recipient: 'customer',
-    channels: ['in_app', 'push'],
+    channels: ['in_app', 'push', 'email'],
   },
 
   // T-05: VNPay order cancelled after payment (timeout, customer or system)
@@ -90,7 +90,7 @@ export const STATUS_TRANSITION_NOTIFICATION: Partial<
   'paid→cancelled': {
     type: 'order_cancelled',
     recipient: 'customer',
-    channels: ['in_app', 'push'],
+    channels: ['in_app', 'push', 'email'],
   },
 
   // T-07: Cancelled after confirmation (COD or VNPay)
@@ -99,7 +99,7 @@ export const STATUS_TRANSITION_NOTIFICATION: Partial<
   'confirmed→cancelled': {
     type: 'order_cancelled',
     recipient: 'customer',
-    channels: ['in_app', 'push'],
+    channels: ['in_app', 'push', 'email'],
   },
 
   // T-12: Delivered → Refunded (admin dispute or late refund)

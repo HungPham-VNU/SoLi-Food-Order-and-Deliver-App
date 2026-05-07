@@ -70,7 +70,7 @@ export class OrderCancelledAfterPaymentNotificationHandler
       recipientRole: 'customer',
       sourceId: event.orderId,
       templateData,
-      channels: ['in_app', 'push'],
+      channels: ['in_app', 'push', 'email'],
       orderId: event.orderId,
     });
 

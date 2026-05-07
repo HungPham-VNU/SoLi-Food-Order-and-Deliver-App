@@ -25,6 +25,10 @@ import {
 } from '../../src/module/ordering/order/order.schema';
 import type { Notification } from '../../src/module/notification/domain/notification.schema';
 import { notifications } from '../../src/module/notification/domain/notification.schema';
+import type { DeviceToken } from '../../src/module/notification/domain/device-token.schema';
+import { deviceTokens } from '../../src/module/notification/domain/device-token.schema';
+import type { NotificationDeliveryLog } from '../../src/module/notification/domain/notification-delivery-log.schema';
+import { notificationDeliveryLogs } from '../../src/module/notification/domain/notification-delivery-log.schema';
 import { getTestDb } from '../setup/db-setup';
 
 /**
@@ -141,4 +145,34 @@ export async function getNotification(
     .where(eq(notifications.id, id))
     .limit(1);
   return rows[0] ?? null;
+}
+
+/**
+ * Reads all device token rows for a given user.
+ * Use for E2E assertions after registering / removing push tokens.
+ */
+export async function getDeviceTokensForUser(
+  userId: string,
+): Promise<DeviceToken[]> {
+  const db = getTestDb();
+  return db
+    .select()
+    .from(deviceTokens)
+    .where(eq(deviceTokens.userId, userId))
+    .orderBy(asc(deviceTokens.createdAt));
+}
+
+/**
+ * Reads all delivery log rows for a given notification, in attempt order.
+ * Use for E2E assertions to verify channel delivery outcomes.
+ */
+export async function getDeliveryLogsForNotification(
+  notificationId: string,
+): Promise<NotificationDeliveryLog[]> {
+  const db = getTestDb();
+  return db
+    .select()
+    .from(notificationDeliveryLogs)
+    .where(eq(notificationDeliveryLogs.notificationId, notificationId))
+    .orderBy(asc(notificationDeliveryLogs.attemptedAt));
 }

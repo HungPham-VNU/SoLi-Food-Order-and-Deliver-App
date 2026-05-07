@@ -49,7 +49,7 @@ export class PaymentConfirmedNotificationHandler
         orderId: event.orderId,
         paidAmount: String(event.paidAmount),
       },
-      channels: ['in_app', 'push'],
+      channels: ['in_app', 'push', 'email'],
       orderId: event.orderId,
     });
   }

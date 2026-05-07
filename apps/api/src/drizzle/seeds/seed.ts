@@ -67,6 +67,7 @@ import { orderingMenuItemSnapshots } from '../../module/ordering/acl/schemas/men
 import { orderingDeliveryZoneSnapshots } from '../../module/ordering/acl/schemas/delivery-zone-snapshot.schema';
 import { notificationPreferences } from '../../module/notification/domain/notification-preference.schema';
 import { notificationRestaurantSnapshots } from '../../module/notification/acl/notification-restaurant-snapshot.schema';
+import { deviceTokens } from '../../module/notification/domain/device-token.schema';
 import type { NotificationType } from '../../module/notification/domain/notification.schema';
 
 const db = drizzle(process.env.DATABASE_URL!);
@@ -301,6 +302,11 @@ const IDS = {
 async function deleteNotificationRestaurantSnapshots() {
   await db.delete(notificationRestaurantSnapshots);
   console.log('🗑️  notification_restaurant_snapshots cleared');
+}
+
+async function deleteDeviceTokens() {
+  await db.delete(deviceTokens);
+  console.log('🗑️  device_tokens cleared');
 }
 
 async function deleteNotificationPreferences() {
@@ -2620,6 +2626,41 @@ async function seedNotificationRestaurantSnapshots() {
   console.log('✅ notification_restaurant_snapshots seeded (5 rows)');
 }
 
+/**
+ * Seed device tokens for customer and restaurant owner 1.
+ * Provides realistic push tokens for E2E testing of the push delivery channel.
+ */
+async function seedDeviceTokens() {
+  const rows = [
+    {
+      id: 'dt000001-0000-4000-8000-000000000001',
+      userId: IDS.customerUserId,
+      token: 'ExponentPushToken[customer-ios-test-001]',
+      platform: 'ios' as const,
+      isActive: true,
+      lastSeenAt: new Date(),
+    },
+    {
+      id: 'dt000002-0000-4000-8000-000000000002',
+      userId: IDS.customerUserId,
+      token: 'ExponentPushToken[customer-android-test-002]',
+      platform: 'android' as const,
+      isActive: true,
+      lastSeenAt: new Date(),
+    },
+    {
+      id: 'dt000003-0000-4000-8000-000000000003',
+      userId: IDS.ownerUserId,
+      token: 'ExponentPushToken[owner1-ios-test-003]',
+      platform: 'ios' as const,
+      isActive: true,
+      lastSeenAt: new Date(),
+    },
+  ];
+  await db.insert(deviceTokens).values(rows);
+  console.log('✅ device_tokens seeded (3 rows)');
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -2627,6 +2668,7 @@ async function main() {
 
   console.log('🗑️  Clearing old data...\n');
   await deleteNotificationRestaurantSnapshots();
+  await deleteDeviceTokens();
   await deleteNotificationPreferences();
   await deleteOrderingDeliveryZoneSnapshots();
   await deleteOrderingMenuItemSnapshots();
@@ -2654,6 +2696,7 @@ async function main() {
   await seedOrderingDeliveryZoneSnapshots(); // 7 rows
   await seedNotificationPreferences(); // 3 rows
   await seedNotificationRestaurantSnapshots(); // 5 rows
+  await seedDeviceTokens(); // 3 rows
 
   console.log('\n✅ All tables seeded successfully.');
   process.exit(0);
