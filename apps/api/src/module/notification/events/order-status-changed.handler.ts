@@ -106,7 +106,7 @@ export const STATUS_TRANSITION_NOTIFICATION: Partial<
   'delivered→refunded': {
     type: 'order_refunded',
     recipient: 'customer',
-    channels: ['in_app'],
+    channels: ['in_app', 'email'],
   },
 };
 

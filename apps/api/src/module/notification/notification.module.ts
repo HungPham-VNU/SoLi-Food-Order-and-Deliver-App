@@ -10,6 +10,7 @@ import { NotificationRestaurantSnapshotProjector } from './acl/notification-rest
 // Repositories
 import { NotificationRepository } from './repositories/notification.repository';
 import { NotificationPreferenceRepository } from './repositories/notification-preference.repository';
+import { UserEmailRepository } from './repositories/user-email.repository';
 import { DeviceTokenRepository } from './repositories/device-token.repository';
 import { NotificationDeliveryLogRepository } from './repositories/notification-delivery-log.repository';
 
@@ -39,6 +40,7 @@ import { NotificationController } from './controllers/notification.controller';
 
 // Services
 import { TestPushService } from './services/test-push.service';
+import { TestEmailService } from './services/test-email.service';
 
 // Event Handlers
 import { OrderPlacedNotificationHandler } from './events/order-placed.handler';
@@ -104,6 +106,7 @@ import { OrderCancelledAfterPaymentNotificationHandler } from './events/order-ca
     // --- Repositories ---
     NotificationRepository,
     NotificationPreferenceRepository,
+    UserEmailRepository,
     DeviceTokenRepository,
     NotificationDeliveryLogRepository,
 
@@ -154,6 +157,7 @@ import { OrderCancelledAfterPaymentNotificationHandler } from './events/order-ca
     ChannelDispatcherService,
     NotificationService,
     TestPushService,
+    TestEmailService,
 
     // --- Gateway (Phase N-2) ---
     NotificationGateway,

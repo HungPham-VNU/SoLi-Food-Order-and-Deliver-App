@@ -81,7 +81,7 @@ export class OrderCancelledAfterPaymentNotificationHandler
       recipientRole: 'customer',
       sourceId: event.orderId,
       templateData,
-      channels: ['in_app'],
+      channels: ['in_app', 'email'],
       orderId: event.orderId,
     });
   }

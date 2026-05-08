@@ -89,9 +89,15 @@ export const envSchema = z.object({
   // ---------------------------------------------------------------------------
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
-  SMTP_SECURE: z.coerce.boolean().default(false),
+  // z.coerce.boolean() converts the string 'false' to true (Boolean('false') === true).
+  // Use a string transform instead so 'false'/'0'/undefined → false and 'true'/'1' → true.
+  SMTP_SECURE: z
+    .string()
+    .optional()
+    .default('false')
+    .transform((s) => s === 'true' || s === '1'),
   SMTP_USER: z.string().optional(),
-  SMTP_PASS: z.string().optional(),
+  SMTP_PASS: z.string().trim().optional(),
   SMTP_FROM: z.string().optional().default('noreply@soli.dev'),
 
   // ---------------------------------------------------------------------------

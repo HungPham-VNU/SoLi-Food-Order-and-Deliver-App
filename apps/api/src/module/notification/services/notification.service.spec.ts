@@ -48,6 +48,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationService } from './notification.service';
 import { NotificationRepository } from '../repositories/notification.repository';
 import { NotificationPreferenceRepository } from '../repositories/notification-preference.repository';
+import { UserEmailRepository } from '../repositories/user-email.repository';
 import { DeviceTokenRepository } from '../repositories/device-token.repository';
 import { NotificationTemplateService } from './notification-template.service';
 import { ChannelDispatcherService } from './channel-dispatcher.service';
@@ -125,6 +126,7 @@ function makeSendParams(overrides: Partial<SendFromEventParams> = {}): SendFromE
 
 describe('NotificationService', () => {
   let service: NotificationService;
+  let userEmailRepo: { findEmailByUserId: jest.Mock };
   let notificationRepo: {
     insertIfNotExists: jest.Mock;
     markRead: jest.Mock;
@@ -142,6 +144,9 @@ describe('NotificationService', () => {
   let gateway: { sendToUser: jest.Mock };
 
   beforeEach(async () => {
+    userEmailRepo = {
+      findEmailByUserId: jest.fn().mockResolvedValue(null),
+    };
     notificationRepo = {
       insertIfNotExists: jest.fn().mockResolvedValue(makeNotificationRow()),
       markRead: jest.fn().mockResolvedValue(null),
@@ -153,7 +158,7 @@ describe('NotificationService', () => {
     };
     preferenceRepo = {
       findByUserId: jest.fn().mockResolvedValue(null),
-      upsert: jest.fn(),
+      upsert: jest.fn().mockResolvedValue(undefined),
     };
     deviceTokenRepo = {
       registerOrRefresh: jest.fn().mockResolvedValue(undefined),
@@ -180,6 +185,7 @@ describe('NotificationService', () => {
         NotificationService,
         { provide: NotificationRepository, useValue: notificationRepo },
         { provide: NotificationPreferenceRepository, useValue: preferenceRepo },
+        { provide: UserEmailRepository, useValue: userEmailRepo },
         { provide: DeviceTokenRepository, useValue: deviceTokenRepo },
         { provide: NotificationTemplateService, useValue: templateService },
         { provide: RedisService, useValue: redisService },
@@ -304,8 +310,9 @@ describe('NotificationService', () => {
       );
     });
 
-    it('passes null email in context when no preference row exists', async () => {
+    it('passes null email in context when no preference row exists and user table also has no email', async () => {
       preferenceRepo.findByUserId.mockResolvedValue(null);
+      userEmailRepo.findEmailByUserId.mockResolvedValue(null);
       const row = makeNotificationRow({ channel: 'email' });
       notificationRepo.insertIfNotExists.mockResolvedValue(row);
 
@@ -315,6 +322,44 @@ describe('NotificationService', () => {
         row,
         expect.objectContaining({ email: null }),
       );
+    });
+
+    it('resolves email from user table when preference row has no email', async () => {
+      preferenceRepo.findByUserId.mockResolvedValue(makePreferenceRow({ email: null }));
+      userEmailRepo.findEmailByUserId.mockResolvedValue('fallback@example.com');
+      const row = makeNotificationRow({ channel: 'email' });
+      notificationRepo.insertIfNotExists.mockResolvedValue(row);
+
+      await service.sendFromEvent(makeSendParams({ channels: ['email'] }));
+
+      expect(channelDispatcher.dispatch).toHaveBeenCalledWith(
+        row,
+        expect.objectContaining({ email: 'fallback@example.com' }),
+      );
+    });
+
+    it('backfills email into notification_preferences after resolving from user table', async () => {
+      preferenceRepo.findByUserId.mockResolvedValue(makePreferenceRow({ email: null }));
+      userEmailRepo.findEmailByUserId.mockResolvedValue('backfill@example.com');
+      preferenceRepo.upsert.mockResolvedValue(undefined);
+      notificationRepo.insertIfNotExists.mockResolvedValue(makeNotificationRow({ channel: 'email' }));
+
+      await service.sendFromEvent(makeSendParams({ channels: ['email'] }));
+
+      // Give the fire-and-forget upsert a tick to run
+      await new Promise((r) => setImmediate(r));
+      expect(preferenceRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user-uuid-001', email: 'backfill@example.com' }),
+      );
+    });
+
+    it('does NOT call userEmailRepo when preference row already has an email', async () => {
+      preferenceRepo.findByUserId.mockResolvedValue(makePreferenceRow({ email: 'already@example.com' }));
+      notificationRepo.insertIfNotExists.mockResolvedValue(makeNotificationRow({ channel: 'email' }));
+
+      await service.sendFromEvent(makeSendParams({ channels: ['email'] }));
+
+      expect(userEmailRepo.findEmailByUserId).not.toHaveBeenCalled();
     });
 
     it('returns 0 and never throws on unexpected exception', async () => {

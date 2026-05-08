@@ -50,7 +50,7 @@ export class PaymentFailedNotificationHandler
         orderId: event.orderId,
         reason: event.reason,
       },
-      channels: ['in_app', 'push'],
+      channels: ['in_app', 'push', 'email'],
       orderId: event.orderId,
     });
   }

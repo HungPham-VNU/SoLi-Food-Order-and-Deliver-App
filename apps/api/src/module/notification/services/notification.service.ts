@@ -10,6 +10,7 @@ import {
 } from '../domain/notification-preference.schema';
 import { NotificationRepository } from '../repositories/notification.repository';
 import { NotificationPreferenceRepository } from '../repositories/notification-preference.repository';
+import { UserEmailRepository } from '../repositories/user-email.repository';
 import { DeviceTokenRepository } from '../repositories/device-token.repository';
 import { NotificationTemplateService } from './notification-template.service';
 import { ChannelDispatcherService } from './channel-dispatcher.service';
@@ -99,6 +100,7 @@ export class NotificationService {
   constructor(
     private readonly notificationRepo: NotificationRepository,
     private readonly preferenceRepo: NotificationPreferenceRepository,
+    private readonly userEmailRepo: UserEmailRepository,
     private readonly deviceTokenRepo: DeviceTokenRepository,
     private readonly templateService: NotificationTemplateService,
     private readonly redisService: RedisService,
@@ -199,10 +201,55 @@ export class NotificationService {
       // 3. Render template (compute once for all channels)
       const { title, body } = this.templateService.render(type, templateData);
 
-      // 4. Build delivery context (resolved once, shared across all channels)
+      // 4. Resolve recipient email for the delivery context.
+      //
+      // Primary source: notification_preferences.email (denormalised, set by
+      //   the user via PATCH /notifications/my/preferences).
+      // Fallback source: user.email (Better Auth table) — used when the user
+      //   has never explicitly set their notification email. This is the
+      //   common case for new users who have not called the preferences API.
+      //
+      // When we resolve via fallback and the email channel is requested,
+      // we also backfill notification_preferences.email so that subsequent
+      // sends skip the user table lookup (fire-and-forget, errors absorbed).
+      let resolvedEmail: string | null = prefRow?.email ?? null;
+
+      if (!resolvedEmail && enabledChannels.includes('email')) {
+        const authEmail = await this.userEmailRepo.findEmailByUserId(recipientId);
+        if (authEmail) {
+          resolvedEmail = authEmail;
+          this.logger.log(
+            `[Notification] Resolved email from user table for recipientId=${recipientId}: ${authEmail}. Backfilling notification_preferences.`,
+          );
+          // Backfill: upsert the email into notification_preferences so the
+          // next event delivery is fast (no user table lookup needed).
+          void this.preferenceRepo.upsert({
+            userId: recipientId,
+            email: authEmail,
+            // Merge with existing prefs or use defaults — only email column changes.
+            pushEnabled: prefRow?.pushEnabled ?? DEFAULT_PREFERENCES.pushEnabled,
+            inAppEnabled: prefRow?.inAppEnabled ?? DEFAULT_PREFERENCES.inAppEnabled,
+            emailEnabled: prefRow?.emailEnabled ?? DEFAULT_PREFERENCES.emailEnabled,
+            smsEnabled: prefRow?.smsEnabled ?? DEFAULT_PREFERENCES.smsEnabled,
+            quietHoursStart: prefRow?.quietHoursStart ?? DEFAULT_PREFERENCES.quietHoursStart,
+            quietHoursEnd: prefRow?.quietHoursEnd ?? DEFAULT_PREFERENCES.quietHoursEnd,
+            mutedTypes: prefRow?.mutedTypes ?? DEFAULT_PREFERENCES.mutedTypes,
+            timezone: prefRow?.timezone ?? DEFAULT_PREFERENCES.timezone,
+          }).catch((upsertErr: Error) => {
+            this.logger.warn(
+              `[Notification] Failed to backfill email into notification_preferences for userId=${recipientId}: ${upsertErr.message}`,
+            );
+          });
+        } else {
+          this.logger.warn(
+            `[Notification] No email found for recipientId=${recipientId} in notification_preferences or user table — email channel will be skipped`,
+          );
+        }
+      }
+
       const deliveryContext = {
         recipientId,
-        email: prefRow?.email ?? null,
+        email: resolvedEmail,
       };
 
       // 5. Persist one row per enabled channel (idempotent via ON CONFLICT DO NOTHING)

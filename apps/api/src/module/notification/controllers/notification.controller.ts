@@ -44,6 +44,8 @@ import {
   UpdateNotificationPreferenceDto,
 } from '../dto/preference.dto';
 import { TestPushDto, TestPushResponseDto } from '../dto/test-push.dto';
+import { TestEmailDto, TestEmailResponseDto } from '../dto/test-email.dto';
+import { TestEmailService } from '../services/test-email.service';
 
 /**
  * NotificationController
@@ -79,6 +81,7 @@ export class NotificationController {
   constructor(
     private readonly notificationService: NotificationService,
     private readonly testPushService: TestPushService,
+    private readonly testEmailService: TestEmailService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -385,5 +388,45 @@ export class NotificationController {
       throw new ForbiddenException('Test endpoints are disabled in production');
     }
     return this.testPushService.send(dto.token, dto.title, dto.body);
+  }
+
+  // ---------------------------------------------------------------------------
+  // POST /notifications/test/email
+  // DEV / STAGING ONLY — manual SMTP integration testing
+  // TODO: Remove this endpoint before deploying to production.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Send a test email to verify the SMTP configuration end-to-end.
+   *
+   * This endpoint is intentionally unauthenticated for ease of local testing.
+   * It is blocked in NODE_ENV=production to prevent misuse.
+   *
+   * @example
+   * POST /api/notifications/test/email
+   * {
+   *   "to": "developer@example.com",
+   *   "subject": "SMTP test",
+   *   "body": "Hello from Notification BC"
+   * }
+   *
+   * TODO: Remove before production deployment.
+   */
+  @Post('test/email')
+  @HttpCode(HttpStatus.OK)
+  @AllowAnonymous()
+  @ApiOperation({
+    summary: '[DEV ONLY] Send a test email via SMTP to verify configuration',
+    description:
+      'Development endpoint for manual SMTP integration testing. Blocked in NODE_ENV=production.',
+  })
+  @ApiBody({ type: TestEmailDto })
+  @ApiOkResponse({ type: TestEmailResponseDto })
+  async testEmail(@Body() dto: TestEmailDto): Promise<TestEmailResponseDto> {
+    // Hard-block in production to prevent accidental exposure
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException('Test endpoints are disabled in production');
+    }
+    return this.testEmailService.send(dto.to, dto.subject, dto.body);
   }
 }
