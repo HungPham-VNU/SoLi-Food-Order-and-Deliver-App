@@ -2629,16 +2629,32 @@ async function seedNotificationRestaurantSnapshots() {
 /**
  * Seed device tokens for customer and restaurant owner 1.
  * Provides realistic push tokens for E2E testing of the push delivery channel.
+ *
+ * Rows include:
+ *  - 2 active tokens for the customer (iOS + Android multi-device)
+ *  - 1 active token for restaurant owner 1 (iOS)
+ *  - 1 inactive token for customer (simulates a previously deactivated device)
+ *    — last_seen_at set to 10 days ago so it is within INACTIVE_TTL_DAYS (30d)
+ *      and therefore NOT yet deleted by the cleanup cron.
+ *  - 1 stale inactive token for owner2
+ *    — last_seen_at set to 45 days ago, past INACTIVE_TTL_DAYS (30d).
+ *      This will be deleted on the next cleanup cron run, demonstrating that
+ *      the cleanup task removes it correctly.
  */
 async function seedDeviceTokens() {
+  const now = new Date();
+  const tenDaysAgo = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
+  const fortyFiveDaysAgo = new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000);
+
   const rows = [
+    // ── Active tokens ──────────────────────────────────────────────────────────
     {
       id: 'dt000001-0000-4000-8000-000000000001',
       userId: IDS.customerUserId,
       token: 'ExponentPushToken[customer-ios-test-001]',
       platform: 'ios' as const,
       isActive: true,
-      lastSeenAt: new Date(),
+      lastSeenAt: now,
     },
     {
       id: 'dt000002-0000-4000-8000-000000000002',
@@ -2646,7 +2662,7 @@ async function seedDeviceTokens() {
       token: 'ExponentPushToken[customer-android-test-002]',
       platform: 'android' as const,
       isActive: true,
-      lastSeenAt: new Date(),
+      lastSeenAt: now,
     },
     {
       id: 'dt000003-0000-4000-8000-000000000003',
@@ -2654,11 +2670,32 @@ async function seedDeviceTokens() {
       token: 'ExponentPushToken[owner1-ios-test-003]',
       platform: 'ios' as const,
       isActive: true,
-      lastSeenAt: new Date(),
+      lastSeenAt: now,
+    },
+    // ── Inactive token (recent — within 30d INACTIVE_TTL, NOT deleted by cron) ──
+    // Simulates a device that FCM rejected last week (e.g. user reinstalled app).
+    {
+      id: 'dt000004-0000-4000-8000-000000000004',
+      userId: IDS.customerUserId,
+      token: 'ExponentPushToken[customer-old-web-004]',
+      platform: 'web' as const,
+      isActive: false,
+      lastSeenAt: tenDaysAgo,
+    },
+    // ── Stale inactive token (>30d — WILL be deleted on next cleanup cron run) ──
+    // Simulates owner2's old device that was deregistered 45 days ago.
+    // DeviceTokenCleanupTask.deleteStaleInactive() will remove this row.
+    {
+      id: 'dt000005-0000-4000-8000-000000000005',
+      userId: IDS.owner2UserId,
+      token: 'ExponentPushToken[owner2-stale-android-005]',
+      platform: 'android' as const,
+      isActive: false,
+      lastSeenAt: fortyFiveDaysAgo,
     },
   ];
   await db.insert(deviceTokens).values(rows);
-  console.log('✅ device_tokens seeded (3 rows)');
+  console.log('✅ device_tokens seeded (5 rows — 3 active, 1 inactive-recent, 1 stale-inactive)');
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -2696,7 +2733,7 @@ async function main() {
   await seedOrderingDeliveryZoneSnapshots(); // 7 rows
   await seedNotificationPreferences(); // 3 rows
   await seedNotificationRestaurantSnapshots(); // 5 rows
-  await seedDeviceTokens(); // 3 rows
+  await seedDeviceTokens(); // 5 rows (3 active, 1 inactive-recent, 1 stale-inactive)
 
   console.log('\n✅ All tables seeded successfully.');
   process.exit(0);

@@ -19,6 +19,10 @@ import { NotificationTemplateService } from './services/notification-template.se
 import { NotificationService } from './services/notification.service';
 import { ChannelDispatcherService } from './services/channel-dispatcher.service';
 import { UserPresenceService } from './services/user-presence.service';
+import { QuietHoursService } from './services/quiet-hours.service';
+
+// Tasks (Phase N-5)
+import { DeviceTokenCleanupTask } from './tasks/device-token-cleanup.task';
 
 // Channel adapters
 import { InAppChannelService } from './channels/in-app/in-app.channel.service';
@@ -154,10 +158,14 @@ import { OrderCancelledAfterPaymentNotificationHandler } from './events/order-ca
     // --- Services ---
     NotificationTemplateService,
     UserPresenceService,
+    QuietHoursService,
     ChannelDispatcherService,
     NotificationService,
     TestPushService,
     TestEmailService,
+
+    // --- Scheduled tasks (Phase N-5) ---
+    DeviceTokenCleanupTask,
 
     // --- Gateway (Phase N-2) ---
     NotificationGateway,

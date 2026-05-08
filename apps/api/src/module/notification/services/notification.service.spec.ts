@@ -21,6 +21,13 @@
  *    - new_order_received bypasses muted types
  *    - Falls back to DEFAULT_PREFERENCES when no preference row
  *
+ *  §2b Quiet hours — push suppression during quiet window
+ *    - Push channel suppressed when QuietHoursService returns true
+ *    - in_app channel NOT suppressed during quiet hours
+ *    - system_announcement bypasses quiet hours for push
+ *    - new_order_received bypasses quiet hours for push
+ *    - Push suppression does not affect email channel
+ *
  *  §3  getPreferences / updatePreferences
  *    - getPreferences returns DEFAULT_PREFERENCES when no row
  *    - getPreferences maps row correctly
@@ -36,6 +43,7 @@
  *    - markAllRead invalidates cache and emits WS all:true
  *
  * Phase: N-4 — Multi-Channel Delivery
+ * Phase: N-5 — Preferences + Device Token Cleanup (quiet hours gate)
  */
 
 // Mock the gateway module before any imports to avoid loading better-auth (ESM-only package)
@@ -52,6 +60,7 @@ import { UserEmailRepository } from '../repositories/user-email.repository';
 import { DeviceTokenRepository } from '../repositories/device-token.repository';
 import { NotificationTemplateService } from './notification-template.service';
 import { ChannelDispatcherService } from './channel-dispatcher.service';
+import { QuietHoursService } from './quiet-hours.service';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { RedisService } from '@/lib/redis/redis.service';
 import { DEFAULT_PREFERENCES } from '../domain/notification-preference.schema';
@@ -142,6 +151,7 @@ describe('NotificationService', () => {
   let redisService: { del: jest.Mock; get: jest.Mock; setWithExpiry: jest.Mock };
   let channelDispatcher: { dispatch: jest.Mock };
   let gateway: { sendToUser: jest.Mock };
+  let quietHours: { isQuietHours: jest.Mock };
 
   beforeEach(async () => {
     userEmailRepo = {
@@ -179,6 +189,10 @@ describe('NotificationService', () => {
     gateway = {
       sendToUser: jest.fn(),
     };
+    // Default: quiet hours NOT active (push not suppressed)
+    quietHours = {
+      isQuietHours: jest.fn().mockReturnValue(false),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -190,6 +204,7 @@ describe('NotificationService', () => {
         { provide: NotificationTemplateService, useValue: templateService },
         { provide: RedisService, useValue: redisService },
         { provide: ChannelDispatcherService, useValue: channelDispatcher },
+        { provide: QuietHoursService, useValue: quietHours },
         { provide: NotificationGateway, useValue: gateway },
       ],
     }).compile();
@@ -466,6 +481,144 @@ describe('NotificationService', () => {
 
       // DEFAULT_PREFERENCES has inAppEnabled:true and pushEnabled:true
       expect(notificationRepo.insertIfNotExists).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // =========================================================================
+  // §2b  Quiet hours — push suppression (via sendFromEvent)
+  // =========================================================================
+
+  describe('quiet hours push suppression (via sendFromEvent)', () => {
+
+    it('suppresses push channel when QuietHoursService.isQuietHours returns true', async () => {
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ quietHoursStart: 22, quietHoursEnd: 7 }),
+      );
+      quietHours.isQuietHours.mockReturnValue(true);
+
+      await service.sendFromEvent(
+        makeSendParams({ type: 'order_status_changed', channels: ['in_app', 'push'] }),
+      );
+
+      const insertedChannels = notificationRepo.insertIfNotExists.mock.calls.map(
+        (c) => c[0].channel,
+      );
+      expect(insertedChannels).toContain('in_app');
+      expect(insertedChannels).not.toContain('push');
+    });
+
+    it('in_app channel is NOT suppressed during quiet hours', async () => {
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ quietHoursStart: 22, quietHoursEnd: 7 }),
+      );
+      quietHours.isQuietHours.mockReturnValue(true);
+
+      await service.sendFromEvent(
+        makeSendParams({ channels: ['in_app'] }),
+      );
+
+      expect(notificationRepo.insertIfNotExists).toHaveBeenCalledWith(
+        expect.objectContaining({ channel: 'in_app' }),
+      );
+    });
+
+    it('email channel is NOT suppressed during quiet hours (only push is suppressed)', async () => {
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ quietHoursStart: 22, quietHoursEnd: 7 }),
+      );
+      quietHours.isQuietHours.mockReturnValue(true);
+      notificationRepo.insertIfNotExists
+        .mockResolvedValueOnce(makeNotificationRow({ channel: 'in_app' }))
+        .mockResolvedValueOnce(makeNotificationRow({ channel: 'email' }));
+
+      await service.sendFromEvent(
+        makeSendParams({ channels: ['in_app', 'email', 'push'] }),
+      );
+
+      const insertedChannels = notificationRepo.insertIfNotExists.mock.calls.map(
+        (c) => c[0].channel,
+      );
+      expect(insertedChannels).toContain('in_app');
+      expect(insertedChannels).toContain('email');
+      expect(insertedChannels).not.toContain('push');
+    });
+
+    it('system_announcement bypasses quiet hours — push is delivered even during quiet window', async () => {
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ quietHoursStart: 22, quietHoursEnd: 7 }),
+      );
+      quietHours.isQuietHours.mockReturnValue(true);
+      notificationRepo.insertIfNotExists
+        .mockResolvedValueOnce(makeNotificationRow({ channel: 'in_app' }))
+        .mockResolvedValueOnce(makeNotificationRow({ channel: 'push' }));
+
+      await service.sendFromEvent(
+        makeSendParams({ type: 'system_announcement', channels: ['in_app', 'push'] }),
+      );
+
+      const insertedChannels = notificationRepo.insertIfNotExists.mock.calls.map(
+        (c) => c[0].channel,
+      );
+      // system_announcement bypasses ALL preference gates including quiet hours
+      expect(insertedChannels).toContain('in_app');
+      expect(insertedChannels).toContain('push');
+      // QuietHoursService should NOT have been called for system_announcement
+      expect(quietHours.isQuietHours).not.toHaveBeenCalled();
+    });
+
+    it('new_order_received bypasses quiet hours — push is delivered even during quiet window', async () => {
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ quietHoursStart: 22, quietHoursEnd: 7 }),
+      );
+      quietHours.isQuietHours.mockReturnValue(true);
+      notificationRepo.insertIfNotExists
+        .mockResolvedValueOnce(makeNotificationRow({ channel: 'in_app' }))
+        .mockResolvedValueOnce(makeNotificationRow({ channel: 'push' }));
+
+      await service.sendFromEvent(
+        makeSendParams({ type: 'new_order_received', channels: ['in_app', 'push'] }),
+      );
+
+      const insertedChannels = notificationRepo.insertIfNotExists.mock.calls.map(
+        (c) => c[0].channel,
+      );
+      expect(insertedChannels).toContain('in_app');
+      expect(insertedChannels).toContain('push');
+      expect(quietHours.isQuietHours).not.toHaveBeenCalled();
+    });
+
+    it('quiet hours check is skipped entirely when pushEnabled=false (push already filtered)', async () => {
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ pushEnabled: false, quietHoursStart: 22, quietHoursEnd: 7 }),
+      );
+      quietHours.isQuietHours.mockReturnValue(true);
+
+      await service.sendFromEvent(
+        makeSendParams({ channels: ['in_app', 'push'] }),
+      );
+
+      // push was already filtered by pushEnabled=false, so quiet hours check is never reached
+      expect(quietHours.isQuietHours).not.toHaveBeenCalled();
+    });
+
+    it('does NOT suppress push when QuietHoursService returns false', async () => {
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ quietHoursStart: 22, quietHoursEnd: 7 }),
+      );
+      quietHours.isQuietHours.mockReturnValue(false); // NOT in quiet hours
+      notificationRepo.insertIfNotExists
+        .mockResolvedValueOnce(makeNotificationRow({ channel: 'in_app' }))
+        .mockResolvedValueOnce(makeNotificationRow({ channel: 'push' }));
+
+      await service.sendFromEvent(
+        makeSendParams({ type: 'order_placed', channels: ['in_app', 'push'] }),
+      );
+
+      const insertedChannels = notificationRepo.insertIfNotExists.mock.calls.map(
+        (c) => c[0].channel,
+      );
+      expect(insertedChannels).toContain('in_app');
+      expect(insertedChannels).toContain('push');
     });
   });
 

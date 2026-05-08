@@ -1273,7 +1273,8 @@ private isQuietHours(prefs: NotificationPreference): boolean {
 }
 ```
 
-> **[RISK]** Timezone handling: The `timezone` field is now in the `notification_preferences` schema (default `'Asia/Ho_Chi_Minh'`). The `isQuietHours()` implementation uses `dayjs-plugin-timezone`. Add `dayjs` to the project dependencies in Phase N-5.
+> ~~**[RISK]** Timezone handling: The `timezone` field is now in the `notification_preferences` schema (default `'Asia/Ho_Chi_Minh'`). The `isQuietHours()` implementation uses `dayjs-plugin-timezone`. Add `dayjs` to the project dependencies in Phase N-5.~~
+> **[RESOLVED — Phase N-5]** `QuietHoursService` was implemented using native `Intl.DateTimeFormat.formatToParts()` — no dayjs or external timezone library required.
 
 ### 10.4 Muted Notification Types
 
@@ -2043,7 +2044,7 @@ src/module/notification/
 
 ---
 
-### Phase N-5: Preferences + Device Token Cleanup
+### Phase N-5: Preferences + Device Token Cleanup ✅ Implemented
 
 **Goal:** Full user preference management. Users can control which notification types and channels they receive. Quiet hours are enforced. Device token cleanup cron runs.
 
@@ -2055,13 +2056,26 @@ src/module/notification/
 - Unread count cache invalidation on preference change
 
 **Deliverables:**
-- `controllers/notification-preference.controller.ts`
-- Updated `NotificationService` with preference gate
-- `tasks/device-token-cleanup.task.ts`
+- `controllers/notification-preference.controller.ts` ✅
+- Updated `NotificationService` with preference gate ✅
+- `tasks/device-token-cleanup.task.ts` ✅
+- `services/quiet-hours.service.ts` ✅ (new — `Intl`-based, no external dependency)
+- Redis `zadd`, `zrangebyscore`, `zrem`, `incrIfExists` added to `RedisService` ✅
+
+**Implementation Notes:**
+- Quiet hours enforced at `isChannelEnabled()` level (pre-persistence gate), push channel only
+- `in_app` channel always persists — user inbox is never suppressed
+- Critical types (`system_announcement`, `new_order_received`) bypass all preference gates
+- Device token cleanup: inactive 30d + active-but-stale 90d, independent try/catch per pass
+- `isQuietHours()` uses `Intl.DateTimeFormat` — no dayjs/luxon dependency needed (removes risk noted below)
+- 185 unit tests passing. See `NOTIFICATION_PHASE_N5_IMPLEMENTATION_REPORT.md` for full details.
+
+> ~~**[RISK]** Timezone handling: The `timezone` field is now in the `notification_preferences` schema (default `'Asia/Ho_Chi_Minh'`). The `isQuietHours()` implementation uses `dayjs-plugin-timezone`. Add `dayjs` to the project dependencies in Phase N-5.~~
+> **[RESOLVED]** Implementation uses native `Intl.DateTimeFormat` — no extra dependency required.
 
 **Testing Strategy:**
-- Unit test: quiet hours edge cases (midnight crossing, same-hour start/end)
-- Unit test: `mutedTypes` gate suppresses delivery but writes DB row with `suppressed_by_preference` log
+- Unit test: quiet hours edge cases (midnight crossing, same-hour start/end) ✅ (24 tests)
+- Unit test: `mutedTypes` gate suppresses delivery but writes DB row with `suppressed_by_preference` log ✅
 - E2E: create preference with `pushEnabled = false`, trigger event, verify no FCM call but in_app notification persisted
 
 ---

@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, lt, desc } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
 import * as schema from '@/drizzle/schema';
@@ -88,5 +88,57 @@ export class DeviceTokenRepository {
           eq(deviceTokens.token, token),
         ),
       );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Phase N-5 — Device Token Cleanup
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Permanently delete tokens that are inactive AND have not been seen since
+   * `cutoffDate`.  These are tokens that Firebase already rejected and that
+   * the user has not re-registered (e.g. they switched phones).
+   *
+   * Threshold recommendation: 30 days — long enough for users to come back
+   * from a vacation without losing their push registration.
+   *
+   * @returns Number of rows deleted.
+   */
+  async deleteStaleInactive(cutoffDate: Date): Promise<number> {
+    const result = await this.db
+      .delete(deviceTokens)
+      .where(
+        and(
+          eq(deviceTokens.isActive, false),
+          lt(deviceTokens.lastSeenAt, cutoffDate),
+        ),
+      )
+      .returning({ id: deviceTokens.id });
+
+    return result.length;
+  }
+
+  /**
+   * Permanently delete tokens that are technically active but have not been
+   * seen for a very long time — indicating the user uninstalled the app
+   * without explicitly deregistering the token.
+   *
+   * Threshold recommendation: 90 days — seasonal users (e.g. tourists) may
+   * go months between visits, so a generous window avoids false positives.
+   *
+   * @returns Number of rows deleted.
+   */
+  async deleteStaleActive(cutoffDate: Date): Promise<number> {
+    const result = await this.db
+      .delete(deviceTokens)
+      .where(
+        and(
+          eq(deviceTokens.isActive, true),
+          lt(deviceTokens.lastSeenAt, cutoffDate),
+        ),
+      )
+      .returning({ id: deviceTokens.id });
+
+    return result.length;
   }
 }

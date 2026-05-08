@@ -14,6 +14,7 @@ import { UserEmailRepository } from '../repositories/user-email.repository';
 import { DeviceTokenRepository } from '../repositories/device-token.repository';
 import { NotificationTemplateService } from './notification-template.service';
 import { ChannelDispatcherService } from './channel-dispatcher.service';
+import { QuietHoursService } from './quiet-hours.service';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import {
   WS_NOTIFICATION_READ,
@@ -89,6 +90,12 @@ export interface SendFromEventParams {
 //    (they are not "deliveries" — they are cross-tab synchronization).
 //
 // Phase: N-4 — Multi-Channel Delivery
+// Phase: N-5 — Preferences + Device Token Cleanup
+//   isChannelEnabled() now accepts the current instant so it can evaluate
+//   quiet hours. QuietHoursService handles timezone-aware computation.
+//   Only the push channel is suppressed during quiet hours; in_app is
+//   always persisted. Critical types (system_announcement,
+//   new_order_received) bypass quiet hours the same way they bypass mutes.
 // ---------------------------------------------------------------------------
 @Injectable()
 export class NotificationService {
@@ -105,6 +112,7 @@ export class NotificationService {
     private readonly templateService: NotificationTemplateService,
     private readonly redisService: RedisService,
     private readonly channelDispatcher: ChannelDispatcherService,
+    private readonly quietHours: QuietHoursService,
     // @Optional() prevents a hard DI error when NotificationGateway is not
     // yet registered (e.g. in unit tests that only test DB persistence).
     // In production, the gateway is always present in NotificationModule.
@@ -182,9 +190,10 @@ export class NotificationService {
       const prefRow = await this.preferenceRepo.findByUserId(recipientId);
       const prefs = prefRow ?? DEFAULT_PREFERENCES;
 
-      // 2. Filter to opted-in channels
+      // 2. Filter to opted-in channels (preference gate + quiet hours)
+      const now = new Date();
       const enabledChannels = channels.filter((ch) =>
-        this.isChannelEnabled(prefs, type, ch),
+        this.isChannelEnabled(prefs, type, ch, now),
       );
 
       this.logger.log(
@@ -313,20 +322,27 @@ export class NotificationService {
 
   /**
    * Returns true when the channel is enabled AND the notification type is
-   * not muted by the user.
+   * not muted by the user AND (for push) it is not currently quiet hours.
    *
-   * Admin-originated and system types bypass mute/quiet-hours checks (D-N7):
-   * critical operational notifications must always reach the recipient.
+   * Gate order:
+   *  1. Per-channel opt-in flag (pushEnabled, inAppEnabled, emailEnabled…)
+   *  2. Admin/system bypass — critical types skip mute + quiet-hours checks
+   *  3. Muted notification types
+   *  4. Quiet hours (push channel only — in_app is always persisted)
+   *
+   * The `now` parameter is injected by sendFromEvent so tests can control
+   * the clock without patching global Date.
    */
   private isChannelEnabled(
     prefs: typeof DEFAULT_PREFERENCES,
     type: NotificationType,
     channel: NotificationChannel,
+    now: Date = new Date(),
   ): boolean {
     const isAdminOrSystem =
       type === 'system_announcement' || type === 'new_order_received';
 
-    // Check per-channel opt-in
+    // 1. Per-channel opt-in
     const channelEnabled = {
       in_app: prefs.inAppEnabled,
       push: prefs.pushEnabled,
@@ -336,11 +352,21 @@ export class NotificationService {
 
     if (!channelEnabled) return false;
 
-    // System/admin types bypass mute lists
+    // 2. Critical types bypass all preference gates
     if (isAdminOrSystem) return true;
 
-    // Check muted types
+    // 3. Muted notification types
     if (prefs.mutedTypes?.includes(type)) return false;
+
+    // 4. Quiet hours — only suppresses the push channel
+    //    In-app notifications are always persisted so users can review them
+    //    in their inbox when they wake up.
+    if (channel === 'push' && this.quietHours.isQuietHours(prefs, now)) {
+      this.logger.debug(
+        `[Notification] Push suppressed by quiet hours for type=${type}`,
+      );
+      return false;
+    }
 
     return true;
   }
