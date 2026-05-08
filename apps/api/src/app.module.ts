@@ -12,6 +12,7 @@ import { DevTestUserMiddleware } from './lib/dev-test-user.middleware';
 import { GeoModule } from './lib/geo/geo.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PaymentModule } from './module/payment/payment.module';
+import { NotificationModule } from './module/notification/notification.module';
 import { validate } from './config/env.schema';
 import { vnpayConfig } from './config/vnpay.config';
 
@@ -29,6 +30,7 @@ import { vnpayConfig } from './config/vnpay.config';
     RestaurantCatalogModule,
     OrderingModule,
     PaymentModule,
+    NotificationModule,
 
     AuthModule.forRoot({
       auth,

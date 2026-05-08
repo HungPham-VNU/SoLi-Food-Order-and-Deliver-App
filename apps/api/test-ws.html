@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Notification WS Test</title>
+</head>
+<body>
+  <h1>Notification WebSocket Test</h1>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+  <script>
+    const token = "JJV1HenTyFwT7ucDLo7s0m2I990sG4QA";
+
+    const socket = io("http://localhost:3000/notifications", {
+      transports: ["websocket"],
+
+      auth: {
+        token,
+      },
+    });
+
+    socket.on("connect", () => {
+      console.log("✅ Connected");
+      console.log("Socket ID:", socket.id);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("❌ Disconnected:", reason);
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("❌ Connect error:", err.message);
+    });
+
+    socket.on("notification.created", (payload) => {
+      console.log("🎉 Notification received:");
+      console.log(payload);
+    });
+  </script>
+</body>
+</html>

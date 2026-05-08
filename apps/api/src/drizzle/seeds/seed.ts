@@ -65,6 +65,10 @@ import { appSettings } from '../../module/ordering/common/app-settings.schema';
 import { orderingRestaurantSnapshots } from '../../module/ordering/acl/schemas/restaurant-snapshot.schema';
 import { orderingMenuItemSnapshots } from '../../module/ordering/acl/schemas/menu-item-snapshot.schema';
 import { orderingDeliveryZoneSnapshots } from '../../module/ordering/acl/schemas/delivery-zone-snapshot.schema';
+import { notificationPreferences } from '../../module/notification/domain/notification-preference.schema';
+import { notificationRestaurantSnapshots } from '../../module/notification/acl/notification-restaurant-snapshot.schema';
+import { deviceTokens } from '../../module/notification/domain/device-token.schema';
+import type { NotificationType } from '../../module/notification/domain/notification.schema';
 
 const db = drizzle(process.env.DATABASE_URL!);
 
@@ -294,6 +298,21 @@ const IDS = {
 } as const;
 
 // ─── Delete functions (reverse insert order to respect foreign keys) ──────────
+
+async function deleteNotificationRestaurantSnapshots() {
+  await db.delete(notificationRestaurantSnapshots);
+  console.log('🗑️  notification_restaurant_snapshots cleared');
+}
+
+async function deleteDeviceTokens() {
+  await db.delete(deviceTokens);
+  console.log('🗑️  device_tokens cleared');
+}
+
+async function deleteNotificationPreferences() {
+  await db.delete(notificationPreferences);
+  console.log('🗑️  notification_preferences cleared');
+}
 
 async function deleteOrderingDeliveryZoneSnapshots() {
   await db.delete(orderingDeliveryZoneSnapshots);
@@ -2516,12 +2535,178 @@ async function seedOrderingDeliveryZoneSnapshots() {
   );
 }
 
+// ─── Notification BC seeds ────────────────────────────────────────────────────
+
+/**
+ * Seed notification_preferences for the 3 test users.
+ * Covers a variety of preference configurations for manual testing:
+ *  - Customer: all channels on, no quiet hours (permissive — standard)
+ *  - Owner 1:  in_app + push, quiet hours 22:00–07:00, timezone Asia/Ho_Chi_Minh
+ *  - Owner 2:  in_app only, email disabled
+ */
+async function seedNotificationPreferences() {
+  const rows = [
+    {
+      userId: IDS.customerUserId,
+      pushEnabled: true,
+      inAppEnabled: true,
+      emailEnabled: true,
+      smsEnabled: false,
+      quietHoursStart: null,
+      quietHoursEnd: null,
+      mutedTypes: [],
+      email: 'customer@test.com',
+      timezone: 'Asia/Ho_Chi_Minh',
+    },
+    {
+      userId: IDS.ownerUserId,
+      pushEnabled: true,
+      inAppEnabled: true,
+      emailEnabled: true,
+      smsEnabled: false,
+      quietHoursStart: 22,
+      quietHoursEnd: 7,
+      mutedTypes: [],
+      email: 'owner1@test.com',
+      timezone: 'Asia/Ho_Chi_Minh',
+    },
+    {
+      userId: IDS.owner2UserId,
+      pushEnabled: false,
+      inAppEnabled: true,
+      emailEnabled: false,
+      smsEnabled: false,
+      quietHoursStart: null,
+      quietHoursEnd: null,
+      mutedTypes: ['system_announcement'] as NotificationType[],
+      email: 'owner2@test.com',
+      timezone: 'Asia/Ho_Chi_Minh',
+    },
+  ];
+  await db.insert(notificationPreferences).values(rows);
+  console.log('✅ notification_preferences seeded (3 rows)');
+}
+
+/**
+ * Seed notification_restaurant_snapshots (ACL projection) for all 5 restaurants.
+ * Pre-populates the snapshot so OrderPlacedNotificationHandler can resolve
+ * restaurantId → ownerId without waiting for RestaurantUpdatedEvent.
+ * (In production this is populated by the event projector; this seed provides
+ * a development baseline.)
+ */
+async function seedNotificationRestaurantSnapshots() {
+  const rows = [
+    {
+      restaurantId: IDS.restaurant1,
+      ownerId: IDS.ownerUserId,
+      name: 'Phở Bắc',
+    },
+    {
+      restaurantId: IDS.restaurant2,
+      ownerId: IDS.ownerUserId,
+      name: 'Bếp Đóng Cửa',
+    },
+    {
+      restaurantId: IDS.restaurant3,
+      ownerId: IDS.ownerUserId,
+      name: 'Cơm Tấm Sài Gòn',
+    },
+    {
+      restaurantId: IDS.restaurant4,
+      ownerId: IDS.owner2UserId,
+      name: 'Seoul BBQ & More',
+    },
+    {
+      restaurantId: IDS.restaurant5,
+      ownerId: IDS.owner2UserId,
+      name: 'Sushi Hana',
+    },
+  ];
+  await db.insert(notificationRestaurantSnapshots).values(rows);
+  console.log('✅ notification_restaurant_snapshots seeded (5 rows)');
+}
+
+/**
+ * Seed device tokens for customer and restaurant owner 1.
+ * Provides realistic push tokens for E2E testing of the push delivery channel.
+ *
+ * Rows include:
+ *  - 2 active tokens for the customer (iOS + Android multi-device)
+ *  - 1 active token for restaurant owner 1 (iOS)
+ *  - 1 inactive token for customer (simulates a previously deactivated device)
+ *    — last_seen_at set to 10 days ago so it is within INACTIVE_TTL_DAYS (30d)
+ *      and therefore NOT yet deleted by the cleanup cron.
+ *  - 1 stale inactive token for owner2
+ *    — last_seen_at set to 45 days ago, past INACTIVE_TTL_DAYS (30d).
+ *      This will be deleted on the next cleanup cron run, demonstrating that
+ *      the cleanup task removes it correctly.
+ */
+async function seedDeviceTokens() {
+  const now = new Date();
+  const tenDaysAgo = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
+  const fortyFiveDaysAgo = new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000);
+
+  const rows = [
+    // ── Active tokens ──────────────────────────────────────────────────────────
+    {
+      id: 'dt000001-0000-4000-8000-000000000001',
+      userId: IDS.customerUserId,
+      token: 'ExponentPushToken[customer-ios-test-001]',
+      platform: 'ios' as const,
+      isActive: true,
+      lastSeenAt: now,
+    },
+    {
+      id: 'dt000002-0000-4000-8000-000000000002',
+      userId: IDS.customerUserId,
+      token: 'ExponentPushToken[customer-android-test-002]',
+      platform: 'android' as const,
+      isActive: true,
+      lastSeenAt: now,
+    },
+    {
+      id: 'dt000003-0000-4000-8000-000000000003',
+      userId: IDS.ownerUserId,
+      token: 'ExponentPushToken[owner1-ios-test-003]',
+      platform: 'ios' as const,
+      isActive: true,
+      lastSeenAt: now,
+    },
+    // ── Inactive token (recent — within 30d INACTIVE_TTL, NOT deleted by cron) ──
+    // Simulates a device that FCM rejected last week (e.g. user reinstalled app).
+    {
+      id: 'dt000004-0000-4000-8000-000000000004',
+      userId: IDS.customerUserId,
+      token: 'ExponentPushToken[customer-old-web-004]',
+      platform: 'web' as const,
+      isActive: false,
+      lastSeenAt: tenDaysAgo,
+    },
+    // ── Stale inactive token (>30d — WILL be deleted on next cleanup cron run) ──
+    // Simulates owner2's old device that was deregistered 45 days ago.
+    // DeviceTokenCleanupTask.deleteStaleInactive() will remove this row.
+    {
+      id: 'dt000005-0000-4000-8000-000000000005',
+      userId: IDS.owner2UserId,
+      token: 'ExponentPushToken[owner2-stale-android-005]',
+      platform: 'android' as const,
+      isActive: false,
+      lastSeenAt: fortyFiveDaysAgo,
+    },
+  ];
+  await db.insert(deviceTokens).values(rows);
+  console.log('✅ device_tokens seeded (5 rows — 3 active, 1 inactive-recent, 1 stale-inactive)');
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
   console.log('🌱 Starting seed...\n');
 
   console.log('🗑️  Clearing old data...\n');
+  await deleteNotificationRestaurantSnapshots();
+  await deleteDeviceTokens();
+  await deleteNotificationPreferences();
   await deleteOrderingDeliveryZoneSnapshots();
   await deleteOrderingMenuItemSnapshots();
   await deleteOrderingRestaurantSnapshots();
@@ -2546,6 +2731,9 @@ async function main() {
   await seedOrderingRestaurantSnapshots(); // 5 rows
   await seedOrderingMenuItemSnapshots(); // 19 rows
   await seedOrderingDeliveryZoneSnapshots(); // 7 rows
+  await seedNotificationPreferences(); // 3 rows
+  await seedNotificationRestaurantSnapshots(); // 5 rows
+  await seedDeviceTokens(); // 5 rows (3 active, 1 inactive-recent, 1 stale-inactive)
 
   console.log('\n✅ All tables seeded successfully.');
   process.exit(0);

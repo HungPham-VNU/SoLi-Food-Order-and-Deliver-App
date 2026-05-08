@@ -69,6 +69,11 @@ export const envSchema = z.object({
     ),
 
   // ---------------------------------------------------------------------------
+  // CORS
+  // ---------------------------------------------------------------------------
+  CORS_ORIGIN: z.string().default('*'),
+
+  // ---------------------------------------------------------------------------
   // Payment session window — optional with a safe default
   // ---------------------------------------------------------------------------
   PAYMENT_SESSION_TIMEOUT_SECONDS: z.coerce
@@ -76,6 +81,38 @@ export const envSchema = z.object({
     .int()
     .positive('PAYMENT_SESSION_TIMEOUT_SECONDS must be a positive integer')
     .default(1800),
+
+  // ---------------------------------------------------------------------------
+  // SMTP email delivery — all optional (Phase N-4)
+  // When SMTP_HOST is absent, NodemailerEmailProvider is swapped for
+  // NoopEmailProvider which records SMTP_NOT_CONFIGURED delivery failures.
+  // ---------------------------------------------------------------------------
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  // z.coerce.boolean() converts the string 'false' to true (Boolean('false') === true).
+  // Use a string transform instead so 'false'/'0'/undefined → false and 'true'/'1' → true.
+  SMTP_SECURE: z
+    .string()
+    .optional()
+    .default('false')
+    .transform((s) => s === 'true' || s === '1'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().trim().optional(),
+  SMTP_FROM: z.string().optional().default('noreply@soli.dev'),
+
+  // ---------------------------------------------------------------------------
+  // Firebase Cloud Messaging — optional (Phase N-5)
+  // Path to the Firebase Admin SDK service account JSON key file.
+  // May be absolute or relative to process.cwd() (the directory from which
+  // `nest start` is invoked — typically `apps/api/` in local dev).
+  //
+  // When absent, PUSH_PROVIDER falls back to StubPushProvider which logs
+  // push delivery attempts without making real FCM calls. Safe for CI/CD.
+  //
+  // Example (relative to apps/api/):
+  //   FIREBASE_SERVICE_ACCOUNT_PATH=soli-food-delivery-FCM-key.json
+  // ---------------------------------------------------------------------------
+  FIREBASE_SERVICE_ACCOUNT_PATH: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
