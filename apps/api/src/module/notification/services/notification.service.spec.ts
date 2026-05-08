@@ -135,7 +135,7 @@ describe('NotificationService', () => {
     updateStatus: jest.Mock;
   };
   let preferenceRepo: { findByUserId: jest.Mock; upsert: jest.Mock };
-  let deviceTokenRepo: { registerOrRefresh: jest.Mock; deactivate: jest.Mock };
+  let deviceTokenRepo: { registerOrRefresh: jest.Mock; deactivate: jest.Mock; findByUserId: jest.Mock };
   let templateService: { render: jest.Mock };
   let redisService: { del: jest.Mock; get: jest.Mock; setWithExpiry: jest.Mock };
   let channelDispatcher: { dispatch: jest.Mock };
@@ -158,6 +158,7 @@ describe('NotificationService', () => {
     deviceTokenRepo = {
       registerOrRefresh: jest.fn().mockResolvedValue(undefined),
       deactivate: jest.fn().mockResolvedValue(undefined),
+      findByUserId: jest.fn().mockResolvedValue([]),
     };
     templateService = {
       render: jest.fn().mockReturnValue({ title: 'Rendered Title', body: 'Rendered body.' }),
@@ -659,6 +660,45 @@ describe('NotificationService', () => {
       const count = await service.getUnreadCount('user-001');
 
       expect(count).toBe(5);
+    });
+  });
+
+  describe('getMyTokens', () => {
+    it('returns masked tokenSuffix and never exposes the full token', async () => {
+      (deviceTokenRepo as any).findByUserId.mockResolvedValue([
+        {
+          id: 'uuid-1',
+          token: 'abcdefgh12345678',
+          platform: 'web',
+          isActive: true,
+          lastSeenAt: new Date('2026-01-01T10:00:00Z'),
+          createdAt: new Date('2026-01-01T09:00:00Z'),
+        },
+      ]);
+      const result = await service.getMyTokens('user-001');
+      expect(result.tokens).toHaveLength(1);
+      expect(result.tokens[0].tokenSuffix).toBe('\u202612345678');
+      expect(result.tokens[0]).not.toHaveProperty('token');
+      expect(result.tokens[0].platform).toBe('web');
+      expect(result.tokens[0].isActive).toBe(true);
+    });
+
+    it('returns empty array when no tokens are registered', async () => {
+      (deviceTokenRepo as any).findByUserId.mockResolvedValue([]);
+      const result = await service.getMyTokens('user-001');
+      expect(result.tokens).toHaveLength(0);
+    });
+
+    it('returns multiple tokens sorted by caller order', async () => {
+      (deviceTokenRepo as any).findByUserId.mockResolvedValue([
+        { id: 'uuid-1', token: 'token-aaaaaa11', platform: 'web',     isActive: true,  lastSeenAt: new Date(), createdAt: new Date() },
+        { id: 'uuid-2', token: 'token-bbbbbb22', platform: 'android', isActive: false, lastSeenAt: new Date(), createdAt: new Date() },
+      ]);
+      const result = await service.getMyTokens('user-001');
+      expect(result.tokens).toHaveLength(2);
+      expect(result.tokens[0].tokenSuffix).toBe('\u2026aaaaaa11');
+      expect(result.tokens[1].tokenSuffix).toBe('\u2026bbbbbb22');
+      expect(result.tokens[1].isActive).toBe(false);
     });
   });
 });

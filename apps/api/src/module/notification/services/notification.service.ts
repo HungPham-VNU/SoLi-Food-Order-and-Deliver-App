@@ -27,6 +27,7 @@ import type {
   RegisterPushTokenDto,
   RegisterPushTokenResponseDto,
   RemovePushTokenResponseDto,
+  PushTokenListResponseDto,
 } from '../dto/device-token.dto';
 import type {
   UpdateNotificationPreferenceDto,
@@ -487,6 +488,27 @@ export class NotificationService {
    *
    * Phase N-4
    */
+  /**
+   * Return all device tokens registered for a user (active + inactive).
+   * Token values are masked to the last 8 chars for security — callers
+   * only need to identify devices by platform and active state.
+   *
+   * Phase N-4
+   */
+  async getMyTokens(userId: string): Promise<PushTokenListResponseDto> {
+    const rows = await this.deviceTokenRepo.findByUserId(userId);
+    return {
+      tokens: rows.map((t) => ({
+        id: t.id,
+        tokenSuffix: `…${t.token.slice(-8)}`,
+        platform: t.platform,
+        isActive: t.isActive,
+        lastSeenAt: t.lastSeenAt.toISOString(),
+        createdAt: t.createdAt.toISOString(),
+      })),
+    };
+  }
+
   async registerPushToken(
     userId: string,
     dto: RegisterPushTokenDto,

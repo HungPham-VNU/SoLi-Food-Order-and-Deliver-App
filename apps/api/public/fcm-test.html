@@ -145,22 +145,67 @@
 
 <h1>SoLi FCM Push Test Page</h1>
 <p class="subtitle">
-  Development tool — generates a browser FCM token and lets you send test push notifications.<br>
+  Development tool — authenticates with the backend, generates a browser FCM token,
+  <strong>persists it to <code>device_tokens</code></strong>, and tests push delivery.<br>
   <strong>Open this page from the NestJS server only:</strong>
   <a href="http://localhost:3000/fcm-test.html"><code>http://localhost:3000/fcm-test.html</code></a>
-  — <em>not</em> Live Server, <em>not</em> <code>file://</code>.<br>
-  Requires a running backend at <code>http://localhost:3000</code> with Firebase credentials configured.
+  — <em>not</em> Live Server, <em>not</em> <code>file://</code>.
 </p>
 
-<!-- Step 1: Permission + Token -->
+<!-- =========================================================================
+  Step 0: Authenticate
+  Calls POST /api/auth/sign-in/email or POST /api/auth/sign-up/email.
+  The better-auth response contains a `token` field (Bearer token) that we
+  store in-memory and send as Authorization: Bearer <token> on all subsequent
+  protected requests.
+========================================================================== -->
 <div class="card">
-  <h2>Step 1 — Get FCM Token <span id="sw-status" class="status idle">checking SW…</span></h2>
+  <h2>Step 0 — Authenticate <span id="auth-status" class="status idle">not signed in</span></h2>
   <p class="hint">
-    Firebase Messaging requires a registered service worker and notification permission.
-    Click the button below to request permission and retrieve your browser FCM token.
+    Sign in to link your FCM token to your account. The token registration endpoint
+    (<code>POST /api/notifications/my/push-tokens</code>) requires a valid session.<br>
+    Try seeded dev accounts: <code>customer@soli.dev</code> / <code>owner@soli.dev</code>
+    (password set during <code>pnpm seed</code>) or sign up with any email below.
+  </p>
+  <div class="form-row" style="flex-direction: row; gap: 12px; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 200px;">
+      <label for="auth-email">Email</label>
+      <input id="auth-email" type="email" placeholder="customer@soli.dev" />
+    </div>
+    <div style="flex: 1; min-width: 180px;">
+      <label for="auth-password">Password</label>
+      <input id="auth-password" type="password" placeholder="••••••••" />
+    </div>
+    <div style="flex: 0 0 auto; align-self: flex-end; min-width: 160px;">
+      <label for="auth-name" style="font-size:0.8rem;font-weight:600;color:#495057">
+        Name <em style="font-weight:400">(sign-up only)</em>
+      </label>
+      <input id="auth-name" type="text" placeholder="Test User" />
+    </div>
+  </div>
+  <div class="actions" style="align-items: center;">
+    <button id="btn-signin"  class="btn-primary">Sign In</button>
+    <button id="btn-signup"  class="btn-warning" style="background:#ffc107;color:#000">Sign Up (new account)</button>
+    <button id="btn-signout" class="btn-danger" style="display:none">Sign Out</button>
+    <span   id="user-pill" style="display:none;background:#d1e7dd;color:#0a3622;border-radius:20px;padding:4px 12px;font-size:0.8rem;font-weight:600;"></span>
+  </div>
+</div>
+
+<!-- =========================================================================
+  Step 1: Get FCM Token + Auto-register in device_tokens
+  Requests notification permission, gets FCM token via Firebase SDK,
+  then IMMEDIATELY calls POST /api/notifications/my/push-tokens to persist it.
+========================================================================== -->
+<div class="card">
+  <h2>Step 1 — Get FCM Token &amp; Register in DB <span id="sw-status" class="status idle">checking SW…</span></h2>
+  <p class="hint">
+    Gets your browser FCM token from Firebase and <strong>registers it in the
+    <code>device_tokens</code> table</strong> via
+    <code>POST /api/notifications/my/push-tokens</code>.
+    Requires Step 0. Re-registering the same token refreshes <code>last_seen_at</code>.
   </p>
   <div class="actions">
-    <button id="btn-get-token" class="btn-primary">Request Permission &amp; Get Token</button>
+    <button id="btn-get-token" class="btn-primary">Request Permission &amp; Get + Register Token</button>
   </div>
   <div class="token-box" style="display:none" id="token-row">
     <textarea id="token-output" readonly></textarea>
@@ -172,8 +217,9 @@
 <div class="card">
   <h2>Step 2 — Send Test Push via Backend API</h2>
   <p class="hint">
-    Paste the token above into the field below (or it auto-fills), set a title and body,
-    then click Send. The backend calls Firebase Admin SDK → FCM → your browser.
+    Sends a push directly to a raw FCM token via the <strong>unauthenticated</strong> test
+    endpoint — bypasses device_tokens. Use to verify Firebase delivery works.
+    Token auto-fills from Step 1.
   </p>
   <div class="form-row">
     <label for="input-token">FCM Token</label>
@@ -192,18 +238,40 @@
   </div>
 </div>
 
+<!-- =========================================================================
+  Step 3: View registered tokens in device_tokens
+  Calls GET /api/notifications/my/push-tokens to show what the DB contains.
+========================================================================== -->
+<div class="card">
+  <h2>Step 3 — Verify Tokens in <code>device_tokens</code></h2>
+  <p class="hint">
+    Shows all tokens registered for your account (active + inactive).
+    Refreshes automatically after Step 1. Token values are masked to the last 8 characters.
+  </p>
+  <div class="actions">
+    <button id="btn-refresh-tokens" class="btn-primary">Refresh Token List</button>
+  </div>
+  <div id="token-table-empty" style="display:none;color:#6c757d;font-size:0.85rem;padding:12px 0">No tokens registered yet. Complete Step 1 first.</div>
+  <table id="token-table" style="display:none;width:100%;border-collapse:collapse;font-size:0.8rem;margin-top:10px">
+    <thead>
+      <tr>
+        <th style="text-align:left;padding:6px 8px;background:#f8f9fa;border-bottom:2px solid #dee2e6;font-size:0.75rem;color:#495057;text-transform:uppercase;letter-spacing:.03em">Token (masked)</th>
+        <th style="text-align:left;padding:6px 8px;background:#f8f9fa;border-bottom:2px solid #dee2e6;font-size:0.75rem;color:#495057;text-transform:uppercase;letter-spacing:.03em">Platform</th>
+        <th style="text-align:left;padding:6px 8px;background:#f8f9fa;border-bottom:2px solid #dee2e6;font-size:0.75rem;color:#495057;text-transform:uppercase;letter-spacing:.03em">Active</th>
+        <th style="text-align:left;padding:6px 8px;background:#f8f9fa;border-bottom:2px solid #dee2e6;font-size:0.75rem;color:#495057;text-transform:uppercase;letter-spacing:.03em">Last Seen</th>
+        <th style="text-align:left;padding:6px 8px;background:#f8f9fa;border-bottom:2px solid #dee2e6;font-size:0.75rem;color:#495057;text-transform:uppercase;letter-spacing:.03em">Registered</th>
+      </tr>
+    </thead>
+    <tbody id="token-table-body"></tbody>
+  </table>
+</div>
+
 <!-- Event log -->
 <div class="card">
   <h2>Event Log</h2>
   <div id="log" class="log"><span class="ts">--:--:-- </span><span class="info">Waiting for events…</span></div>
 </div>
 
-<!--
-  Firebase Web SDK (v10 modular)
-  Uses the CDN compat build so this page works without a bundler.
-  DO NOT upgrade to a major version without testing — the service worker
-  compat version must match the app version.
--->
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
   import {
@@ -213,7 +281,7 @@
   } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js';
 
   // ---------------------------------------------------------------------------
-  // Origin safety-check (mirrors the synchronous guard above)
+  // Origin safety-check
   // ---------------------------------------------------------------------------
   const EXPECTED_ORIGIN = 'http://localhost:3000';
   if (window.location.origin !== EXPECTED_ORIGIN) {
@@ -222,6 +290,12 @@
       `Service worker registration will 404. Open this page from ${EXPECTED_ORIGIN}/fcm-test.html`
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // State
+  // ---------------------------------------------------------------------------
+  let sessionToken = null;   // better-auth Bearer token
+  let sessionUser  = null;   // { id, email, name }
 
   // ---------------------------------------------------------------------------
   // Firebase project config — safe to include in client-side code.
@@ -251,7 +325,6 @@
     line.innerHTML = `<span class="ts">${ts} </span><span class="${type}">${msg}</span>`;
     logEl.appendChild(line);
     logEl.scrollTop = logEl.scrollHeight;
-    // Remove the placeholder line on first real entry
     const placeholder = logEl.querySelector('span.info');
     if (placeholder && placeholder.textContent === 'Waiting for events…') {
       placeholder.parentElement?.remove();
@@ -264,15 +337,50 @@
     el.className = `status ${cls}`;
   }
 
+  function setAuthStatus(text, cls) {
+    const el = document.getElementById('auth-status');
+    el.textContent = text;
+    el.className = `status ${cls}`;
+  }
+
+  function updateAuthUI() {
+    const signedIn = !!sessionToken;
+    document.getElementById('btn-signin').style.display  = signedIn ? 'none' : '';
+    document.getElementById('btn-signup').style.display  = signedIn ? 'none' : '';
+    document.getElementById('btn-signout').style.display = signedIn ? '' : 'none';
+    const pill = document.getElementById('user-pill');
+    if (signedIn && sessionUser) {
+      pill.textContent = `✓ ${sessionUser.email}`;
+      pill.style.display = '';
+      setAuthStatus('signed in', 'ok');
+    } else {
+      pill.style.display = 'none';
+      setAuthStatus('not signed in', 'idle');
+    }
+  }
+
+  // Build fetch options with Bearer auth header
+  function authFetchOpts(extra = {}) {
+    const headers = { 'Content-Type': 'application/json', ...(extra.headers ?? {}) };
+    if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
+    return { ...extra, headers };
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function fmtDate(iso) {
+    try {
+      return new Date(iso).toLocaleString('en-GB', {
+        day: '2-digit', month: '2-digit', year: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+      });
+    } catch { return iso; }
+  }
+
   // ---------------------------------------------------------------------------
   // Service Worker Registration
-  //
-  // firebase-messaging-sw.js MUST be served from the origin root (/).
-  // The SW scope defaults to its directory, giving it control over all pages
-  // at this origin — required for background message handling.
-  //
-  // We register manually (rather than letting getToken() auto-register) so we
-  // can report registration status to the user in the log.
   // ---------------------------------------------------------------------------
   let swRegistration = null;
 
@@ -289,26 +397,11 @@
         scope: '/',
       });
 
-      // ---------------------------------------------------------------------------
-      // SW update detection — when a new SW version is available, activate it
-      // immediately instead of waiting for all tabs to close.
-      //
-      // Flow:
-      //   1. reg.update() checks for a new SW version on every call.
-      //   2. If found, the new SW enters "installing" → "installed/waiting".
-      //   3. We detect the new worker via updatefound + statechange.
-      //   4. We send SKIP_WAITING to the new worker — it calls self.skipWaiting()
-      //      which makes it active immediately (the SW file also handles this
-      //      via its own install event, but belt-and-suspenders here).
-      //   5. The 'controllerchange' event fires when the new SW takes control.
-      //      We log a notice so the developer knows the SW was refreshed.
-      // ---------------------------------------------------------------------------
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;
         if (!newWorker) return;
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            // New SW is waiting — trigger it to activate immediately
             log('SW update found — activating new service worker…', 'info');
             newWorker.postMessage({ type: 'SKIP_WAITING' });
           }
@@ -344,27 +437,7 @@
   const messaging = getMessaging(firebaseApp);
 
   // ---------------------------------------------------------------------------
-  // Foreground message handler
-  //
-  // IMPORTANT — FCM foreground vs background behaviour:
-  //
-  //   When a message has a top-level `notification` key, the browser/SW
-  //   intercepts the push event BEFORE the main thread sees it. In a foreground
-  //   tab, Chrome silently drops the event without calling onMessage(). The user
-  //   sees nothing and the JavaScript callback never fires.
-  //
-  //   When a message is DATA-ONLY (no top-level `notification` key), FCM routes
-  //   the message to:
-  //     - onMessage() in THIS tab (foreground)
-  //     - onBackgroundMessage() in the service worker (background)
-  //   Both handlers then manually display the notification.
-  //
-  //   The SoLi backend sends data-only messages so this handler always fires
-  //   when the tab is in the foreground. All notification fields (title, body,
-  //   icon, link) are in payload.data.
-  //
-  // Background messages (tab hidden or closed) are handled by the service
-  // worker in firebase-messaging-sw.js.
+  // Foreground message handler (data-only FCM payload)
   // ---------------------------------------------------------------------------
   onMessage(messaging, (payload) => {
     console.log('[FCM] onMessage fired (foreground):', payload);
@@ -395,11 +468,99 @@
   });
 
   // ---------------------------------------------------------------------------
-  // Step 1: Get FCM Token
+  // Step 0: Authentication via better-auth Bearer token
+  // ---------------------------------------------------------------------------
+  async function authCall(endpoint, label) {
+    const email    = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value.trim();
+    const name     = document.getElementById('auth-name').value.trim() || 'Test User';
+
+    if (!email || !password) { log('Email and password are required.', 'warn'); return; }
+
+    setAuthStatus('authenticating…', 'loading');
+    log(`Calling ${endpoint}…`, 'info');
+
+    try {
+      const body = endpoint.includes('sign-up') ? { email, password, name } : { email, password };
+      const res  = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setAuthStatus('failed', 'error');
+        log(`${label} failed (${res.status}): ${data.message ?? JSON.stringify(data)}`, 'err');
+        return;
+      }
+
+      sessionToken = data.token;
+      sessionUser  = data.user;
+      updateAuthUI();
+      log(`✅ ${label} successful — signed in as ${sessionUser.email} (userId: ${sessionUser.id})`, 'ok');
+    } catch (err) {
+      setAuthStatus('error', 'error');
+      log(`${label} request failed: ${err.message}`, 'err');
+    }
+  }
+
+  document.getElementById('btn-signin').addEventListener('click',  () => authCall('/api/auth/sign-in/email', 'Sign In'));
+  document.getElementById('btn-signup').addEventListener('click',  () => authCall('/api/auth/sign-up/email', 'Sign Up'));
+  document.getElementById('btn-signout').addEventListener('click', () => {
+    sessionToken = null;
+    sessionUser  = null;
+    updateAuthUI();
+    log('Signed out. Session token cleared.', 'info');
+  });
+
+  // ---------------------------------------------------------------------------
+  // Token registration helper — CRITICAL step that writes to device_tokens
+  // ---------------------------------------------------------------------------
+  async function registerTokenWithBackend(fcmToken) {
+    if (!sessionToken) {
+      log('⚠️  Skipping token registration — not signed in (Step 0).', 'warn');
+      log('   Complete Step 0 first, then click "Get + Register Token" again.', 'warn');
+      return false;
+    }
+
+    log('Registering FCM token with backend (POST /api/notifications/my/push-tokens)…', 'info');
+
+    try {
+      const res = await fetch('/api/notifications/my/push-tokens', {
+        method: 'POST',
+        ...authFetchOpts(),
+        body: JSON.stringify({ token: fcmToken, platform: 'web' }),
+      });
+      const data = await res.json();
+
+      if (res.status === 401) {
+        log('❌ Token registration failed: 401 Unauthorized — sign in again in Step 0.', 'err');
+        sessionToken = null; sessionUser = null; updateAuthUI();
+        return false;
+      }
+      if (!res.ok) {
+        log(`❌ Token registration failed (${res.status}): ${JSON.stringify(data)}`, 'err');
+        return false;
+      }
+
+      log(`✅ Token registered in device_tokens! Response: ${JSON.stringify(data)}`, 'ok');
+      return true;
+    } catch (err) {
+      log(`❌ Token registration request failed: ${err.message}`, 'err');
+      return false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Step 1: Get FCM Token + Register in device_tokens
   // ---------------------------------------------------------------------------
   document.getElementById('btn-get-token').addEventListener('click', async () => {
-    log('Requesting notification permission…', 'info');
+    if (!sessionToken) {
+      log('⚠️  Please complete Step 0 (Sign In) first — token registration requires auth.', 'warn');
+    }
 
+    log('Requesting notification permission…', 'info');
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
       log(`Permission denied: ${permission}. Enable notifications in browser settings.`, 'err');
@@ -412,27 +573,34 @@
       if (!swRegistration) return;
     }
 
+    let fcmToken;
     try {
-      log('Fetching FCM registration token…', 'info');
-      const token = await getToken(messaging, {
+      log('Fetching FCM registration token from Firebase…', 'info');
+      fcmToken = await getToken(messaging, {
         vapidKey: VAPID_KEY,
         serviceWorkerRegistration: swRegistration,
       });
 
-      if (!token) {
+      if (!fcmToken) {
         log('getToken() returned empty — check Firebase project config and VAPID key.', 'err');
         return;
       }
 
-      log(`FCM token obtained (${token.length} chars).`, 'ok');
-      log(`Token: ${token.substring(0, 30)}…`, 'info');
+      log(`FCM token obtained (${fcmToken.length} chars).`, 'ok');
+      log(`Token preview: ${fcmToken.substring(0, 30)}…${fcmToken.slice(-8)}`, 'info');
 
-      // Show token in the UI
       document.getElementById('token-row').style.display = 'flex';
-      document.getElementById('token-output').value = token;
-      document.getElementById('input-token').value = token;
+      document.getElementById('token-output').value = fcmToken;
+      document.getElementById('input-token').value  = fcmToken;
     } catch (err) {
       log(`getToken() failed: ${err.message}`, 'err');
+      return;
+    }
+
+    // ← THE FIX: persist the token to device_tokens
+    const registered = await registerTokenWithBackend(fcmToken);
+    if (registered) {
+      await loadMyTokens();  // Refresh Step 3 table
     }
   });
 
@@ -490,10 +658,70 @@
     }
   });
 
+  // ---------------------------------------------------------------------------
+  // Step 3: Load and display registered tokens from device_tokens
+  // ---------------------------------------------------------------------------
+  async function loadMyTokens() {
+    if (!sessionToken) {
+      log('Step 3: Cannot list tokens — not signed in.', 'warn');
+      return;
+    }
+    try {
+      const res = await fetch('/api/notifications/my/push-tokens', authFetchOpts());
+      if (res.status === 401) { log('Step 3: 401 — session expired, sign in again.', 'err'); return; }
+      if (!res.ok) { log(`Step 3: GET failed (${res.status})`, 'err'); return; }
+      const data = await res.json();
+      renderTokenTable(data.tokens ?? []);
+    } catch (err) {
+      log(`Step 3: Request failed: ${err.message}`, 'err');
+    }
+  }
+
+  function renderTokenTable(tokens) {
+    const table = document.getElementById('token-table');
+    const empty = document.getElementById('token-table-empty');
+    const tbody = document.getElementById('token-table-body');
+    tbody.innerHTML = '';
+
+    if (tokens.length === 0) {
+      table.style.display = 'none';
+      empty.style.display = '';
+      log('Step 3: No tokens in device_tokens for this user.', 'warn');
+      return;
+    }
+    empty.style.display = 'none';
+    table.style.display = '';
+
+    tokens.forEach((t) => {
+      const activeBadge = t.isActive
+        ? '<span style="background:#d1e7dd;color:#0a3622;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600">active</span>'
+        : '<span style="background:#f8d7da;color:#58151c;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600">inactive</span>';
+      const platformBadge = `<span style="background:#cff4fc;color:#0c5460;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600">${escHtml(t.platform)}</span>`;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-family:monospace;font-size:.75rem;padding:6px 8px;border-bottom:1px solid #f0f0f0">${escHtml(t.tokenSuffix)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #f0f0f0">${platformBadge}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #f0f0f0">${activeBadge}</td>
+        <td style="font-size:.75rem;color:#6c757d;padding:6px 8px;border-bottom:1px solid #f0f0f0">${fmtDate(t.lastSeenAt)}</td>
+        <td style="font-size:.75rem;color:#6c757d;padding:6px 8px;border-bottom:1px solid #f0f0f0">${fmtDate(t.createdAt)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    log(`Step 3: Found ${tokens.length} token(s) in device_tokens for userId=${sessionUser?.id ?? '?'}.`, 'ok');
+  }
+
+  document.getElementById('btn-refresh-tokens').addEventListener('click', loadMyTokens);
+
+  // ---------------------------------------------------------------------------
   // Auto-register service worker on page load for readiness
+  // ---------------------------------------------------------------------------
   window.addEventListener('load', async () => {
     swRegistration = await registerServiceWorker();
   });
+
+  // Initial UI sync
+  updateAuthUI();
 </script>
 </body>
 </html>

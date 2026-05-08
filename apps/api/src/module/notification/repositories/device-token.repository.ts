@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
 import * as schema from '@/drizzle/schema';
@@ -23,6 +23,20 @@ export class DeviceTokenRepository {
   constructor(
     @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
   ) {}
+
+  /**
+   * Find ALL device tokens for a user (active + inactive).
+   * Used by `GET /notifications/my/push-tokens` so users can inspect their
+   * registered devices and debug missing-token issues.
+   * Results are sorted newest-first by createdAt.
+   */
+  async findByUserId(userId: string): Promise<DeviceToken[]> {
+    return this.db
+      .select()
+      .from(deviceTokens)
+      .where(eq(deviceTokens.userId, userId))
+      .orderBy(desc(deviceTokens.createdAt));
+  }
 
   /**
    * Find all active device tokens for a user.

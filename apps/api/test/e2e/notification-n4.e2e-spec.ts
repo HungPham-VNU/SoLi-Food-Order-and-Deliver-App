@@ -12,6 +12,8 @@
  *    §1.6 User B cannot deactivate User A's token (DB WHERE enforces ownership)
  *    §1.7 Validation: missing token → 400
  *    §1.8 Auth guard: 401 without token
+ *    §1.9 GET /notifications/my/push-tokens → lists tokens with masked suffix
+ *    §1.10 GET /notifications/my/push-tokens → 401 without auth
  *
  *  §2  Notification Preferences
  *    §2.1 GET /notifications/my/preferences → system defaults when no row
@@ -303,6 +305,38 @@ describe('§1 Push Token CRUD', () => {
       .post('/api/notifications/my/push-tokens')
       .send({ token: 'some-token', platform: 'ios' });
 
+    expect(res.status).toBe(401);
+  });
+
+  it('§1.9 GET /notifications/my/push-tokens → lists tokens with masked suffix', async () => {
+    // Register a token first so there is something to list
+    const testToken = `e2e-get-list-token-${Date.now()}`;
+    await http
+      .post('/api/notifications/my/push-tokens')
+      .set(authHeader(customerToken))
+      .send({ token: testToken, platform: 'web' });
+
+    const res = await http
+      .get('/api/notifications/my/push-tokens')
+      .set(authHeader(customerToken));
+
+    expect(res.status).toBe(200);
+    expect(res.body.tokens).toBeInstanceOf(Array);
+    expect(res.body.tokens.length).toBeGreaterThan(0);
+    const item = res.body.tokens.find((t: any) => t.tokenSuffix.endsWith(testToken.slice(-8)));
+    expect(item).toBeDefined();
+    expect(item).toMatchObject({
+      platform: 'web',
+      isActive: expect.any(Boolean),
+      tokenSuffix: expect.stringMatching(/^\u2026/),
+      lastSeenAt: expect.any(String),
+      createdAt: expect.any(String),
+    });
+    expect(item).not.toHaveProperty('token');
+  });
+
+  it('§1.10 GET /notifications/my/push-tokens → 401 without auth', async () => {
+    const res = await http.get('/api/notifications/my/push-tokens');
     expect(res.status).toBe(401);
   });
 });

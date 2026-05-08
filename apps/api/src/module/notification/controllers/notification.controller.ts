@@ -37,6 +37,7 @@ import {
   RegisterPushTokenResponseDto,
   RemovePushTokenDto,
   RemovePushTokenResponseDto,
+  PushTokenListResponseDto,
 } from '../dto/device-token.dto';
 import {
   NotificationPreferenceResponseDto,
@@ -58,6 +59,7 @@ import { TestPushDto, TestPushResponseDto } from '../dto/test-push.dto';
  *  GET  /notifications/my/preferences  — notification delivery preferences
  *  PATCH /notifications/my/read-all  — bulk mark all as read
  *  PATCH /notifications/my/preferences — update delivery preferences
+ *  GET   /notifications/my/push-tokens — list all registered push tokens (masked)
  *  POST  /notifications/my/push-tokens — register a push device token
  *  DELETE /notifications/my/push-tokens — deactivate a push device token
  *  PATCH /notifications/:id/read     — mark single notification as read
@@ -255,6 +257,34 @@ export class NotificationController {
     @Body() dto: UpdateNotificationPreferenceDto,
   ): Promise<NotificationPreferenceResponseDto> {
     return this.notificationService.updatePreferences(session.user.id, dto);
+  }
+
+  // ---------------------------------------------------------------------------
+  // GET /notifications/my/push-tokens
+  // ---------------------------------------------------------------------------
+
+  /**
+   * List all push device tokens registered for the current user.
+   *
+   * Returns both active and inactive tokens so users can see the full history
+   * of their registered devices. Token values are masked to the last 8
+   * characters — full tokens are never returned from the API.
+   *
+   * Useful for:
+   *  - Debugging missing push notifications ("is my browser token registered?")
+   *  - Multi-device management UIs
+   *  - Verifying that registration succeeded after calling POST
+   */
+  @Get('my/push-tokens')
+  @ApiOperation({
+    summary: "List current user's registered push device tokens",
+  })
+  @ApiOkResponse({ type: PushTokenListResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Not authenticated' })
+  async getMyPushTokens(
+    @Session() session: UserSession,
+  ): Promise<PushTokenListResponseDto> {
+    return this.notificationService.getMyTokens(session.user.id);
   }
 
   // ---------------------------------------------------------------------------

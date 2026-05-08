@@ -80,3 +80,48 @@ export class RemovePushTokenResponseDto {
   })
   removed!: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Response DTOs for GET /notifications/my/push-tokens
+// ---------------------------------------------------------------------------
+
+/**
+ * Single device token entry returned by GET /notifications/my/push-tokens.
+ * The token value itself is partially masked (last 8 chars only) for security
+ * — callers only need to know the platform and active state, not the full token.
+ */
+export class PushTokenItemDto {
+  @ApiProperty({ description: 'Token UUID (primary key)', format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({
+    description:
+      'FCM registration token — masked to last 8 characters for security. ' +
+      'The full token is only stored server-side.',
+    example: '…xyz12345',
+  })
+  tokenSuffix!: string;
+
+  @ApiProperty({
+    description: 'Device platform',
+    enum: devicePlatformEnum.enumValues,
+  })
+  platform!: DevicePlatform;
+
+  @ApiProperty({ description: 'Whether this token is currently active' })
+  isActive!: boolean;
+
+  @ApiProperty({ description: 'Last time this token was seen or refreshed', format: 'date-time' })
+  lastSeenAt!: string;
+
+  @ApiProperty({ description: 'When this token was first registered', format: 'date-time' })
+  createdAt!: string;
+}
+
+/**
+ * Response for GET /notifications/my/push-tokens.
+ */
+export class PushTokenListResponseDto {
+  @ApiProperty({ type: [PushTokenItemDto] })
+  tokens!: PushTokenItemDto[];
+}
