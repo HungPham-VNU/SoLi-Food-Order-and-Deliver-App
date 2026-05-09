@@ -8,8 +8,6 @@ const ACTIVE_COLOR = '#0d631b';
 const INACTIVE_COLOR = '#707a6c';
 const TAB_BAR_BG = '#f8faf7';
 
-const TAB_CONTENT_HEIGHT = Platform.OS === 'ios' ? 56 : 52;
-
 type TabBarIconProps = {
   children: ReactNode;
   color: string;
@@ -31,7 +29,11 @@ function TabBarIcon({ children, focused }: TabBarIconProps) {
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  const bottomInset = insets.bottom;
+
+  // Dynamically adjust padding and height based on the device's safe area bottom inset.
+  // Add a minimum padding for devices that don't have a bottom notch/bar.
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 10);
+  const baseHeight = Platform.OS === 'ios' ? 56 : 56;
 
   return (
     <Tabs
@@ -55,9 +57,9 @@ export default function TabsLayout() {
           shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.06,
           shadowRadius: 24,
-          height: TAB_CONTENT_HEIGHT + bottomInset,
+          height: baseHeight + bottomPadding,
+          paddingBottom: bottomPadding,
           paddingTop: 8,
-          paddingBottom: bottomInset,
         },
         tabBarItemStyle: {
           paddingVertical: 4,
