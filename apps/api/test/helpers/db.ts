@@ -6,7 +6,7 @@
  * API endpoint (e.g. confirm a record is truly deleted, or read raw JSONB).
  */
 
-import { asc, eq } from 'drizzle-orm';
+import { asc, desc, eq } from 'drizzle-orm';
 import type { OrderingMenuItemSnapshot } from '../../src/module/ordering/acl/schemas/menu-item-snapshot.schema';
 import { orderingMenuItemSnapshots } from '../../src/module/ordering/acl/schemas/menu-item-snapshot.schema';
 import type { OrderingRestaurantSnapshot } from '../../src/module/ordering/acl/schemas/restaurant-snapshot.schema';
@@ -23,6 +23,12 @@ import {
   orderItems,
   orderStatusLogs,
 } from '../../src/module/ordering/order/order.schema';
+import type { Notification } from '../../src/module/notification/domain/notification.schema';
+import { notifications } from '../../src/module/notification/domain/notification.schema';
+import type { DeviceToken } from '../../src/module/notification/domain/device-token.schema';
+import { deviceTokens } from '../../src/module/notification/domain/device-token.schema';
+import type { NotificationDeliveryLog } from '../../src/module/notification/domain/notification-delivery-log.schema';
+import { notificationDeliveryLogs } from '../../src/module/notification/domain/notification-delivery-log.schema';
 import { getTestDb } from '../setup/db-setup';
 
 /**
@@ -108,4 +114,65 @@ export async function getOrderTimeline(
     .from(orderStatusLogs)
     .where(eq(orderStatusLogs.orderId, orderId))
     .orderBy(asc(orderStatusLogs.createdAt));
+}
+
+/**
+ * Reads all in-app notification rows for a given recipient, newest first.
+ * Use for E2E assertions after triggering events that produce notifications.
+ */
+export async function getNotificationsForUser(
+  recipientId: string,
+): Promise<Notification[]> {
+  const db = getTestDb();
+  return db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.recipientId, recipientId))
+    .orderBy(desc(notifications.createdAt));
+}
+
+/**
+ * Reads a single notification row by its UUID.
+ * Returns null when the row does not exist.
+ */
+export async function getNotification(
+  id: string,
+): Promise<Notification | null> {
+  const db = getTestDb();
+  const rows = await db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.id, id))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/**
+ * Reads all device token rows for a given user.
+ * Use for E2E assertions after registering / removing push tokens.
+ */
+export async function getDeviceTokensForUser(
+  userId: string,
+): Promise<DeviceToken[]> {
+  const db = getTestDb();
+  return db
+    .select()
+    .from(deviceTokens)
+    .where(eq(deviceTokens.userId, userId))
+    .orderBy(asc(deviceTokens.createdAt));
+}
+
+/**
+ * Reads all delivery log rows for a given notification, in attempt order.
+ * Use for E2E assertions to verify channel delivery outcomes.
+ */
+export async function getDeliveryLogsForNotification(
+  notificationId: string,
+): Promise<NotificationDeliveryLog[]> {
+  const db = getTestDb();
+  return db
+    .select()
+    .from(notificationDeliveryLogs)
+    .where(eq(notificationDeliveryLogs.notificationId, notificationId))
+    .orderBy(asc(notificationDeliveryLogs.attemptedAt));
 }
