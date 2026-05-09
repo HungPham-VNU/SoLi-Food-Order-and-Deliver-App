@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -9,6 +10,7 @@ import { CLOUDINARY_CLIENT } from './cloudinary.constants';
 import type { CloudinarySignatureResponseDto } from './dto/cloudinary.dto';
 
 const DEFAULT_FOLDER = 'app-images';
+const FOLDER_PATTERN = /^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/;
 
 @Injectable()
 export class CloudinaryService {
@@ -17,6 +19,25 @@ export class CloudinaryService {
     private readonly cloudinaryClient: typeof cloudinary,
     private readonly configService: ConfigService,
   ) {}
+
+  private resolveSafeFolder(folder?: string): string {
+    const trimmed = folder?.trim();
+    if (!trimmed) return DEFAULT_FOLDER;
+
+    if (trimmed.startsWith('/') || trimmed.startsWith('\\')) {
+      throw new BadRequestException('Invalid Cloudinary folder path.');
+    }
+
+    if (trimmed.includes('../') || trimmed.includes('..\\')) {
+      throw new BadRequestException('Invalid Cloudinary folder path.');
+    }
+
+    if (!FOLDER_PATTERN.test(trimmed)) {
+      throw new BadRequestException('Invalid Cloudinary folder path.');
+    }
+
+    return trimmed;
+  }
 
   getUploadSignature(folder?: string): CloudinarySignatureResponseDto {
     const cloudName = this.configService.get<string>('CLOUDINARY_CLOUD_NAME');
@@ -29,7 +50,7 @@ export class CloudinaryService {
       );
     }
 
-    const safeFolder = folder?.trim() || DEFAULT_FOLDER;
+    const safeFolder = this.resolveSafeFolder(folder);
     const timestamp = Math.round(Date.now() / 1000);
     const signature = this.cloudinaryClient.utils.api_sign_request(
       { timestamp, folder: safeFolder },

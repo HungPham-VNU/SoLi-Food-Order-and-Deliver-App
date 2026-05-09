@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  ParseIntPipe,
-  Post,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import {
   ApiBearerAuth,
@@ -21,6 +14,7 @@ import {
   CreateImageDto,
   ImageListResponseDto,
   ImageResponseDto,
+  PaginationQueryDto,
 } from './dto/image.dto';
 
 @ApiTags('Images')
@@ -38,11 +32,8 @@ export class ImageController {
   @ApiQuery({ name: 'offset', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiOkResponse({ type: ImageListResponseDto })
-  findAll(
-    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
-  ) {
-    return this.service.findAll(offset, limit);
+  findAll(@Query() pagination: PaginationQueryDto) {
+    return this.service.findAll(pagination.offset, pagination.limit);
   }
 
   @Post()

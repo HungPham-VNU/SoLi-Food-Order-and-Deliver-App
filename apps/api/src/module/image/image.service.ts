@@ -11,7 +11,10 @@ export class ImageService {
   constructor(private readonly repo: ImageRepository) {}
 
   async findAll(offset?: number, limit?: number): Promise<PaginatedImages> {
-    const safeLimit = Math.min(limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const safeLimit = Math.min(
+      Math.max(limit ?? DEFAULT_PAGE_SIZE, 1),
+      MAX_PAGE_SIZE,
+    );
     const safeOffset = Math.max(0, offset ?? 0);
     return this.repo.findAll(safeOffset, safeLimit);
   }

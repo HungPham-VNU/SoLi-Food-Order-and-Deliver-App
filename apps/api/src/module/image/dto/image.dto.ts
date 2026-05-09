@@ -1,5 +1,34 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsString, IsUrl, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsInt, IsOptional, IsString, IsUrl, Max, Min } from 'class-validator';
+
+export class PaginationQueryDto {
+  @ApiPropertyOptional({
+    description: 'Pagination offset',
+    example: 0,
+    minimum: 0,
+    default: 0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  offset: number = 0;
+
+  @ApiPropertyOptional({
+    description: 'Page size',
+    example: 20,
+    minimum: 1,
+    maximum: 100,
+    default: 20,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit: number = 20;
+}
 
 export class CreateImageDto {
   @ApiProperty({
