@@ -1,6 +1,6 @@
 import 'react-native-reanimated';
 import '../global.css';
-import { AppState, Platform } from 'react-native';
+import { AppState, Platform, ActivityIndicator, View } from 'react-native';
 import {
   QueryClient,
   QueryClientProvider,
@@ -10,7 +10,7 @@ import {
 import NetInfo from '@react-native-community/netinfo';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+
 import { useSession } from '@/src/lib/auth-client';
 
 function RootNavigation() {
@@ -22,7 +22,7 @@ function RootNavigation() {
     if (isPending) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    
+
     if (session && inAuthGroup) {
       // Redirect to customer flow if logged in but in auth flow
       router.replace('/(customer)/(tabs)');
@@ -30,7 +30,7 @@ function RootNavigation() {
       // Redirect to auth flow if not logged in but in customer flow
       router.replace('/(auth)');
     }
-  }, [session, isPending, segments]);
+  }, [session, isPending, segments, router]);
 
   if (isPending) {
     return (
