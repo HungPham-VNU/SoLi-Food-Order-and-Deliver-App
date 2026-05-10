@@ -17,7 +17,9 @@ import {
   ShoppingBag,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { formatCurrency, formatPrice } from '@/src/lib/format-utils';
+import { formatCurrency } from '@/src/lib/format-utils';
+import { MenuItemDetailScreenProps, ModifierGroup } from '../types';
+import { useMenuItem, useMenuItemModifiers } from '../api/restaurant-api';
 
 export function MenuItemDetailScreen({
   itemId,
@@ -33,13 +35,26 @@ export function MenuItemDetailScreen({
   const { data: item, isLoading: isLoadingItem } = useMenuItem(itemId);
   const { data: modifierGroups, isLoading: isLoadingModifiers } = useMenuItemModifiers(itemId);
 
+  // Sync favorited state from server
+  React.useEffect(() => {
+    if (item) {
+      // setIsFavorited(!!item.isFavorited); // Assuming API might have this
+    }
+  }, [item]);
+
   const toggleOption = (optionId: string, group: ModifierGroup) => {
     setSelectedOptionIds(prev => {
       const isSelected = prev.includes(optionId);
       
       // If it's a radio group (maxSelections = 1)
       if (group.maxSelections === 1) {
-        if (isSelected) return prev; // Cannot deselect if it's required? Actually let's just replace.
+        if (isSelected) {
+          // If optional, allow deselection
+          if (group.minSelections === 0) {
+            return prev.filter(id => id !== optionId);
+          }
+          return prev;
+        }
         const otherOptionsInGroup = group.options.map(o => o.id);
         const filtered = prev.filter(id => !otherOptionsInGroup.includes(id));
         return [...filtered, optionId];
@@ -59,6 +74,17 @@ export function MenuItemDetailScreen({
     });
   };
 
+  const areRequiredModifiersSelected = useMemo(() => {
+    if (!modifierGroups) return true;
+    return modifierGroups.every(group => {
+      if (group.minSelections === 0) return true;
+      const selectedInGroupCount = selectedOptionIds.filter(id => 
+        group.options.some(o => o.id === id)
+      ).length;
+      return selectedInGroupCount >= group.minSelections;
+    });
+  }, [modifierGroups, selectedOptionIds]);
+
   const calculateTotal = () => {
     if (!item) return 0;
     const optionsTotal = selectedOptionIds.reduce((acc, id) => {
@@ -66,6 +92,22 @@ export function MenuItemDetailScreen({
       return acc + (option?.price || 0);
     }, 0);
     return (item.price + optionsTotal) * quantity;
+  };
+
+  const handleAddToCart = () => {
+    if (!areRequiredModifiersSelected) return;
+    
+    const selections: Record<string, string[]> = {};
+    modifierGroups?.forEach(group => {
+      const selectedInGroup = selectedOptionIds.filter(id => 
+        group.options.some(o => o.id === id)
+      );
+      if (selectedInGroup.length > 0) {
+        selections[group.id] = selectedInGroup;
+      }
+    });
+    
+    onAddToCart?.(itemId, quantity, selections);
   };
 
   const isLoading = isLoadingItem || isLoadingModifiers;
@@ -258,32 +300,6 @@ export function MenuItemDetailScreen({
             {areRequiredModifiersSelected 
               ? `Add to Cart • ${formatCurrency(calculateTotal())}`
               : 'Select required options'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
- );
-                })}
-              </View>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
-
-      {/* Fixed Bottom Action Bar */}
-      <View 
-        className="fixed bottom-0 left-0 w-full p-4 bg-surface/80 backdrop-blur-xl border-t-0 shadow-[0_-8px_32px_rgba(26,28,28,0.08)] z-50 rounded-t-xl sm:px-6"
-        style={{ paddingBottom: Math.max(insets.bottom, 16) }}
-      >
-        <TouchableOpacity 
-          onPress={() => onAddToCart?.(itemId, quantity, selectedOptionIds)}
-          className="w-full flex-row items-center justify-center gap-3 rounded-full bg-primary py-4 shadow-lg active:scale-[0.98]"
-        >
-          <ShoppingBag size={24} color="#ffffff" />
-          <Text className="font-jakarta-sans font-bold text-lg text-white">
-            Add to Cart • {formatCurrency(calculateTotal())}
           </Text>
         </TouchableOpacity>
       </View>
