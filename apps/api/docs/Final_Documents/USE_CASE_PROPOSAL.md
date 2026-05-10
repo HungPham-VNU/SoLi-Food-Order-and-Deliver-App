@@ -202,7 +202,7 @@ Use cases are grouped into 12 functional domains aligned with the bounded contex
 | UC-AUTH-10 | Impersonate a user account (admin debug) | System Administrator | P3 | **Partial** |
 | UC-AUTH-11 | Sign in via social identity provider (OAuth) | Guest | P3 | **Planned** |
 | UC-AUTH-12 | Reset forgotten password | Registered User | P2 | **Partial** |
-
+  
 **Implementation Notes:**
 - Authentication is fully delegated to the `better-auth` library with the `emailAndPassword` plugin enabled (`auth.ts`).
 - The `admin` plugin is loaded, enabling role management, user banning, and impersonation at the library level.
