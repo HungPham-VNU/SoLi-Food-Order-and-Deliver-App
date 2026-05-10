@@ -5,9 +5,10 @@ interface SignUpFieldProps extends TextInputProps {
   label: string;
   icon: ReactNode;
   isFocused: boolean;
+  error?: string;
 }
 
-export function SignUpField({ label, icon, isFocused, ...inputProps }: SignUpFieldProps) {
+export function SignUpField({ label, icon, isFocused, error, ...inputProps }: SignUpFieldProps) {
   return (
     <View className="gap-y-2">
       <Text
@@ -21,8 +22,8 @@ export function SignUpField({ label, icon, isFocused, ...inputProps }: SignUpFie
         className="flex-row items-center rounded-xl overflow-hidden"
         style={{
           backgroundColor: isFocused ? "#ffffff" : "#e8e8e8",
-          borderWidth: isFocused ? 2 : 0,
-          borderColor: isFocused ? "rgba(13, 99, 27, 0.3)" : "transparent",
+          borderWidth: isFocused ? 2 : (error ? 1 : 0),
+          borderColor: isFocused ? "rgba(13, 99, 27, 0.3)" : (error ? "#ff4d4d" : "transparent"),
         }}
       >
         <View className="pl-4 pr-2">{icon}</View>
@@ -33,6 +34,14 @@ export function SignUpField({ label, icon, isFocused, ...inputProps }: SignUpFie
           {...inputProps}
         />
       </View>
+      {!!error && (
+        <Text
+          className="text-[#ff4d4d] text-xs ml-1"
+          style={{ fontFamily: "Inter_500Medium" }}
+        >
+          {error}
+        </Text>
+      )}
     </View>
   );
 }

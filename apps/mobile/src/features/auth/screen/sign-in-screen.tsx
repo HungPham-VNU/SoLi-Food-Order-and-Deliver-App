@@ -11,9 +11,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, ArrowRight, Mail, Lock, Sprout } from "lucide-react-native";
 import Svg, { Path } from "react-native-svg";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import { SignInField } from "@/src/features/auth/components";
-import type { SignInScreenProps } from "@/src/features/auth/types";
+import type { SignInScreenProps, SignInFormData } from "@/src/features/auth/types";
+import { signInSchema } from "@/src/features/auth/types";
 
 // ─── Google Icon ──────────────────────────────────────────────────────────────
 const GoogleIcon = () => (
@@ -48,14 +51,24 @@ export function SignInScreen({
   onSignUp,
 }: SignInScreenProps) {
   const insets = useSafeAreaInsets();
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
-  const handleSignIn = () => {
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignInFormData>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+    mode: "onBlur",
+  });
+
+  const handleSignIn = (data: SignInFormData) => {
     if (isLoading) return;
-    onSignIn?.({ email, password });
+    onSignIn?.(data);
   };
 
   return (
@@ -134,18 +147,28 @@ export function SignInScreen({
 
         {/* ── Form Fields ──────────────────────────────────────────────────── */}
         <View className="gap-y-5">
-          <SignInField
-            label="Email Address"
-            icon={<Mail size={20} color="#707a6c" />}
-            isFocused={focusedField === "email"}
-            placeholder="hello@example.com"
-            value={email}
-            onChangeText={setEmail}
-            onFocus={() => setFocusedField("email")}
-            onBlur={() => setFocusedField(null)}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
+          <Controller
+            control={control}
+            name="email"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <SignInField
+                label="Email Address"
+                icon={<Mail size={20} color="#707a6c" />}
+                isFocused={focusedField === "email"}
+                placeholder="hello@example.com"
+                value={value}
+                onChangeText={onChange}
+                onFocus={() => setFocusedField("email")}
+                onBlur={() => {
+                  onBlur();
+                  setFocusedField(null);
+                }}
+                error={errors.email?.message}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+              />
+            )}
           />
 
           {/* Password with inline "Forgot Password?" */}
@@ -167,24 +190,34 @@ export function SignInScreen({
               </TouchableOpacity>
             </View>
 
-            <SignInField
-              label=""
-              icon={<Lock size={20} color="#707a6c" />}
-              isFocused={focusedField === "password"}
-              placeholder="••••••••"
-              value={password}
-              onChangeText={setPassword}
-              onFocus={() => setFocusedField("password")}
-              onBlur={() => setFocusedField(null)}
-              isPassword
-              autoComplete="current-password"
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <SignInField
+                  label=""
+                  icon={<Lock size={20} color="#707a6c" />}
+                  isFocused={focusedField === "password"}
+                  placeholder="••••••••"
+                  value={value}
+                  onChangeText={onChange}
+                  onFocus={() => setFocusedField("password")}
+                  onBlur={() => {
+                    onBlur();
+                    setFocusedField(null);
+                  }}
+                  error={errors.password?.message}
+                  isPassword
+                  autoComplete="current-password"
+                />
+              )}
             />
           </View>
 
           {/* ── Sign In CTA ──────────────────────────────────────────────── */}
           <View className="pt-2">
             <TouchableOpacity
-              onPress={handleSignIn}
+              onPress={handleSubmit(handleSignIn)}
               activeOpacity={0.88}
               className="rounded-full overflow-hidden"
               style={{
@@ -262,7 +295,7 @@ export function SignInScreen({
             className="text-[#40493d] text-sm"
             style={{ fontFamily: "Inter_400Regular" }}
           >
-            Don't have an account?
+            Don't have an account?{" "}
             <Text
               className="text-[#8b5000]"
               style={{ fontFamily: "PlusJakartaSans_700Bold" }}

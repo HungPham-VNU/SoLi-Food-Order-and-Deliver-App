@@ -7,6 +7,7 @@ interface SignInFieldProps extends TextInputProps {
   icon: ReactNode;
   isFocused: boolean;
   isPassword?: boolean;
+  error?: string;
 }
 
 export function SignInField({
@@ -14,6 +15,7 @@ export function SignInField({
   icon,
   isFocused,
   isPassword = false,
+  error,
   ...inputProps
 }: SignInFieldProps) {
   const [isVisible, setIsVisible] = useState(false);
@@ -33,8 +35,8 @@ export function SignInField({
         className="flex-row items-center rounded-xl overflow-hidden"
         style={{
           backgroundColor: isFocused ? "#ffffff" : "#e8e8e8",
-          borderWidth: isFocused ? 2 : 0,
-          borderColor: isFocused ? "rgba(13, 99, 27, 0.3)" : "transparent",
+          borderWidth: isFocused ? 2 : (error ? 1 : 0),
+          borderColor: isFocused ? "rgba(13, 99, 27, 0.3)" : (error ? "#ff4d4d" : "transparent"),
         }}
       >
         <View className="pl-4 pr-2">{icon}</View>
@@ -59,6 +61,14 @@ export function SignInField({
           </TouchableOpacity>
         )}
       </View>
+      {!!error && (
+        <Text
+          className="text-[#ff4d4d] text-xs ml-1"
+          style={{ fontFamily: "Inter_500Medium" }}
+        >
+          {error}
+        </Text>
+      )}
     </View>
   );
 }
