@@ -31,5 +31,4 @@ SystemActor --> UC_PAY_06
 Admin --> UC_PAY_07
 
 UC_PAY_02 ..> UC_PAY_04 : <<include>>
-UC_PAY_07 ..> UC_PAY_06 : <<include>>
 @enduml

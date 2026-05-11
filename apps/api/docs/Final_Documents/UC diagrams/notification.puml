@@ -77,8 +77,8 @@ SystemActor --> UC_NOTIF_PUSH
 SystemActor --> UC_NOTIF_EMAIL
 
 UC_NOTIF_08 ..> UC_NOTIF_09 : <<include>>
-UC_NOTIF_08 ..> UC_NOTIF_10 : <<include>>
-UC_NOTIF_08 ..> UC_NOTIF_11 : <<include>>
+UC_NOTIF_10 ..> UC_NOTIF_08 : <<extend>>
+UC_NOTIF_11 ..> UC_NOTIF_08 : <<extend>>
 
 UC_NOTIF_PUSH ..> UC_NOTIF_20 : <<include>>
 UC_NOTIF_EMAIL ..> UC_NOTIF_20 : <<include>>

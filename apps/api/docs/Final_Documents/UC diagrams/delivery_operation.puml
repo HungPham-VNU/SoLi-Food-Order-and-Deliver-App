@@ -31,7 +31,4 @@ Admin --> UC_SHIP_03
 Admin --> UC_SHIP_04
 Admin --> UC_SHIP_05
 
-UC_SHIP_02 ..> UC_SHIP_03 : <<include>>
-UC_SHIP_03 ..> UC_SHIP_04 : <<include>>
-UC_SHIP_04 ..> UC_SHIP_05 : <<include>>
 @enduml

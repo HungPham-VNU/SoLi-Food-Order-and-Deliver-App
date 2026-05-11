@@ -56,6 +56,4 @@ Admin --> UC_REST_02
 Admin --> UC_REST_06
 Admin --> UC_REST_09
 
-UC_REST_06 ..> UC_REST_07 : <<include>>
-UC_REST_07 ..> UC_REST_08 : <<include>>
 @enduml
