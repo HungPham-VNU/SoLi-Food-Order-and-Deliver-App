@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Menu, ChevronDown } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { useAddressStore } from '../store/address-store';
+import { useAddressStore } from '@/src/features/location';
 
 interface HomeTopBarProps {
   insetsTop: number;
@@ -14,7 +14,7 @@ export function HomeTopBar({ insetsTop }: HomeTopBarProps) {
   const { selectedAddress } = useAddressStore();
 
   return (
-    <View 
+    <View
       className="absolute top-0 w-full z-50 bg-surface-container-lowest/90 shadow-sm"
       style={{ paddingTop: Math.max(insetsTop, 12), paddingBottom: 12 }}
     >
@@ -22,12 +22,12 @@ export function HomeTopBar({ insetsTop }: HomeTopBarProps) {
         <TouchableOpacity className="text-on-background p-2 -ml-2 rounded-full active:bg-surface-variant">
           <Menu size={24} color="#1a1c1c" />
         </TouchableOpacity>
-        
+
         <View className="flex-col items-start flex-1 ml-2">
           <Text className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-inter leading-none mb-0.5">
             Deliver to
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             className="flex-row items-center gap-1"
             onPress={() => router.push('/(customer)/address-selection')}
           >
@@ -39,8 +39,10 @@ export function HomeTopBar({ insetsTop }: HomeTopBarProps) {
         </View>
 
         <View className="w-10 h-10 rounded-full bg-surface-container overflow-hidden ring-2 ring-primary/20 shadow-sm">
-          <Image 
-            source={{ uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuCOTNFg5xLNhg4ibo1deIjw7n921_AMMLLTpr2ESna4XzRPuSnbvlu7zjFtK-1xfdkQnQEoGAGduWUpLIHUgfjjd0rGHbOULjKTCQOIMuCNNrX8WKz37582RBecKs6u4chcDD72BadZvLaN_ddoSK1Wt_tJdY-evJLPWUybjGblLKjFVhbvnfk6wFASZ1Cv89DRvzrsr_bLnJjLTw8ISRIp9O1yfwEKY9gpPdSmfBCp6DlLSCLRYJc8PfySytbwpBnvMEIaAN1OU1Ov" }}
+          <Image
+            source={{
+              uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCOTNFg5xLNhg4ibo1deIjw7n921_AMMLLTpr2ESna4XzRPuSnbvlu7zjFtK-1xfdkQnQEoGAGduWUpLIHUgfjjd0rGHbOULjKTCQOIMuCNNrX8WKz37582RBecKs6u4chcDD72BadZvLaN_ddoSK1Wt_tJdY-evJLPWUybjGblLKjFVhbvnfk6wFASZ1Cv89DRvzrsr_bLnJjLTw8ISRIp9O1yfwEKY9gpPdSmfBCp6DlLSCLRYJc8PfySytbwpBnvMEIaAN1OU1Ov',
+            }}
             className="w-full h-full"
             contentFit="cover"
           />
