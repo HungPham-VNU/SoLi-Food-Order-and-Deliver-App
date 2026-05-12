@@ -35,6 +35,20 @@ $ pnpm install
 
 The project uses Drizzle ORM for database management.
 
+### Setup & Migrations
+
+Before running the application or seeding the database, you must configure the database connection and apply migrations.
+
+1. **Configure Environment:** Copy `.env.example` to `.env` and set the `DATABASE_URL` to your PostgreSQL instance.
+2. **Create Database Instance:** Ensure the database instance exists (e.g., using Docker or a local PostgreSQL service).
+3. **Run Migrations:** Apply the schema to your database.
+   ```bash
+   $ pnpm run db:migrate
+   ```
+
+**Workflow:** Configure → Migrate → Seed (`db:seed` or `db:seed:rich`).
+Note: Seed scripts require migrations to be run first as they do not apply schema changes automatically.
+
 ### Seeding
 
 There are two seeding options available:

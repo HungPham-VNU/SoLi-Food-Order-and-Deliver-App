@@ -1,18 +1,29 @@
 import Constants from 'expo-constants';
 
-type PhotonExtras = {
-  photonBaseUrl?: string;
+type GeocodingConfig = {
+  baseUrl: string;
+  apiKey?: string | null;
+  timeout?: number;
+  retry?: {
+    maxRetries: number;
+    fallbackUrl?: string | null;
+  };
 };
 
 const DEFAULT_PHOTON_URL = 'https://photon.komoot.io';
 
-const getPhotonBaseUrl = () => {
-  const extra = Constants.expoConfig?.extra as PhotonExtras | undefined;
-  const baseUrl = extra?.photonBaseUrl || DEFAULT_PHOTON_URL;
-  return baseUrl.replace(/\/+$/, '');
+const getGeocodingConfig = (): GeocodingConfig => {
+  const extra = Constants.expoConfig?.extra as { geocoding?: GeocodingConfig } | undefined;
+  return {
+    baseUrl: extra?.geocoding?.baseUrl || DEFAULT_PHOTON_URL,
+    apiKey: extra?.geocoding?.apiKey,
+    timeout: extra?.geocoding?.timeout || 5000,
+    retry: extra?.geocoding?.retry,
+  };
 };
 
-const PHOTON_BASE_URL = getPhotonBaseUrl();
+const CONFIG = getGeocodingConfig();
+const PHOTON_BASE_URL = CONFIG.baseUrl.replace(/\/+$/, '');
 
 interface PhotonProperties {
   name?: string;
@@ -127,12 +138,28 @@ export async function searchPhoton(
 
   const url = `${PHOTON_BASE_URL}/api?${params.toString()}`;
 
-  const response = await fetch(url, { signal: options.signal });
-  if (!response.ok) {
-    throw new Error(`Photon search failed (${response.status})`);
-  }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CONFIG.timeout);
+  
+  try {
+    const response = await fetch(url, { 
+      signal: options.signal || controller.signal 
+    });
+    clearTimeout(timeoutId);
 
-  const data = (await response.json()) as PhotonResponse;
-  const results = data.features?.map(formatPhotonResult).filter(Boolean) || [];
-  return results as PhotonSearchResult[];
+    if (!response.ok) {
+      throw new Error(`Photon search failed (${response.status})`);
+    }
+
+    const data = (await response.json()) as PhotonResponse;
+    const results = data.features?.map(formatPhotonResult).filter(Boolean) || [];
+    return results as PhotonSearchResult[];
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error(`Geocoding request timed out after ${CONFIG.timeout}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }

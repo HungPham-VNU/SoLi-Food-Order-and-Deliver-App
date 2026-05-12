@@ -47,7 +47,15 @@
       ]
     ],
     "extra": {
-      "photonBaseUrl": "https://photon.komoot.io"
+      "geocoding": {
+        "baseUrl": "https://photon.komoot.io",
+        "apiKey": null,
+        "timeout": 5000,
+        "retry": {
+          "maxRetries": 3,
+          "fallbackUrl": null
+        }
+      }
     },
     "experiments": {
       "typedRoutes": true,

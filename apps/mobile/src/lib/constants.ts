@@ -1,6 +1,12 @@
 import Constants from 'expo-constants';
 
-const CDN_BASE_URL = Constants.expoConfig?.extra?.cdnUrl || 'https://lh3.googleusercontent.com/aida-public';
+const cdnUrl = Constants.expoConfig?.extra?.cdnUrl;
+
+if (!cdnUrl && !__DEV__) {
+  console.error('Critical: cdnUrl is missing in Constants.expoConfig. Ensure it is set in app.json extra.');
+}
+
+const CDN_BASE_URL = cdnUrl || '';
 
 export const IMAGE_ASSETS = {
   banner: `${CDN_BASE_URL}/AB6AXuDEAydfvb_RwKuGVoiWBAmVZ32xwiLP9xHMtHn2whqI0PKEhU7Q-tfnfGyPJu5SgYm8691I5cgNfiKvulJmI_DcfAETV9xex0q-z94DSPKtHADmgoMzVJMx7dFmSpyNZlQcYTrpWcaINQzDLvqiK1rTLS6Rk7U916Hl2XzXrN9KkbVdPLXkjbaEfPzdDVMoL746jlIrfs_jU-aWS1sUVwJiOc-A6E-blYjQwz-f3QV_DeHX8I6eg1kFUVyTAr7blKVOyRDYJzAGYe-p`,
@@ -9,5 +15,5 @@ export const IMAGE_ASSETS = {
   oranges: `${CDN_BASE_URL}/AB6AXuAjlXlyIiJTPQ3L60YhdFuHexUYqfDfB3sTMle7zCI-KY7_CRIQ8mSRNMatrRmVzyOYEpStgl4WurymBXJ_VlgW58HkBlVBHslBCiFmOsqnI2cIG-QXn6pePVxrjTcvjgvzTwlo021y3HRmU5LHkDy5jNmP-Woa0JADQUan8h_7oNQteY6scJ-ukqUoJAdHoGSwIFzBOtQFlXlRBUpEoekfMLugNweQ3TkxyvfNI69561UY4TXot8L3OkaqG0eG4NzfXLXPvXM5rooR`,
   peppers: `${CDN_BASE_URL}/AB6AXuAhiMzBCnCrPM88ANvoddbGlB-cJvrscRyDnPfW0VpAz6e98MGmq_VjcA5Rl9fxMuWS_iCfD4uF6lPAIhabzcgM-gNL99q7aSmV4PnNWdQuoQFf2QZE61lv5rzdany4dyh5jOggKUNMi_SZ3g-SVdSZBxz0MfHx6FzoX_ZsjOgIIUvs7Fug2YCU7T6lsXUaoz7BFyUjXxpnJWX9EZKgwD5Na2_QWN9_7UJeIqQCJadfCZxikMMrBssLFTDiS3feWjHZnJVPAvEhg-oS`,
   freshFromFarm: `${CDN_BASE_URL}/AB6AXuAwoqCQHBPd1w2eRe7igfOW3p7shNxsjt3JiAcWkHDkiV9sSvH1DdxwBgSmycz1tesT9tJussYHGppIDKv-ohYbFJbnlgYaMJnvBwKdsgv9bGC0VVOYCdPXOD6aSj2hflYXXBSSvUCBECdRmTuz-oZK_Y0AqKCb5GCTzsGfusOhNkTjmYe_ogvHDW4xn1bsf6Veo9uwkHo4642ldt9ByGndRcfzydmzUpMWTucBfLweMk2ZgmHqG4tsZ3u6Nh6wDmaathXFFzJBNW0w`,
-  placeholder: 'https://via.placeholder.com/400x300?text=No+Image',
+  placeholder: `${CDN_BASE_URL}/images/placeholder-400x300.png`,
 };

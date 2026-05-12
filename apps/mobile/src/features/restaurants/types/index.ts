@@ -79,16 +79,16 @@ export interface Restaurant {
   id: string;
   ownerId: string;
   name: string;
-  description?: string;
+  description?: string | null;
   address: string;
   phone: string;
   isOpen: boolean;
   isApproved: boolean;
-  latitude?: number;
-  longitude?: number;
-  cuisineType?: string;
-  logoUrl?: string;
-  coverImageUrl?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  cuisineType?: string | null;
+  logoUrl?: string | null;
+  coverImageUrl?: string | null;
   createdAt: string;
   updatedAt: string;
   // UI-specific extensions (may not be in API yet)

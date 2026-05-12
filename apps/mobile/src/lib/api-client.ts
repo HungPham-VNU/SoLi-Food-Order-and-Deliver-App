@@ -14,12 +14,22 @@ export async function apiFetch<T>(
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = `${BASE_URL}${normalizedEndpoint}`;
   
+  const method = (options.method || 'GET').toUpperCase();
+  const hasBody = !!options.body;
+  const isStringBody = typeof options.body === 'string';
+  const isFormOrBlob = options.body instanceof FormData || options.body instanceof Blob;
+  const skipJsonHeader = ['GET', 'HEAD'].includes(method) || isFormOrBlob;
+
+  const headers = { ...options.headers } as Record<string, string>;
+  
+  if (hasBody && isStringBody && !skipJsonHeader && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    method,
+    headers,
   });
 
   const contentType = response.headers.get('content-type');
