@@ -3,6 +3,7 @@ import { RegisterPage } from '@/app/pages/auth/register/RegisterPage';
 import { RegisterLocationPage } from '@/app/pages/auth/register/RegisterBusinessPage';
 import { RegisterPendingPage } from '@/app/pages/auth/register/RegisterPendingPage';
 import { LoginPage } from '@/app/pages/auth/login/LoginPage';
+import { DashboardPage } from '@/app/pages/dashboard/DashboardPage';
 import { MenuManagementPage } from '@/app/pages/menu/MenuManagementPage';
 import CreateMenuItemPage from '@/app/pages/menu/CreateMenuItemPage';
 import { OrdersPage } from '@/app/pages/orders/OrdersPage';
@@ -33,6 +34,13 @@ export const router = createBrowserRouter([
       breadcrumb: 'Home',
     },
     children: [
+      {
+        path: 'dashboard',
+        element: <DashboardPage />,
+        handle: {
+          breadcrumb: 'Dashboard',
+        },
+      },
       {
         path: 'orders',
         handle: {

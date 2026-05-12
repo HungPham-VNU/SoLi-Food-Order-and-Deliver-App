@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Harvest Kitchen | Operational Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "surface-dim": "#dadada",
+                "on-secondary-fixed-variant": "#693c00",
+                "inverse-primary": "#88d982",
+                "surface": "#f9f9f9",
+                "on-primary-fixed-variant": "#005312",
+                "tertiary-fixed": "#ffd9e2",
+                "primary-fixed": "#a3f69c",
+                "surface-container-low": "#f3f3f3",
+                "primary-fixed-dim": "#88d982",
+                "tertiary-container": "#b14b6f",
+                "on-background": "#1a1c1c",
+                "on-surface-variant": "#40493d",
+                "on-primary-container": "#cbffc2",
+                "inverse-surface": "#2f3131",
+                "tertiary-fixed-dim": "#ffb1c7",
+                "surface-container-lowest": "#ffffff",
+                "background": "#f9f9f9",
+                "on-error": "#ffffff",
+                "on-primary": "#ffffff",
+                "secondary-fixed-dim": "#ffb870",
+                "on-tertiary": "#ffffff",
+                "secondary": "#8b5000",
+                "on-surface": "#1a1c1c",
+                "surface-tint": "#1b6d24",
+                "error": "#ba1a1a",
+                "surface-bright": "#f9f9f9",
+                "on-tertiary-container": "#ffedf0",
+                "error-container": "#ffdad6",
+                "on-error-container": "#93000a",
+                "inverse-on-surface": "#f1f1f1",
+                "secondary-fixed": "#ffdcbe",
+                "on-secondary-fixed": "#2c1600",
+                "on-primary-fixed": "#002204",
+                "surface-variant": "#e2e2e2",
+                "primary": "#0d631b",
+                "outline-variant": "#bfcaba",
+                "on-secondary-container": "#653900",
+                "surface-container-high": "#e8e8e8",
+                "surface-container": "#eeeeee",
+                "on-tertiary-fixed-variant": "#7f2448",
+                "on-secondary": "#ffffff",
+                "tertiary": "#923357",
+                "secondary-container": "#ff9800",
+                "primary-container": "#2e7d32",
+                "outline": "#707a6c",
+                "surface-container-highest": "#e2e2e2",
+                "on-tertiary-fixed": "#3f001c"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "2xl": "1rem",
+                "3xl": "1.5rem",
+                "full": "9999px"
+            },
+            "fontFamily": {
+                "headline": ["Plus Jakarta Sans"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex flex-col md:flex-row">
+<!-- SideNavBar Component (COMPONENTS_13) -->
+<aside class="hidden md:flex flex-col h-screen w-64 bg-stone-50 dark:bg-stone-950 p-4 gap-2 sticky top-0 shrink-0 border-r-0 font-['Plus_Jakarta_Sans'] antialiased">
+<div class="flex items-center gap-3 px-2 py-4 mb-6">
+<div class="w-10 h-10 rounded-xl bg-green-800 dark:bg-green-400 flex items-center justify-center text-white dark:text-stone-950">
+<span class="material-symbols-outlined">restaurant</span>
+</div>
+<div>
+<h1 class="text-xl font-bold text-green-900 dark:text-green-100 leading-tight">Harvest Kitchen</h1>
+<p class="text-[10px] uppercase tracking-wider text-stone-500 font-medium">Management Portal</p>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-4 py-3 bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 font-semibold rounded-xl transition-transform active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-stone-600 dark:text-stone-400 hover:text-green-700 dark:hover:text-green-200 hover:bg-stone-100 dark:hover:bg-stone-900 transition-all duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span>Orders</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-stone-600 dark:text-stone-400 hover:text-green-700 dark:hover:text-green-200 hover:bg-stone-100 dark:hover:bg-stone-900 transition-all duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span>Menu</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-stone-200 dark:border-stone-800 flex flex-col gap-1">
+<button class="w-full bg-green-800 dark:bg-green-400 text-white dark:text-stone-950 py-3 rounded-xl font-bold mb-4 active:scale-95 duration-100 transition-transform">New Order</button>
+<a class="flex items-center gap-3 px-4 py-2 text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-900 rounded-xl transition-all duration-200" href="#">
+<span class="material-symbols-outlined">help</span>
+<span>Help</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-900 rounded-xl transition-all duration-200" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span>Logout</span>
+</a>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 pb-20 md:pb-0">
+<!-- TopAppBar Component (COMPONENTS_13) -->
+<header class="sticky top-0 z-40 bg-white/80 dark:bg-stone-950/80 backdrop-blur-md shadow-sm dark:shadow-none border-b border-stone-100 dark:border-stone-800 flex justify-between items-center px-6 py-3 w-full transition-all duration-300 font-['Plus_Jakarta_Sans']">
+<div class="flex items-center gap-4">
+<span class="text-lg font-extrabold text-green-800 dark:text-green-100">Harvest Kitchen</span>
+<div class="hidden md:flex items-center gap-2 ml-4 px-3 py-1 bg-stone-100 dark:bg-stone-900 rounded-full">
+<span class="w-2 h-2 rounded-full bg-green-600 animate-pulse"></span>
+<span class="text-[10px] font-bold text-green-700 dark:text-green-400 uppercase tracking-wider">Live Server</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="hidden sm:flex items-center gap-4 mr-2">
+<div class="relative">
+<input class="pl-10 pr-4 py-1.5 bg-stone-100 dark:bg-stone-900 border-none rounded-full text-xs focus:ring-1 focus:ring-green-500 w-48 transition-all" placeholder="Search..." type="text"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm">search</span>
+</div>
+</div>
+<button class="p-2 text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-900 rounded-full transition-all duration-300">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-900 rounded-full transition-all duration-300">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<img alt="Manager Profile" class="w-8 h-8 rounded-full object-cover border border-stone-200 dark:border-stone-800" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDM736M9EgJN7mgeD-I5iuQOJR_q_QmH32ePvpxyflwpqJaWXuwrjtuE3q43rc_qsP4TgWaxPAeD2oquwDzjdXB2Rr_SbW-MhEjQZ0izdcD1M-pF8q00GgxlYIm-zE2NjUYNJczZzRUYydhRCc_eJA6Zpv4SbUYlC0AuDjeRKLlk52G8R4-yPvNGxujuTTV6HtrsG5DalTPTeGgsL2HOGfUlh1fOHYqGGhFqUgmK9wGZmklGwi7PJadzlQyxFfY3sbUeGkMokIXTtA"/>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="p-6 space-y-8 max-w-7xl mx-auto w-full">
+<!-- Global Control Bar -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+<!-- Global Availability Toggle -->
+<div class="lg:col-span-8 bg-surface-container-lowest p-6 rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col sm:flex-row justify-between items-center gap-6">
+<div class="flex items-center gap-5">
+<div class="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-3xl">storefront</span>
+</div>
+<div>
+<h2 class="text-xl font-extrabold text-on-surface">Store Status</h2>
+<p class="text-sm text-on-surface-variant">Currently accepting orders through all channels.</p>
+</div>
+</div>
+<div class="flex items-center gap-3 p-1.5 bg-surface-container rounded-full">
+<button class="px-6 py-2.5 rounded-full font-bold text-sm bg-primary text-on-primary transition-all shadow-md">Open</button>
+<button class="px-6 py-2.5 rounded-full font-bold text-sm text-on-surface-variant hover:bg-surface-container-high transition-all">Closed</button>
+</div>
+</div>
+<!-- Alert Management -->
+<div class="lg:col-span-4 bg-surface-container-lowest p-6 rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-center gap-4">
+<div class="flex justify-between items-center">
+<span class="text-sm font-bold uppercase tracking-tighter text-on-surface-variant">Audio Alerts</span>
+<div class="flex gap-2">
+<button class="w-8 h-8 rounded-full flex items-center justify-center bg-error-container text-on-error-container">
+<span class="material-symbols-outlined text-lg">volume_off</span>
+</button>
+<button class="w-8 h-8 rounded-full flex items-center justify-center bg-surface-container text-on-surface-variant">
+<span class="material-symbols-outlined text-lg">volume_up</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 bg-error-container/20 rounded-2xl border border-error/10">
+<span class="material-symbols-outlined text-error">campaign</span>
+<span class="text-sm font-semibold text-error">New Order Received!</span>
+<button class="ml-auto text-xs font-bold uppercase underline text-error">Dismiss</button>
+</div>
+</div>
+</section>
+<!-- Operational Bento Grid -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- Summary Card: Preparing -->
+<div class="bg-primary-container p-6 rounded-3xl relative overflow-hidden flex flex-col justify-between h-48">
+<div class="z-10">
+<span class="text-[10px] font-black uppercase tracking-[0.2em] text-on-primary-container/70">In Progress</span>
+<h3 class="text-4xl font-black text-on-primary-container mt-1">12</h3>
+<p class="text-sm font-medium text-on-primary-container/80">Preparing now</p>
+</div>
+<div class="z-10 flex items-center gap-2">
+<span class="text-xs font-bold py-1 px-3 bg-on-primary-container/10 rounded-full text-on-primary-container">Avg. 14 mins</span>
+</div>
+<span class="material-symbols-outlined absolute -right-4 -bottom-4 text-9xl text-on-primary-container/10 rotate-12">skillet</span>
+</div>
+<!-- Summary Card: Ready -->
+<div class="bg-secondary-container p-6 rounded-3xl relative overflow-hidden flex flex-col justify-between h-48">
+<div class="z-10">
+<span class="text-[10px] font-black uppercase tracking-[0.2em] text-on-secondary-container/70">Outbound</span>
+<h3 class="text-4xl font-black text-on-secondary-container mt-1">08</h3>
+<p class="text-sm font-medium text-on-secondary-container/80">Ready for Pickup</p>
+</div>
+<div class="z-10 flex items-center gap-2">
+<span class="text-xs font-bold py-1 px-3 bg-on-secondary-container/10 rounded-full text-on-secondary-container">3 urgent</span>
+</div>
+<span class="material-symbols-outlined absolute -right-4 -bottom-4 text-9xl text-on-secondary-container/10 -rotate-12">shopping_bag</span>
+</div>
+<!-- Real-time Status -->
+<div class="md:col-span-2 bg-surface-container-lowest p-6 rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] border border-outline-variant/10">
+<h3 class="font-bold text-on-surface-variant mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">hub</span>
+                    System Connectivity
+                </h3>
+<div class="space-y-4">
+<div class="flex items-center justify-between p-3 bg-surface-container-low rounded-2xl">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-700">
+<span class="material-symbols-outlined text-sm">sync_alt</span>
+</div>
+<span class="text-sm font-bold">WebSocket (Socket.io)</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-black">CONNECTED</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container-low rounded-2xl">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-700">
+<span class="material-symbols-outlined text-sm">language</span>
+</div>
+<span class="text-sm font-bold">Network Stability</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-black">98ms PING</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Visual Data / Order Flow -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-3xl overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
+<div class="p-6 flex justify-between items-center border-b border-surface-container">
+<h3 class="text-lg font-extrabold">Active Load Monitor</h3>
+<div class="flex gap-2">
+<span class="w-3 h-3 rounded-full bg-primary"></span>
+<span class="w-3 h-3 rounded-full bg-surface-container-high"></span>
+<span class="w-3 h-3 rounded-full bg-surface-container-high"></span>
+</div>
+</div>
+<div class="p-8 aspect-[21/9] bg-gradient-to-b from-primary/5 to-transparent relative flex items-end gap-1">
+<div class="flex-1 bg-primary/20 rounded-t-lg h-[40%]"></div>
+<div class="flex-1 bg-primary/20 rounded-t-lg h-[60%]"></div>
+<div class="flex-1 bg-primary/30 rounded-t-lg h-[55%]"></div>
+<div class="flex-1 bg-primary/40 rounded-t-lg h-[80%]"></div>
+<div class="flex-1 bg-primary/60 rounded-t-lg h-[95%]"></div>
+<div class="flex-1 bg-primary/80 rounded-t-lg h-[70%]"></div>
+<div class="flex-1 bg-primary/50 rounded-t-lg h-[45%]"></div>
+<div class="flex-1 bg-primary/30 rounded-t-lg h-[30%]"></div>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="px-4 py-2 bg-white/90 backdrop-blur shadow-xl rounded-2xl flex items-center gap-3 border border-primary/20">
+<span class="material-symbols-outlined text-primary">trending_up</span>
+<span class="text-sm font-bold">Peak capacity at 12:45 PM</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-3xl p-6 flex flex-col">
+<h3 class="text-sm font-black uppercase tracking-widest text-on-surface-variant mb-6">Staff Availability</h3>
+<div class="space-y-4 flex-1">
+<div class="flex items-center gap-4">
+<img class="w-12 h-12 rounded-2xl object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlNNtQFc3Cjt5qAySWQn1-iz7e3vnQoxUXHYxUiIg36r5ONHNfaKupmrD44rI_eFNQaK6NEUgbR1Y_ZPWJny4ryabMun_2dhLnYSHOOrlG-ISRcsxi7EvCuh3zRek-tbg1F4oE0_rxl4jq-RPBLex8Uu2zUlKoBuk4HrOekN5Z5pyTIkSg6fjSq9fRbu3BF0XxNZamhRGRvVX_GDawDLy3IMgMAB9wVSzJnl8_-kwVEEVyaek0aYmh9vb5tNh8cVArDJ2d8qz4Hjs"/>
+<div class="flex-1">
+<p class="text-sm font-bold">Marco Rossini</p>
+<p class="text-[10px] text-zinc-500 font-medium">Head Chef • STATION A</p>
+</div>
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+</div>
+<div class="flex items-center gap-4">
+<img class="w-12 h-12 rounded-2xl object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuChIYz8_a3Wj1m6QhFG0kea0-REyCP4UNib18aaJebB_jDo6MbVHxANurc2Gdi46TMifpHDP8-kdnHOIKFV4PurzoPPuNYyeFGbj92mo6ZfoX7wAcrriRNmhniou5MdMFIhfxoLsq65jGGNZsB0hQcwgyIOppCGv4xAK04bmyZvEn1Xb-YuwQ4GBn5DVnbv9WJpsdwTz-uYyY9JJOJAeekdLGx87uZDwy7Q8Ok2SQEKA65ALNK8xfE4LL7k0LEnXI4lsC7F1EVf7jU"/>
+<div class="flex-1">
+<p class="text-sm font-bold">Elena Vance</p>
+<p class="text-[10px] text-zinc-500 font-medium">Sous Chef • STATION B</p>
+</div>
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+</div>
+<div class="flex items-center gap-4 opacity-50">
+<div class="w-12 h-12 rounded-2xl bg-zinc-300 flex items-center justify-center text-zinc-500">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div class="flex-1">
+<p class="text-sm font-bold">Shift Open</p>
+<p class="text-[10px] text-zinc-500 font-medium">Delivery Prep • STATION C</p>
+</div>
+<div class="w-3 h-3 rounded-full bg-zinc-400"></div>
+</div>
+</div>
+<button class="mt-6 w-full py-3 bg-surface-container-lowest text-primary text-xs font-black uppercase tracking-tighter rounded-2xl hover:bg-white transition-colors">
+                    Assign Station
+                </button>
+</div>
+</section>
+</div>
+<!-- BottomAppBar (Mobile Only - Adapted from TopAppBar style) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-safe bg-white/90 dark:bg-stone-950/90 backdrop-blur-xl border-t border-stone-100 dark:border-stone-800 shadow-lg">
+<button class="flex flex-col items-center justify-center text-green-700 dark:text-green-400 rounded-2xl px-5 py-1 scale-90">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px] font-bold uppercase tracking-wider mt-0.5">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center text-stone-500 dark:text-stone-400 px-5 py-1 scale-90">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-[10px] font-bold uppercase tracking-wider mt-0.5">Orders</span>
+</button>
+<button class="flex flex-col items-center justify-center text-stone-500 dark:text-stone-400 px-5 py-1 scale-90">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="text-[10px] font-bold uppercase tracking-wider mt-0.5">Menu</span>
+</button>
+<button class="flex flex-col items-center justify-center text-stone-500 dark:text-stone-400 px-5 py-1 scale-90">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-bold uppercase tracking-wider mt-0.5">Settings</span>
+</button>
+</nav>
+</main>
+</body></html>
