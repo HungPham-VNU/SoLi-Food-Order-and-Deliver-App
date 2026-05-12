@@ -281,9 +281,9 @@ export function MenuItemDetailScreen({
         </View>
       </ScrollView>
 
-      {/* Fixed Bottom Action Bar */}
+      {/* Action Bar */}
       <View 
-        className="fixed bottom-0 left-0 w-full p-4 bg-surface/80 backdrop-blur-xl border-t-0 shadow-[0_-8px_32px_rgba(26,28,28,0.08)] z-50 rounded-t-xl sm:px-6"
+        className="absolute bottom-0 left-0 w-full p-4 bg-surface/80 backdrop-blur-xl border-t-0 shadow-[0_-8px_32px_rgba(26,28,28,0.08)] z-50 rounded-t-xl sm:px-6"
         style={{ paddingBottom: Math.max(insets.bottom, 16) }}
       >
         <TouchableOpacity 

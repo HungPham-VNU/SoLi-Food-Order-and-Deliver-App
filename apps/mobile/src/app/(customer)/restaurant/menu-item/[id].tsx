@@ -16,6 +16,8 @@ export default function MenuItemDetailPage() {
         <TouchableOpacity 
           onPress={() => router.back()}
           className="bg-primary px-6 py-2 rounded-full"
+          accessibilityRole="button"
+          accessibilityLabel="Go back to restaurant menu"
         >
           <Text className="text-white font-bold">Go Back</Text>
         </TouchableOpacity>

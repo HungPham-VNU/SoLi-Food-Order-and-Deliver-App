@@ -28,6 +28,7 @@ export default function RestaurantMenuPage() {
   };
 
   const handleFavoriteToggle = (restaurantId: string) => {
+    // TODO: Integrate with backend favorite API or local storage
     console.log("Toggle favorite for restaurant:", restaurantId);
   };
 

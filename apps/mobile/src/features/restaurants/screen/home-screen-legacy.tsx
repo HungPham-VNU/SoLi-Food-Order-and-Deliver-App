@@ -100,7 +100,7 @@ export function HomeScreen() {
   };
 
   return (
-    <View className="flex-1 bg-surface font-inter text-on-surface">
+    <View className="flex-1 bg-surface">
       <HomeTopBar insetsTop={insets.top} />
 
       <ScrollView
@@ -145,7 +145,7 @@ export function HomeScreen() {
                 accessibilityLabel={`Select ${cat.name}`}
                 accessible={true}
                 accessibilityState={{ selected: isActive }}
-                className="flex-col items-center gap-2 group active:scale-90"
+                className="flex-col items-center gap-2 active:opacity-70"
               >
                 <View className={`w-16 h-16 rounded-full items-center justify-center shadow-sm ${
                   isActive ? 'bg-primary-fixed' : 'bg-surface-container-lowest'
@@ -176,23 +176,23 @@ export function HomeScreen() {
           />
           <View className="absolute inset-0 bg-primary/40 p-6 flex-col justify-center gap-2">
             <View className="bg-secondary-container px-2 py-1 rounded-full self-start">
-              <Text className="text-on-secondary-container text-[10px] font-bold uppercase tracking-wider">
+              <Text className="text-on-secondary-container text-[10px] font-bold uppercase tracking-wider font-inter">
                 Flash Sale
               </Text>
             </View>
             <Text className="font-jakarta-sans font-extrabold text-white text-2xl leading-tight max-w-[180px]">
               Up to 40% OFF Fresh Produce
             </Text>
-            <Text className="text-primary-fixed text-sm font-medium">
+            <Text className="text-primary-fixed text-sm font-medium font-inter">
               Daily essentials at market price.
             </Text>
             <TouchableOpacity 
               onPress={handleShopNow}
               accessibilityRole="button"
               accessibilityLabel="Shop Now, open shop"
-              className="mt-2 bg-white px-6 py-2 rounded-full self-start active:scale-95"
+              className="mt-2 bg-white px-6 py-2 rounded-full self-start active:opacity-80"
             >
-              <Text className="text-primary font-bold text-xs">Shop Now</Text>
+              <Text className="text-primary font-bold text-xs font-inter">Shop Now</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -227,11 +227,11 @@ export function HomeScreen() {
         {/* Fresh Picks Recommendation */}
         <View className="mt-8 pb-8">
           <View className="bg-primary-fixed/20 rounded-3xl p-6 flex-row items-center gap-6 overflow-hidden relative">
-            <View className="flex-1 space-y-2 z-10">
+            <View className="flex-1 gap-2 z-10">
               <Text className="font-jakarta-sans font-extrabold text-primary-container text-lg">
                 Fresh From Farm
               </Text>
-              <Text className="text-primary-container/80 text-xs mt-1">
+              <Text className="text-primary-container/80 text-xs mt-1 font-inter">
                 Hand-picked daily, delivered within 2 hours of harvest.
               </Text>
               <TouchableOpacity 
@@ -241,7 +241,7 @@ export function HomeScreen() {
                 accessible={true}
                 className="flex-row items-center gap-1 mt-2"
               >
-                <Text className="text-primary-container font-bold text-xs">
+                <Text className="text-primary-container font-bold text-xs font-inter">
                   Learn more
                 </Text>
                 <ArrowRight size={14} color="#2e7d32" />

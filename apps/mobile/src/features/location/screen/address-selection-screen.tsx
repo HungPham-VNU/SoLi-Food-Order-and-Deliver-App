@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Search, Navigation, ChevronRight, Plus } from 'lucide-react-native';
@@ -13,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAddressStore } from '../store/address-store';
 import { useAddressSearch, useCurrentLocation } from '../hooks';
+import { IMAGE_ASSETS } from '@/src/lib/constants';
 import {
   AddressSelectionHeader,
   SearchResultItem,
@@ -23,7 +25,13 @@ import {
 export function AddressSelectionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { setSelectedAddress, latitude, longitude } = useAddressStore();
+  const { 
+    setSelectedAddress, 
+    latitude, 
+    longitude,
+    savedAddresses,
+    recentSearches 
+  } = useAddressStore();
   const {
     query: searchQuery,
     setQuery: setSearchQuery,
@@ -60,6 +68,10 @@ export function AddressSelectionScreen() {
     router.back();
   };
 
+  const handleAddNewAddress = () => {
+    Alert.alert('Action', 'Add new address feature coming soon!');
+  };
+
   return (
     <View className="flex-1 bg-background">
       <AddressSelectionHeader
@@ -71,7 +83,7 @@ export function AddressSelectionScreen() {
         className="flex-1"
         contentContainerStyle={{
           paddingTop: insets.top + 70,
-          paddingBottom: insets.bottom + 100,
+          paddingBottom: insets.bottom + 120,
           paddingHorizontal: 24,
         }}
         showsVerticalScrollIndicator={false}
@@ -163,7 +175,7 @@ export function AddressSelectionScreen() {
         <View className="mb-10 h-40 w-full rounded-2xl overflow-hidden relative shadow-sm border border-surface-variant/10">
           <Image
             source={{
-              uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBhzmhZKCUolF2XW75TN31tPXR3P6XddNn-Q5QoXW1Q18LTMrjJrBH4G96BNKcwqpTJWIajE0yAoL29FcQoGgmcxjJ6PimsFLHyeRyiF05iH6SWiR7heKDtrSnWdYCD7pc5fl3k9IBuFeKioKVZt7zU4qTpzPqmXXrKSbf6TyIEPPquFOh_ztp0miFrwsHFk5BItRZfJMOD9oTVa5yAjiO46wMHPj6rf4Is6DLNkpGqKtdhz-qYlNMc9yZDOe2IalF3Z3_HeIJfcho8',
+              uri: IMAGE_ASSETS.mapVisualization,
             }}
             className="w-full h-full opacity-90"
             contentFit="cover"
@@ -189,19 +201,15 @@ export function AddressSelectionScreen() {
           </View>
 
           <View className="gap-4">
-            <SavedAddressItem
-              type="home"
-              label="Home"
-              address="1242 Orchard Lane, Green Valley"
-              onPress={() => handleSelectAddress('1242 Orchard Lane')}
-            />
-            <View className="h-4" />
-            <SavedAddressItem
-              type="work"
-              label="Creative Studio"
-              address="88 Artisans Way, Suite 400"
-              onPress={() => handleSelectAddress('88 Artisans Way')}
-            />
+            {savedAddresses.map((addr) => (
+              <SavedAddressItem
+                key={addr.id}
+                type={addr.type}
+                label={addr.label}
+                address={addr.address}
+                onPress={() => handleSelectAddress(addr.address, addr.coords)}
+              />
+            ))}
           </View>
         </View>
 
@@ -211,24 +219,26 @@ export function AddressSelectionScreen() {
             Recent Searches
           </Text>
           <View className="gap-2">
-            <RecentSearchItem
-              address="241 Maple Avenue, North Hills"
-              onPress={() => handleSelectAddress('241 Maple Avenue')}
-            />
-            <RecentSearchItem
-              address="Farmers Market Plaza, Downtown"
-              onPress={() => handleSelectAddress('Farmers Market Plaza')}
-            />
+            {recentSearches.map((search) => (
+              <RecentSearchItem
+                key={search.id}
+                address={search.address}
+                onPress={() => handleSelectAddress(search.address, search.coords)}
+              />
+            ))}
           </View>
         </View>
       </ScrollView>
 
-      {/* Fixed Footer */}
+      {/* Footer */}
       <View
-        className="fixed bottom-0 left-0 w-full p-6 bg-white/90 backdrop-blur-xl border-t border-surface-variant/20"
+        className="absolute bottom-0 left-0 w-full p-6 bg-white/90 backdrop-blur-xl border-t border-surface-variant/20"
         style={{ paddingBottom: Math.max(insets.bottom, 24) }}
       >
-        <TouchableOpacity className="w-full bg-primary h-14 rounded-full flex-row items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-[0.98]">
+        <TouchableOpacity 
+          onPress={handleAddNewAddress}
+          className="w-full bg-primary h-14 rounded-full flex-row items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-[0.98]"
+        >
           <Plus size={24} color="#ffffff" />
           <Text className="text-on-primary font-bold text-base">
             Add New Address
