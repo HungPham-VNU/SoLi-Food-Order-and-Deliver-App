@@ -103,6 +103,64 @@ export interface RestaurantListResponse {
   total: number;
 }
 
+export interface RestaurantSearchResult {
+  id: string;
+  name: string;
+  description?: string | null;
+  address: string;
+  phone: string;
+  isOpen: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+  cuisineType?: string | null;
+  logoUrl?: string | null;
+  coverImageUrl?: string | null;
+  distanceKm?: number | null;
+  score?: number;
+  createdAt: string;
+  updatedAt: string;
+  // UI-specific extensions (may not be in API yet)
+  rating?: number;
+  reviewCount?: number;
+  deliveryTime?: string;
+  deliveryFee?: number;
+}
+
+export interface RestaurantSearchSummary {
+  id: string;
+  name: string;
+  address: string;
+  cuisineType?: string | null;
+  logoUrl?: string | null;
+  coverImageUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  distanceKm?: number | null;
+}
+
+export interface SearchItemResult {
+  id: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  imageUrl?: string | null;
+  tags?: string[];
+  categoryName?: string | null;
+  score?: number;
+  restaurant: RestaurantSearchSummary;
+}
+
+export interface UnifiedSearchTotals {
+  restaurants: number;
+  items: number;
+}
+
+export interface UnifiedSearchResponse {
+  restaurants: RestaurantSearchResult[];
+  items: SearchItemResult[];
+  total: UnifiedSearchTotals;
+}
+
 // ─── Screen Props ──────────────────────────────────────────────────────────────
 
 export interface ProductDetailScreenProps {

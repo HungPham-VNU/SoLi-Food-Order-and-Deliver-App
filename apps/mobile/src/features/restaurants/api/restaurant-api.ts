@@ -6,15 +6,29 @@ import {
   RestaurantListResponse,
   MenuItemListResponse,
   ModifierGroup,
+  UnifiedSearchResponse,
 } from '../types';
 
 export const restaurantKeys = {
   all: ['restaurants'] as const,
   lists: () => [...restaurantKeys.all, 'list'] as const,
   list: (filters: string) => [...restaurantKeys.lists(), { filters }] as const,
+  search: (filters: string) =>
+    [...restaurantKeys.all, 'search', { filters }] as const,
   details: () => [...restaurantKeys.all, 'detail'] as const,
   detail: (id: string) => [...restaurantKeys.details(), id] as const,
 };
+
+const buildSearchQuery = (
+  params: Record<string, string | number | undefined>,
+) =>
+  Object.entries(params)
+    .filter(([, value]) => value !== undefined)
+    .map(
+      ([key, value]) =>
+        `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`,
+    )
+    .join('&');
 
 export const menuKeys = {
   all: ['menu-items'] as const,
@@ -32,6 +46,32 @@ export function useRestaurants(offset = 0, limit = 20) {
       apiFetch<RestaurantListResponse>(
         `/api/restaurants?offset=${offset}&limit=${limit}`,
       ),
+  });
+}
+
+interface NearbyRestaurantsParams {
+  latitude?: number | null;
+  longitude?: number | null;
+  radiusKm?: number;
+  offset?: number;
+  limit?: number;
+}
+
+export function useNearbyRestaurants(params: NearbyRestaurantsParams = {}) {
+  const { latitude, longitude, radiusKm = 5, offset = 0, limit = 20 } = params;
+  const hasCoords = latitude != null && longitude != null;
+  const queryString = buildSearchQuery({
+    lat: hasCoords ? (latitude ?? undefined) : undefined,
+    lon: hasCoords ? (longitude ?? undefined) : undefined,
+    radiusKm: hasCoords ? radiusKm : undefined,
+    offset,
+    limit,
+  });
+  const endpoint = queryString ? `/api/search?${queryString}` : '/api/search';
+
+  return useQuery({
+    queryKey: restaurantKeys.search(queryString),
+    queryFn: () => apiFetch<UnifiedSearchResponse>(endpoint),
   });
 }
 

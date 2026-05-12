@@ -18,13 +18,13 @@ import {
   Leaf,
   Croissant,
   Utensils,
-  UtensilsCrossed,
   Heart,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useAddressStore } from '@/src/features/location';
 import { HomeTopBar } from '../components';
-import { useRestaurants } from '../api/restaurant-api';
+import { useNearbyRestaurants } from '../api/restaurant-api';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', Icon: Utensils, active: true },
@@ -41,7 +41,8 @@ const SPECIAL_OFFERS = [
     code: 'TASTY50',
     tag: 'Limited Time',
     tagBg: 'bg-primary',
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDwlt7N_i3aWRp2VHbLgQmZ6k6gj96k-SslATcMloH8nym9v2Yix9HPc6kpFLatV7Li6BYTIFlz379nAENGr5h_ft3GEd5uPMNjkhjk0K0ZSrcaq-n5d9Ywt_0pbaeu72cLYCJOLoCaAi-OeGD4-6mfpcrt5AFTOm6iQSaX-gYFy-mzS1fCZMFNQXX4IxTYejhgv5Sds8DcCvua6PlcKoO_Jc8b6iiHogp9s-tIewrSensPEdNrOic8AhpvXiwHgIrgMXjOjqO6sL-z',
+    imageUrl:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuDwlt7N_i3aWRp2VHbLgQmZ6k6gj96k-SslATcMloH8nym9v2Yix9HPc6kpFLatV7Li6BYTIFlz379nAENGr5h_ft3GEd5uPMNjkhjk0K0ZSrcaq-n5d9Ywt_0pbaeu72cLYCJOLoCaAi-OeGD4-6mfpcrt5AFTOm6iQSaX-gYFy-mzS1fCZMFNQXX4IxTYejhgv5Sds8DcCvua6PlcKoO_Jc8b6iiHogp9s-tIewrSensPEdNrOic8AhpvXiwHgIrgMXjOjqO6sL-z',
   },
   {
     id: '2',
@@ -49,25 +50,34 @@ const SPECIAL_OFFERS = [
     code: 'Healthy & Delicious',
     tag: 'Trending',
     tagBg: 'bg-secondary',
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDPE2kvoWKkyBMIdyp4KqLer9OI7B_ZZa1GlQjw8e_8jGaRxZLiSi2IYdtJdkg3mjshv8V0VzXqOrTPow-FLGxnUDfWTlOKpBFle-9Q5CKJyYdn4AJ4XWIUN5cHItF59-Fj3V2lsr4oKaQ2sU7u0rAMXaejNmqNL-2G-kuQN0mce1J6gpyJFPfQVOtXhy1VC0odLDXzuO-hAhVlCA3cHRhR0oU91RNM_5UQO4vfU1z235ZekNO0MsTIEkh27oKYECOS8SLM7sMtdEJC',
+    imageUrl:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuDPE2kvoWKkyBMIdyp4KqLer9OI7B_ZZa1GlQjw8e_8jGaRxZLiSi2IYdtJdkg3mjshv8V0VzXqOrTPow-FLGxnUDfWTlOKpBFle-9Q5CKJyYdn4AJ4XWIUN5cHItF59-Fj3V2lsr4oKaQ2sU7u0rAMXaejNmqNL-2G-kuQN0mce1J6gpyJFPfQVOtXhy1VC0odLDXzuO-hAhVlCA3cHRhR0oU91RNM_5UQO4vfU1z235ZekNO0MsTIEkh27oKYECOS8SLM7sMtdEJC',
   },
 ];
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { data: restaurantsData, isLoading, error } = useRestaurants();
+  const { latitude, longitude } = useAddressStore();
+  const {
+    data: restaurantsData,
+    isLoading,
+    error,
+  } = useNearbyRestaurants({
+    latitude,
+    longitude,
+  });
 
-  const restaurants = restaurantsData?.data || [];
+  const restaurants = restaurantsData?.restaurants || [];
 
   return (
     <View className="flex-1 bg-background font-inter text-on-surface">
       <HomeTopBar insetsTop={insets.top} />
 
-      <ScrollView 
+      <ScrollView
         className="flex-1"
-        contentContainerStyle={{ 
-          paddingTop: insets.top + 80, 
+        contentContainerStyle={{
+          paddingTop: insets.top + 80,
           paddingBottom: insets.bottom + 24,
         }}
         showsVerticalScrollIndicator={false}
@@ -78,7 +88,7 @@ export function HomeScreen() {
             <View className="absolute left-4 z-10 pointer-events-none">
               <Search size={20} color="#40493d" />
             </View>
-            <TextInput 
+            <TextInput
               className="w-full h-14 pl-12 pr-4 bg-surface-container-lowest border border-surface-variant rounded-full font-inter text-sm text-on-surface shadow-sm"
               placeholder="Search restaurants, dishes..."
               placeholderTextColor="#40493d"
@@ -88,31 +98,35 @@ export function HomeScreen() {
 
         {/* Categories Section */}
         <View className="mb-8">
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
             className="px-4"
             contentContainerStyle={{ gap: 16, paddingRight: 32 }}
           >
             {CATEGORIES.map((cat) => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key={cat.id}
                 className="flex-col items-center gap-1.5 active:scale-95"
               >
-                <View 
+                <View
                   className={`w-16 h-16 rounded-2xl items-center justify-center shadow-md ${
-                    cat.active ? 'bg-primary rotate-3' : 'bg-surface-container-lowest border border-surface-variant'
+                    cat.active
+                      ? 'bg-primary rotate-3'
+                      : 'bg-surface-container-lowest border border-surface-variant'
                   }`}
                 >
-                  <cat.Icon 
-                    size={30} 
-                    color={cat.active ? "#ffffff" : "#00490e"} 
-                    fill={cat.active ? "#ffffff" : "none"}
+                  <cat.Icon
+                    size={30}
+                    color={cat.active ? '#ffffff' : '#00490e'}
+                    fill={cat.active ? '#ffffff' : 'none'}
                   />
                 </View>
-                <Text className={`font-jakarta-sans text-sm font-bold mt-1 ${
-                  cat.active ? 'text-primary' : 'text-on-surface-variant'
-                }`}>
+                <Text
+                  className={`font-jakarta-sans text-sm font-bold mt-1 ${
+                    cat.active ? 'text-primary' : 'text-on-surface-variant'
+                  }`}
+                >
                   {cat.name}
                 </Text>
               </TouchableOpacity>
@@ -122,8 +136,8 @@ export function HomeScreen() {
 
         {/* Special Offer Hero Carousel */}
         <View className="mb-10">
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             snapToInterval={320}
             decelerationRate="fast"
             showsHorizontalScrollIndicator={false}
@@ -131,17 +145,19 @@ export function HomeScreen() {
             contentContainerStyle={{ gap: 16, paddingRight: 32 }}
           >
             {SPECIAL_OFFERS.map((offer) => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key={offer.id}
                 className="w-80 h-48 rounded-3xl overflow-hidden shadow-lg relative active:scale-[0.98]"
               >
-                <Image 
+                <Image
                   source={{ uri: offer.imageUrl }}
                   className="w-full h-full"
                   contentFit="cover"
                 />
                 <View className="absolute inset-0 bg-black/40 p-5 justify-end">
-                  <View className={`${offer.tagBg} px-2.5 py-1 rounded-md self-start mb-2`}>
+                  <View
+                    className={`${offer.tagBg} px-2.5 py-1 rounded-md self-start mb-2`}
+                  >
                     <Text className="text-on-primary text-[10px] font-bold uppercase tracking-wide">
                       {offer.tag}
                     </Text>
@@ -172,76 +188,111 @@ export function HomeScreen() {
           {isLoading ? (
             <ActivityIndicator size="large" color="#00490e" />
           ) : error ? (
-            <Text className="text-error text-center my-4">Error loading restaurants</Text>
+            <Text className="text-error text-center my-4">
+              Error loading restaurants
+            </Text>
           ) : restaurants.length === 0 ? (
             <View className="items-center justify-center my-10">
               <Utensils size={48} color="#707a6c" />
-              <Text className="text-on-surface-variant font-medium mt-4">No restaurants available</Text>
+              <Text className="text-on-surface-variant font-medium mt-4">
+                No restaurants available
+              </Text>
             </View>
           ) : (
             <View className="flex-col gap-5">
-              {restaurants.map((restaurant) => (
-                <TouchableOpacity 
-                  key={restaurant.id}
-                  onPress={() => router.push({ pathname: '/restaurant/[id]', params: { id: restaurant.id } })}
-                  className="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm active:scale-[0.98] border border-surface-variant/20"
-                >
-                  <View className="h-40 w-full relative">
-                    <Image 
-                      source={{ uri: restaurant.coverImageUrl || restaurant.logoUrl }}
-                      className="w-full h-full"
-                      contentFit="cover"
-                    />
-                    <View className="absolute top-3 right-3 bg-surface-container-lowest/95 px-2.5 py-1 rounded-full flex-row items-center gap-1 shadow-md">
-                      <Star size={16} color="#8b5000" fill="#8b5000" />
-                      <Text className="font-jakarta-sans text-sm font-bold text-on-background">
-                        {restaurant.rating ? restaurant.rating.toFixed(1) : 'New'}
-                      </Text>
-                      <Text className="font-inter text-xs text-on-surface-variant">(500+)</Text>
-                    </View>
-                    {restaurant.deliveryFee === 0 && (
-                      <View className="absolute top-3 left-3 bg-primary px-2.5 py-1 rounded-lg shadow-md">
-                        <Text className="text-on-primary font-inter text-xs font-bold uppercase tracking-wider">
-                          Free Delivery
-                        </Text>
-                      </View>
-                    )}
-                  </View>
+              {restaurants.map((restaurant) => {
+                const imageUrl =
+                  restaurant.coverImageUrl ?? restaurant.logoUrl ?? undefined;
 
-                  <View className="p-4">
-                    <View className="flex-row justify-between items-start mb-1">
-                      <Text className="font-jakarta-sans font-extrabold text-xl text-on-background leading-tight">
-                        {restaurant.name}
+                return (
+                  <TouchableOpacity
+                    key={restaurant.id}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/restaurant/[id]',
+                        params: { id: restaurant.id },
+                      })
+                    }
+                    className="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm active:scale-[0.98] border border-surface-variant/20"
+                  >
+                    <View className="h-40 w-full relative">
+                      <Image
+                        source={imageUrl ? { uri: imageUrl } : undefined}
+                        className="w-full h-full"
+                        contentFit="cover"
+                      />
+                      <View className="absolute top-3 right-3 bg-surface-container-lowest/95 px-2.5 py-1 rounded-full flex-row items-center gap-1 shadow-md">
+                        <Star size={16} color="#8b5000" fill="#8b5000" />
+                        <Text className="font-jakarta-sans text-sm font-bold text-on-background">
+                          {restaurant.rating
+                            ? restaurant.rating.toFixed(1)
+                            : 'New'}
+                        </Text>
+                        <Text className="font-inter text-xs text-on-surface-variant">
+                          (500+)
+                        </Text>
+                      </View>
+                      {restaurant.deliveryFee === 0 && (
+                        <View className="absolute top-3 left-3 bg-primary px-2.5 py-1 rounded-lg shadow-md">
+                          <Text className="text-on-primary font-inter text-xs font-bold uppercase tracking-wider">
+                            Free Delivery
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <View className="p-4">
+                      <View className="flex-row justify-between items-start mb-1">
+                        <Text className="font-jakarta-sans font-extrabold text-xl text-on-background leading-tight">
+                          {restaurant.name}
+                        </Text>
+                        <TouchableOpacity>
+                          <Heart size={20} color="#40493d" />
+                        </TouchableOpacity>
+                      </View>
+                      <Text className="font-inter text-sm text-on-surface-variant mb-3">
+                        {restaurant.cuisineType || 'Cuisine'} • Gourmet
                       </Text>
-                      <TouchableOpacity>
-                        <Heart size={20} color="#40493d" />
-                      </TouchableOpacity>
-                    </View>
-                    <Text className="font-inter text-sm text-on-surface-variant mb-3">
-                      {restaurant.cuisineType || 'Cuisine'} • Gourmet
-                    </Text>
-                    
-                    <View className="flex-row items-center gap-3">
-                      <View className="flex-row items-center gap-1.5 bg-surface-container px-2.5 py-1.5 rounded-lg">
-                        <Clock size={16} color="#1a1c1c" />
-                        <Text className="font-inter text-xs font-semibold text-on-surface">
-                          {restaurant.deliveryTime || '20-30'} min
-                        </Text>
+
+                      <View className="flex-row items-center gap-3">
+                        <View className="flex-row items-center gap-1.5 bg-surface-container px-2.5 py-1.5 rounded-lg">
+                          <Clock size={16} color="#1a1c1c" />
+                          <Text className="font-inter text-xs font-semibold text-on-surface">
+                            {restaurant.deliveryTime || '20-30'} min
+                          </Text>
+                        </View>
+                        <View
+                          className={`flex-row items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${
+                            restaurant.deliveryFee === 0
+                              ? 'bg-primary/10'
+                              : 'bg-surface-container'
+                          }`}
+                        >
+                          <Truck
+                            size={16}
+                            color={
+                              restaurant.deliveryFee === 0
+                                ? '#00490e'
+                                : '#1a1c1c'
+                            }
+                          />
+                          <Text
+                            className={`font-inter text-xs font-bold ${
+                              restaurant.deliveryFee === 0
+                                ? 'text-primary'
+                                : 'text-on-surface'
+                            }`}
+                          >
+                            {restaurant.deliveryFee === 0
+                              ? 'Free'
+                              : `$${restaurant.deliveryFee} Delivery`}
+                          </Text>
+                        </View>
                       </View>
-                      <View className={`flex-row items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${
-                        restaurant.deliveryFee === 0 ? 'bg-primary/10' : 'bg-surface-container'
-                      }`}>
-                        <Truck size={16} color={restaurant.deliveryFee === 0 ? "#00490e" : "#1a1c1c"} />
-                        <Text className={`font-inter text-xs font-bold ${
-                          restaurant.deliveryFee === 0 ? 'text-primary' : 'text-on-surface'
-                        }`}>
-                          {restaurant.deliveryFee === 0 ? 'Free' : `$${restaurant.deliveryFee} Delivery`}
-                        </Text>
-                      </View>
                     </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
         </View>
