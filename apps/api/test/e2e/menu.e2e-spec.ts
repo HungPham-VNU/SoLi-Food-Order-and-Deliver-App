@@ -204,14 +204,14 @@ describe('Menu Item & Category CRUD (E2E)', () => {
       const res = await http.post('/api/menu-items').set(ownerHeaders()).send({
         restaurantId: TEST_RESTAURANT_ID,
         name: 'Margherita Pizza',
-        price: 12.5,
+        price: 12000,
       });
 
       expect(res.status).toBe(201);
       expect(res.body).toMatchObject({
         restaurantId: TEST_RESTAURANT_ID,
         name: 'Margherita Pizza',
-        price: 12.5,
+        price: 12000,
         status: 'available',
       });
       expect(res.body.id).toBeDefined();
@@ -234,7 +234,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
         .send({
           restaurantId: TEST_RESTAURANT_ID,
           name: 'Deluxe Burger',
-          price: 18.99,
+          price: 19000,
           categoryId: catId,
           description: 'Double patty with special sauce',
           sku: 'BURGER-DLX-001',
@@ -245,7 +245,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
       expect(res.status).toBe(201);
       expect(res.body).toMatchObject({
         name: 'Deluxe Burger',
-        price: 18.99,
+        price: 19000,
         categoryId: catId,
         description: 'Double patty with special sauce',
         sku: 'BURGER-DLX-001',
@@ -271,7 +271,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
         .send({
           restaurantId: TEST_RESTAURANT_ID,
           name: 'Intrusion Item',
-          price: 1,
+          price: 10000,
         });
 
       expect(res.status).toBe(403);
@@ -347,7 +347,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
         .send({
           restaurantId: TEST_RESTAURANT_ID,
           name: 'Tomato Soup',
-          price: 7.5,
+          price: 8000,
           categoryId: listCategoryId,
         });
       soupId = soupRes.body.id as string;
@@ -358,7 +358,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
         .send({
           restaurantId: TEST_RESTAURANT_ID,
           name: 'Caesar Salad',
-          price: 9.0,
+          price: 9000,
         });
       saladId = saladRes.body.id as string;
     });
@@ -478,7 +478,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
       const res = await http.post('/api/menu-items').set(ownerHeaders()).send({
         restaurantId: TEST_RESTAURANT_ID,
         name: 'Spaghetti Carbonara',
-        price: 14.5,
+        price: 15000,
       });
       itemId = res.body.id as string;
     });
@@ -491,7 +491,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
       expect(res.status).toBe(200);
       expect(res.body.id).toBe(itemId);
       expect(res.body.name).toBe('Spaghetti Carbonara');
-      expect(res.body.price).toBe(14.5);
+      expect(res.body.price).toBe(15000);
       expect(res.body.status).toBe('available');
     });
 
@@ -537,7 +537,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
       const res = await http.post('/api/menu-items').set(ownerHeaders()).send({
         restaurantId: TEST_RESTAURANT_ID,
         name: 'Tiramisu',
-        price: 6.5,
+        price: 7000,
       });
       itemId = res.body.id as string;
     });
@@ -556,10 +556,10 @@ describe('Menu Item & Category CRUD (E2E)', () => {
       const res = await http
         .patch(`/api/menu-items/${itemId}`)
         .set(ownerHeaders())
-        .send({ price: 8.99 });
+        .send({ price: 9000 });
 
       expect(res.status).toBe(200);
-      expect(res.body.price).toBe(8.99);
+      expect(res.body.price).toBe(9000);
     });
 
     it('updates tags and returns 200', async () => {
@@ -616,7 +616,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
         .send({
           restaurantId: TEST_RESTAURANT_ID,
           name: 'Toggle Burger',
-          price: 10,
+          price: 10000,
         });
       toggleItemId = toggleRes.body.id as string;
 
@@ -627,7 +627,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
         .send({
           restaurantId: TEST_RESTAURANT_ID,
           name: 'Unavailable Item',
-          price: 5,
+          price: 5000,
         });
       unavailableItemId = unavailableRes.body.id as string;
       // Set to unavailable via update
@@ -689,7 +689,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
       const res = await http.post('/api/menu-items').set(ownerHeaders()).send({
         restaurantId: TEST_RESTAURANT_ID,
         name: 'Deletable Item',
-        price: 5,
+        price: 5000,
       });
       deletableItemId = res.body.id as string;
     });
@@ -757,7 +757,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
         .send({
           restaurantId: TEST_RESTAURANT_ID,
           name: 'Snapshot Item',
-          price: 9.99,
+          price: 10000,
         });
       expect(createRes.status).toBe(201);
       plainItemId = createRes.body.id as string;
@@ -774,7 +774,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
       const patchRes = await http
         .patch(`/api/menu-items/${plainItemId}`)
         .set(ownerHeaders())
-        .send({ price: 11.99 });
+        .send({ price: 12000 });
       expect(patchRes.status).toBe(200);
 
       // Allow 100 ms for projector
@@ -782,7 +782,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
 
       const snapshot = await getSnapshot(plainItemId);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.price).toBe(11.99);
+      expect(snapshot!.price).toBe(12000);
       expect(snapshot!.modifiers).toEqual([]);
     });
 
@@ -809,7 +809,7 @@ describe('Menu Item & Category CRUD (E2E)', () => {
       await http
         .patch(`/api/menu-items/${plainItemId}`)
         .set(ownerHeaders())
-        .send({ price: 12.0 });
+        .send({ price: 12000 });
 
       await new Promise((r) => setTimeout(r, 100));
 

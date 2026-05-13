@@ -234,7 +234,7 @@ describe('SoLi Full Integration E2E', () => {
     const basicRes = await http
       .post('/api/menu-items')
       .set(ownerHeaders())
-      .send({ restaurantId: TEST_RESTAURANT_ID, name: 'Plain Burger', price: 10.0 });
+      .send({ restaurantId: TEST_RESTAURANT_ID, name: 'Plain Burger', price: 10000 });
     expect(basicRes.status).toBe(201);
     basicItemId = basicRes.body.id as string;
     await delay(200);
@@ -243,7 +243,7 @@ describe('SoLi Full Integration E2E', () => {
     const modRes = await http
       .post('/api/menu-items')
       .set(ownerHeaders())
-      .send({ restaurantId: TEST_RESTAURANT_ID, name: 'Fancy Burger', price: 15.0 });
+      .send({ restaurantId: TEST_RESTAURANT_ID, name: 'Fancy Burger', price: 15000 });
     expect(modRes.status).toBe(201);
     modItemId = modRes.body.id as string;
     await delay(200);
@@ -267,7 +267,7 @@ describe('SoLi Full Integration E2E', () => {
     const robRes = await http
       .post(`/api/menu-items/${modItemId}/modifier-groups/${reqGroupId}/options`)
       .set(ownerHeaders())
-      .send({ name: 'Wheat', price: 0.5, isDefault: false });
+      .send({ name: 'Wheat', price: 500, isDefault: false });
     expect(robRes.status).toBe(201);
     reqOptBId = robRes.body.id as string;
     await delay(200);
@@ -284,14 +284,14 @@ describe('SoLi Full Integration E2E', () => {
     const ooaRes = await http
       .post(`/api/menu-items/${modItemId}/modifier-groups/${optGroupId}/options`)
       .set(ownerHeaders())
-      .send({ name: 'Cheese', price: 1.0, isDefault: false });
+      .send({ name: 'Cheese', price: 1000, isDefault: false });
     expect(ooaRes.status).toBe(201);
     optOptAId = ooaRes.body.id as string;
 
     const oobRes = await http
       .post(`/api/menu-items/${modItemId}/modifier-groups/${optGroupId}/options`)
       .set(ownerHeaders())
-      .send({ name: 'Bacon', price: 1.5, isDefault: false });
+      .send({ name: 'Bacon', price: 1500, isDefault: false });
     expect(oobRes.status).toBe(201);
     optOptBId = oobRes.body.id as string;
     await delay(300); // extra wait after modifier chain
@@ -423,13 +423,13 @@ describe('SoLi Full Integration E2E', () => {
         .send({
           restaurantId: newRestaurantId,
           name: 'Bistro Salad',
-          price: 8.5,
+          price: 9000,
         });
       expect(res.status).toBe(201);
       expect(res.body).toMatchObject({
         id: expect.any(String),
         name: 'Bistro Salad',
-        price: 8.5,
+        price: 9000,
         restaurantId: newRestaurantId,
       });
       newMenuItemId = res.body.id as string;
@@ -500,7 +500,7 @@ describe('SoLi Full Integration E2E', () => {
       const snap = await getSnapshot(basicItemId);
       expect(snap).not.toBeNull();
       expect(snap!.name).toBe('Plain Burger');
-      expect(snap!.price).toBe(10.0);
+      expect(snap!.price).toBe(10000);
       expect(snap!.status).toBe('available');
       expect(snap!.restaurantId).toBe(TEST_RESTAURANT_ID);
     });
@@ -536,16 +536,16 @@ describe('SoLi Full Integration E2E', () => {
       await http
         .patch(`/api/menu-items/${basicItemId}`)
         .set(ownerHeaders())
-        .send({ price: 12.0 });
+        .send({ price: 12000 });
       await delay(200);
       const snap = await getSnapshot(basicItemId);
-      expect(snap!.price).toBe(12.0);
+      expect(snap!.price).toBe(12000);
 
       // Restore original price
       await http
         .patch(`/api/menu-items/${basicItemId}`)
         .set(ownerHeaders())
-        .send({ price: 10.0 });
+        .send({ price: 10000 });
       await delay(200);
     });
   });
@@ -613,7 +613,7 @@ describe('SoLi Full Integration E2E', () => {
         itemName: 'Fancy Burger',
         unitPrice: 15.0,
         quantity: 1,
-        selectedOptions: [{ groupId: reqGroupId, optionId }],
+        selectedModifiers: [{ groupId: reqGroupId, optionId }],
       });
       await http
         .post('/api/carts/my/items')
@@ -684,7 +684,7 @@ describe('SoLi Full Integration E2E', () => {
           itemName: 'Fancy Burger',
           unitPrice: 15.0,
           quantity: 1,
-          selectedOptions: [{ groupId: reqGroupId, optionId: reqOptAId }],
+          selectedModifiers: [{ groupId: reqGroupId, optionId: reqOptAId }],
         });
       expect(addRes.status).toBe(201);
       const cartItemId = (
@@ -695,7 +695,7 @@ describe('SoLi Full Integration E2E', () => {
         .patch(`/api/carts/my/items/${cartItemId}/modifiers`)
         .set(authH(customerToken))
         .send({
-          selectedOptions: [
+          selectedModifiers: [
             { groupId: reqGroupId, optionId: reqOptBId },
             { groupId: optGroupId, optionId: optOptAId },
           ],
@@ -828,8 +828,8 @@ describe('SoLi Full Integration E2E', () => {
       // perKmRate=0 so fee = baseFee exactly
       expect(res.body.shippingFee).toBe(ZONE_BASE_FEE);
       expect(res.body.estimatedDeliveryMinutes).toBeGreaterThan(0);
-      // totalAmount = items total (10.0 * 1) + shippingFee
-      expect(res.body.totalAmount).toBe(10.0 + ZONE_BASE_FEE);
+      // totalAmount = items total (10000 * 1) + shippingFee
+      expect(res.body.totalAmount).toBe(10000 + ZONE_BASE_FEE);
     });
 
     it('O-03 Scenario C — GPS outside every zone → 422', async () => {
@@ -908,7 +908,7 @@ describe('SoLi Full Integration E2E', () => {
         restaurantId: TEST_RESTAURANT_ID,
         restaurantName: 'E2E Test Restaurant',
         itemName: 'Plain Burger',
-        unitPrice: 999.0, // wrong — ACL price is 10.0
+        unitPrice: 999.0, // wrong — ACL price is 10000
         quantity: 1,
       });
       const res = await http
@@ -917,8 +917,8 @@ describe('SoLi Full Integration E2E', () => {
         .send({ deliveryAddress: ADDR_NO_GPS, paymentMethod: 'cod' });
       expect(res.status).toBe(201);
       const items = await getOrderItems(res.body.orderId as string);
-      expect(items[0].unitPrice).toBe(10.0); // ACL snapshot price wins
-      expect(res.body.totalAmount).toBe(10.0);
+      expect(items[0].unitPrice).toBe(10000); // ACL snapshot price wins
+      expect(res.body.totalAmount).toBe(10000);
     });
 
     it('O-09 DB order row has correct status, totalAmount, shippingFee', async () => {
@@ -932,7 +932,7 @@ describe('SoLi Full Integration E2E', () => {
       expect(order).not.toBeNull();
       expect(order!.status).toBe('pending');
       expect(order!.shippingFee).toBe(0);
-      expect(order!.totalAmount).toBe(20.0); // 10.0 × qty 2
+      expect(order!.totalAmount).toBe(20000); // 10000 × qty 2
       expect(order!.estimatedDeliveryMinutes).toBeNull();
     });
 

@@ -281,7 +281,7 @@ describe('Order History E2E (Phase 7)', () => {
     const itemRes = await http
       .post('/api/menu-items')
       .set(ownerHeaders())
-      .send({ restaurantId: TEST_RESTAURANT_ID, name: 'Test Burger', price: 10.0 });
+      .send({ restaurantId: TEST_RESTAURANT_ID, name: 'Test Burger', price: 10000 });
     expect(itemRes.status).toBe(201);
     menuItemId = itemRes.body.id as string;
     await delay(200);

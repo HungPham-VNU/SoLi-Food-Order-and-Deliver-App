@@ -44,6 +44,17 @@
  *    ORDER_IDEMPOTENCY_TTL_SECONDS     = 300
  *    RESTAURANT_ACCEPT_TIMEOUT_SECONDS = 600
  *    CART_ABANDONED_TTL_SECONDS        = 86400
+ *
+ *  PROMOTIONS
+ *    P1 Platform 10% auto-apply (active)  : a0000001-0000-4000-8000-000000000001
+ *    P2 Phở Bắc 20K off auto-apply (active): a0000002-0000-4000-8000-000000000002
+ *    P3 Seoul BBQ free delivery (active)  : a0000003-0000-4000-8000-000000000003
+ *    P4 Cơm Tấm 15% coupon (active)       : a0000004-0000-4000-8000-000000000004
+ *    P5 Draft upcoming platform promo     : a0000005-0000-4000-8000-000000000005
+ *
+ *  COUPON CODES (for P4)
+ *    COMTAM15  : c0000001-0000-4000-8000-000000000001
+ *    WELCOME10 : c0000002-0000-4000-8000-000000000002
  * ──────────────────────────────────────────────────────────────────────────────
  */
 
@@ -69,6 +80,10 @@ import { notificationPreferences } from '../../module/notification/domain/notifi
 import { notificationRestaurantSnapshots } from '../../module/notification/acl/notification-restaurant-snapshot.schema';
 import { deviceTokens } from '../../module/notification/domain/device-token.schema';
 import type { NotificationType } from '../../module/notification/domain/notification.schema';
+import {
+  promotions,
+  couponCodes,
+} from '../../module/promotion/domain/promotion.schema';
 
 const db = drizzle(process.env.DATABASE_URL!);
 
@@ -186,6 +201,22 @@ const IDS = {
   grpR5BanhMiTemp: 'ee000025-0000-4000-8000-000000000025', // Bánh Mì Cá Hồi — Nhiệt độ
   grpR5TraXanhTemp: 'ee000026-0000-4000-8000-000000000026', // Trà Xanh — Nhiệt độ
   grpR5TraXanhStrength: 'ee000027-0000-4000-8000-000000000027', // Trà Xanh — Nồng độ matcha
+
+  // ── Promotions ─────────────────────────────────────────────────────────────
+  // P1: Platform-wide 10% discount (active, auto-apply)
+  promo1Platform10pct: 'a0000001-0000-4000-8000-000000000001',
+  // P2: Phở Bắc flat 20,000 VND off (active, auto-apply, min order 80,000)
+  promo2R1Fixed20k: 'a0000002-0000-4000-8000-000000000002',
+  // P3: Free delivery for Seoul BBQ (active, auto-apply, min order 100,000)
+  promo3R4FreeDelivery: 'a0000003-0000-4000-8000-000000000003',
+  // P4: Cơm Tấm 15% off with coupon (active, coupon_code)
+  promo4R3Coupon15pct: 'a0000004-0000-4000-8000-000000000004',
+  // P5: Draft — upcoming platform promo (not yet active)
+  promo5DraftUpcoming: 'a0000005-0000-4000-8000-000000000005',
+
+  // ── Coupon Codes ───────────────────────────────────────────────────────────
+  coupon1ComTam: 'c0000001-0000-4000-8000-000000000001', // COMTAM15
+  coupon2ComTam: 'c0000002-0000-4000-8000-000000000002', // WELCOME10
 
   // ── Modifier Options ───────────────────────────────────────────────────────
   // grpR1Pho1Size
@@ -2649,7 +2680,7 @@ async function seedDeviceTokens() {
   const rows = [
     // ── Active tokens ──────────────────────────────────────────────────────────
     {
-      id: 'dt000001-0000-4000-8000-000000000001',
+      id: 'd0000001-0000-4000-8000-000000000001',
       userId: IDS.customerUserId,
       token: 'ExponentPushToken[customer-ios-test-001]',
       platform: 'ios' as const,
@@ -2657,7 +2688,7 @@ async function seedDeviceTokens() {
       lastSeenAt: now,
     },
     {
-      id: 'dt000002-0000-4000-8000-000000000002',
+      id: 'd0000002-0000-4000-8000-000000000002',
       userId: IDS.customerUserId,
       token: 'ExponentPushToken[customer-android-test-002]',
       platform: 'android' as const,
@@ -2665,7 +2696,7 @@ async function seedDeviceTokens() {
       lastSeenAt: now,
     },
     {
-      id: 'dt000003-0000-4000-8000-000000000003',
+      id: 'd0000003-0000-4000-8000-000000000003',
       userId: IDS.ownerUserId,
       token: 'ExponentPushToken[owner1-ios-test-003]',
       platform: 'ios' as const,
@@ -2675,7 +2706,7 @@ async function seedDeviceTokens() {
     // ── Inactive token (recent — within 30d INACTIVE_TTL, NOT deleted by cron) ──
     // Simulates a device that FCM rejected last week (e.g. user reinstalled app).
     {
-      id: 'dt000004-0000-4000-8000-000000000004',
+      id: 'd0000004-0000-4000-8000-000000000004',
       userId: IDS.customerUserId,
       token: 'ExponentPushToken[customer-old-web-004]',
       platform: 'web' as const,
@@ -2686,7 +2717,7 @@ async function seedDeviceTokens() {
     // Simulates owner2's old device that was deregistered 45 days ago.
     // DeviceTokenCleanupTask.deleteStaleInactive() will remove this row.
     {
-      id: 'dt000005-0000-4000-8000-000000000005',
+      id: 'd0000005-0000-4000-8000-000000000005',
       userId: IDS.owner2UserId,
       token: 'ExponentPushToken[owner2-stale-android-005]',
       platform: 'android' as const,
@@ -2698,10 +2729,184 @@ async function seedDeviceTokens() {
   console.log('✅ device_tokens seeded (5 rows — 3 active, 1 inactive-recent, 1 stale-inactive)');
 }
 
+// ─── Promotions seed ──────────────────────────────────────────────────────────
+
+async function deleteCouponCodes() {
+  await db.delete(couponCodes);
+  console.log('🗑️  coupon_codes cleared');
+}
+
+async function deletePromotions() {
+  await db.delete(promotions);
+  console.log('🗑️  promotions cleared');
+}
+
+/**
+ * Seeds 5 promotions covering the main PR-1/PR-2 use-cases:
+ *  P1 — Platform 10% (active, auto-apply, max 50,000 VND off)
+ *  P2 — Phở Bắc 20,000 off (active, auto-apply, min order 80,000)
+ *  P3 — Seoul BBQ free delivery (active, auto-apply, min order 100,000)
+ *  P4 — Cơm Tấm 15% coupon (active, coupon_code, max 30,000 VND off)
+ *  P5 — Draft upcoming platform promo (draft, future starts)
+ */
+async function seedPromotions() {
+  const now = new Date();
+  const activeStart = new Date('2025-01-01T00:00:00.000Z');
+  const activeEnd = new Date('2030-12-31T23:59:59.000Z');
+  const futureStart = new Date('2030-01-01T00:00:00.000Z');
+  const futureEnd = new Date('2030-06-30T23:59:59.000Z');
+
+  await db.insert(promotions).values([
+    // ── P1: Platform-wide 10% discount ────────────────────────────────────────
+    {
+      id: IDS.promo1Platform10pct,
+      name: 'Ưu đãi toàn sàn 10%',
+      description: 'Giảm 10% cho tất cả đơn hàng trên SoLi Food.',
+      type: 'percentage' as const,
+      scope: 'platform' as const,
+      status: 'active' as const,
+      trigger: 'auto_apply' as const,
+      stackingMode: 'non_stackable' as const,
+      discountValue: 10,
+      restaurantId: null,
+      minOrderAmount: null,
+      maxDiscountAmount: 50000,
+      maxTotalUses: null,
+      maxUsesPerUser: 5,
+      startsAt: activeStart,
+      endsAt: activeEnd,
+      createdAt: now,
+      updatedAt: now,
+    },
+    // ── P2: Phở Bắc flat 20,000 off ──────────────────────────────────────────
+    {
+      id: IDS.promo2R1Fixed20k,
+      name: 'Giảm 20K cho Phở Bắc',
+      description: 'Đơn từ 80,000 VND được giảm thẳng 20,000 VND.',
+      type: 'fixed_amount' as const,
+      scope: 'restaurant' as const,
+      status: 'active' as const,
+      trigger: 'auto_apply' as const,
+      stackingMode: 'non_stackable' as const,
+      discountValue: 20000,
+      restaurantId: IDS.restaurant1,
+      minOrderAmount: 80000,
+      maxDiscountAmount: null,
+      maxTotalUses: 200,
+      maxUsesPerUser: 3,
+      startsAt: activeStart,
+      endsAt: activeEnd,
+      createdAt: now,
+      updatedAt: now,
+    },
+    // ── P3: Seoul BBQ free delivery ───────────────────────────────────────────
+    {
+      id: IDS.promo3R4FreeDelivery,
+      name: 'Miễn phí giao hàng Seoul BBQ',
+      description: 'Đơn từ 100,000 VND — freeship toàn bộ.',
+      type: 'free_delivery' as const,
+      scope: 'restaurant' as const,
+      status: 'active' as const,
+      trigger: 'auto_apply' as const,
+      stackingMode: 'non_stackable' as const,
+      discountValue: 0,
+      restaurantId: IDS.restaurant4,
+      minOrderAmount: 100000,
+      maxDiscountAmount: null,
+      maxTotalUses: null,
+      maxUsesPerUser: null,
+      startsAt: activeStart,
+      endsAt: activeEnd,
+      createdAt: now,
+      updatedAt: now,
+    },
+    // ── P4: Cơm Tấm 15% coupon ───────────────────────────────────────────────
+    {
+      id: IDS.promo4R3Coupon15pct,
+      name: 'Cơm Tấm Sài Gòn — Coupon 15%',
+      description: 'Nhập mã COMTAM15 để nhận giảm 15% (tối đa 30,000 VND).',
+      type: 'percentage' as const,
+      scope: 'restaurant' as const,
+      status: 'active' as const,
+      trigger: 'coupon_code' as const,
+      stackingMode: 'non_stackable' as const,
+      discountValue: 15,
+      restaurantId: IDS.restaurant3,
+      minOrderAmount: 50000,
+      maxDiscountAmount: 30000,
+      maxTotalUses: 500,
+      maxUsesPerUser: 2,
+      startsAt: activeStart,
+      endsAt: activeEnd,
+      createdAt: now,
+      updatedAt: now,
+    },
+    // ── P5: Draft — upcoming platform promo ──────────────────────────────────
+    {
+      id: IDS.promo5DraftUpcoming,
+      name: 'Siêu sale cuối năm 2030',
+      description: 'Chuẩn bị cho sự kiện siêu sale cuối năm 2030.',
+      type: 'percentage' as const,
+      scope: 'platform' as const,
+      status: 'draft' as const,
+      trigger: 'auto_apply' as const,
+      stackingMode: 'non_stackable' as const,
+      discountValue: 20,
+      restaurantId: null,
+      minOrderAmount: 200000,
+      maxDiscountAmount: 100000,
+      maxTotalUses: 1000,
+      maxUsesPerUser: 1,
+      startsAt: futureStart,
+      endsAt: futureEnd,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ]);
+
+  console.log('✅ promotions seeded (5 rows)');
+}
+ 
+/**
+ * Seeds coupon codes for P4 (Cơm Tấm 15% coupon promotion).
+ *  COMTAM15  — primary campaign code (200 uses)
+ *  WELCOME10 — secondary code for new customer onboarding (50 uses)
+ */
+async function seedCouponCodes() {
+  const now = new Date();
+  const activeEnd = new Date('2030-12-31T23:59:59.000Z');
+
+  await db.insert(couponCodes).values([
+    {
+      id: IDS.coupon1ComTam,
+      promotionId: IDS.promo4R3Coupon15pct,
+      code: 'COMTAM15',
+      status: 'active' as const,
+      maxUses: 200,
+      currentUses: 0,
+      expiresAt: activeEnd,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: IDS.coupon2ComTam,
+      promotionId: IDS.promo4R3Coupon15pct,
+      code: 'WELCOME10',
+      status: 'active' as const,
+      maxUses: 50,
+      currentUses: 0,
+      expiresAt: activeEnd,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ]);
+
+  console.log('✅ coupon_codes seeded (2 rows)');
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log('🌱 Starting seed...\n');
 
   console.log('🗑️  Clearing old data...\n');
   await deleteNotificationRestaurantSnapshots();
@@ -2710,6 +2915,8 @@ async function main() {
   await deleteOrderingDeliveryZoneSnapshots();
   await deleteOrderingMenuItemSnapshots();
   await deleteOrderingRestaurantSnapshots();
+  await deleteCouponCodes();
+  await deletePromotions();
   await deleteModifierOptions();
   await deleteModifierGroups();
   await deleteMenuItems();
@@ -2734,6 +2941,8 @@ async function main() {
   await seedNotificationPreferences(); // 3 rows
   await seedNotificationRestaurantSnapshots(); // 5 rows
   await seedDeviceTokens(); // 5 rows (3 active, 1 inactive-recent, 1 stale-inactive)
+  await seedPromotions(); // 5 rows
+  await seedCouponCodes(); // 2 rows
 
   console.log('\n✅ All tables seeded successfully.');
   process.exit(0);

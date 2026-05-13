@@ -35,5 +35,12 @@ export class PlaceOrderCommand {
      * Defaults to '127.0.0.1' when absent (e.g. integration test context).
      */
     public readonly ipAddr?: string,
+    /**
+     * Optional coupon code entered by the customer at checkout.
+     * When present, the Promotion BC validates and reserves the corresponding
+     * promotion discount. Auto-apply promotions are also evaluated.
+     * The command handler selects the best applicable promotion between them.
+     */
+    public readonly couponCode?: string,
   ) {}
 }

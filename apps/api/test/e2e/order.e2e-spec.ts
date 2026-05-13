@@ -141,7 +141,7 @@ describe('Order placement E2E', () => {
       .send({
         restaurantId: TEST_RESTAURANT_ID,
         name: 'Test Burger',
-        price: 10.0,
+        price: 10000,
       });
     expect(itemRes.status).toBe(201);
     snapshotItemId = itemRes.body.id as string;
@@ -231,8 +231,8 @@ describe('Order placement E2E', () => {
       expect(order).not.toBeNull();
       expect(order!.status).toBe('pending');
       expect(order!.shippingFee).toBe(0);
-      // Snapshot price (10.0) × qty 2 = 20.0
-      expect(order!.totalAmount).toBe(20.0);
+      // Snapshot price (10000) × qty 2 = 20000
+      expect(order!.totalAmount).toBe(20000);
       expect(order!.estimatedDeliveryMinutes).toBeNull();
       expect(order!.paymentMethod).toBe('cod');
     });
@@ -253,8 +253,8 @@ describe('Order placement E2E', () => {
       const items = await getOrderItems(res.body.orderId as string);
       expect(items).toHaveLength(1);
       // ACL snapshot price wins — not the 99.99 cart price
-      expect(items[0].unitPrice).toBe(10.0);
-      expect(res.body.totalAmount).toBe(10.0);
+      expect(items[0].unitPrice).toBe(10000);
+      expect(res.body.totalAmount).toBe(10000);
     });
   });
 
@@ -281,14 +281,14 @@ describe('Order placement E2E', () => {
       await delay(200);
 
       // Create a 10 km delivery zone.
-      // perKmRate=0 → shippingFee = baseFee (2.50) for any address inside the zone.
+      // perKmRate=0 → shippingFee = baseFee (5000) for any address inside the zone.
       const zoneRes = await http
         .post(`/api/restaurants/${TEST_RESTAURANT_ID}/delivery-zones`)
         .set(ownerHeaders())
         .send({
           name: 'City Zone',
           radiusKm: 10,
-          baseFee: 2.5,
+          baseFee: 5000,
           perKmRate: 0,
           avgSpeedKmh: 30,
           prepTimeMinutes: 15,
@@ -307,7 +307,7 @@ describe('Order placement E2E', () => {
       await http.delete('/api/carts/my').set(ownerHeaders());
     });
 
-    it('O-05 shippingFee equals baseFee (2.50) when delivery address is inside zone', async () => {
+    it('O-05 shippingFee equals baseFee (5000) when delivery address is inside zone', async () => {
       await http
         .post('/api/carts/my/items')
         .set(ownerHeaders())
@@ -319,7 +319,7 @@ describe('Order placement E2E', () => {
         .send({ deliveryAddress: ADDRESS_NEARBY, paymentMethod: 'cod' });
 
       expect(res.status).toBe(201);
-      expect(res.body.shippingFee).toBe(2.5);
+      expect(res.body.shippingFee).toBe(5000);
     });
 
     it('O-06 totalAmount = itemsTotal + shippingFee, consistent across response and DB', async () => {
@@ -334,13 +334,13 @@ describe('Order placement E2E', () => {
         .send({ deliveryAddress: ADDRESS_NEARBY, paymentMethod: 'cod' });
 
       expect(res.status).toBe(201);
-      // itemsTotal = 10.0 × 2 = 20.0; shippingFee = 2.5; total = 22.5
-      expect(res.body.shippingFee).toBe(2.5);
-      expect(res.body.totalAmount).toBe(22.5);
+      // itemsTotal = 10000 × 2 = 20000; shippingFee = 5000; total = 25000
+      expect(res.body.shippingFee).toBe(5000);
+      expect(res.body.totalAmount).toBe(25000);
 
       const order = await getOrder(res.body.orderId as string);
-      expect(order!.totalAmount).toBe(22.5);
-      expect(order!.shippingFee).toBe(2.5);
+      expect(order!.totalAmount).toBe(25000);
+      expect(order!.shippingFee).toBe(5000);
     });
 
     it('O-07 estimatedDeliveryMinutes is non-null when zone data is present', async () => {
@@ -541,7 +541,7 @@ describe('Order placement E2E', () => {
         .send({
           restaurantId: TEST_RESTAURANT_ID,
           name: 'Soon Unavailable',
-          price: 5.0,
+          price: 5000,
         });
       expect(tempItemRes.status).toBe(201);
       const tempItemId = tempItemRes.body.id as string;
@@ -591,7 +591,7 @@ describe('Order placement E2E', () => {
         .send({
           restaurantId: TEST_RESTAURANT_ID,
           name: 'Modifier Burger',
-          price: 12.0,
+          price: 12000,
         });
       expect(modItemRes.status).toBe(201);
       modItemId = modItemRes.body.id as string;
@@ -635,7 +635,7 @@ describe('Order placement E2E', () => {
           itemName: 'Modifier Burger',
           unitPrice: 12.0,
           quantity: 1,
-          selectedOptions: [{ groupId: reqGroupId, optionId: defaultOptId }],
+          selectedModifiers: [{ groupId: reqGroupId, optionId: defaultOptId }],
         });
 
       // Delete the option — fires MenuItemUpdatedEvent → snapshot updated (option gone).

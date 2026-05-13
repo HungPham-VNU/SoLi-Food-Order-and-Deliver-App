@@ -67,7 +67,7 @@ describe('Modifier Group & Option CRUD (E2E)', () => {
       .send({
         restaurantId: TEST_RESTAURANT_ID,
         name: 'Modifier Test Item',
-        price: 12.5,
+        price: 12000,
       });
     expect(itemRes.status).toBe(201);
     menuItemId = itemRes.body.id as string;
@@ -349,7 +349,7 @@ describe('Modifier Group & Option CRUD (E2E)', () => {
           `/api/menu-items/${menuItemId}/modifier-groups/${groupId}/options`,
         )
         .set(ownerHeaders())
-        .send({ name: 'Extra Cheese', price: 1.0 });
+        .send({ name: 'Extra Cheese', price: 1000 });
       optionId = oRes.body.id as string;
     });
 
@@ -421,7 +421,7 @@ describe('Modifier Group & Option CRUD (E2E)', () => {
         .set(ownerHeaders())
         .send({
           name: 'Cola',
-          price: 2.5,
+          price: 2500,
           isDefault: false,
           displayOrder: 1,
           isAvailable: true,
@@ -431,7 +431,7 @@ describe('Modifier Group & Option CRUD (E2E)', () => {
       expect(res.body).toMatchObject({
         groupId,
         name: 'Cola',
-        price: 2.5,
+        price: 2500,
         isDefault: false,
         displayOrder: 1,
         isAvailable: true,
@@ -482,7 +482,7 @@ describe('Modifier Group & Option CRUD (E2E)', () => {
           `/api/menu-items/${menuItemId}/modifier-groups/${groupId}/options`,
         )
         .set(ownerHeaders())
-        .send({ price: 1.0 });
+        .send({ price: 1000 });
 
       expect(res.status).toBe(400);
     });
@@ -511,7 +511,7 @@ describe('Modifier Group & Option CRUD (E2E)', () => {
           `/api/menu-items/${menuItemId}/modifier-groups/${groupId}/options`,
         )
         .set(ownerHeaders())
-        .send({ name: 'Penne', price: 0.5 });
+        .send({ name: 'Penne', price: 500 });
     });
 
     it('returns a flat array of options (public)', async () => {
@@ -555,7 +555,7 @@ describe('Modifier Group & Option CRUD (E2E)', () => {
           `/api/menu-items/${menuItemId}/modifier-groups/${groupId}/options`,
         )
         .set(ownerHeaders())
-        .send({ name: 'Cheddar', price: 1.5 });
+        .send({ name: 'Cheddar', price: 1500 });
       optionId = oRes.body.id as string;
     });
 
@@ -612,7 +612,7 @@ describe('Modifier Group & Option CRUD (E2E)', () => {
           `/api/menu-items/${menuItemId}/modifier-groups/${groupId}/options`,
         )
         .set(ownerHeaders())
-        .send({ name: 'Chicken', price: 3.0 });
+        .send({ name: 'Chicken', price: 3000 });
       optionId = oRes.body.id as string;
     });
 
@@ -622,10 +622,10 @@ describe('Modifier Group & Option CRUD (E2E)', () => {
           `/api/menu-items/${menuItemId}/modifier-groups/${groupId}/options/${optionId}`,
         )
         .set(ownerHeaders())
-        .send({ price: 4.0, isAvailable: false });
+        .send({ price: 4000, isAvailable: false });
 
       expect(res.status).toBe(200);
-      expect(res.body.price).toBe(4);
+      expect(res.body.price).toBe(4000);
       expect(res.body.isAvailable).toBe(false);
     });
 
@@ -639,7 +639,7 @@ describe('Modifier Group & Option CRUD (E2E)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.name).toBe('Grilled Chicken');
-      expect(res.body.price).toBe(4); // unchanged
+      expect(res.body.price).toBe(4000); // unchanged
     });
 
     it('snapshot reflects updated option price', async () => {
@@ -656,7 +656,7 @@ describe('Modifier Group & Option CRUD (E2E)', () => {
       expect(group).toBeDefined();
       const option = group!.options.find((o) => o.optionId === optionId);
       expect(option).toBeDefined();
-      expect(option!.price).toBe(4);
+      expect(option!.price).toBe(4000);
     });
 
     it('returns 401 when unauthenticated', async () => {
@@ -700,7 +700,7 @@ describe('Modifier Group & Option CRUD (E2E)', () => {
           `/api/menu-items/${menuItemId}/modifier-groups/${groupId}/options`,
         )
         .set(ownerHeaders())
-        .send({ name: 'Extra Shot', price: 1.0 });
+        .send({ name: 'Extra Shot', price: 1000 });
       optionId = oRes.body.id as string;
     });
 

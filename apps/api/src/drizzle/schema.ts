@@ -19,3 +19,6 @@ export * from '../module/notification/domain/device-token.schema';
 export * from '../module/notification/domain/notification-preference.schema';
 export * from '../module/notification/domain/notification-delivery-log.schema';
 export * from '../module/notification/acl/notification-restaurant-snapshot.schema';
+
+// Promotion bounded context — Phase PR-1 schemas
+export * from '../module/promotion/domain/promotion.schema';

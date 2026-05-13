@@ -160,7 +160,7 @@ export class CartController {
     summary: 'Replace modifier selections on a cart line item',
     description:
       'Replaces the selectedModifiers of a specific cart line item with the resolved ' +
-      'result of selectedOptions.  Replace semantics: send the full desired modifier state.  ' +
+      'result of selectedModifiers.  Replace semantics: send the full desired modifier state.  ' +
       'Sending [] clears all modifiers (valid only when no group requires minSelections > 0).  ' +
       'quantity is NEVER modified by this endpoint.',
   })
@@ -299,6 +299,7 @@ export class CartController {
       dto.note,
       idempotencyKey,
       ipAddr,
+      dto.couponCode,
     );
 
     const order: Order = await this.commandBus.execute(command);
@@ -316,6 +317,7 @@ export class CartController {
       status: order.status,
       totalAmount: order.totalAmount,
       shippingFee: order.shippingFee,
+      discountAmount: order.discountAmount,
       paymentMethod: order.paymentMethod,
       paymentUrl: order.paymentUrl,
       estimatedDeliveryMinutes: order.estimatedDeliveryMinutes,

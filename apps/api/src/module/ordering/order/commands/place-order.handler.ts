@@ -7,6 +7,7 @@ import {
   InternalServerErrorException,
   Inject,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -47,6 +48,11 @@ import {
   PAYMENT_INITIATION_PORT,
   type IPaymentInitiationPort,
 } from '@/shared/ports/payment-initiation.port';
+import {
+  PROMOTION_APPLICATION_PORT,
+  type IPromotionApplicationPort,
+  type CartItemInput,
+} from '@/shared/ports/promotion-application.port';
 
 /**
  * Local projection of a delivery zone — contains only the fields needed for
@@ -133,6 +139,8 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     private readonly geo: GeoService,
     @Inject(PAYMENT_INITIATION_PORT)
     private readonly paymentPort: IPaymentInitiationPort,
+    @Inject(PROMOTION_APPLICATION_PORT)
+    private readonly promotionPort: IPromotionApplicationPort,
   ) {}
 
   async execute(command: PlaceOrderCommand): Promise<Order> {
@@ -143,6 +151,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
       note,
       idempotencyKey,
       ipAddr,
+      couponCode,
     } = command;
 
     // -------------------------------------------------------------------------
@@ -190,6 +199,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
         note,
         idempotencyKey,
         ipAddr,
+        couponCode,
       );
     } finally {
       // Release lock — swallow errors so they never mask the original exception.
@@ -213,6 +223,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     note: string | undefined,
     idempotencyKey: string | undefined,
     ipAddr: string | undefined,
+    couponCode: string | undefined,
   ): Promise<Order> {
     // -------------------------------------------------------------------------
     // Step 3 — Load cart from Redis
@@ -287,7 +298,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     );
 
     // -------------------------------------------------------------------------
-    // Step 8 — Compute final totals
+    // Step 8 — Compute gross totals (before promotion discount)
     // Shipping fee defaults to 0 when delivery pricing could not be resolved
     // (missing coordinates or no active zones configured for the restaurant).
     // All amounts are integer VND — no floating-point accumulation possible.
@@ -297,13 +308,71 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
       deliveryPricing?.estimatedDeliveryMinutes ?? null;
     const distanceKm = deliveryPricing?.distanceKm;
     const itemsTotal = this.calculateItemsTotal(snapshotedItems);
-    // Both itemsTotal and shippingFee are multiples of 1000 VND — sum is safe.
-    const totalAmount = itemsTotal + shippingFee;
+
+    // Guard: itemsTotal must be positive before applying any discount.
+    // Checked on the gross amount so that a full-subsidy promotion cannot
+    // bypass the minimum-order requirement.
     if (itemsTotal <= MINIMUM_ORDER_TOTAL) {
       throw new UnprocessableEntityException(
         'Order total must be greater than zero.',
       );
     }
+
+    // -------------------------------------------------------------------------
+    // Step 8b — Pre-generate the order UUID.
+    //
+    // The UUID is generated here (before the DB transaction) so it can be used
+    // as `tempOrderId` in the promotion reservation. This guarantees that the
+    // promotion_usages.order_id matches orders.id when the DB row is inserted.
+    // -------------------------------------------------------------------------
+    const preGeneratedOrderId = randomUUID();
+
+    // -------------------------------------------------------------------------
+    // Step 8c — Reserve promotion discount (atomic counter increments + usage row).
+    //
+    // Design decisions:
+    //  - Runs BEFORE the DB transaction so quota counters are never inflated by
+    //    orders that never reach the DB (e.g. validation failures in step 5).
+    //  - Returns reserved=false gracefully when no promotion applies or quota is
+    //    exhausted — checkout continues without a discount (non-blocking).
+    //  - If the DB transaction (Step 10) fails, the reservation is rolled back
+    //    in the catch block below before the error is re-thrown.
+    // -------------------------------------------------------------------------
+    const cartItemInputs: CartItemInput[] = snapshotedItems.map((item) => ({
+      menuItemId: item.menuItemId,
+      unitPrice: item.unitPrice,
+      quantity: item.quantity,
+      modifiersTotal: item.modifiersPrice,
+    }));
+
+    const discountReservation =
+      await this.promotionPort.computeAndReserveDiscount({
+        customerId,
+        restaurantId: cart!.restaurantId,
+        items: cartItemInputs,
+        itemsSubtotal: itemsTotal,
+        shippingFee,
+        couponCode,
+        tempOrderId: preGeneratedOrderId,
+      });
+
+    const discountAmount = discountReservation.discountAmount; // 0 when not reserved
+
+    if (discountReservation.reserved) {
+      this.logger.log(
+        `Promotion discount reserved: orderId=${preGeneratedOrderId} ` +
+          `discount=${discountAmount} VND usageId=${discountReservation.usageId}`,
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // Step 8d — Compute final payable amount (post-discount).
+    //
+    // The engine guarantees discountAmount ≤ (itemsTotal + shippingFee) and that
+    // all VND amounts are multiples of 1000. The Math.max(0, …) is a belt-and-
+    // suspenders guard only — it should never trigger in practice.
+    // -------------------------------------------------------------------------
+    const totalAmount = Math.max(0, itemsTotal + shippingFee - discountAmount);
 
     // -------------------------------------------------------------------------
     // Step 9 — Determine order expiry (for restaurant accept timeout)
@@ -323,21 +392,51 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     // D5-B: If two requests race past the Redis lock (e.g. lock TTL expired),
     // the UNIQUE(cartId) constraint on orders will throw a constraint violation
     // on the second request, which we catch and re-throw as 409.
+    //
+    // Promotion rollback: if the transaction fails for any reason, we roll back
+    // the promotion reservation (decrement counters + mark usage rolled_back)
+    // before re-throwing so quota is not permanently consumed by a failed order.
     // -------------------------------------------------------------------------
-    const order = await this.persistOrderAtomically({
-      customerId,
-      restaurantId: cart!.restaurantId,
-      restaurantName: restaurantSnapshot!.name,
-      cartId: cart!.cartId,
-      totalAmount,
-      shippingFee,
-      estimatedDeliveryMinutes,
-      paymentMethod,
-      deliveryAddress,
-      note,
-      expiresAt,
-      items: snapshotedItems,
-    });
+    let order: Order;
+    try {
+      order = await this.persistOrderAtomically({
+        id: preGeneratedOrderId,
+        customerId,
+        restaurantId: cart!.restaurantId,
+        restaurantName: restaurantSnapshot!.name,
+        cartId: cart!.cartId,
+        totalAmount,
+        shippingFee,
+        discountAmount,
+        estimatedDeliveryMinutes,
+        paymentMethod,
+        deliveryAddress,
+        note,
+        expiresAt,
+        items: snapshotedItems,
+      });
+    } catch (err) {
+      // Rollback promotion reservation before re-throwing.
+      // rollbackReservations is idempotent and never throws.
+      if (discountReservation.reserved) {
+        await this.promotionPort.rollbackReservations(preGeneratedOrderId);
+        this.logger.warn(
+          `Promotion reservation rolled back after DB failure: orderId=${preGeneratedOrderId}`,
+        );
+      }
+      throw err;
+    }
+
+    // -------------------------------------------------------------------------
+    // Step 10c — Confirm promotion reservation (reserved → confirmed).
+    //
+    // Called after the order row is durably persisted. Transitions the
+    // promotion_usages row from 'reserved' to 'confirmed' so cleanup tasks
+    // (Phase PR-5) do not mistake it for a stale orphaned reservation.
+    //
+    // confirmReservations is idempotent and never throws (internal try/catch).
+    // -------------------------------------------------------------------------
+    await this.promotionPort.confirmReservations(order.id);
 
     // -------------------------------------------------------------------------
     // Step 10b — Two-phase VNPay write (Phase 8 integration).
@@ -420,7 +519,8 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
 
     this.logger.log(
       `Order placed: orderId=${finalOrder.id}, customerId=${customerId}, ` +
-        `itemsTotal=${itemsTotal}, shippingFee=${shippingFee}, total=${totalAmount}` +
+        `itemsTotal=${itemsTotal}, shippingFee=${shippingFee}, ` +
+        `discountAmount=${discountAmount}, total=${totalAmount}` +
         (distanceKm != null ? `, distanceKm=${distanceKm.toFixed(2)}` : '') +
         (finalOrder.paymentUrl ? ', paymentUrl=<set>' : ''),
     );
@@ -776,12 +876,14 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
   // ---------------------------------------------------------------------------
 
   private async persistOrderAtomically(params: {
+    id: string;
     customerId: string;
     restaurantId: string;
     restaurantName: string;
     cartId: string;
     totalAmount: number;
     shippingFee: number;
+    discountAmount: number;
     estimatedDeliveryMinutes: number | null;
     paymentMethod: 'cod' | 'vnpay';
     deliveryAddress: DeliveryAddress;
@@ -798,12 +900,14 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     }>;
   }): Promise<Order> {
     const {
+      id,
       customerId,
       restaurantId,
       restaurantName,
       cartId,
       totalAmount,
       shippingFee,
+      discountAmount,
       estimatedDeliveryMinutes,
       paymentMethod,
       deliveryAddress,
@@ -816,6 +920,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
       return await this.db.transaction(async (tx) => {
         // 1. Insert the order aggregate root.
         const newOrder: NewOrder = {
+          id, // pre-generated UUID — must match tempOrderId used for promotion reservation
           customerId,
           restaurantId,
           restaurantName,
@@ -823,6 +928,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
           status: 'pending',
           totalAmount,
           shippingFee,
+          discountAmount,
           estimatedDeliveryMinutes,
           paymentMethod,
           deliveryAddress,

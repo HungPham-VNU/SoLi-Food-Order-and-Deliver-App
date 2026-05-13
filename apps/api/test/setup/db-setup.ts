@@ -26,6 +26,11 @@ import { orderingRestaurantSnapshots } from '../../src/module/ordering/acl/schem
 import { orderingDeliveryZoneSnapshots } from '../../src/module/ordering/acl/schemas/delivery-zone-snapshot.schema';
 import { orders } from '../../src/module/ordering/order/order.schema';
 import { user } from '../../src/module/auth/auth.schema';
+import {
+  promotionUsages,
+  couponCodes,
+  promotions,
+} from '../../src/module/promotion/domain/promotion.schema';
 
 // ─── Test user credentials ────────────────────────────────────────────────────
 //
@@ -95,6 +100,10 @@ export async function resetDb(): Promise<void> {
   await db.delete(orderingMenuItemSnapshots);
   await db.delete(orderingRestaurantSnapshots);
   await db.delete(orderingDeliveryZoneSnapshots);
+  // Promotion BC — delete in FK-safe order (usages first, then coupons, then promotions)
+  await db.delete(promotionUsages);
+  await db.delete(couponCodes);
+  await db.delete(promotions);
   await db.delete(restaurants);
   await resetUsers();
 }

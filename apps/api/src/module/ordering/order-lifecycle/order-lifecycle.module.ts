@@ -9,9 +9,11 @@ import { OrderLifecycleController } from './controllers/order-lifecycle.controll
 // Commands
 import { TransitionOrderHandler } from './commands/transition-order.handler';
 
-// Event handlers
+// Event handlers — incoming Payment BC events
 import { PaymentConfirmedEventHandler } from './events/payment-confirmed.handler';
 import { PaymentFailedEventHandler } from './events/payment-failed.handler';
+// Event handlers — Promotion BC (PR-3)
+import { PromotionRollbackOnCancellationHandler } from './events/promotion-rollback-on-cancellation.handler';
 
 // Tasks
 import { OrderTimeoutTask } from './tasks/order-timeout.task';
@@ -47,6 +49,12 @@ import { OrderRepository } from './repositories/order.repository';
     // Event handlers — incoming Payment BC events
     PaymentConfirmedEventHandler,
     PaymentFailedEventHandler,
+
+    // Event handlers — Promotion BC (PR-3)
+    // Rolls back reserved/confirmed promotion usages when an order is
+    // cancelled or refunded. Uses PROMOTION_APPLICATION_PORT (DIP).
+    // PromotionModule is @Global() so no additional import is needed.
+    PromotionRollbackOnCancellationHandler,
 
     // Cron task — auto-cancel expired orders
     OrderTimeoutTask,
