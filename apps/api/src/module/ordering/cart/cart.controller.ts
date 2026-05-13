@@ -299,6 +299,7 @@ export class CartController {
       dto.note,
       idempotencyKey,
       ipAddr,
+      dto.couponCode,
     );
 
     const order: Order = await this.commandBus.execute(command);
@@ -316,6 +317,7 @@ export class CartController {
       status: order.status,
       totalAmount: order.totalAmount,
       shippingFee: order.shippingFee,
+      discountAmount: order.discountAmount,
       paymentMethod: order.paymentMethod,
       paymentUrl: order.paymentUrl,
       estimatedDeliveryMinutes: order.estimatedDeliveryMinutes,

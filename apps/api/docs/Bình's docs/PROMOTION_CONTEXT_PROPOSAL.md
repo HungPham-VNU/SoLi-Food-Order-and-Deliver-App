@@ -1461,30 +1461,47 @@ E2E tests seed promotion data directly into the `promotions` table using the exi
 
 **Test milestone:** Admin CRUD E2E tests.
 
-### Phase PR-3 — Ordering Integration (Checkout)
+### Phase PR-3 — Ordering Integration (Checkout) ✅ IMPLEMENTED
 
-**Goal:** Discount is computed and applied at checkout. Orders store `discount_amount` and `promotion_breakdown`.
+**Goal:** Discount is computed and reserved at checkout. Orders store `discount_amount`. Cancellation/refund rolls back reservation.
 
-**Deliverables:**
-- `PlaceOrderHandler` modified to call `IPromotionApplicationPort.computeAndReserveDiscount()` and `confirmReservations()`
-- `Cart` Redis type extended with `appliedCouponCode`, `pendingDiscountAmount`
-- `POST /carts/my/coupon` + `DELETE /carts/my/coupon` endpoints
-- `CheckoutResponseDto` updated with `discountAmount` and `promotionBreakdown`
-- Reservation cleanup cron: `PromotionReservationCleanupTask`
+**Actual deliverables implemented (2025-05-13):**
+- `src/drizzle/out/0013_promotion_checkout.sql` — adds `discount_amount integer NOT NULL DEFAULT 0` to `orders`
+- `order.schema.ts` — `discountAmount` field added to `orders` Drizzle model
+- `checkout.dto.ts` — `CheckoutDto` gets optional `couponCode?: string` field; `CheckoutResponseDto` gets `discountAmount: number`
+- `place-order.command.ts` — `couponCode?: string` added as 7th constructor argument
+- `cart.controller.ts` — passes `dto.couponCode` to `PlaceOrderCommand`; maps `order.discountAmount` in `toCheckoutResponse`
+- `place-order.handler.ts` — injects `PROMOTION_APPLICATION_PORT`; pre-generates `orderId` (UUID) before the DB transaction so `tempOrderId === order.id`; calls `computeAndReserveDiscount()` after `itemsTotal > 0` guard; computes `finalTotalAmount = max(0, itemsTotal + shippingFee − discountAmount)`; wraps `persistOrderAtomically` in try/catch that calls `rollbackReservations()` before re-throwing; calls `confirmReservations()` after successful persistence
+- `order-lifecycle/events/promotion-rollback-on-cancellation.handler.ts` (NEW) — handles `OrderStatusChangedEvent`, calls `rollbackReservations()` when `toStatus === 'cancelled' | 'refunded'` (covers PR-4 scope)
+- `order-lifecycle.module.ts` — registers `PromotionRollbackOnCancellationHandler`
 
-**Test milestone:** PR-01 through PR-10 E2E tests passing.
+**Design decisions made:**
+- Coupon code at checkout (in `CheckoutDto`) rather than at cart, for simplicity and idempotency-key compatibility
+- Pre-generated order UUID ensures `promotion_usages.order_id === orders.id` at insert time
+- Cancellation rollback merged into PR-3 (originally PR-4 scope) — single `PromotionRollbackOnCancellationHandler` handles all terminal states
 
-### Phase PR-4 — Payment Rollback Integration
+**Deferred to later phases:**
+- `POST /carts/my/coupon` + `DELETE /carts/my/coupon` discount-preview endpoints
+- Cart Redis type extension with `appliedCouponCode`, `pendingDiscountAmount`
+- `PromotionReservationCleanupTask` (stale-reservation cron)
+
+**Test milestone:** 774/774 E2E tests passing.
+
+### Phase PR-4 — Payment Rollback Integration ✅ IMPLEMENTED (merged into PR-3)
 
 **Goal:** Promotion usage is rolled back when payment fails or order is cancelled.
 
-**Deliverables:**
-- `PromotionOrderCancelledHandler` subscribes to `OrderCancelledAfterPaymentEvent`
-- `PromotionOrderCancelledHandler` also handles COD cancellations via `OrderStatusChangedEvent`
-- Budget counter decremented on rollback
-- `PromotionUsage.status` set to `'rolled_back'`
+**Status:** Fully covered by `PromotionRollbackOnCancellationHandler` introduced in PR-3.
+That handler subscribes to `OrderStatusChangedEvent` (published on every transition by `TransitionOrderHandler`)
+and calls `rollbackReservations()` when `toStatus === 'cancelled' || toStatus === 'refunded'`.
+This covers all terminal states: customer cancel (T-03), restaurant cancel (T-05), order timeout (T-07),
+payment failure (T-06), and admin refund (T-12).
 
-**Test milestone:** PR-11 E2E test passing.
+**Original deliverables — all covered:**
+- ~~`PromotionOrderCancelledHandler` subscribes to `OrderCancelledAfterPaymentEvent`~~ → handled by `PromotionRollbackOnCancellationHandler` via `OrderStatusChangedEvent`
+- ~~`PromotionOrderCancelledHandler` also handles COD cancellations via `OrderStatusChangedEvent`~~ → same handler covers both
+- Budget counter decremented on rollback ✅ (via `rollbackReservations()` → `usageRepo.rollbackByOrderId()`)
+- `PromotionUsage.status` set to `'rolled_back'` ✅
 
 ### Phase PR-5 — Notification Integration
 
@@ -1536,14 +1553,15 @@ E2E tests seed promotion data directly into the `promotions` table using the exi
 
 ### 18.3 Coupon at Checkout vs. at Cart
 
-| Aspect | Coupon at Cart (SELECTED) | Coupon at Checkout |
+| Aspect | Coupon at Cart | Coupon at Checkout (SELECTED) |
 |---|---|---|
-| UX | Customer sees discount before tapping "Place Order" | Customer knows discount only after checkout |
-| `CheckoutDto` complexity | No changes to checkout request | New optional field |
-| Idempotency | Coupon stored in cart → idempotent with X-Idempotency-Key | Coupon in body → changes body per retry |
-| Cart abandonment | Coupon preview without reservation → no leaked usage | Would need preview call anyway |
+| UX | Customer sees discount before tapping "Place Order" | Customer sees discount only in checkout response |
+| `CheckoutDto` complexity | No changes to checkout request | New optional `couponCode` field |
+| Idempotency | Coupon stored in cart → idempotent with X-Idempotency-Key | Coupon in body — same value on retry is safe (coupon validation is idempotent) |
+| Cart abandonment | Coupon preview without reservation → no leaked usage | No cart-level preview needed |
+| Implementation simplicity | Requires new cart endpoints + cart Redis schema change | Single new field in CheckoutDto |
 
-**Verdict:** Coupon at cart is better UX. The `CheckoutDto` remains unchanged.
+**Verdict (revised in PR-3):** Coupon at checkout was selected for PR-3 because it is simpler (zero cart schema changes) and still correct. Idempotency is preserved because the coupon code is a deterministic input — retrying with the same X-Idempotency-Key returns the cached result. Cart-level preview endpoints (`POST /carts/my/coupon`) are deferred to a later phase.
 
 ### 18.4 Separate Bounded Context vs. Module Inside Ordering
 

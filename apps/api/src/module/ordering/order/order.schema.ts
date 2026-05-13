@@ -120,6 +120,13 @@ export const orders = pgTable(
      */
     shippingFee: integer('shipping_fee').notNull().default(0),
     /**
+     * Total promotion discount applied at checkout (VND, integer, multiple of 1000).
+     * 0 when no promotion was applied.
+     * Invariant: totalAmount = itemsTotal + shippingFee - discountAmount.
+     * Used for receipts, refund calculations, and analytics.
+     */
+    discountAmount: integer('discount_amount').notNull().default(0),
+    /**
      * Estimated delivery time in minutes, computed at checkout.
      * Formula: prepTimeMinutes + (distanceKm / avgSpeedKmh × 60) + bufferMinutes.
      * Null when coordinates or zone data is unavailable.
