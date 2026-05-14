@@ -62,7 +62,12 @@ export default function MenuItemDetailPage() {
     console.log("Toggle favorite for menu item:", itemId);
   };
 
-  const handleAddToCart = (itemId: string, quantity: number, modifierSelections: Record<string, string[]>) => {
+  const handleAddToCart = (
+    itemId: string,
+    quantity: number,
+    modifierSelections: Record<string, string[]>,
+    isUpdate?: boolean
+  ) => {
     if (!menuItem || !restaurant || isAddingToCart) {
       if (!isAddingToCart) {
         Alert.alert("Error", "Missing item or restaurant information");
@@ -87,7 +92,7 @@ export default function MenuItemDetailPage() {
       },
       {
         onSuccess: () => {
-          Alert.alert("Success", `${menuItem.name} added to cart`);
+          Alert.alert("Success", `${menuItem.name} ${isUpdate ? 'updated in' : 'added to'} cart`);
           router.back();
         },
         onError: (error: any) => {

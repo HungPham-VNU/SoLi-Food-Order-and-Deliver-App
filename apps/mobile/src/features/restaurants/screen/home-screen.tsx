@@ -84,7 +84,7 @@ export function HomeScreen() {
         className="flex-1"
         contentContainerStyle={{
           paddingTop: insets.top + 80,
-          paddingBottom: insets.bottom + 24,
+          paddingBottom: insets.bottom + 80,
         }}
         showsVerticalScrollIndicator={false}
       >

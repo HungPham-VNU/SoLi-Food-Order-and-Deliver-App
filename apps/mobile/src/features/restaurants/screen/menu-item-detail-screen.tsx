@@ -21,8 +21,19 @@ import { formatCurrency } from '@/src/lib/format-utils';
 import { MenuItemDetailScreenProps, ModifierGroup } from '../types';
 import { useMenuItem, useMenuItemModifiers } from '../api/restaurant-api';
 import { useMyCart } from '@/src/features/cart/api/cart-api';
-import { FloatingCartButton } from '@/src/features/cart';
 import { LinearGradient } from 'expo-linear-gradient';
+
+const areModifierSelectionsEqual = (a: Record<string, string[]>, b: Record<string, string[]>) => {
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every(key => {
+    const valA = a[key];
+    const valB = b[key];
+    if (!valB || valA.length !== valB.length) return false;
+    return valA.every(id => valB.includes(id)) && valB.every(id => valA.includes(id));
+  });
+};
 
 export function MenuItemDetailScreen({
   itemId,
@@ -39,9 +50,34 @@ export function MenuItemDetailScreen({
   const { data: modifierGroups, isLoading: isLoadingModifiers } = useMenuItemModifiers(itemId);
   const { data: cart } = useMyCart();
 
+  const currentSelections = useMemo(() => {
+    const selections: Record<string, string[]> = {};
+    modifierGroups?.forEach(group => {
+      const selectedInGroup = selectedOptionIds.filter(id => 
+        group.options.some(o => o.id === id)
+      );
+      if (selectedInGroup.length > 0) {
+        selections[group.id] = selectedInGroup;
+      }
+    });
+    return selections;
+  }, [modifierGroups, selectedOptionIds]);
+
   const isItemInCart = useMemo(() => {
-    return cart?.items.some(cartItem => cartItem.menuItemId === itemId);
-  }, [cart, itemId]);
+    return cart?.items.some(cartItem => {
+      if (cartItem.menuItemId !== itemId) return false;
+      
+      const cartItemSelections: Record<string, string[]> = {};
+      cartItem.selectedModifiers.forEach(mod => {
+        if (!cartItemSelections[mod.groupId]) {
+          cartItemSelections[mod.groupId] = [];
+        }
+        cartItemSelections[mod.groupId].push(mod.optionId);
+      });
+      
+      return areModifierSelectionsEqual(currentSelections, cartItemSelections);
+    });
+  }, [cart, itemId, currentSelections]);
 
   const toggleOption = (optionId: string, group: ModifierGroup) => {
     setSelectedOptionIds(prev => {
@@ -93,18 +129,7 @@ export function MenuItemDetailScreen({
 
   const handleAddToCart = () => {
     if (!areRequiredModifiersSelected) return;
-    
-    const selections: Record<string, string[]> = {};
-    modifierGroups?.forEach(group => {
-      const selectedInGroup = selectedOptionIds.filter(id => 
-        group.options.some(o => o.id === id)
-      );
-      if (selectedInGroup.length > 0) {
-        selections[group.id] = selectedInGroup;
-      }
-    });
-    
-    onAddToCart?.(itemId, quantity, selections);
+    onAddToCart?.(itemId, quantity, currentSelections, isItemInCart);
   };
 
   const isLoading = isLoadingItem || isLoadingModifiers;

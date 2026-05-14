@@ -11,7 +11,7 @@ export function FloatingCartButton() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  if (!cart || cart.items.length === 0) {
+  if (!cart?.items || cart.items.length === 0) {
     return null;
   }
 
@@ -26,6 +26,12 @@ export function FloatingCartButton() {
         className="bg-primary-container w-14 h-14 rounded-2xl items-center justify-center shadow-lg shadow-black/30 elevation-8"
         activeOpacity={0.8}
         onPress={() => router.push('/(customer)/cart')}
+        accessibilityRole="button"
+        accessible={true}
+        accessibilityLabel={`Cart, ${itemCount} items`}
+        accessibilityHint="Opens your shopping cart"
+        accessibilityState={{ busy: false }}
+        testID="floating-cart-button"
       >
         <View className="relative">
           <ShoppingCart size={28} color="#ffffff" />

@@ -191,5 +191,6 @@ export interface MenuItemDetailScreenProps {
     itemId: string,
     quantity: number,
     modifierSelections: Record<string, string[]>,
+    isUpdate?: boolean,
   ) => void;
 }
