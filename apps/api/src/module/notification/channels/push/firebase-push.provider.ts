@@ -31,8 +31,8 @@ interface ServiceAccountJson {
 /**
  * FCM error codes that indicate a token is permanently invalid.
  * These tokens should be deactivated immediately — retrying would waste quota.
- *
- * Reference: https://firebase.google.com/docs/cloud-messaging/send-message#admin_sdk_error_codes
+ *https://firebase.google.com/docs/cloud-messaging/send-message#admin_sdk_error_codes
+ * Reference: 
  */
 const FCM_INVALID_TOKEN_CODES = new Set([
   'messaging/registration-token-not-registered',

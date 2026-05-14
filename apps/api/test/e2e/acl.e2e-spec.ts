@@ -81,7 +81,7 @@ describe('ACL Layer — Snapshot Projection & Read API (E2E)', () => {
         .send({
           restaurantId: TEST_RESTAURANT_ID,
           name: 'Snapshot Pizza',
-          price: 12.0,
+          price: 12000,
         });
       itemId = itemRes.body.id as string;
 
@@ -117,7 +117,7 @@ describe('ACL Layer — Snapshot Projection & Read API (E2E)', () => {
         menuItemId: itemId,
         restaurantId: TEST_RESTAURANT_ID,
         name: 'Snapshot Pizza',
-        price: 12.0,
+        price: 12000,
         status: 'available',
       });
     });
@@ -146,12 +146,12 @@ describe('ACL Layer — Snapshot Projection & Read API (E2E)', () => {
       await http
         .patch(`/api/menu-items/${itemId}`)
         .set(ownerHeaders())
-        .send({ name: 'Snapshot Pizza XL', price: 14.5 });
+        .send({ name: 'Snapshot Pizza XL', price: 15000 });
       await delay(150);
 
       const after = await getSnapshot(itemId);
       expect(after!.name).toBe('Snapshot Pizza XL');
-      expect(after!.price).toBe(14.5);
+      expect(after!.price).toBe(15000);
       expect(after!.lastSyncedAt.getTime()).toBeGreaterThanOrEqual(
         before!.lastSyncedAt.getTime(),
       );
@@ -228,7 +228,7 @@ describe('ACL Layer — Snapshot Projection & Read API (E2E)', () => {
       const res = await http.post('/api/menu-items').set(ownerHeaders()).send({
         restaurantId: TEST_RESTAURANT_ID,
         name: 'Read Test Item',
-        price: 8.0,
+        price: 8000,
       });
       readItemId = res.body.id as string;
       await delay(150);
@@ -244,7 +244,7 @@ describe('ACL Layer — Snapshot Projection & Read API (E2E)', () => {
         menuItemId: readItemId,
         restaurantId: TEST_RESTAURANT_ID,
         name: 'Read Test Item',
-        price: 8.0,
+        price: 8000,
         status: 'available',
         lastSyncedAt: expect.any(String),
       });
@@ -661,7 +661,7 @@ describe('ACL Layer — Snapshot Projection & Read API (E2E)', () => {
       const res = await http.post('/api/menu-items').set(ownerHeaders()).send({
         restaurantId: TEST_RESTAURANT_ID,
         name: 'Gate Test Item',
-        price: 9.0,
+        price: 9000,
       });
       availableItemId = res.body.id as string;
       await delay(150);

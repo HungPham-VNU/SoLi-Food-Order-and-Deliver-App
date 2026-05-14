@@ -198,7 +198,7 @@ export class CartService {
     const resolved = await this.resolveOptions(
       existing.menuItemId,
       cart.restaurantId,
-      dto.selectedOptions,
+      dto.selectedModifiers,
     );
 
     // Fingerprint MUST be updated alongside selectedModifiers (Case 3 bug 2 fix).
@@ -325,7 +325,7 @@ export class CartService {
   private async validateAndResolveModifiers(
     dto: AddItemToCartDto,
   ): Promise<SelectedModifier[]> {
-    const selectedOptions = dto.selectedOptions ?? [];
+    const selectedOptions = dto.selectedModifiers ?? [];
 
     const snapshot = await this.snapshotRepo.findById(dto.menuItemId);
     if (!snapshot) {

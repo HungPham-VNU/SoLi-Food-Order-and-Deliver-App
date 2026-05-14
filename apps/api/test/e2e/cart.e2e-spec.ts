@@ -73,7 +73,7 @@ describe('Cart API (E2E)', () => {
     const basic = await http.post('/api/menu-items').set(ownerHeaders()).send({
       restaurantId: TEST_RESTAURANT_ID,
       name: 'Plain Burger',
-      price: 10.0,
+      price: 10000,
     });
     snapshotItemId = basic.body.id as string;
 
@@ -84,7 +84,7 @@ describe('Cart API (E2E)', () => {
       .send({
         restaurantId: TEST_RESTAURANT_ID,
         name: 'Fancy Burger',
-        price: 15.0,
+        price: 15000,
       });
     modItemId = modItem.body.id as string;
 
@@ -115,7 +115,7 @@ describe('Cart API (E2E)', () => {
         `/api/menu-items/${modItemId}/modifier-groups/${reqGroupId}/options`,
       )
       .set(ownerHeaders())
-      .send({ name: 'Whole Wheat', price: 0.5, isDefault: false });
+      .send({ name: 'Whole Wheat', price: 500, isDefault: false });
     altOptId = altOptRes.body.id as string;
     await delay(200);
 
@@ -132,7 +132,7 @@ describe('Cart API (E2E)', () => {
         `/api/menu-items/${modItemId}/modifier-groups/${optGroupId}/options`,
       )
       .set(ownerHeaders())
-      .send({ name: 'Extra Cheese', price: 1.0, isDefault: false });
+      .send({ name: 'Extra Cheese', price: 1000, isDefault: false });
     optOptAId = optARes.body.id as string;
     await delay(200);
 
@@ -141,7 +141,7 @@ describe('Cart API (E2E)', () => {
         `/api/menu-items/${modItemId}/modifier-groups/${optGroupId}/options`,
       )
       .set(ownerHeaders())
-      .send({ name: 'Bacon', price: 1.5, isDefault: false });
+      .send({ name: 'Bacon', price: 1500, isDefault: false });
     optOptBId = optBRes.body.id as string;
 
     // Final wait — ensure the last event is fully projected before tests run
@@ -275,7 +275,7 @@ describe('Cart API (E2E)', () => {
           itemName: 'Fancy Burger',
           unitPrice: 15.0,
           quantity: 1,
-          selectedOptions: [{ groupId: reqGroupId, optionId: defaultOptId }],
+          selectedModifiers: [{ groupId: reqGroupId, optionId: defaultOptId }],
         });
 
       // Second line: different modifier selection → distinct fingerprint
@@ -289,7 +289,7 @@ describe('Cart API (E2E)', () => {
           itemName: 'Fancy Burger',
           unitPrice: 15.0,
           quantity: 1,
-          selectedOptions: [{ groupId: reqGroupId, optionId: altOptId }],
+          selectedModifiers: [{ groupId: reqGroupId, optionId: altOptId }],
         });
 
       expect(res.status).toBe(201);
@@ -432,18 +432,18 @@ describe('Cart API (E2E)', () => {
           itemName: 'Fancy Burger',
           unitPrice: 15.0,
           quantity: 1,
-          selectedOptions: [{ groupId: reqGroupId, optionId: defaultOptId }],
+          selectedModifiers: [{ groupId: reqGroupId, optionId: defaultOptId }],
         });
       cartItemId = (addRes.body.items as { cartItemId: string }[])[0]
         .cartItemId;
     });
 
-    it('C-12 replaces modifier selection and returns 200 CartResponseDto', async () => {
+    it('C-12 replaces modifier selection and returns 200 with correct optionName and price', async () => {
       const res = await http
         .patch(`/api/carts/my/items/${cartItemId}/modifiers`)
         .set(ownerHeaders())
         .send({
-          selectedOptions: [
+          selectedModifiers: [
             { groupId: reqGroupId, optionId: altOptId },
             { groupId: optGroupId, optionId: optOptAId },
           ],
@@ -451,32 +451,57 @@ describe('Cart API (E2E)', () => {
 
       expect(res.status).toBe(200);
       const item = (
-        res.body.items as { cartItemId: string; selectedModifiers: unknown[] }[]
+        res.body.items as {
+          cartItemId: string;
+          selectedModifiers: { optionId: string; optionName: string; price: number }[];
+          subtotal: number;
+        }[]
       ).find((i) => i.cartItemId === cartItemId);
       expect(item?.selectedModifiers).toBeDefined();
+      const wholeWheat = item!.selectedModifiers.find(
+        (m) => m.optionId === altOptId,
+      );
+      expect(wholeWheat?.optionName).toBe('Whole Wheat');
+      expect(wholeWheat?.price).toBe(500);
+      const extraCheese = item!.selectedModifiers.find(
+        (m) => m.optionId === optOptAId,
+      );
+      expect(extraCheese?.optionName).toBe('Extra Cheese');
+      expect(extraCheese?.price).toBe(1000);
+      // subtotal = (unitPrice + modifiersTotal) * quantity = (15.0 + 500 + 1000) * 1 = 1515.0
+      expect(item!.subtotal).toBe(1515.0);
     });
 
-    it('C-13 clears all modifiers when selectedOptions is empty array', async () => {
-      // First set some modifiers
+    it('C-13 auto-injects default modifier when selectedModifiers sent as empty array', async () => {
+      // First set an optional modifier in addition to the required one
       await http
         .patch(`/api/carts/my/items/${cartItemId}/modifiers`)
         .set(ownerHeaders())
         .send({
-          selectedOptions: [
+          selectedModifiers: [
             { groupId: reqGroupId, optionId: defaultOptId },
             { groupId: optGroupId, optionId: optOptAId },
           ],
         });
 
-      // Then clear them (empty array is valid — no required validation at PATCH level)
+      // Sending [] triggers auto-inject for required group — result is the default option
       const res = await http
         .patch(`/api/carts/my/items/${cartItemId}/modifiers`)
         .set(ownerHeaders())
-        .send({ selectedOptions: [] });
+        .send({ selectedModifiers: [] });
 
-      // Either succeeds (200) or returns validation error (400) depending on business rules
-      // Accept both — the important assertion is the response shape
-      expect([200, 400]).toContain(res.status);
+      // Auto-inject fires for reqGroup (minSelections=1) → injects default 'White Bread'
+      expect(res.status).toBe(200);
+      const item = (
+        res.body.items as {
+          cartItemId: string;
+          selectedModifiers: { optionId: string; optionName: string; price: number }[];
+        }[]
+      ).find((i) => i.cartItemId === cartItemId);
+      const optionIds = item!.selectedModifiers.map((m) => m.optionId);
+      expect(optionIds).toContain(defaultOptId);
+      // Optional group ('Extras') should be absent — only default was injected
+      expect(optionIds).not.toContain(optOptAId);
     });
 
     it('C-14 returns 404 when cartItemId does not exist', async () => {
@@ -484,13 +509,13 @@ describe('Cart API (E2E)', () => {
         .patch(`/api/carts/my/items/${UNKNOWN_CART_ITEM_ID}/modifiers`)
         .set(ownerHeaders())
         .send({
-          selectedOptions: [{ groupId: reqGroupId, optionId: defaultOptId }],
+          selectedModifiers: [{ groupId: reqGroupId, optionId: defaultOptId }],
         });
 
       expect(res.status).toBe(404);
     });
 
-    it('C-15 returns 400 when selectedOptions is missing from body', async () => {
+    it('C-15 returns 400 when selectedModifiers is missing from body', async () => {
       const res = await http
         .patch(`/api/carts/my/items/${cartItemId}/modifiers`)
         .set(ownerHeaders())
@@ -694,16 +719,87 @@ describe('Cart API (E2E)', () => {
           itemName: 'Fancy Burger',
           unitPrice: 15.0,
           quantity: 1,
-          selectedOptions: [], // empty — service should inject default for reqGroup
+          selectedModifiers: [], // empty — service should inject default for reqGroup
         });
 
       // Should succeed — default is auto-injected
       expect(res.status).toBe(201);
       const item = (
-        res.body.items as { selectedModifiers: { optionId: string }[] }[]
+        res.body.items as {
+          selectedModifiers: { optionId: string; optionName: string; price: number }[];
+          subtotal: number;
+        }[]
       )[0];
-      const optionIds = item.selectedModifiers.map((m) => m.optionId);
-      expect(optionIds).toContain(defaultOptId);
+      const wheatBread = item.selectedModifiers.find(
+        (m) => m.optionId === defaultOptId,
+      );
+      expect(wheatBread?.optionId).toBe(defaultOptId);
+      expect(wheatBread?.optionName).toBe('White Bread');
+      expect(wheatBread?.price).toBe(0);
+      // subtotal = (unitPrice + modifiersTotal) * quantity = (15.0 + 0) * 1 = 15.0
+      expect(item.subtotal).toBe(15.0);
+      expect(res.body.totalAmount).toBe(15.0);
+    });
+
+    it('C-23b explicit non-default modifier is stored with correct optionName and price', async () => {
+      const res = await http
+        .post('/api/carts/my/items')
+        .set(ownerHeaders())
+        .send({
+          menuItemId: modItemId,
+          restaurantId: TEST_RESTAURANT_ID,
+          restaurantName: 'Test Restaurant',
+          itemName: 'Fancy Burger',
+          unitPrice: 15.0,
+          quantity: 2,
+          selectedModifiers: [{ groupId: reqGroupId, optionId: altOptId }],
+        });
+
+      expect(res.status).toBe(201);
+      const item = (
+        res.body.items as {
+          selectedModifiers: { optionId: string; optionName: string; price: number }[];
+          subtotal: number;
+        }[]
+      )[0];
+      const wholeWheat = item.selectedModifiers.find(
+        (m) => m.optionId === altOptId,
+      );
+      expect(wholeWheat?.optionName).toBe('Whole Wheat');
+      expect(wholeWheat?.price).toBe(500);
+      // subtotal = (unitPrice + modifiersTotal) * quantity = (15.0 + 500) * 2 = 1030.0
+      expect(item.subtotal).toBe(1030.0);
+      expect(res.body.totalAmount).toBe(1030.0);
+    });
+
+    it('C-23c totalAmount sums all modifier prices across multiple options', async () => {
+      const res = await http
+        .post('/api/carts/my/items')
+        .set(ownerHeaders())
+        .send({
+          menuItemId: modItemId,
+          restaurantId: TEST_RESTAURANT_ID,
+          restaurantName: 'Test Restaurant',
+          itemName: 'Fancy Burger',
+          unitPrice: 15.0,
+          quantity: 1,
+          selectedModifiers: [
+            { groupId: reqGroupId, optionId: altOptId },     // Whole Wheat: 500
+            { groupId: optGroupId, optionId: optOptAId },   // Extra Cheese: 1000
+          ],
+        });
+
+      expect(res.status).toBe(201);
+      const item = (
+        res.body.items as {
+          selectedModifiers: { optionId: string; optionName: string; price: number }[];
+          subtotal: number;
+        }[]
+      )[0];
+      // modifiersTotal = 500 + 1000 = 1500
+      // subtotal = (15.0 + 1500) * 1 = 1515.0
+      expect(item.subtotal).toBe(1515.0);
+      expect(res.body.totalAmount).toBe(1515.0);
     });
 
     it('C-24 returns 400 when an unknown groupId is sent', async () => {
@@ -717,7 +813,7 @@ describe('Cart API (E2E)', () => {
           itemName: 'Fancy Burger',
           unitPrice: 15.0,
           quantity: 1,
-          selectedOptions: [
+          selectedModifiers: [
             {
               groupId: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
               optionId: defaultOptId,
@@ -740,7 +836,7 @@ describe('Cart API (E2E)', () => {
           itemName: 'Fancy Burger',
           unitPrice: 15.0,
           quantity: 1,
-          selectedOptions: [
+          selectedModifiers: [
             {
               groupId: reqGroupId,
               optionId: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
@@ -752,7 +848,7 @@ describe('Cart API (E2E)', () => {
       expect(res.status).toBe(400);
     });
 
-    it('C-26 returns 400 when item has no snapshot but selectedOptions are provided', async () => {
+    it('C-26 returns 400 when item has no snapshot but selectedModifiers are provided', async () => {
       // UNKNOWN_ITEM_ID_2 has no snapshot — providing options is an error
       const res = await http
         .post('/api/carts/my/items')
@@ -764,13 +860,13 @@ describe('Cart API (E2E)', () => {
           itemName: 'Ghost Item',
           unitPrice: 5.0,
           quantity: 1,
-          selectedOptions: [{ groupId: reqGroupId, optionId: defaultOptId }],
+          selectedModifiers: [{ groupId: reqGroupId, optionId: defaultOptId }],
         });
 
       expect(res.status).toBe(400);
     });
 
-    it('C-27 succeeds for item with no snapshot and no selectedOptions (Phase 2 fallback)', async () => {
+    it('C-27 succeeds for item with no snapshot and no selectedModifiers (Phase 2 fallback)', async () => {
       // No snapshot → service trusts client data when no modifiers requested
       const res = await http
         .post('/api/carts/my/items')
@@ -919,7 +1015,7 @@ describe('Cart API (E2E)', () => {
       const res = await http
         .patch(`/api/carts/my/items/${UNKNOWN_CART_ITEM_ID}/modifiers`)
         .set(noAuthHeaders())
-        .send({ selectedOptions: [] });
+        .send({ selectedModifiers: [] });
       expect(res.status).toBe(401);
     });
 

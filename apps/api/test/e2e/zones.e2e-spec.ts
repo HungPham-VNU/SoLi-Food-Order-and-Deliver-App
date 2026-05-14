@@ -255,7 +255,7 @@ describe('Delivery Zone CRUD & Estimate (E2E)', () => {
           name: 'Get Test Zone',
           radiusKm: 4,
           baseFee: 12000,
-          perKmRate: 2500,
+          perKmRate: 2000,
         });
       zoneId = res.body.id as string;
     });
@@ -365,10 +365,10 @@ describe('Delivery Zone CRUD & Estimate (E2E)', () => {
           `/api/restaurants/${TEST_RESTAURANT_ID}/delivery-zones/${zoneId}`,
         )
         .set(ownerHeaders())
-        .send({ perKmRate: 3500 });
+        .send({ perKmRate: 3000 });
 
       expect(res.status).toBe(200);
-      expect(res.body.perKmRate).toBe(3500);
+      expect(res.body.perKmRate).toBe(3000);
       expect(res.body.radiusKm).toBe(originalRadius); // unchanged
     });
 
@@ -419,7 +419,7 @@ describe('Delivery Zone CRUD & Estimate (E2E)', () => {
           name: 'Deactivatable Zone',
           radiusKm: 3,
           baseFee: 8000,
-          perKmRate: 1500,
+          perKmRate: 1000,
         });
       zoneId = res.body.id as string;
     });

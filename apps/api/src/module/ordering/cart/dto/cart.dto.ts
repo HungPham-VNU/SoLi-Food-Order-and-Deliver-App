@@ -120,22 +120,23 @@ export class AddItemToCartDto {
       'Modifier option selections for this item.  ' +
       'When the snapshot is available (Phase 3), the server validates group ' +
       'membership, option availability, and min/max selection constraints.  ' +
-      'Prices are resolved from the snapshot — never from client-supplied values.',
+      'Prices are resolved from the snapshot — never from client-supplied values.  ' +
+      'Only groupId + optionId are required; name, price, and groupName are ignored if sent.',
     type: [SelectedOptionDto],
   })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => SelectedOptionDto)
-  selectedOptions?: SelectedOptionDto[];
+  selectedModifiers?: SelectedOptionDto[];
 }
 
 /**
  * Request body for PATCH /carts/my/items/:cartItemId/modifiers.
  *
  * Replace-semantics: the server replaces selectedModifiers entirely with the
- * resolved result of selectedOptions.  Sending [] clears all modifiers (valid
- * only if no group has minSelections > 0).
+ * resolved result of the provided selectedModifiers array.  Sending [] clears
+ * all modifiers (valid only if no group has minSelections > 0).
  *
  * quantity is intentionally absent — never combined with modifier changes
  * (see Section 4.2 anti-pattern documentation).
@@ -144,13 +145,14 @@ export class UpdateCartItemModifiersDto {
   @ApiProperty({
     description:
       'Full desired modifier state.  Server replaces existing modifiers entirely. ' +
-      'Send [] to clear all modifiers (only valid when no group requires minSelections > 0).',
+      'Send [] to clear all modifiers (only valid when no group requires minSelections > 0). ' +
+      'Only groupId + optionId are required; name, price, and groupName are ignored if sent.',
     type: [SelectedOptionDto],
   })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => SelectedOptionDto)
-  selectedOptions!: SelectedOptionDto[];
+  selectedModifiers!: SelectedOptionDto[];
 }
 
 /**

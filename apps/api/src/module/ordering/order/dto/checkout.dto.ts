@@ -7,8 +7,9 @@ import {
   IsOptional,
   IsNumber,
   ValidateNested,
+  Matches,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import type { DeliveryAddress } from '../order.schema';
 
 // ---------------------------------------------------------------------------
@@ -95,6 +96,27 @@ export class CheckoutDto {
   @IsString()
   @MaxLength(500)
   note?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Coupon code to apply at checkout (e.g. "WELCOME10"). ' +
+      'Automatically normalised to uppercase — case-insensitive input accepted. ' +
+      'When supplied, the Promotion BC validates and reserves the discount. ' +
+      'Auto-apply promotions are evaluated regardless of this field.',
+    example: 'WELCOME10',
+    maxLength: 20,
+  })
+  @IsOptional()
+  @IsString()
+  // Normalise to uppercase before validation so callers can pass 'welcome10'
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.toUpperCase() : value,
+  )
+  // Coupon codes are uppercase letters and digits only — prevents injection
+  @Matches(/^[A-Z0-9]{1,20}$/, {
+    message: 'couponCode must be 1–20 letters or digits',
+  })
+  couponCode?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,16 +135,25 @@ export class CheckoutResponseDto {
   status!: string;
 
   @ApiProperty({
-    description: 'Total amount = items total + shipping fee',
-    example: 145.5,
+    description: 'Net payable amount = itemsTotal + shippingFee − discountAmount (integer VND)',
+    example: 135000,
   })
   totalAmount!: number;
 
   @ApiProperty({
-    description: 'Delivery fee computed from the closest eligible zone',
-    example: 20.0,
+    description: 'Delivery fee computed from the closest eligible delivery zone (integer VND)',
+    example: 20000,
   })
   shippingFee!: number;
+
+  @ApiProperty({
+    description:
+      'Promotion discount applied at checkout (integer VND). ' +
+      '0 when no promotion was applied. ' +
+      'Invariant: totalAmount = itemsTotal + shippingFee − discountAmount.',
+    example: 15000,
+  })
+  discountAmount!: number;
 
   @ApiProperty({ enum: ['cod', 'vnpay'] })
   paymentMethod!: string;

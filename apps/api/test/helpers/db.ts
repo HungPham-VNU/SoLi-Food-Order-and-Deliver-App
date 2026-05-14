@@ -7,6 +7,16 @@
  */
 
 import { asc, desc, eq } from 'drizzle-orm';
+import type {
+  Promotion,
+  CouponCode,
+  PromotionUsage,
+} from '../../src/module/promotion/domain/promotion.schema';
+import {
+  promotions,
+  couponCodes,
+  promotionUsages,
+} from '../../src/module/promotion/domain/promotion.schema';
 import type { OrderingMenuItemSnapshot } from '../../src/module/ordering/acl/schemas/menu-item-snapshot.schema';
 import { orderingMenuItemSnapshots } from '../../src/module/ordering/acl/schemas/menu-item-snapshot.schema';
 import type { OrderingRestaurantSnapshot } from '../../src/module/ordering/acl/schemas/restaurant-snapshot.schema';
@@ -175,4 +185,52 @@ export async function getDeliveryLogsForNotification(
     .from(notificationDeliveryLogs)
     .where(eq(notificationDeliveryLogs.notificationId, notificationId))
     .orderBy(asc(notificationDeliveryLogs.attemptedAt));
+}
+
+// ---------------------------------------------------------------------------
+// Promotion BC helpers — Phase PR-3 / PR-4
+// ---------------------------------------------------------------------------
+
+/**
+ * Reads all promotion_usages rows for a given order ID.
+ * Use for E2E assertions to verify that a discount was reserved/confirmed/rolled_back.
+ */
+export async function getPromotionUsagesByOrderId(
+  orderId: string,
+): Promise<PromotionUsage[]> {
+  const db = getTestDb();
+  return db
+    .select()
+    .from(promotionUsages)
+    .where(eq(promotionUsages.orderId, orderId));
+}
+
+/**
+ * Reads a single promotion row by its UUID.
+ * Returns null when the row does not exist.
+ * Use for E2E assertions on currentTotalUses counter after checkout/rollback.
+ */
+export async function getPromotion(id: string): Promise<Promotion | null> {
+  const db = getTestDb();
+  const rows = await db
+    .select()
+    .from(promotions)
+    .where(eq(promotions.id, id))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/**
+ * Reads a single coupon_codes row by its UUID.
+ * Returns null when the row does not exist.
+ * Use for E2E assertions on currentUses counter after checkout/rollback.
+ */
+export async function getCouponCode(id: string): Promise<CouponCode | null> {
+  const db = getTestDb();
+  const rows = await db
+    .select()
+    .from(couponCodes)
+    .where(eq(couponCodes.id, id))
+    .limit(1);
+  return rows[0] ?? null;
 }

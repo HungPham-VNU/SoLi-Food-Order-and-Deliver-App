@@ -14,6 +14,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { PaymentModule } from './module/payment/payment.module';
 import { NotificationModule } from './module/notification/notification.module';
 import { ImageModule } from './module/image/image.module';
+import { PromotionModule } from './module/promotion/promotion.module';
 import { validate } from './config/env.schema';
 import { vnpayConfig } from './config/vnpay.config';
 
@@ -29,6 +30,7 @@ import { vnpayConfig } from './config/vnpay.config';
     GeoModule,
     ScheduleModule.forRoot(),
     RestaurantCatalogModule,
+    PromotionModule,
     OrderingModule,
     PaymentModule,
     NotificationModule,
