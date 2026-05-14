@@ -22,6 +22,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { formatCurrency } from '@/src/lib/format-utils';
 import { RestaurantMenuScreenProps } from '../types';
 import { useRestaurant, useRestaurantCategories, useRestaurantMenu } from '../api';
+import { useMyCart } from '@/src/features/cart/api/cart-api';
+import { useRouter } from 'expo-router';
 
 export function RestaurantMenuScreen({
   restaurantId,
@@ -32,6 +34,7 @@ export function RestaurantMenuScreen({
   isAddingToCart,
 }: RestaurantMenuScreenProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all');
   const [isFavorited, setIsFavorited] = useState(false);
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
@@ -56,6 +59,8 @@ export function RestaurantMenuScreen({
     error: catsError,
     isError: isErrorCats 
   } = useRestaurantCategories(restaurantId);
+
+  const { data: cart } = useMyCart();
 
   // Sync favorited state from server
   React.useEffect(() => {
@@ -111,6 +116,8 @@ export function RestaurantMenuScreen({
       setIsTogglingFavorite(false);
     }
   };
+
+  const itemCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
   return (
     <View className="flex-1 bg-surface">
@@ -309,8 +316,42 @@ export function RestaurantMenuScreen({
         </View>
 
         {/* Spacer for bottom nav */}
-        <View style={{ height: insets.bottom + 80 }} />
+        <View style={{ height: insets.bottom + 100 }} />
       </ScrollView>
+
+      {/* Sticky Bottom View Cart Bar */}
+      {cart && cart.items.length > 0 && (
+        <View 
+          className="absolute bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl pb-8 pt-4 px-6 shadow-lg rounded-t-xl border-t border-surface-container-high/50"
+          style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+        >
+          <TouchableOpacity 
+            onPress={() => router.push('/(customer)/cart')}
+            activeOpacity={0.9}
+          >
+            <LinearGradient
+              colors={['#00490e', '#0d631b']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              className="w-full h-14 rounded-full flex-row items-center justify-between px-6"
+            >
+              <View className="flex-row items-center gap-3">
+                <View className="bg-white/20 rounded-lg p-1.5">
+                  <Text className="text-white font-jakarta-sans font-bold text-sm">
+                    {itemCount}
+                  </Text>
+                </View>
+                <Text className="text-white font-jakarta-sans font-bold text-lg">
+                  View Cart
+                </Text>
+              </View>
+              <Text className="text-white font-jakarta-sans font-bold text-lg">
+                {formatCurrency(cart.totalAmount)}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }

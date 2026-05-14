@@ -20,6 +20,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatCurrency } from '@/src/lib/format-utils';
 import { MenuItemDetailScreenProps, ModifierGroup } from '../types';
 import { useMenuItem, useMenuItemModifiers } from '../api/restaurant-api';
+import { useMyCart } from '@/src/features/cart/api/cart-api';
+import { FloatingCartButton } from '@/src/features/cart';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export function MenuItemDetailScreen({
@@ -35,6 +37,11 @@ export function MenuItemDetailScreen({
 
   const { data: item, isLoading: isLoadingItem } = useMenuItem(itemId);
   const { data: modifierGroups, isLoading: isLoadingModifiers } = useMenuItemModifiers(itemId);
+  const { data: cart } = useMyCart();
+
+  const isItemInCart = useMemo(() => {
+    return cart?.items.some(cartItem => cartItem.menuItemId === itemId);
+  }, [cart, itemId]);
 
   const toggleOption = (optionId: string, group: ModifierGroup) => {
     setSelectedOptionIds(prev => {
@@ -282,7 +289,7 @@ export function MenuItemDetailScreen({
             style={{ opacity: areRequiredModifiersSelected ? 1 : 0.6 }}
           >
             <Text className="text-white font-jakarta-sans font-bold text-lg">
-              Add to Cart - {formatCurrency(calculateTotal())}
+              {isItemInCart ? 'Update Cart' : 'Add to Cart'} - {formatCurrency(calculateTotal())}
             </Text>
           </LinearGradient>
         </TouchableOpacity>

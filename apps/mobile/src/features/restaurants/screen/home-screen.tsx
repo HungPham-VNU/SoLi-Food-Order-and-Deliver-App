@@ -26,6 +26,7 @@ import { useRouter } from 'expo-router';
 import { useAddressStore } from '@/src/features/location';
 import { HomeTopBar } from '../components';
 import { useNearbyRestaurants } from '../api/restaurant-api';
+import { FloatingCartButton } from '@/src/features/cart';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', Icon: Utensils },
@@ -314,6 +315,7 @@ export function HomeScreen() {
           )}
         </View>
       </ScrollView>
+      <FloatingCartButton />
     </View>
   );
 }

@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Home, ShoppingCart, ReceiptText, User } from 'lucide-react-native';
+import { Home, ReceiptText, User } from 'lucide-react-native';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -73,17 +73,6 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon color={color} focused={focused}>
               <Home size={22} color={color} />
-            </TabBarIcon>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="cart"
-        options={{
-          title: 'Cart',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon color={color} focused={focused}>
-              <ShoppingCart size={22} color={color} />
             </TabBarIcon>
           ),
         }}
