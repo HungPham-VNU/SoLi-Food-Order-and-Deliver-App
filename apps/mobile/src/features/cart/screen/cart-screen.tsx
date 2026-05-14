@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -50,8 +51,10 @@ export function CartScreen({
   const insets = useSafeAreaInsets();
   
   const { data: cart, isLoading, isError } = useMyCart();
-  const { mutate: updateQuantity } = useUpdateCartItemQuantity();
-  const { mutate: removeItem } = useRemoveCartItem();
+  const { mutate: updateQuantity, isPending: isUpdating } = useUpdateCartItemQuantity();
+  const { mutate: removeItem, isPending: isRemoving } = useRemoveCartItem();
+
+  const isMutating = isUpdating || isRemoving;
 
   const cartItems: CartItem[] = (cart?.items || []).map((item) => ({
     id: item.cartItemId,
@@ -68,24 +71,49 @@ export function CartScreen({
   const checkoutBarHeight = 80 + insets.bottom;
 
   const handleIncrement = useCallback((id: string) => {
+    if (isMutating) return;
     const item = cart?.items.find(i => i.cartItemId === id);
     if (item) {
-      updateQuantity({ cartItemId: id, quantity: item.quantity + 1 });
+      updateQuantity(
+        { cartItemId: id, quantity: item.quantity + 1 },
+        {
+          onError: (error: any) => {
+            Alert.alert("Error", error.message || "Failed to update quantity");
+          }
+        }
+      );
     }
-  }, [cart, updateQuantity]);
+  }, [cart, updateQuantity, isMutating]);
 
   const handleDecrement = useCallback((id: string) => {
+    if (isMutating) return;
     const item = cart?.items.find(i => i.cartItemId === id);
     if (item && item.quantity > 1) {
-      updateQuantity({ cartItemId: id, quantity: item.quantity - 1 });
+      updateQuantity(
+        { cartItemId: id, quantity: item.quantity - 1 },
+        {
+          onError: (error: any) => {
+            Alert.alert("Error", error.message || "Failed to update quantity");
+          }
+        }
+      );
     } else if (item && item.quantity === 1) {
-      removeItem(id);
+      removeItem(id, {
+        onError: (error: any) => {
+          Alert.alert("Error", error.message || "Failed to remove item");
+        }
+      });
     }
-  }, [cart, updateQuantity, removeItem]);
+  }, [cart, updateQuantity, removeItem, isMutating]);
 
   const handleRemove = useCallback((id: string) => {
-    removeItem(id);
-  }, [removeItem]);
+    if (isMutating) return;
+    removeItem(id, {
+      onError: (error: any) => {
+        Alert.alert("Error", error.message || "Failed to remove item");
+      }
+    });
+  }, [removeItem, isMutating]);
 
   const handleBack = () => {
     if (onBack) {

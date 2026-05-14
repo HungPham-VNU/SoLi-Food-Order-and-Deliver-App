@@ -180,6 +180,7 @@ export interface RestaurantMenuScreenProps {
   onItemPress?: (itemId: string) => void;
   onAddItem?: (itemId: string) => void;
   onTabPress?: (tabId: string) => void;
+  isAddingToCart?: boolean;
 }
 
 export interface MenuItemDetailScreenProps {

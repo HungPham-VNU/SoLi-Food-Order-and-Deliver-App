@@ -78,7 +78,14 @@ export function CartItemCard({
             className="text-primary text-base"
             style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
           >
-            {formatCurrency(item.price * item.quantity)}
+            {formatCurrency(
+              (item.price +
+                (item.selectedModifiers?.reduce(
+                  (sum, mod) => sum + mod.price,
+                  0
+                ) ?? 0)) *
+                item.quantity
+            )}
           </Text>
 
           {/* Quantity stepper */}

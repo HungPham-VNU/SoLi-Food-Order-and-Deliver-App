@@ -10,9 +10,9 @@ export default function MenuItemDetailPage() {
 
   const normalizedId = Array.isArray(id) ? id[0] : id;
 
-  const { data: menuItem } = useMenuItem(normalizedId || "");
-  const { data: restaurant } = useRestaurant(menuItem?.restaurantId || "");
-  const { mutate: addToCart } = useAddToCart();
+  const { data: menuItem, isLoading: isLoadingItem, isError: isErrorItem } = useMenuItem(normalizedId || "");
+  const { data: restaurant, isLoading: isLoadingRestaurant, isError: isErrorRestaurant } = useRestaurant(menuItem?.restaurantId || "");
+  const { mutate: addToCart, isPending: isAddingToCart } = useAddToCart();
 
   if (!normalizedId) {
     return (
@@ -31,6 +31,29 @@ export default function MenuItemDetailPage() {
     );
   }
 
+  if (isLoadingItem || isLoadingRestaurant) {
+    return (
+      <View className="flex-1 items-center justify-center bg-surface">
+        <Text className="text-on-surface">Loading item details...</Text>
+      </View>
+    );
+  }
+
+  if (isErrorItem || isErrorRestaurant) {
+    return (
+      <View className="flex-1 items-center justify-center bg-surface p-6">
+        <Text className="text-on-surface text-lg font-bold mb-2">Error</Text>
+        <Text className="text-on-surface-variant text-center mb-6">Failed to load item details. Please try again.</Text>
+        <TouchableOpacity 
+          onPress={() => router.back()}
+          className="bg-primary px-6 py-2 rounded-full"
+        >
+          <Text className="text-white font-bold">Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const handleBack = () => {
     router.back();
   };
@@ -40,13 +63,15 @@ export default function MenuItemDetailPage() {
   };
 
   const handleAddToCart = (itemId: string, quantity: number, modifierSelections: Record<string, string[]>) => {
-    if (!menuItem || !restaurant) {
-      Alert.alert("Error", "Missing item or restaurant information");
+    if (!menuItem || !restaurant || isAddingToCart) {
+      if (!isAddingToCart) {
+        Alert.alert("Error", "Missing item or restaurant information");
+      }
       return;
     }
 
     // Convert modifierSelections Record<groupId, optionIds[]> to SelectedOption[]
-    const selectedOptions = Object.entries(modifierSelections).flatMap(
+    const selectedOptions = Object.entries(modifierSelections ?? {}).flatMap(
       ([groupId, optionIds]) => optionIds.map(optionId => ({ groupId, optionId }))
     );
 

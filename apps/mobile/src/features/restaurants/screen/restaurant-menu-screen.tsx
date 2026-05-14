@@ -29,6 +29,7 @@ export function RestaurantMenuScreen({
   onFavoriteToggle,
   onItemPress,
   onAddItem,
+  isAddingToCart,
 }: RestaurantMenuScreenProps) {
   const insets = useSafeAreaInsets();
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all');
@@ -148,7 +149,7 @@ export function RestaurantMenuScreen({
         {/* Hero Section */}
         <View className="relative w-full h-80">
           <Image
-            source={{ uri: restaurant.coverImageUrl || restaurant.logoUrl }}
+            source={{ uri: (restaurant.coverImageUrl || restaurant.logoUrl) ?? undefined }}
             className="w-full h-full"
             contentFit="cover"
           />
@@ -291,9 +292,16 @@ export function RestaurantMenuScreen({
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => onAddItem?.(item.id)}
-                  className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-primary items-center justify-center shadow-md active:scale-90"
+                  disabled={isAddingToCart}
+                  className={`absolute bottom-4 right-4 w-10 h-10 rounded-full items-center justify-center shadow-md active:scale-90 ${
+                    isAddingToCart ? 'bg-primary/60' : 'bg-primary'
+                  }`}
                 >
-                  <Plus size={24} color="#ffffff" />
+                  {isAddingToCart ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <Plus size={24} color="#ffffff" />
+                  )}
                 </TouchableOpacity>
               </View>
             ))}
