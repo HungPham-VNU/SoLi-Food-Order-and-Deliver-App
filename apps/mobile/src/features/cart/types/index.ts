@@ -44,3 +44,57 @@ export interface ReviewScreenProps {
   onBack?: () => void;
   onPlaceOrder?: () => void;
 }
+
+// ─── Backend API Types ────────────────────────────────────────────────────────
+
+export interface SelectedOption {
+  groupId: string;
+  optionId: string;
+}
+
+export interface AddItemToCartRequest {
+  menuItemId: string;
+  restaurantId: string;
+  restaurantName: string;
+  itemName: string;
+  unitPrice: number;
+  quantity: number;
+  selectedOptions?: SelectedOption[];
+}
+
+export interface UpdateCartItemQuantityRequest {
+  quantity: number;
+}
+
+export interface UpdateCartItemModifiersRequest {
+  selectedOptions: SelectedOption[];
+}
+
+export interface SelectedModifierResponse {
+  groupId: string;
+  groupName: string;
+  optionId: string;
+  optionName: string;
+  price: number;
+}
+
+export interface CartItemResponse {
+  cartItemId: string;
+  menuItemId: string;
+  itemName: string;
+  unitPrice: number;
+  quantity: number;
+  subtotal: number;
+  selectedModifiers: SelectedModifierResponse[];
+}
+
+export interface CartResponse {
+  cartId: string;
+  customerId: string;
+  restaurantId: string;
+  restaurantName: string;
+  items: CartItemResponse[];
+  totalAmount: number;
+  createdAt: string;
+  updatedAt: string;
+}

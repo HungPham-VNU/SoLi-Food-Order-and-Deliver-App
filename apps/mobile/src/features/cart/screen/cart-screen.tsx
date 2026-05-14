@@ -1,10 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   ScrollView,
   Text,
   TouchableOpacity,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -14,39 +15,7 @@ import { CartItemCard } from '@/src/features/cart/components/cart-item-card';
 import { OrderSummaryCard } from '@/src/features/cart/components/order-summary-card';
 import { EmptyCart } from '@/src/features/cart/components/empty-cart';
 import type { CartItem, CartScreenProps } from '@/src/features/cart/types';
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-// Replace with Zustand store or TanStack Query in a real implementation.
-
-const INITIAL_CART: CartItem[] = [
-  {
-    id: 'broccoli-organic',
-    name: 'Organic Green Broccoli',
-    subtitle: '500g • Farm Fresh',
-    price: 3.49,
-    quantity: 2,
-    imageUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBELZ5Eb-Tlvg7UC3aSSLWtPSp1AJvLvnnN0U8npdtjPZb4pW3VxuLGWvtg6fHeqwoYYv-D3wEMrEKjW8NSgoL29eewRglOJlzgurUYawqSv9f-1ZTfYuPkt-1DBR1WpPNeUCht5G5XACE7NeqiJIdUiPhVYdKs9qiHiZ0pG5phULlYEEl6_glRqCSphzaH-6u6mhkZqg5JOKN9n3X6NKRPD0Skejlj3ze5D-qLAdRwTY4guBuoGrRYMH7HWy1y0E-rux5rQNPz_ouy',
-  },
-  {
-    id: 'salmon-norwegian',
-    name: 'Norwegian Salmon',
-    subtitle: '250g • Wild Caught',
-    price: 12.99,
-    quantity: 1,
-    imageUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuA1kwXwpwjUHXeFwcX65ffGMFqKzJCaaijvjYUXZUwjwzzKL7-bZKpC9_N2Q5llkNy3s4Kx4d_AUto59TmsxJz-OBaTQYK7uGJ4u9xaCWaJzxn3Djv_jREobp8XepGDRiSn-3oM3dF07vpyzaStTQ4r2L-oUudPlBFPdwdYYCLva-wgl2_eG8MxgtWIk_zMfcUE-VRqE1UefQ0V8AzIehXHBJ0YuJ8K5uMIssm6KXun_tbSLPQYcViBQqVjzhtkSCen_9Oou04Cu-wH',
-  },
-  {
-    id: 'oranges-valencia',
-    name: 'Valencia Oranges',
-    subtitle: '1kg • Sweet & Juicy',
-    price: 4.25,
-    quantity: 1,
-    imageUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBow1PwDhusPylLQZ4hJsukRc3aaMtY_7AIsMWs2fl9dpdIJUxW0OiBGZ8VT7mSqJCuH5Fh-4WAnYzC3w9hQA9lBNKTY2Qn31_kN68fD5nd_NVhKAT8PGM0hbp93IEzSDttJ8NgmKXqfVFqaA_H80CS4NL-KwGi69ASPoUMpHmHuLWBmLph9ZDFmW4Le3yy8OQpzDkCKTxlIkZw3RcjuS_LyvWCYtWBmqP6REPtQ1PpJz_oppmkLeBBpMXh56ECdSzTtSHYs43c6Ewf',
-  },
-];
+import { useMyCart, useUpdateCartItemQuantity, useRemoveCartItem } from '../api/cart-api';
 
 // ─── Pricing Logic ─────────────────────────────────────────────────────────────
 
@@ -54,11 +23,7 @@ const DISCOUNT_THRESHOLD = 30;
 const DISCOUNT_PERCENT = 15;
 const DELIVERY_FEE = 0;
 
-function computeOrderSummary(items: CartItem[]) {
-  const subtotal = items.reduce(
-    (acc, item) => acc + item.price * item.quantity,
-    0,
-  );
+function computeOrderSummary(subtotal: number) {
   const remaining = Math.max(0, DISCOUNT_THRESHOLD - subtotal);
   const discount =
     subtotal >= DISCOUNT_THRESHOLD ? subtotal * (DISCOUNT_PERCENT / 100) : 0;
@@ -82,33 +47,43 @@ export function CartScreen({
   onContinueShopping,
 }: CartScreenProps) {
   const insets = useSafeAreaInsets();
-  const [cartItems, setCartItems] = useState<CartItem[]>(INITIAL_CART);
+  
+  const { data: cart, isLoading, isError } = useMyCart();
+  const { mutate: updateQuantity } = useUpdateCartItemQuantity();
+  const { mutate: removeItem } = useRemoveCartItem();
 
-  const summary = computeOrderSummary(cartItems);
+  const cartItems: CartItem[] = (cart?.items || []).map((item) => ({
+    id: item.cartItemId,
+    name: item.itemName,
+    subtitle: '', // Backend doesn't provide subtitle yet
+    price: item.unitPrice,
+    quantity: item.quantity,
+    imageUrl: '', // Backend doesn't provide imageUrl for cart items yet
+  }));
+
+  const summary = computeOrderSummary(cart?.totalAmount || 0);
   const headerHeight = insets.top + 64;
   const checkoutBarHeight = 80 + insets.bottom;
 
   const handleIncrement = useCallback((id: string) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, quantity: item.quantity + 1 } : item,
-      ),
-    );
-  }, []);
+    const item = cart?.items.find(i => i.cartItemId === id);
+    if (item) {
+      updateQuantity({ cartItemId: id, quantity: item.quantity + 1 });
+    }
+  }, [cart, updateQuantity]);
 
   const handleDecrement = useCallback((id: string) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity - 1) }
-          : item,
-      ),
-    );
-  }, []);
+    const item = cart?.items.find(i => i.cartItemId === id);
+    if (item && item.quantity > 1) {
+      updateQuantity({ cartItemId: id, quantity: item.quantity - 1 });
+    } else if (item && item.quantity === 1) {
+      removeItem(id);
+    }
+  }, [cart, updateQuantity, removeItem]);
 
   const handleRemove = useCallback((id: string) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== id));
-  }, []);
+    removeItem(id);
+  }, [removeItem]);
 
   const handleBack = () => {
     if (onBack) {
@@ -134,6 +109,25 @@ export function CartScreen({
     }
   };
 
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-surface">
+        <ActivityIndicator size="large" color="#0d631b" />
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-surface p-6">
+        <Text className="text-on-surface text-center mb-4">Failed to load cart</Text>
+        <TouchableOpacity onPress={handleBack} className="bg-primary px-6 py-2 rounded-full">
+          <Text className="text-white font-bold">Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1 bg-surface">
       <StatusBar
@@ -146,7 +140,7 @@ export function CartScreen({
       <CartHeader insetsTop={insets.top} onBack={handleBack} />
 
       {/* ── Body ─────────────────────────────────────────────────────────────── */}
-      {cartItems.length === 0 ? (
+      {!cart || cart.items.length === 0 ? (
         <EmptyCart onContinueShopping={handleContinueShopping} />
       ) : (
         <ScrollView
@@ -164,7 +158,7 @@ export function CartScreen({
             className="text-on-surface text-[18px] mb-1"
             style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
           >
-            {cartItems.length} {cartItems.length === 1 ? 'Item' : 'Items'}
+            {cart.items.length} {cart.items.length === 1 ? 'Item' : 'Items'}
           </Text>
 
           {/* Cart items */}
@@ -186,7 +180,7 @@ export function CartScreen({
       )}
 
       {/* ── Sticky Checkout Bar ───────────────────────────────────────────────── */}
-      {cartItems.length > 0 && (
+      {cart && cart.items.length > 0 && (
         <View
           className="absolute bottom-0 left-0 right-0 px-4 pt-3 bg-surface/90"
           style={{ paddingBottom: Math.max(insets.bottom, 16) }}

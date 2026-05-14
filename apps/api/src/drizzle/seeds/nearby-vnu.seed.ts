@@ -22,10 +22,15 @@ async function main() {
   // Cascading deletes will handle menu items, categories, etc.
   console.log(`🗑  Cleaning up existing data for owner: ${ownerId}`);
   try {
-    await db.delete(schema.restaurants).where(eq(schema.restaurants.ownerId, ownerId));
+    await db
+      .delete(schema.restaurants)
+      .where(eq(schema.restaurants.ownerId, ownerId));
     console.log('✅ Old seed data cleared.');
-  } catch (error) {
-    console.warn('⚠️  Warning: Could not clear old data (might be empty or missing tables):', error.message);
+  } catch (error: any) {
+    console.warn(
+      '⚠️  Warning: Could not clear old data (might be empty or missing tables):',
+      error.message,
+    );
   }
 
   // 3. Define Restaurants near the target location
@@ -78,20 +83,18 @@ async function main() {
 
     // Create a default delivery zone for each
     const zoneId = uuidv4();
-    await db
-      .insert(schema.deliveryZones)
-      .values({
-        id: zoneId,
-        restaurantId: r.id,
-        name: 'Khu vực Làng Đại học (3km)',
-        radiusKm: 10,
-        baseFee: 10000,
-        perKmRate: 4000,
-        avgSpeedKmh: 25,
-        prepTimeMinutes: 15,
-        bufferMinutes: 5,
-        isActive: true,
-      });
+    await db.insert(schema.deliveryZones).values({
+      id: zoneId,
+      restaurantId: r.id,
+      name: 'Khu vực Làng Đại học (3km)',
+      radiusKm: 10,
+      baseFee: 10000,
+      perKmRate: 4000,
+      avgSpeedKmh: 25,
+      prepTimeMinutes: 15,
+      bufferMinutes: 5,
+      isActive: true,
+    });
 
     // Add some menu categories, items, and modifier groups
     if (r.name === 'Bún Chả Làng Đại Học') {
@@ -138,9 +141,27 @@ async function main() {
         });
 
         await db.insert(schema.modifierOptions).values([
-          { id: uuidv4(), groupId: modGroupId, name: 'Thêm bún', price: 5000, displayOrder: 1 },
-          { id: uuidv4(), groupId: modGroupId, name: 'Thêm chả miếng', price: 15000, displayOrder: 2 },
-          { id: uuidv4(), groupId: modGroupId, name: 'Thêm nem rán (1 cái)', price: 10000, displayOrder: 3 },
+          {
+            id: uuidv4(),
+            groupId: modGroupId,
+            name: 'Thêm bún',
+            price: 5000,
+            displayOrder: 1,
+          },
+          {
+            id: uuidv4(),
+            groupId: modGroupId,
+            name: 'Thêm chả miếng',
+            price: 15000,
+            displayOrder: 2,
+          },
+          {
+            id: uuidv4(),
+            groupId: modGroupId,
+            name: 'Thêm nem rán (1 cái)',
+            price: 10000,
+            displayOrder: 3,
+          },
         ]);
       }
     } else if (r.name === 'The Coffee House - KTX Khu B') {
@@ -187,8 +208,21 @@ async function main() {
         });
 
         await db.insert(schema.modifierOptions).values([
-          { id: uuidv4(), groupId: sizeGroupId, name: 'Size M', price: 0, isDefault: true, displayOrder: 1 },
-          { id: uuidv4(), groupId: sizeGroupId, name: 'Size L', price: 10000, displayOrder: 2 },
+          {
+            id: uuidv4(),
+            groupId: sizeGroupId,
+            name: 'Size M',
+            price: 0,
+            isDefault: true,
+            displayOrder: 1,
+          },
+          {
+            id: uuidv4(),
+            groupId: sizeGroupId,
+            name: 'Size L',
+            price: 10000,
+            displayOrder: 2,
+          },
         ]);
 
         const toppingGroupId = uuidv4();
@@ -202,9 +236,27 @@ async function main() {
         });
 
         await db.insert(schema.modifierOptions).values([
-          { id: uuidv4(), groupId: toppingGroupId, name: 'Trân châu trắng', price: 10000, displayOrder: 1 },
-          { id: uuidv4(), groupId: toppingGroupId, name: 'Đào miếng (2 miếng)', price: 10000, displayOrder: 2 },
-          { id: uuidv4(), groupId: toppingGroupId, name: 'Kem Macchiato', price: 15000, displayOrder: 3 },
+          {
+            id: uuidv4(),
+            groupId: toppingGroupId,
+            name: 'Trân châu trắng',
+            price: 10000,
+            displayOrder: 1,
+          },
+          {
+            id: uuidv4(),
+            groupId: toppingGroupId,
+            name: 'Đào miếng (2 miếng)',
+            price: 10000,
+            displayOrder: 2,
+          },
+          {
+            id: uuidv4(),
+            groupId: toppingGroupId,
+            name: 'Kem Macchiato',
+            price: 15000,
+            displayOrder: 3,
+          },
         ]);
       }
     } else if (r.name === 'Cơm Tấm Cali - Thủ Đức') {
@@ -251,10 +303,34 @@ async function main() {
         });
 
         await db.insert(schema.modifierOptions).values([
-          { id: uuidv4(), groupId: sideGroupId, name: 'Thêm cơm', price: 10000, displayOrder: 1 },
-          { id: uuidv4(), groupId: sideGroupId, name: 'Trứng ốp la', price: 10000, displayOrder: 2 },
-          { id: uuidv4(), groupId: sideGroupId, name: 'Thêm chả trứng', price: 15000, displayOrder: 3 },
-          { id: uuidv4(), groupId: sideGroupId, name: 'Thêm bì', price: 10000, displayOrder: 4 },
+          {
+            id: uuidv4(),
+            groupId: sideGroupId,
+            name: 'Thêm cơm',
+            price: 10000,
+            displayOrder: 1,
+          },
+          {
+            id: uuidv4(),
+            groupId: sideGroupId,
+            name: 'Trứng ốp la',
+            price: 10000,
+            displayOrder: 2,
+          },
+          {
+            id: uuidv4(),
+            groupId: sideGroupId,
+            name: 'Thêm chả trứng',
+            price: 15000,
+            displayOrder: 3,
+          },
+          {
+            id: uuidv4(),
+            groupId: sideGroupId,
+            name: 'Thêm bì',
+            price: 10000,
+            displayOrder: 4,
+          },
         ]);
       }
     }

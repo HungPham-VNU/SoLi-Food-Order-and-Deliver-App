@@ -1,12 +1,18 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MenuItemDetailScreen } from "@/src/features/restaurants";
-import { Text, View, TouchableOpacity } from "react-native";
+import { useMenuItem, useRestaurant } from "@/src/features/restaurants/api";
+import { useAddToCart } from "@/src/features/cart";
+import { Text, View, TouchableOpacity, Alert } from "react-native";
 
 export default function MenuItemDetailPage() {
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
   const router = useRouter();
 
   const normalizedId = Array.isArray(id) ? id[0] : id;
+
+  const { data: menuItem } = useMenuItem(normalizedId || "");
+  const { data: restaurant } = useRestaurant(menuItem?.restaurantId || "");
+  const { mutate: addToCart } = useAddToCart();
 
   if (!normalizedId) {
     return (
@@ -34,8 +40,36 @@ export default function MenuItemDetailPage() {
   };
 
   const handleAddToCart = (itemId: string, quantity: number, modifierSelections: Record<string, string[]>) => {
-    // TODO: Integrate with cart store
-    console.log("Add menu item to cart:", itemId, "qty:", quantity, "modifiers:", modifierSelections);
+    if (!menuItem || !restaurant) {
+      Alert.alert("Error", "Missing item or restaurant information");
+      return;
+    }
+
+    // Convert modifierSelections Record<groupId, optionIds[]> to SelectedOption[]
+    const selectedOptions = Object.entries(modifierSelections).flatMap(
+      ([groupId, optionIds]) => optionIds.map(optionId => ({ groupId, optionId }))
+    );
+
+    addToCart(
+      {
+        menuItemId: menuItem.id,
+        restaurantId: restaurant.id,
+        restaurantName: restaurant.name,
+        itemName: menuItem.name,
+        unitPrice: menuItem.price,
+        quantity,
+        selectedOptions,
+      },
+      {
+        onSuccess: () => {
+          Alert.alert("Success", `${menuItem.name} added to cart`);
+          router.back();
+        },
+        onError: (error: any) => {
+          Alert.alert("Error", error.message || "Failed to add item to cart");
+        },
+      }
+    );
   };
 
   return (

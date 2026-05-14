@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Rich Catalog Seed Script
- * 
+ *
  * This script adds realistic, high-quality restaurant and menu data.
  * It uses descriptive text to simulate a real-world production environment.
  */
@@ -21,8 +21,9 @@ async function main() {
     {
       id: uuidv4(),
       ownerId,
-      name: 'Pizza 4P\'s',
-      description: 'Nhà hàng Pizza thủ công với triết lý "Từ trang trại đến bàn ăn", nổi tiếng với phô mai tự làm và pizza nướng củi.',
+      name: "Pizza 4P's",
+      description:
+        'Nhà hàng Pizza thủ công với triết lý "Từ trang trại đến bàn ăn", nổi tiếng với phô mai tự làm và pizza nướng củi.',
       address: '8/15 Lê Thánh Tôn, Quận 1, TP.HCM',
       phone: '1900 6043',
       isOpen: true,
@@ -35,7 +36,8 @@ async function main() {
       id: uuidv4(),
       ownerId,
       name: 'The Coffee House',
-      description: 'Không gian cà phê hiện đại, nơi kết nối mọi người qua những tách cà phê đậm đà và trà trái cây thanh mát.',
+      description:
+        'Không gian cà phê hiện đại, nơi kết nối mọi người qua những tách cà phê đậm đà và trà trái cây thanh mát.',
       address: '183 Hoa Hồng, Phú Nhuận, TP.HCM',
       phone: '1800 6936',
       isOpen: true,
@@ -48,7 +50,8 @@ async function main() {
       id: uuidv4(),
       ownerId,
       name: 'Món Huế',
-      description: 'Tinh hoa ẩm thực cố đô với những món ăn đậm đà, tinh tế và mang đậm nét văn hóa Huế.',
+      description:
+        'Tinh hoa ẩm thực cố đô với những món ăn đậm đà, tinh tế và mang đậm nét văn hóa Huế.',
       address: '92 Nam Kỳ Khởi Nghĩa, Quận 1, TP.HCM',
       phone: '028 3827 0101',
       isOpen: true,
@@ -61,7 +64,8 @@ async function main() {
       id: uuidv4(),
       ownerId,
       name: 'Haidilao Hotpot',
-      description: 'Trải nghiệm lẩu Trung Hoa đẳng cấp với dịch vụ tận tâm và nước lẩu đa dạng, đậm đà.',
+      description:
+        'Trải nghiệm lẩu Trung Hoa đẳng cấp với dịch vụ tận tâm và nước lẩu đa dạng, đậm đà.',
       address: 'Tòa nhà Bitexco, Quận 1, TP.HCM',
       phone: '028 6273 1000',
       isOpen: true,
@@ -78,21 +82,24 @@ async function main() {
 
     // Create a default delivery zone for each
     const zoneId = uuidv4();
-    await db.insert(schema.deliveryZones).values({
-      id: zoneId,
-      restaurantId: r.id,
-      name: 'Khu vực trung tâm (5km)',
-      radiusKm: 5,
-      baseFee: 15000,
-      perKmRate: 5000,
-      avgSpeedKmh: 30,
-      prepTimeMinutes: 20,
-      bufferMinutes: 5,
-      isActive: true,
-    }).onConflictDoNothing();
+    await db
+      .insert(schema.deliveryZones)
+      .values({
+        id: zoneId,
+        restaurantId: r.id,
+        name: 'Khu vực trung tâm (5km)',
+        radiusKm: 5,
+        baseFee: 15000,
+        perKmRate: 5000,
+        avgSpeedKmh: 30,
+        prepTimeMinutes: 20,
+        bufferMinutes: 5,
+        isActive: true,
+      })
+      .onConflictDoNothing();
 
     // Create Menu Categories and Items
-    if (r.name === 'Pizza 4P\'s') {
+    if (r.name === "Pizza 4P's") {
       const catId = uuidv4();
       await db.insert(schema.menuCategories).values({
         id: catId,
@@ -107,7 +114,8 @@ async function main() {
           restaurantId: r.id,
           categoryId: catId,
           name: 'Pizza 4 Phô Mai',
-          description: 'Sự kết hợp hoàn hảo của 4 loại phô mai tự làm (Mozzarella, Camembert, Gorgonzola, Parmesan), ăn kèm với mật ong rừng nguyên chất.',
+          description:
+            'Sự kết hợp hoàn hảo của 4 loại phô mai tự làm (Mozzarella, Camembert, Gorgonzola, Parmesan), ăn kèm với mật ong rừng nguyên chất.',
           price: 250000,
           tags: ['pizza', 'cheese', 'honey'],
           status: 'available' as const,
@@ -117,7 +125,8 @@ async function main() {
           restaurantId: r.id,
           categoryId: catId,
           name: 'Pizza Cá Hồi Xông Khói',
-          description: 'Cá hồi xông khói tươi ngon kết hợp cùng phô mai cream cheese béo ngậy, hành tây và thì là trên nền đế bánh giòn rụm.',
+          description:
+            'Cá hồi xông khói tươi ngon kết hợp cùng phô mai cream cheese béo ngậy, hành tây và thì là trên nền đế bánh giòn rụm.',
           price: 290000,
           tags: ['pizza', 'seafood', 'salmon'],
           status: 'available' as const,
@@ -137,7 +146,8 @@ async function main() {
         restaurantId: r.id,
         categoryId: catPastaId,
         name: 'Mỳ Ý Cua Sốt Cà Chua',
-        description: 'Thịt cua tươi xào cùng sốt cà chua đậm đà, tỏi, ớt cay nhẹ và dầu ô liu nguyên chất.',
+        description:
+          'Thịt cua tươi xào cùng sốt cà chua đậm đà, tỏi, ớt cay nhẹ và dầu ô liu nguyên chất.',
         price: 220000,
         tags: ['pasta', 'seafood', 'crab'],
         status: 'available' as const,
@@ -159,7 +169,8 @@ async function main() {
           restaurantId: r.id,
           categoryId: catDrinksId,
           name: 'Trà Đào Cam Sả',
-          description: 'Thức uống trứ danh với vị trà thanh khiết, những miếng đào giòn tan, cam tươi mọng nước và hương sả nồng nàn.',
+          description:
+            'Thức uống trứ danh với vị trà thanh khiết, những miếng đào giòn tan, cam tươi mọng nước và hương sả nồng nàn.',
           price: 55000,
           tags: ['drink', 'tea', 'fruit'],
           status: 'available' as const,
@@ -169,7 +180,8 @@ async function main() {
           restaurantId: r.id,
           categoryId: catDrinksId,
           name: 'Cà Phê Sữa Đá',
-          description: 'Hương vị cà phê Việt Nam truyền thống, pha phin đậm đà từ hạt cà phê Robusta và sữa đặc béo ngậy.',
+          description:
+            'Hương vị cà phê Việt Nam truyền thống, pha phin đậm đà từ hạt cà phê Robusta và sữa đặc béo ngậy.',
           price: 35000,
           tags: ['drink', 'coffee'],
           status: 'available' as const,
@@ -189,7 +201,8 @@ async function main() {
         restaurantId: r.id,
         categoryId: catFoodId,
         name: 'Bánh Mì Que',
-        description: 'Bánh mì nhỏ giòn rụm với nhân pate gan béo bùi đặc trưng và tương ớt cay nồng.',
+        description:
+          'Bánh mì nhỏ giòn rụm với nhân pate gan béo bùi đặc trưng và tương ớt cay nồng.',
         price: 15000,
         tags: ['food', 'bread', 'pate'],
         status: 'available' as const,
@@ -211,7 +224,8 @@ async function main() {
           restaurantId: r.id,
           categoryId: catHueId,
           name: 'Bún Bò Huế Đặc Biệt',
-          description: 'Nước dùng đậm đà hương mắm ruốc cố đô, ăn kèm bắp bò mềm, giò heo béo ngậy, chả cua và tiết luộc.',
+          description:
+            'Nước dùng đậm đà hương mắm ruốc cố đô, ăn kèm bắp bò mềm, giò heo béo ngậy, chả cua và tiết luộc.',
           price: 95000,
           tags: ['noodle', 'beef', 'hue'],
           status: 'available' as const,
@@ -221,7 +235,8 @@ async function main() {
           restaurantId: r.id,
           categoryId: catHueId,
           name: 'Bánh Bèo Chén (6 chén)',
-          description: 'Những chiếc bánh bèo nhỏ xinh trong chén sứ, phủ lên trên là tôm chấy, mỡ hành thơm phức và da heo chiên giòn.',
+          description:
+            'Những chiếc bánh bèo nhỏ xinh trong chén sứ, phủ lên trên là tôm chấy, mỡ hành thơm phức và da heo chiên giòn.',
           price: 45000,
           tags: ['hue', 'steamed'],
           status: 'available' as const,
@@ -243,7 +258,8 @@ async function main() {
         restaurantId: r.id,
         categoryId: catSoupId,
         name: 'Nước Lẩu Cà Chua',
-        description: 'Vị chua ngọt tự nhiên từ cà chua tươi chọn lọc, giàu vitamin và phù hợp cho mọi lứa tuổi.',
+        description:
+          'Vị chua ngọt tự nhiên từ cà chua tươi chọn lọc, giàu vitamin và phù hợp cho mọi lứa tuổi.',
         price: 120000,
         tags: ['hotpot', 'soup', 'tomato'],
         status: 'available' as const,
@@ -261,7 +277,8 @@ async function main() {
         restaurantId: r.id,
         categoryId: catMeatId,
         name: 'Thịt Bò Haidilao',
-        description: 'Thịt bò thượng hạng thái lát mỏng, có độ vân mỡ hoàn hảo, mềm tan trong miệng khi nhúng lẩu.',
+        description:
+          'Thịt bò thượng hạng thái lát mỏng, có độ vân mỡ hoàn hảo, mềm tan trong miệng khi nhúng lẩu.',
         price: 250000,
         tags: ['meat', 'beef', 'hotpot'],
         status: 'available' as const,
