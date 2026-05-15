@@ -143,11 +143,6 @@ export function PaymentScreen({
           gap: 32,
         }}
       >
-        <CheckoutProgress
-          currentStep={2}
-          stepName="Payment Method"
-        />
-
         {/* ── Saved Cards ─────────────────────────────────────────────── */}
         <View className="gap-4">
           <Text

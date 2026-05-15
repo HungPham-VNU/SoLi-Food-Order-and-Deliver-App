@@ -17,7 +17,11 @@ import { OrderSummaryCard } from '@/src/features/cart/components/order-summary-c
 import { EmptyCart } from '@/src/features/cart/components/empty-cart';
 import type { CartItem, CartScreenProps } from '@/src/features/cart/types';
 import { formatCurrency } from '@/src/lib/format-utils';
-import { useMyCart, useUpdateCartItemQuantity, useRemoveCartItem } from '../api/cart-api';
+import {
+  useMyCart,
+  useUpdateCartItemQuantity,
+  useRemoveCartItem,
+} from '../api/cart-api';
 
 // ─── Pricing Logic ─────────────────────────────────────────────────────────────
 
@@ -49,9 +53,10 @@ export function CartScreen({
   onContinueShopping,
 }: CartScreenProps) {
   const insets = useSafeAreaInsets();
-  
+
   const { data: cart, isLoading, isError } = useMyCart();
-  const { mutate: updateQuantity, isPending: isUpdating } = useUpdateCartItemQuantity();
+  const { mutate: updateQuantity, isPending: isUpdating } =
+    useUpdateCartItemQuantity();
   const { mutate: removeItem, isPending: isRemoving } = useRemoveCartItem();
 
   const isMutating = isUpdating || isRemoving;
@@ -70,50 +75,65 @@ export function CartScreen({
   const headerHeight = insets.top + 64;
   const checkoutBarHeight = 80 + insets.bottom;
 
-  const handleIncrement = useCallback((id: string) => {
-    if (isMutating) return;
-    const item = cart?.items.find(i => i.cartItemId === id);
-    if (item) {
-      updateQuantity(
-        { cartItemId: id, quantity: item.quantity + 1 },
-        {
-          onError: (error: any) => {
-            Alert.alert("Error", error.message || "Failed to update quantity");
-          }
-        }
-      );
-    }
-  }, [cart, updateQuantity, isMutating]);
+  const handleIncrement = useCallback(
+    (id: string) => {
+      if (isMutating) return;
+      const item = cart?.items.find((i) => i.cartItemId === id);
+      if (item) {
+        updateQuantity(
+          { cartItemId: id, quantity: item.quantity + 1 },
+          {
+            onError: (error: any) => {
+              Alert.alert(
+                'Error',
+                error.message || 'Failed to update quantity',
+              );
+            },
+          },
+        );
+      }
+    },
+    [cart, updateQuantity, isMutating],
+  );
 
-  const handleDecrement = useCallback((id: string) => {
-    if (isMutating) return;
-    const item = cart?.items.find(i => i.cartItemId === id);
-    if (item && item.quantity > 1) {
-      updateQuantity(
-        { cartItemId: id, quantity: item.quantity - 1 },
-        {
+  const handleDecrement = useCallback(
+    (id: string) => {
+      if (isMutating) return;
+      const item = cart?.items.find((i) => i.cartItemId === id);
+      if (item && item.quantity > 1) {
+        updateQuantity(
+          { cartItemId: id, quantity: item.quantity - 1 },
+          {
+            onError: (error: any) => {
+              Alert.alert(
+                'Error',
+                error.message || 'Failed to update quantity',
+              );
+            },
+          },
+        );
+      } else if (item && item.quantity === 1) {
+        removeItem(id, {
           onError: (error: any) => {
-            Alert.alert("Error", error.message || "Failed to update quantity");
-          }
-        }
-      );
-    } else if (item && item.quantity === 1) {
+            Alert.alert('Error', error.message || 'Failed to remove item');
+          },
+        });
+      }
+    },
+    [cart, updateQuantity, removeItem, isMutating],
+  );
+
+  const handleRemove = useCallback(
+    (id: string) => {
+      if (isMutating) return;
       removeItem(id, {
         onError: (error: any) => {
-          Alert.alert("Error", error.message || "Failed to remove item");
-        }
+          Alert.alert('Error', error.message || 'Failed to remove item');
+        },
       });
-    }
-  }, [cart, updateQuantity, removeItem, isMutating]);
-
-  const handleRemove = useCallback((id: string) => {
-    if (isMutating) return;
-    removeItem(id, {
-      onError: (error: any) => {
-        Alert.alert("Error", error.message || "Failed to remove item");
-      }
-    });
-  }, [removeItem, isMutating]);
+    },
+    [removeItem, isMutating],
+  );
 
   const handleBack = () => {
     if (onBack) {
@@ -135,7 +155,7 @@ export function CartScreen({
     if (onCheckout) {
       onCheckout();
     } else {
-      router.push('/(customer)/checkout/shipping-address');
+      router.push('/(customer)/checkout');
     }
   };
 
@@ -150,8 +170,13 @@ export function CartScreen({
   if (isError) {
     return (
       <View className="flex-1 items-center justify-center bg-surface p-6">
-        <Text className="text-on-surface text-center mb-4">Failed to load cart</Text>
-        <TouchableOpacity onPress={handleBack} className="bg-primary px-6 py-2 rounded-full">
+        <Text className="text-on-surface text-center mb-4">
+          Failed to load cart
+        </Text>
+        <TouchableOpacity
+          onPress={handleBack}
+          className="bg-primary px-6 py-2 rounded-full"
+        >
           <Text className="text-white font-bold">Go Back</Text>
         </TouchableOpacity>
       </View>

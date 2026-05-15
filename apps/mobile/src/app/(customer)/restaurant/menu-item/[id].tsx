@@ -76,7 +76,7 @@ export default function MenuItemDetailPage() {
     }
 
     // Convert modifierSelections Record<groupId, optionIds[]> to SelectedOption[]
-    const selectedOptions = Object.entries(modifierSelections ?? {}).flatMap(
+    const selectedModifiers = Object.entries(modifierSelections ?? {}).flatMap(
       ([groupId, optionIds]) => optionIds.map(optionId => ({ groupId, optionId }))
     );
 
@@ -88,7 +88,7 @@ export default function MenuItemDetailPage() {
         itemName: menuItem.name,
         unitPrice: menuItem.price,
         quantity,
-        selectedOptions,
+        selectedModifiers,
       },
       {
         onSuccess: () => {

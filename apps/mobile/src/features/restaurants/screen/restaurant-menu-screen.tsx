@@ -117,7 +117,7 @@ export function RestaurantMenuScreen({
     }
   };
 
-  const itemCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  const itemCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
   return (
     <View className="flex-1 bg-surface">
@@ -320,7 +320,7 @@ export function RestaurantMenuScreen({
       </ScrollView>
 
       {/* Sticky Bottom View Cart Bar */}
-      {cart && cart.items.length > 0 && (
+      {cart && cart.items && cart.items.length > 0 && (
         <View 
           className="absolute bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl pb-8 pt-4 px-6 shadow-lg rounded-t-xl border-t border-surface-container-high/50"
           style={{ paddingBottom: Math.max(insets.bottom, 24) }}
@@ -334,6 +334,7 @@ export function RestaurantMenuScreen({
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               className="w-full h-14 rounded-full flex-row items-center justify-between px-6"
+              style={{ borderRadius: 9999 }}
             >
               <View className="flex-row items-center gap-3">
                 <View className="bg-white/20 rounded-lg p-1.5">

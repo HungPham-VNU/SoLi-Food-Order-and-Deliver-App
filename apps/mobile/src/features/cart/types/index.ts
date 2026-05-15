@@ -60,7 +60,7 @@ export interface AddItemToCartRequest {
   itemName: string;
   unitPrice: number;
   quantity: number;
-  selectedOptions?: SelectedOption[];
+  selectedModifiers?: SelectedOption[];
 }
 
 export interface UpdateCartItemQuantityRequest {

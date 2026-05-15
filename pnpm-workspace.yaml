@@ -2,7 +2,10 @@ packages:
   - 'apps/*'
   - 'packages/*'
 allowBuilds:
+  '@firebase/util': set this to true or false
   '@nestjs/core': true
   '@scarf/scarf': true
   esbuild: true
+  msw: set this to true or false
+  protobufjs: set this to true or false
   unrs-resolver: true

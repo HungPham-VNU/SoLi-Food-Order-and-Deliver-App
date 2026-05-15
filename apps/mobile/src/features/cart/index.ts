@@ -1,5 +1,6 @@
 // Barrel exports for the cart feature
 export { CartScreen } from './screen/cart-screen';
+export { SingleScreenCheckout } from './screen/single-screen-checkout';
 export { FloatingCartButton } from './components/floating-cart-button';
 export { ShippingAddressScreen } from './screen/shipping-address-screen';
 export { PaymentScreen } from './screen/payment-screen';

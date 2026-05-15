@@ -54,7 +54,7 @@ export function MenuItemDetailScreen({
     const selections: Record<string, string[]> = {};
     modifierGroups?.forEach(group => {
       const selectedInGroup = selectedOptionIds.filter(id => 
-        group.options.some(o => o.id === id)
+        group.options?.some(o => o.id === id)
       );
       if (selectedInGroup.length > 0) {
         selections[group.id] = selectedInGroup;
@@ -64,7 +64,7 @@ export function MenuItemDetailScreen({
   }, [modifierGroups, selectedOptionIds]);
 
   const isItemInCart = useMemo(() => {
-    return cart?.items.some(cartItem => {
+    return cart?.items?.some(cartItem => {
       if (cartItem.menuItemId !== itemId) return false;
       
       const cartItemSelections: Record<string, string[]> = {};
@@ -90,7 +90,7 @@ export function MenuItemDetailScreen({
           }
           return prev;
         }
-        const otherOptionsInGroup = group.options.map(o => o.id);
+        const otherOptionsInGroup = group.options?.map(o => o.id) || [];
         const filtered = prev.filter(id => !otherOptionsInGroup.includes(id));
         return [...filtered, optionId];
       }
@@ -98,7 +98,7 @@ export function MenuItemDetailScreen({
       if (isSelected) {
         return prev.filter(id => id !== optionId);
       } else {
-        const optionsInGroupCount = prev.filter(id => group.options.some(o => o.id === id)).length;
+        const optionsInGroupCount = prev.filter(id => group.options?.some(o => o.id === id)).length;
         if (optionsInGroupCount < group.maxSelections) {
           return [...prev, optionId];
         }
@@ -112,7 +112,7 @@ export function MenuItemDetailScreen({
     return modifierGroups.every(group => {
       if (group.minSelections === 0) return true;
       const selectedInGroupCount = selectedOptionIds.filter(id => 
-        group.options.some(o => o.id === id)
+        group.options?.some(o => o.id === id)
       ).length;
       return selectedInGroupCount >= group.minSelections;
     });
@@ -217,7 +217,7 @@ export function MenuItemDetailScreen({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
       >
-        <View className="space-y-10">
+        <View className="flex-col gap-6">
           {/* Modifier Groups */}
           {modifierGroups?.map((group) => (
             <View key={group.id} className="bg-surface-container-lowest rounded-xl p-6 shadow-sm">
@@ -232,8 +232,8 @@ export function MenuItemDetailScreen({
                 </View>
               </View>
               
-              <View className="space-y-4">
-                {group.options.map((option) => {
+              <View className="flex-col gap-4">
+                {group.options?.map((option) => {
                   const isSelected = selectedOptionIds.includes(option.id);
                   const isRadio = group.maxSelections === 1;
                   
@@ -298,7 +298,7 @@ export function MenuItemDetailScreen({
 
       {/* Sticky Bottom Action Bar */}
       <View 
-        className="absolute bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl pb-8 pt-4 px-6 shadow-lg rounded-t-xl border-t border-surface-container-high/50"
+        className="absolute bottom-0 w-full z-50 bg-surface pb-8 pt-4 px-6 shadow-lg rounded-t-xl border-t border-outline-variant"
         style={{ paddingBottom: Math.max(insets.bottom, 24) }}
       >
         <TouchableOpacity 
@@ -307,13 +307,17 @@ export function MenuItemDetailScreen({
           activeOpacity={0.9}
         >
           <LinearGradient
-            colors={['#00490e', '#0d631b']}
+            colors={areRequiredModifiersSelected ? ['#00490e', '#0d631b'] : ['#e0e0e0', '#bdbdbd']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             className="w-full h-14 rounded-full flex-row items-center justify-center"
-            style={{ opacity: areRequiredModifiersSelected ? 1 : 0.6 }}
+            style={{ borderRadius: 9999 }}
           >
-            <Text className="text-white font-jakarta-sans font-bold text-lg">
+            <Text 
+              className={`font-jakarta-sans font-bold text-lg ${
+                areRequiredModifiersSelected ? 'text-white' : 'text-on-surface-variant'
+              }`}
+            >
               {isItemInCart ? 'Update Cart' : 'Add to Cart'} - {formatCurrency(calculateTotal())}
             </Text>
           </LinearGradient>

@@ -97,11 +97,6 @@ export function ShippingAddressScreen({
           gap: 18,
         }}
       >
-        <CheckoutProgress
-          currentStep={1}
-          stepName="Shipping Address"
-        />
-
         <View className="gap-2">
           <Text
             className="text-on-surface text-2xl"

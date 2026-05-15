@@ -91,7 +91,6 @@ export function ProductInfoCard({
 
         <TouchableOpacity
           onPress={onAddToCart}
-          activeOpacity={0.88}
           className="flex-1 rounded-full overflow-hidden"
           style={{
             shadowColor: '#0d631b',

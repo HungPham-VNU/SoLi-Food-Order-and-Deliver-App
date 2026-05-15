@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "scalar": {
+      "type": "http",
+      "url": "https://mcp.scalar.com/mcp/96bb1233-b4fa-4041-ac8e-ff01221b99e4"
+    }
+  }
+}
