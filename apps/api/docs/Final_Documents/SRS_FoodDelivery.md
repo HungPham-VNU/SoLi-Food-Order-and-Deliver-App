@@ -1,16 +1,16 @@
 # Software Requirements Specification
 
-## SoLi Food Delivery Application — Phases 1, 2 & 3
+## SoLi Food Delivery Application — Phases 1, 2, 3 & 4
 
 ---
 
-| Field              | Detail                                                |
-|--------------------|-------------------------------------------------------|
-| **Document Title** | Software Requirements Specification — Phases 1, 2 & 3 |
-| **Version**        | 1.9                                                   |
-| **Status**         | Draft                                                 |
-| **Prepared by**    | Development Team                                      |
-| **Last Modified**  | 2026-05-16                                            |
+| Field              | Detail                                                    |
+|--------------------|-----------------------------------------------------------|
+| **Document Title** | Software Requirements Specification — Phases 1, 2, 3 & 4  |
+| **Version**        | 1.11                                                      |
+| **Status**         | Draft                                                     |
+| **Prepared by**    | Development Team                                          |
+| **Last Modified**  | 2026-05-18                                                |
 
 ---
 
@@ -28,6 +28,8 @@
 | 1.7     | 2026-05-15 | Dev Team         | Integrated **Phase 3 — Customer Interaction, Promotion & Notification** (UC-20 through UC-26): Track Order Status, Cancel Order, Submit Rating & Review, Manage Restaurant Promotions, Manage Platform Promotions, Process Payment Refund, Manage Real-Time Notifications. Extended global Message Appendix (§3) with 30 new codes for `MSG-TRACK`, `MSG-CANC`, `MSG-RATE`, `MSG-PROMO`, `MSG-REFUND`, and `MSG-NOTI` domains. |
 | 1.8     | 2026-05-15 | Dev Team         | Deep backend audit of Phase 3 (UC-20–UC-26). Fixed 9 critical/high mis-alignments: removed non-existent `DELETE /promotions/restaurant/:id` trigger; restricted `→cancelled` to admin-only in BR-23.3; completely rewrote BR-24.4 to reflect admin-provided `codes: string[]` model with immediate `ConflictException` on collision (no retry); added HTTP 204 note for admin DELETE in BR-24.7; restructured UC-25 diagram so Notification BC fan-out is shown as an independent parallel `@EventsHandler`, not a sequential Payment BC step; completed `OrderCancelledAfterPaymentEvent` payload in BR-21.5 and BR-25.1 (`customerId`, `paymentMethod`, `cancelledAt`); updated BR-25.7 to document both `order_cancelled` (idempotent) and `refund_initiated` notifications; expanded BR-26.2 channel table to cover all implemented event-type/channel mappings from source code. |
 | 1.9     | 2026-05-16 | Dev Team         | Refactored all 26 Activity Diagrams to business-level presentation. Removed implementation details (HTTP status codes, API endpoint paths, database table and field names, internal event class names, optimistic locking mechanics, Redis/ACL terminology, DTO and service class references) from all diagram step labels while preserving complete flow logic, all MSG code references, actor swimlanes, and BR cross-reference numbering unchanged. Business Rules tables are untouched. |
+| 1.10    | 2026-05-17 | Dev Team         | Integrated **Phase 4 — Administration & Governance** (UC-27 through UC-35): Review Restaurant Applications, Review Shipper Applications, Suspend or Reactivate Partner Accounts, Monitor Orders and Platform Operations, Search and Manage User Accounts, Administrative Order Cancellation & Refund, View and Export Operational Reports, View Admin Dashboard, Manage Roles and Permissions. Backend-implemented UCs (UC-27 restaurant approval, UC-30 admin order monitoring, UC-32 admin cancellation/refund) match observed endpoints; backend-pending UCs (UC-28 shipper review, UC-29 suspension, UC-31 user management, UC-33 reports, UC-34 dashboard, UC-35 role management) are written as enterprise target designs aligned with the existing schema, role model and CQRS architecture. Closes the BR-1 (Partner Verification) and BR-5 (Commission Calculation) traceability loops opened in Phases 1–3. Extended global Message Appendix (§3) with 28 new codes in the `MSG-ADM` domain (MSG-ADM-01 through MSG-ADM-28). |
+| 1.11    | 2026-05-18 | Dev Team         | Full audit and refinement of Phase 4 (UC-27–UC-35). Corrected UC canonical names in ToC, section headings and header tables (UC-27, UC-28, UC-30, UC-34, UC-35 renamed to match finalized UC decomposition). Added Phase 4 to Table of Contents and updated §1.2 Scope. Fixed two wrong message code references in UC-28 activity diagram (MSG-PROMO-05→MSG-ADM-30, MSG-AUTH-05→MSG-ADM-29). Removed inner `stop` nodes from UC-28 and UC-31 diagrams (single-stop convention). Corrected `sortBy` filter field values from camelCase to `snake_case` and `sortDir`→`sortOrder` in UC-30 Pre-condition and BR-30.2 to match the actual `AdminOrderFiltersDto`. Removed implementation-detail migration filename from BR-30.3. Added promotion rollback note to BR-32.4. Softened UC-34 BR-34.4 performance target from MUST to SHOULD. Removed suspended-account guard from UC-35 Pre-condition (relocated exclusively to BR-35.5); updated UC-35 step (21) and BR-35.5 to reference new `MSG-ADM-31`. Generalized MSG-ADM-10 text from “Account” to “Resource”. Cleaned Phase 4 intro paragraph of API endpoint reference. Extended Message Appendix with MSG-ADM-29, MSG-ADM-30, MSG-ADM-31 (total 31 ADM codes). |
 
 ---
 
@@ -70,6 +72,16 @@
      - UC-24: Manage Platform Promotions
      - UC-25: Process Payment Refund
      - UC-26: Manage Real-Time Notifications
+   - **Phase 4 — Administration & Governance**
+     - UC-27: Approve or Reject Restaurant Applications
+     - UC-28: Approve or Reject Shipper Applications
+     - UC-29: Suspend or Reactivate Partner Accounts
+     - UC-30: Monitor Orders and Platform Health
+     - UC-31: Search and Manage User Accounts
+     - UC-32: Administrative Order Cancellation & Refund
+     - UC-33: View and Export Operational Reports
+     - UC-34: View Dashboard & Platform Overview
+     - UC-35: Manage Admin Roles & Permissions
 3. [Appendix — Message List](#3-appendix--message-list)
 
 ---
@@ -110,7 +122,16 @@ This SRS covers the end-to-end ordering platform across three writing phases:
 - Cross-context payment refund pipeline (`completed → refund_pending → refunded`)
 - Multi-channel notification dispatch (in-app, push, email) with per-user preferences and quiet hours
 
-Out of scope for Phases 1 – 3: all administrator governance UCs covering identity, restaurant approval, shipper approval, dispute resolution and operational reporting (Phase 4).
+**Phase 4 — Administration & Governance (UC-27 through UC-35):**
+- Restaurant partner approval and revocation (closes BR-1 loop from UC-11)
+- Shipper application review, approval and rejection queue
+- Account suspension and reactivation with session invalidation and last-admin safeguard
+- Cross-tenant order monitoring with composable filters and full lifecycle history
+- User account search, profile management, and delegation to suspension and role-change UCs
+- Administrative order cancellation and post-delivery refund override
+- Operational reports across order, financial, user and promotion domains with CSV/XLSX export
+- Admin dashboard summary with today's KPIs and recent-activity stream
+- Role assignment and governance with last-admin safeguard and shipper-role-via-UC-28 constraint
 
 ### 1.3 Intended Audience
 
@@ -1902,6 +1923,592 @@ stop
 
 ---
 
+### Phase 4 — Administration & Governance
+
+Phase 4 specifies the **administrative control plane** of the platform — the set of use cases that allow the **Administrator** actor to govern partner onboarding, account lifecycle, operational health, financial reporting and platform-level role assignments. These use cases sit on top of every preceding phase: they read and mutate the same aggregates (restaurants, shipper applications, orders, payments, promotions, users) without re-defining their domain rules. Phase 4 therefore closes the BR-1 (Partner Verification) and BR-5 (Commission Calculation) traceability loops opened in Phases 1–3 and adds the missing admin-side workflows for partner approval queues, suspension, monitoring, reporting and role governance.<br>Where a Phase 4 capability is already fully implemented in the backend (administrative restaurant approval — see UC-11 BR-11.6; administrative order monitoring — cross-tenant read surface, see UC-30; administrative cancellation and post-delivery refund — see UC-21, UC-25 BR-25.8) the corresponding UC documents the observed behaviour and cross-references the primary BR. Where the capability is **partially implemented (schema-only)** or **forward-looking enterprise design** (shipper application queue, account suspension, user account management, reports & export, dashboard, role management) the UC is written as the **target enterprise design** that aligns with the existing architecture, role model and domain conventions so it can be wired without re-specification.
+
+---
+
+### UC-27: Approve or Reject Restaurant Applications
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | ADM-FR-02 — Approve or Reject Restaurant Applications |
+| **Actor** | Administrator |
+| **Trigger** | ❖ Administrator opens the Restaurant Approval Queue and selects an application to review.<br>❖ Administrator submits an approval decision (`PATCH /restaurants/:id/approve`) or revocation (`PATCH /restaurants/:id/unapprove`). |
+| **Description** | Provides the admin-side workflow that completes the Restaurant Partner onboarding cycle initiated in UC-11. The administrator inspects pending restaurants, reviews submitted profile data (name, address, phone, geo-coordinates, cuisine type, logo and cover images) and the owning user record, and approves or unapproves the restaurant. Approval flips `isApproved = true` and, combined with the partner's later toggle of `isOpen = true` (UC-13), makes the restaurant publicly discoverable in UC-2. Unapproval is reversible: it removes the restaurant from discovery without affecting in-flight orders. Every decision publishes `RestaurantUpdatedEvent` so the Ordering ACL snapshot reflects the change at the next read. |
+| **Pre-condition** | ❖ Actor is authenticated with role `admin`.<br>❖ Target restaurant exists.<br>❖ For approve: the restaurant currently has `isApproved = false`.<br>❖ For unapprove: the restaurant currently has `isApproved = true`. |
+| **Post-condition** | ❖ The target restaurant's `isApproved` flag matches the admin decision; `RestaurantUpdatedEvent` is published carrying the new state.<br>❖ Discovery results (UC-2) reflect the change on the next query; previously placed orders are unaffected.<br>❖ An audit entry records the admin actor and the decision timestamp. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC27-ApproveRejectRestaurantApplications
+title UC-27: ADM-FR-02 — Approve or Reject Restaurant Applications
+skinparam ConditionEndStyle hline
+
+|Administrator|
+start
+:(1) Open Restaurant Approval Queue;
+:(2) Filter applications\n(pending review, recently approved, recently revoked);
+:(3) Select a restaurant and review submitted profile and documents;
+:(4) Choose Approve or Unapprove;
+
+|System|
+:(5) Verify administrator session;
+:(6) Load the target restaurant;
+if ((7) Restaurant exists?) then (yes)
+  if ((8) Requested decision differs from current approval state?) then (yes)
+    :(9) Apply approval decision atomically;
+    :(10) Synchronise approval change with downstream services;
+    :(11) Record admin actor and decision timestamp on the restaurant row;
+    :(12) Return the updated restaurant referencing\nMSG-ADM-02 (approved) or MSG-ADM-03 (unapproved);
+  else (no)
+    :(13) Return no-change acknowledgement referencing MSG-ADM-10;
+  endif
+else (no)
+  :(14) Return not found referencing MSG-REST-01;
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(5)_, _(9)_ | _BR-27.1_ | **Role Gate (BR-1 admin-side):**<br>❖ Both `PATCH /restaurants/:id/approve` and `PATCH /restaurants/:id/unapprove` require role `admin` via `@Roles(['admin'])`.<br>❖ Non-admin sessions receive HTTP 403 referencing `MSG-AUTH-05`; the guard fires before resource lookup so existence is not leaked.<br>❖ See primary partner-verification rule in UC-11 BR-11.3 / BR-11.6 — UC-27 documents the admin-side execution surface. |
+| _(1)–(3)_ | _BR-27.2_ | **Approval Queue Composition:**<br>❖ The approval queue is derived from `GET /restaurants` filtered by `isApproved = false` for the **Pending** tab, and `isApproved = true` for the **Approved** tab.<br>❖ For each row the admin sees: restaurant name, owner email, submission timestamp, address, phone, and the resolved image URLs for logo and cover.<br>❖ Pagination defaults to 20 rows (max 100); the response references `MSG-ADM-01`. |
+| _(7)–(9)_, _(14)_ | _BR-27.3_ | **Idempotency & No-Op Semantics:**<br>❖ Approving an already-approved restaurant (or unapproving an already-unapproved one) returns HTTP 200 with the unchanged row and `MSG-ADM-10`; no event is republished.<br>❖ A non-existent `:id` returns HTTP 404 referencing `MSG-REST-01`. |
+| _(10)_ | _BR-27.4_ | **Event Synchronisation:**<br>❖ Every actual state change publishes `RestaurantUpdatedEvent` consumed by the Ordering ACL projector (see UC-11 BR-11.5).<br>❖ Customers who were viewing UC-2 listings continue to see the restaurant until their next refresh; in-flight carts and orders are NOT invalidated by an unapproval. |
+| _(11)_ | _BR-27.5_ | **Audit Trail:**<br>❖ The decision writes `approvalDecidedAt` (timestamp) and `approvalDecidedBy` (admin `userId`) onto the restaurant row so audits can trace who approved or revoked each partner.<br>❖ Repeated decisions overwrite the previous decision metadata; full history is reconstructable from the application log (`request_id` correlation). |
+
+---
+
+### UC-28: Approve or Reject Shipper Applications
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | ADM-FR-03 — Approve or Reject Shipper Applications |
+| **Actor** | Administrator |
+| **Trigger** | ❖ Administrator opens the Shipper Approval Queue and selects an application to review.<br>❖ Administrator submits an approval decision (approve / reject with a reason note). |
+| **Description** | Completes the Delivery Personnel onboarding cycle initiated in UC-16. The administrator inspects pending shipper applications — applicant identity, vehicle type, licence-plate number, and the referenced national-ID and driving-licence images — and approves or rejects each one. On approval, the applicant's account role is elevated to `shipper` atomically with the application status update, and a `ShipperApprovedEvent` is published so the Delivery BC and Notification BC react. Rejection requires a reason note that is surfaced to the applicant via `MSG-SHIP-05`. This use case represents the target enterprise design; the underlying admin endpoints are scheduled for the same Phase 2 sprint that delivers UC-16. |
+| **Pre-condition** | ❖ Actor is authenticated with role `admin`.<br>❖ A `shipper_applications` row exists in `status = 'pending_approval'`.<br>❖ For reject: a non-empty reason note is supplied. |
+| **Post-condition** | ❖ On approval: the application row reaches `status = 'approved'`; the applicant's account role is elevated to `shipper`; `ShipperApprovedEvent` is published.<br>❖ On rejection: the application row reaches `status = 'rejected'` with the reason note persisted; the applicant's role is unchanged.<br>❖ An audit entry records the admin actor and the decision timestamp. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC28-ApproveRejectShipperApplications
+title UC-28: ADM-FR-03 — Approve or Reject Shipper Applications
+skinparam ConditionEndStyle hline
+
+|Administrator|
+start
+:(1) Open Shipper Approval Queue;
+:(2) Filter applications\n(pending, approved, rejected);
+:(3) Select an application and review applicant identity,\nvehicle and licence documents;
+:(4) Choose Approve or Reject\n(Reject requires a reason note);
+
+|System|
+:(5) Verify administrator session;
+:(6) Load the target shipper application;
+if ((7) Application exists?) then (yes)
+  if ((8) Application currently in pending state?) then (yes)
+    if ((9) Decision is Reject AND reason note is missing?) then (yes)
+      :(10) Return validation error referencing MSG-LCYC-05;
+    endif
+    :(11) Apply decision atomically;
+    if ((12) Decision is Approve?) then (yes)
+      :(13) Elevate applicant account role to shipper;
+      :(14) Notify downstream services of shipper activation;
+      :(15) Return approved status referencing MSG-ADM-06;
+    else (Reject)
+      :(16) Persist rejection reason on the application row;
+      :(17) Return rejected status referencing MSG-ADM-07;
+    endif
+    :(18) Record admin actor and decision timestamp;
+  else (no)
+    :(19) Return state error referencing MSG-ADM-30;
+  endif
+else (no)
+  :(20) Return not found referencing MSG-ADM-29;
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(5)_, _(11)_ | _BR-28.1_ | **Role Gate (BR-1 admin-side):**<br>❖ The shipper approval endpoints (`PATCH /admin/shipper-applications/:id/approve` and `…/reject`) require role `admin` via `@Roles(['admin'])`.<br>❖ Non-admin sessions receive HTTP 403 referencing `MSG-AUTH-05`.<br>❖ See primary partner-verification rule in UC-16 BR-16.3 / BR-16.4 — UC-28 documents the admin-side queue and decision execution. |
+| _(1)–(3)_ | _BR-28.2_ | **Approval Queue Composition:**<br>❖ The queue is derived from `GET /admin/shipper-applications` filtered by the `status` query parameter (`pending_approval`, `approved`, `rejected`).<br>❖ Each row exposes the applicant's email, full name, vehicle type, licence-plate number, submission timestamp, and the resolved image URLs for the national-ID and driving-licence references; sensitive identifiers are masked except for the last four characters.<br>❖ Pagination defaults to 20 rows (max 100); the list response references `MSG-ADM-05`. |
+| _(8)_, _(19)_ | _BR-28.3_ | **Eligible-State Constraint:**<br>❖ Only applications in `status = 'pending_approval'` are decidable. An already-approved or already-rejected application returns HTTP 409 referencing `MSG-ADM-30` (entity already decided) without mutating any data.<br>❖ A rejected application may be superseded by a fresh re-application from the same applicant (see UC-16 BR-16.2); admins do NOT re-decide the old row. |
+| _(9)–(10)_, _(16)_ | _BR-28.4_ | **Reason Note Requirement:**<br>❖ Reject requires a non-empty `reason` (1–500 chars, trimmed). Missing or whitespace-only reason returns HTTP 400 referencing `MSG-LCYC-05`.<br>❖ Approve does NOT require a reason; an optional note may still be persisted for audit. |
+| _(11)–(14)_ | _BR-28.5_ | **Atomic Role Elevation:**<br>❖ Approval performs the application status update and the user role elevation in a single transaction; if either fails the whole decision is rolled back and the queue is unchanged.<br>❖ `ShipperApprovedEvent` carrying `userId`, vehicle type and licence-plate number is published after commit. Downstream contexts (Notification BC, Delivery BC dispatch) react asynchronously. |
+| _(18)_ | _BR-28.6_ | **Audit Trail:**<br>❖ Every decision writes `decidedBy` (admin `userId`), `decidedAt` (timestamp) and (when present) `rejectionReason` onto the `shipper_applications` row.<br>❖ Application logs preserve a `request_id` correlation for forensic tracing. |
+
+---
+
+### UC-29: Suspend or Reactivate Partner Accounts
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | ADM-FR-04 — Suspend or Reactivate Partner Accounts |
+| **Actor** | Administrator |
+| **Trigger** | ❖ Administrator opens an account record (customer, restaurant owner, shipper or another admin) and chooses **Suspend** or **Reactivate**.<br>❖ Administrator submits the suspension or reactivation decision (with reason note and optional expiry). |
+| **Description** | Lets an administrator temporarily revoke an account's ability to use the platform without deleting any historical data. Suspension sets the account's `banned = true`, persists a reason note and an optional `banExpires` timestamp; reactivation clears those fields. Suspended accounts cannot establish new sessions and existing sessions are invalidated on the next request. The use case applies uniformly to every role (`user`, `restaurant`, `shipper`, `admin`) with the special safeguard that the **last active administrator cannot be suspended** to avoid platform lockout. The schema (`users.banned`, `users.banReason`, `users.banExpires`) already exists in the codebase; the dedicated admin endpoints are the missing piece this UC specifies. |
+| **Pre-condition** | ❖ Actor is authenticated with role `admin`.<br>❖ Target user account exists.<br>❖ For suspend: a non-empty reason note is supplied; `banExpires` (when present) is strictly in the future.<br>❖ For reactivate: the target account is currently in `banned = true`. |
+| **Post-condition** | ❖ On suspend: `users.banned = true`, `users.banReason = <note>`, `users.banExpires` is set or NULL; all active sessions for the target user are invalidated at the auth layer.<br>❖ On reactivate: `users.banned = false`, `users.banReason = NULL`, `users.banExpires = NULL`.<br>❖ A `system_announcement` notification is dispatched to the target user describing the action and (when temporary) the expiry.<br>❖ An audit entry records the admin actor, decision timestamp and reason. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC29-SuspendReactivateAccount
+title UC-29: ADM-FR-04 — Suspend or Reactivate Partner Accounts
+skinparam ConditionEndStyle hline
+
+|Administrator|
+start
+:(1) Open the target user account;
+:(2) Choose Suspend or Reactivate;
+:(3) Provide reason note\n(and, for temporary suspension, expiry date);
+:(4) Submit decision;
+
+|System|
+:(5) Verify administrator session;
+:(6) Load the target user account;
+if ((7) Account exists?) then (yes)
+  if ((8) Decision is Suspend?) then (yes)
+    if ((9) Reason note non-empty AND expiry (if any) in the future?) then (yes)
+      if ((10) Target is the last active administrator?) then (no)
+        :(11) Apply suspension and persist reason\nand optional expiry;
+        :(12) Invalidate all active sessions for the target user;
+        :(13) Notify target user of suspension;
+        :(14) Return suspended state referencing MSG-ADM-08;
+      else (yes)
+        :(15) Return safeguard error referencing MSG-ADM-11;
+      endif
+    else (no)
+      :(16) Return validation error referencing MSG-ADM-12;
+    endif
+  else (Reactivate)
+    if ((17) Account currently suspended?) then (yes)
+      :(18) Clear suspension fields;
+      :(19) Notify target user of reactivation;
+      :(20) Return reactivated state referencing MSG-ADM-09;
+    else (no)
+      :(21) Return no-change acknowledgement referencing MSG-ADM-10;
+    endif
+  endif
+  :(22) Record admin actor and decision timestamp;
+else (no)
+  :(23) Return not found referencing MSG-ADM-13;
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(5)_, _(11)_, _(18)_ | _BR-29.1_ | **Role Gate:**<br>❖ Both endpoints (`PATCH /admin/users/:userId/suspend` and `PATCH /admin/users/:userId/reactivate`) require role `admin` via `@Roles(['admin'])`.<br>❖ Non-admin sessions receive HTTP 403 referencing `MSG-AUTH-05`. |
+| _(9)_, _(16)_ | _BR-29.2_ | **Suspend Payload Validation:**<br>❖ `reason` is required and must be a trimmed, non-empty string of length 1–500.<br>❖ `expiresAt` (optional) — when present — MUST be a future timestamp; a past or current timestamp rejects with HTTP 400 referencing `MSG-ADM-12`.<br>❖ Absence of `expiresAt` indicates an indefinite suspension; the account remains suspended until explicit reactivation. |
+| _(10)_, _(15)_ | _BR-29.3_ | **Last-Administrator Safeguard:**<br>❖ Suspending a user whose only role on the platform is `admin` AND who is the only non-suspended `admin` account is rejected with HTTP 409 referencing `MSG-ADM-11`.<br>❖ This safeguard runs inside the same transaction that performs the suspension to prevent a TOCTOU race during simultaneous admin demotions. |
+| _(11)–(13)_ | _BR-29.4_ | **Suspension Effects:**<br>❖ The transaction updates `users.banned = true`, `users.banReason`, `users.banExpires` and stamps `users.bannedAt` / `users.bannedBy` (admin `userId`).<br>❖ All Better Auth sessions for the target user are invalidated; on the next request the auth layer rejects the session and returns HTTP 401 referencing `MSG-AUTH-05`.<br>❖ A `system_announcement` notification carrying `reason` and `expiresAt` (when present) is dispatched via the Notification BC (UC-26); this is a **critical type** that bypasses quiet hours and mutes (see BR-26.3). |
+| _(17)–(20)_ | _BR-29.5_ | **Reactivation Effects:**<br>❖ Reactivation clears `banned`, `banReason`, `banExpires` and stamps `reactivatedAt` / `reactivatedBy`.<br>❖ The Better Auth account can establish new sessions immediately afterwards; no role change is performed by this action — the user resumes with whatever roles were on the account at suspension time.<br>❖ Reactivating an already-active account returns HTTP 200 with the unchanged row and `MSG-ADM-10`. |
+| _(22)_ | _BR-29.6_ | **Audit Trail:**<br>❖ Every decision is recorded with admin `userId`, decision timestamp, action (`suspend` / `reactivate`), `reason` (suspend), `expiresAt` (suspend) on the user row. The history of multiple suspend/reactivate cycles is preserved through the request-correlated application log. |
+| _(implicit)_ | _BR-29.7_ | **Automatic Expiry:**<br>❖ When `banExpires` is set and `now() ≥ banExpires`, a scheduled job (`AccountSuspensionExpiryTask`, future phase) automatically reactivates the account using the same code path as UC-29 with the system actor. Until that task ships, the auth layer enforces the same check at session-validation time so expired suspensions do not block users even before the task runs. |
+
+---
+
+### UC-30: Monitor Orders and Platform Health
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | ADM-FR-05 — Monitor Orders and Platform Health |
+| **Actor** | Administrator |
+| **Trigger** | ❖ Administrator opens the Order Operations console and applies one or more filters (status, restaurant, customer, shipper, payment method, date range, total amount).<br>❖ Administrator drills into a specific order to view its full timeline. |
+| **Description** | Provides the cross-tenant operational view that lets an administrator inspect every order on the platform — irrespective of restaurant ownership or assigned shipper — together with its full lifecycle history, payment ledger and assigned actors. Backed by `GET /admin/orders` (paginated list with composable filters) and `GET /admin/orders/:id` (full detail including audit log). All data is read-only in this UC; corrective actions (cancel, refund) are delegated to UC-32. The list query supports composite filtering by actor (`restaurantId`, `customerId`, `shipperId`), `status`, `paymentMethod`, date range and total-amount range, with sort by creation, update or amount. |
+| **Pre-condition** | ❖ Actor is authenticated with role `admin`.<br>❖ Filter values, when supplied, satisfy: `status` matches a canonical order state; `minDate ≤ maxDate`; `limit ∈ [1, 100]`; `offset ≥ 0`; `paymentMethod ∈ {cod, vnpay}`; sort key ∈ {`created_at`, `updated_at`, `total_amount`}. |
+| **Post-condition** | ❖ A paginated list of orders (or a single full order detail) is returned matching the supplied filters; no aggregate state is mutated. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC30-MonitorOrdersPlatformHealth
+title UC-30: ADM-FR-05 — Monitor Orders and Platform Health
+skinparam ConditionEndStyle hline
+
+|Administrator|
+start
+:(1) Open Order Operations console;
+:(2) Apply filters and sort\n(status, restaurant, customer, shipper,\npayment method, date range, total range);
+:(3) Submit query;
+
+|System|
+:(4) Verify administrator session;
+if ((5) Filter values valid?) then (yes)
+  :(6) Retrieve matching orders (no ownership filter);
+  :(7) Return paginated list referencing MSG-ADM-16;
+
+  |Administrator|
+  :(8) Select an order to drill into;
+
+  |System|
+  :(9) Load full order detail with lifecycle history,\npayment ledger and assigned actors;
+  if ((10) Order exists?) then (yes)
+    :(11) Return full detail referencing MSG-ADM-17;
+  else (no)
+    :(12) Return not found referencing MSG-HIST-01;
+  endif
+else (no)
+  :(13) Return validation error referencing MSG-ADM-18;
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(4)_, _(6)_, _(9)_ | _BR-30.1_ | **Role Gate & Cross-Tenant Read:**<br>❖ All `/admin/orders*` endpoints require role `admin`; the controller additionally re-asserts `hasRole(session.user.role, 'admin')` and throws `ForbiddenException` if the assertion fails.<br>❖ Admin reads bypass every ownership filter applied to the same data by UC-10 (customer scope), UC-14 (restaurant scope) and UC-19 (assigned-shipper scope) so the admin sees the global cross-tenant view in a single query. |
+| _(2)–(5)_, _(13)_ | _BR-30.2_ | **Composite Filter Contract:**<br>❖ The query DTO extends the customer history filter DTO with admin-only fields: `restaurantId`, `customerId`, `shipperId`, `paymentMethod`, `sortBy` (`created_at` / `updated_at` / `total_amount`) and `sortOrder` (`asc` / `desc`).<br>❖ All filters compose conjunctively (`AND`); empty filter values are ignored.<br>❖ Invalid filter values return HTTP 400 referencing `MSG-ADM-18` and never reach the database.<br>❖ Pagination defaults: `limit = 20`, `max = 100`, `offset ≥ 0` (see UC-10 BR-10.1 for the underlying filter validator). |
+| _(7)_ | _BR-30.3_ | **List Response Shape:**<br>❖ The list returns one row per order with summary fields (`id`, `status`, `restaurantName`, `customerName`, `shipperName?`, `paymentMethod`, `totalAmount`, `createdAt`, `updatedAt`) plus the running total count for pagination.<br>❖ Composite indexes on `(restaurantId, status)`, `(customerId, status)`, `(shipperId, status)` and standalone indexes on `(createdAt)`, `(updatedAt)`, `(totalAmount)` make every supported sort key efficient at the documented page size.<br>❖ A successful retrieval references `MSG-ADM-16`. |
+| _(9)–(12)_ | _BR-30.4_ | **Detail Response Shape:**<br>❖ The detail endpoint returns the full order aggregate, including `order_items` with modifier-option snapshots, `order_status_logs` (audit timeline), the `payment_transactions` ledger and resolved actor references (restaurant name, customer name, shipper name).<br>❖ A non-existent `:id` returns HTTP 404 referencing `MSG-HIST-01`.<br>❖ A successful retrieval references `MSG-ADM-17`. |
+| _(implicit)_ | _BR-30.5_ | **Read-Only Boundary:**<br>❖ UC-30 NEVER mutates any aggregate. Administrative cancellation, refund and any other corrective action is delegated to UC-32 and uses the same authorisation surface.<br>❖ All audit logs preserve the read-only request via `request_id` correlation but no `order_status_logs` row is written for read access. |
+
+---
+
+### UC-31: Search and Manage User Accounts
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | ADM-FR-06 — Search and Manage User Accounts |
+| **Actor** | Administrator |
+| **Trigger** | ❖ Administrator opens the User Accounts console and applies filters (role, status, registered date range, free-text on email or display name).<br>❖ Administrator drills into a specific user to view profile, sessions and account-related history.<br>❖ Administrator updates user attributes — display name, contact email, primary role (see UC-35), suspension state (see UC-29). |
+| **Description** | Provides the cross-role user directory and the single editing surface administrators use to maintain customer, restaurant owner, shipper and administrator accounts. UC-31 reads from the central `users` table and resolves the related role-scoped artefacts (restaurants owned, shipper application, order count). Mutations that change the **suspension state** delegate to UC-29 and mutations that change the **role** delegate to UC-35 so the policy gates for those actions stay centralised; UC-31 only handles profile-level edits (display name, contact email, optional metadata) and visibility into the account. This UC is a forward-looking enterprise design — the schema already exists, the admin REST surface is scheduled. |
+| **Pre-condition** | ❖ Actor is authenticated with role `admin`.<br>❖ Filter values, when supplied, satisfy: `role ∈ {user, restaurant, shipper, admin}`; `status ∈ {active, suspended}`; `minDate ≤ maxDate`; free-text query is 1–100 characters. |
+| **Post-condition** | ❖ Read paths: a paginated list (or single user detail) is returned matching the supplied filters; no state mutates.<br>❖ Write paths: the profile fields owned by UC-31 are persisted; suspension and role changes are routed to UC-29 and UC-35 respectively. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC31-SearchManageUsers
+title UC-31: ADM-FR-06 — Search and Manage User Accounts
+skinparam ConditionEndStyle hline
+
+|Administrator|
+start
+:(1) Open User Accounts console;
+:(2) Apply filters\n(role, status, registered date range,\nfree-text on email or display name);
+:(3) Submit query;
+
+|System|
+:(4) Verify administrator session;
+if ((5) Filter values valid?) then (yes)
+  :(6) Retrieve matching users;
+  :(7) Return paginated list referencing MSG-ADM-14;
+else (no)
+  :(8) Return validation error referencing MSG-ADM-18;
+endif
+
+|Administrator|
+:(9) Open a user account;
+
+|System|
+if ((10) User exists?) then (yes)
+  :(11) Resolve owned restaurants, shipper application,\nrecent orders and active suspension (if any);
+  :(12) Return profile view referencing MSG-ADM-14;
+else (no)
+  :(13) Return not found referencing MSG-ADM-13;
+endif
+
+|Administrator|
+:(14) Choose an action\n(edit profile / suspend / reactivate / change role);
+
+|System|
+if ((15) Action is profile edit?) then (yes)
+  if ((16) Payload valid?) then (yes)
+    :(17) Apply and save profile updates;
+    :(18) Return updated user referencing MSG-ADM-15;
+  else (no)
+    :(19) Return validation error referencing MSG-ADM-18;
+  endif
+else (no)
+  :(20) Delegate to UC-29 (suspend / reactivate)\nor UC-35 (change role) following its own rules;
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(4)_, _(6)_, _(11)_, _(17)_ | _BR-31.1_ | **Role Gate:**<br>❖ All `/admin/users*` endpoints require role `admin`; non-admin sessions receive HTTP 403 referencing `MSG-AUTH-05`.<br>❖ The admin scope bypasses the per-actor session filters used by Better Auth's self-service endpoints; the admin sees and edits any user. |
+| _(2)–(5)_, _(8)_ | _BR-31.2_ | **Search Filter Contract:**<br>❖ Filters: `role` (single value), `status` (`active` / `suspended`), `registeredFrom` / `registeredTo` (ISO dates, `from ≤ to`), `q` (free-text on `email` or `name`, 1–100 chars, case-insensitive prefix match).<br>❖ Pagination defaults: `limit = 20`, `max = 100`, `offset ≥ 0`.<br>❖ Invalid filter values return HTTP 400 referencing `MSG-ADM-18`. |
+| _(7)_, _(12)_ | _BR-31.3_ | **List & Detail Response Shape:**<br>❖ The list returns one row per user with summary fields (`id`, `email`, `name`, `role`, `status` derived from `banned`, `createdAt`).<br>❖ The detail view additionally resolves: owned restaurants (count and names), shipper application status (UC-28), order count and most recent order timestamp, active suspension reason and expiry.<br>❖ Successful retrieval references `MSG-ADM-14`. |
+| _(10)_, _(13)_ | _BR-31.4_ | **Not Found:**<br>❖ A non-existent `userId` returns HTTP 404 referencing `MSG-ADM-13`. |
+| _(15)–(19)_ | _BR-31.5_ | **Profile-Edit Surface:**<br>❖ Editable profile fields: `name` (1–80 chars, trimmed), `contactEmail` (RFC 5322, must be unique platform-wide except for the current user), and an optional `notes` field (admin-internal, max 1 000 chars).<br>❖ The primary login `email` is NOT editable through this UC (Better Auth owns email change with its own verification flow).<br>❖ Invalid payloads return HTTP 400 referencing `MSG-ADM-18`; conflicts on `contactEmail` return HTTP 409 referencing `MSG-AUTH-02`. |
+| _(20)_ | _BR-31.6_ | **Delegation Boundary:**<br>❖ Suspension and reactivation MUST be performed via the UC-29 endpoints; UC-31 never writes `banned` / `banReason` / `banExpires` directly.<br>❖ Role assignment MUST be performed via the UC-35 endpoint; UC-31 never writes `role` directly.<br>❖ This separation keeps the last-admin safeguard (BR-29.3) and the role-policy audit trail (BR-35.4) authoritative in a single place. |
+| _(17)_ | _BR-31.7_ | **Audit Trail:**<br>❖ Every profile edit records admin `userId`, decision timestamp and the set of changed fields on the user row's `updatedBy` / `updatedAt` metadata.<br>❖ Application logs preserve the `request_id` correlation. |
+
+---
+
+### UC-32: Administrative Order Cancellation & Refund
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | ADM-FR-07 — Administrative Order Cancellation & Refund |
+| **Actor** | Administrator |
+| **Trigger** | ❖ Administrator drills into an order from the operations console (UC-30) and chooses **Cancel** (states `pending`, `paid`, `confirmed`) or **Refund** (state `delivered`).<br>❖ Administrator submits the decision with a non-empty reason note. |
+| **Description** | Captures the administrator's override authority over the order lifecycle: the admin can cancel an order from any state the canonical state machine permits (T-03 `pending → cancelled`, T-05 `paid → cancelled`, T-07 `confirmed → cancelled`) and is the **only** role authorised to drive the post-delivery refund transition (T-12 `delivered → refunded`). All admin transitions reuse the same `TransitionOrderCommand` and `TRANSITIONS` map used by UC-14, UC-15, UC-19 and UC-21, so the lifecycle invariants, audit log and downstream events stay identical regardless of who triggered the change. A VNPay-paid cancellation publishes `OrderCancelledAfterPaymentEvent` so the Payment BC refund pipeline (UC-25) takes over automatically. T-12 changes only the Order aggregate; the actual `payment_transactions` reversal is performed manually by finance or by a future admin-scoped refund event. |
+| **Pre-condition** | ❖ Actor is authenticated with role `admin`.<br>❖ Target order exists; its current `status` is `pending`, `paid`, `confirmed` (for cancel) or `delivered` (for refund).<br>❖ A non-empty `reason` (1–500 chars, trimmed) is supplied. |
+| **Post-condition** | ❖ Cancel: the order reaches `status = 'cancelled'`; an `order_status_logs` row is written with the admin actor and reason; `OrderStatusChangedEvent` fires; for VNPay-paid cancellations, `OrderCancelledAfterPaymentEvent` is published and the Payment BC refund pipeline (UC-25) runs.<br>❖ Refund (T-12): the order reaches `status = 'refunded'`; an `order_status_logs` row is written; `OrderStatusChangedEvent` fires; the customer is notified (`order_refunded` channel set, see BR-26.2). |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC32-AdminCancelRefund
+title UC-32: ADM-FR-07 — Administrative Order Cancellation & Refund
+skinparam ConditionEndStyle hline
+
+|Administrator|
+start
+:(1) Drill into a target order from UC-30;
+:(2) Choose Cancel (pending / paid / confirmed)\nor Refund (delivered);
+:(3) Provide reason note;
+:(4) Submit decision;
+
+|System|
+:(5) Verify administrator session;
+:(6) Load the target order;
+if ((7) Order exists?) then (yes)
+  :(8) Validate that the requested status transition\nis permitted for role admin in the current state;
+  if ((9) Transition exists and admin is permitted?) then (yes)
+    if ((10) Reason note non-empty?) then (yes)
+      :(11) Apply status transition;
+      :(12) Append admin decision to order audit log;
+      :(13) Notify downstream services of status change;
+      if ((14) VNPay-paid cancellation?) then (yes)
+        :(15) Initiate payment refund pipeline (UC-25);
+      endif
+      :(16) Return the updated order referencing MSG-ADM-19;
+    else (no)
+      :(17) Return validation error referencing MSG-LCYC-05;
+    endif
+  else (no)
+    :(18) Return state or role error\nreferencing MSG-ADM-20 or MSG-LCYC-02;
+  endif
+else (no)
+  :(19) Return not found referencing MSG-HIST-01;
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(5)_, _(8)–(9)_, _(11)_ | _BR-32.1_ | **Role Gate (BR-7 admin override):**<br>❖ Admin cancellation uses the same `PATCH /orders/:id/cancel` endpoint as UC-21; the role `admin` is one of the `allowedRoles` declared on T-03, T-05 and T-07 in the canonical `TRANSITIONS` map.<br>❖ Admin refund uses the dedicated `POST /orders/:id/refund` endpoint; the controller asserts `hasRole(session.user.role, 'admin')` and throws `ForbiddenException` referencing `MSG-LCYC-02` for any other role.<br>❖ See UC-21 BR-21.x and UC-25 BR-25.8 for the underlying transition rules; UC-32 documents the admin override path. |
+| _(8)_, _(18)_ | _BR-32.2_ | **State Eligibility:**<br>❖ Cancel is permitted from `pending`, `paid` or `confirmed`. From any other source state the system returns HTTP 422 referencing `MSG-ADM-20`.<br>❖ Refund (T-12) is permitted from `delivered` only. An attempt from any other state returns HTTP 422 referencing `MSG-ADM-20`.<br>❖ Idempotency: an order already in the target state returns HTTP 200 with the unchanged row and `MSG-LCYC-06` (concurrent-modification message reused) — no duplicate audit row is written. |
+| _(10)_, _(17)_ | _BR-32.3_ | **Reason Note Requirement:**<br>❖ Both admin actions require a non-empty `reason` (1–500 chars, trimmed); whitespace-only or missing reason returns HTTP 400 referencing `MSG-LCYC-05`.<br>❖ The reason is persisted in the `order_status_logs.notes` column along with the admin `userId` and the decision timestamp. |
+| _(11)–(13)_ | _BR-32.4_ | **Lifecycle Reuse:**<br>❖ Admin transitions reuse `TransitionOrderCommand` / `TransitionOrderHandler` and therefore obey the same optimistic-lock contract documented in UC-14 BR-14.x and UC-21 BR-21.x.<br>❖ Every successful transition publishes `OrderStatusChangedEvent` with `actorRole = 'admin'`; downstream Notification BC fan-out (UC-26) honours the same channel mapping (BR-26.2) used by customer- or restaurant-initiated transitions.<br>❖ Admin cancellation transitions also trigger the promotion rollback handler (see UC-21 BR-21.5), rolling back any active promotion reservations linked to the cancelled order. |
+| _(14)–(15)_ | _BR-32.5_ | **VNPay Refund Pipeline (cancel):**<br>❖ For VNPay-paid cancellation (T-05 or T-07), the handler publishes `OrderCancelledAfterPaymentEvent` carrying `cancelledByRole = 'admin'`. The Payment BC handler (UC-25) drives the refund state machine `completed → refund_pending → refunded` and the Notification BC dispatches `order_cancelled` and `refund_initiated` notifications.<br>❖ For COD cancellation, no refund event fires (BR-25.1 condition). |
+| _(implicit)_ | _BR-32.6_ | **Post-Delivery Refund (T-12) Scope:**<br>❖ T-12 changes the Order aggregate only. The actual `payment_transactions` reversal is performed manually by finance or, when implemented, by emitting an admin-scoped refund event consumed by the same Payment BC pipeline as VNPay cancellations (see UC-25 BR-25.8).<br>❖ The customer-facing notification for T-12 uses channels `in_app + email` only (no push) per BR-26.2. |
+
+---
+
+### UC-33: View and Export Operational Reports
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | ADM-FR-08 — View and Export Operational Reports |
+| **Actor** | Administrator |
+| **Trigger** | ❖ Administrator selects a report type (orders, financial, users, promotions) and date range from the Reports console.<br>❖ Administrator requests an export (CSV or XLSX) of the currently rendered report. |
+| **Description** | Surfaces the platform's operational KPIs and lets the administrator export the underlying tabular data for offline analysis. Reports are read-only aggregations computed on demand from the orders, payments, users, restaurants and promotions data: **Orders Report** (daily order volume, completion rate, cancellation rate, average preparation and delivery time, breakdown by status), **Financial Report** (GMV per restaurant, platform commission per BR-5, payment-method breakdown, daily revenue trend, COD vs VNPay reconciliation, refund volume), **Users Report** (new registrations per role, pending approvals, active vs suspended accounts), **Promotions Report** (active promotions, coupon redemption rate, discount value distributed). All reports honour an admin-supplied date range and optional filters (restaurant, payment method, scope). Export produces an immutable file containing the same data the on-screen view rendered. This UC is forward-looking enterprise design; the schema and indexes (see UC-30 BR-30.3) already support the queries. |
+| **Pre-condition** | ❖ Actor is authenticated with role `admin`.<br>❖ Report type is one of {`orders`, `financial`, `users`, `promotions`}; `dateFrom ≤ dateTo`; date range does not exceed 366 days; export `format ∈ {csv, xlsx}`. |
+| **Post-condition** | ❖ View path: a structured report payload (tabular series + summary KPIs) is returned for the requested type, date range and filters.<br>❖ Export path: a file (CSV or XLSX) representing the same data is generated and a download URL is returned, OR the file is streamed directly in the HTTP response. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC33-Reports
+title UC-33: ADM-FR-08 — View and Export Operational Reports
+skinparam ConditionEndStyle hline
+
+|Administrator|
+start
+:(1) Open Reports console;
+:(2) Choose report type and date range\n(orders / financial / users / promotions);
+:(3) Apply optional filters\n(restaurant, payment method, promotion scope);
+:(4) Choose View or Export\n(format = csv / xlsx for Export);
+
+|System|
+:(5) Verify administrator session;
+if ((6) Report type supported AND parameters valid?) then (yes)
+  if ((7) Date range within supported window\n(`dateFrom ≤ dateTo`, span ≤ 366 days)?) then (yes)
+    :(8) Compute report payload\n(time series + summary KPIs);
+    if ((9) Action is Export?) then (yes)
+      :(10) Generate file in requested format;
+      :(11) Return file (or download URL)\nreferencing MSG-ADM-23;
+    else (View)
+      :(12) Return structured payload referencing MSG-ADM-21;
+    endif
+  else (no)
+    :(13) Return validation error referencing MSG-ADM-22;
+  endif
+else (no)
+  if ((14) Report type unsupported?) then (yes)
+    :(15) Return unsupported-type error referencing MSG-ADM-24;
+  else (no)
+    :(16) Return validation error referencing MSG-ADM-22;
+  endif
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(5)_, _(8)_, _(10)_ | _BR-33.1_ | **Role Gate:**<br>❖ All `/admin/reports/*` endpoints require role `admin`; non-admin sessions receive HTTP 403 referencing `MSG-AUTH-05`. |
+| _(6)–(7)_, _(13)_, _(16)_ | _BR-33.2_ | **Parameter Validation:**<br>❖ `type ∈ {orders, financial, users, promotions}`; `dateFrom` and `dateTo` are required ISO dates and must satisfy `dateFrom ≤ dateTo`; the span MUST NOT exceed 366 days.<br>❖ Optional filters: `restaurantId` (UUID), `paymentMethod ∈ {cod, vnpay}`, `promotionScope ∈ {platform, restaurant}`.<br>❖ Invalid values return HTTP 400 referencing `MSG-ADM-22`. |
+| _(14)–(15)_ | _BR-33.3_ | **Unsupported Type:**<br>❖ A request for a report type not in the supported set returns HTTP 400 referencing `MSG-ADM-24` so the client can present a discoverable error distinct from generic validation failures. |
+| _(8)_ | _BR-33.4_ | **Report Definitions:**<br>❖ **Orders Report** — series: daily counts by status; KPIs: total orders, completion rate (`delivered / created`), cancellation rate, average preparation time (`confirmed → ready_for_pickup`) and delivery time (`picked_up → delivered`).<br>❖ **Financial Report** — series: daily GMV (sum of `totalAmount` for `delivered` orders), daily commission (GMV × commission rate, per BR-5), payment-method split, daily refund total (sum of refunded `payment_transactions.amount`); KPIs: period GMV, period commission, refund ratio.<br>❖ **Users Report** — series: new registrations per role per day; KPIs: total active, total suspended, pending shipper applications, pending restaurant approvals.<br>❖ **Promotions Report** — series: daily redemption count; KPIs: active promotions, total discount distributed, top-N coupons by redemption. |
+| _(8)_ | _BR-33.5_ | **BR-5 Commission Calculation Anchor:**<br>❖ Commission is computed as `GMV × commissionRate` where `commissionRate` is the platform-wide fixed percentage configured in `app_settings`. The Financial Report is the canonical surface that materialises BR-5 (Commission Calculation) for stakeholders.<br>❖ GMV explicitly EXCLUDES cancelled and refunded orders; partially refunded amounts (future) are subtracted from the original GMV row in the same period bucket. |
+| _(10)–(11)_ | _BR-33.6_ | **Export Contract:**<br>❖ Supported formats: `csv` (UTF-8 with BOM, RFC 4180 quoting) and `xlsx` (Office Open XML, one sheet per series).<br>❖ The exported file contains the exact same rows that the on-screen view rendered for the same parameters — no extra rows or smoothing.<br>❖ For small reports (≤ 10 000 rows) the file is streamed directly in the response; for larger reports the system enqueues an async job, returns a job id and `MSG-ADM-23`, and exposes a poll endpoint to retrieve the download URL when ready.<br>❖ File names follow `solifood_<type>_<from>_<to>.<ext>` (lowercase, ISO date components). |
+| _(implicit)_ | _BR-33.7_ | **Data Freshness & Caching:**<br>❖ Reports are computed against the live operational database; no replication lag is involved. Aggregation queries leverage the indexes documented in BR-30.3.<br>❖ Identical parameter sets within a 60-second window may be served from an in-memory cache to absorb dashboard polling; cache keys include the admin `userId` so per-actor filtering remains consistent. |
+
+---
+
+### UC-34: View Dashboard & Platform Overview
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | ADM-FR-01 — View Dashboard & Platform Overview |
+| **Actor** | Administrator |
+| **Trigger** | ❖ Administrator opens the Admin Dashboard.<br>❖ Dashboard polls or subscribes to live KPI updates while the page remains open. |
+| **Description** | The Admin Dashboard is the entry-point read-only summary view that presents a single snapshot of the platform's current health. It surfaces today's KPIs (order count by status, GMV, commission, new registrations, pending approvals, active shippers, in-flight orders) and the most-recent activity stream (last-N orders, last-N restaurants registered, last-N shipper applications). The dashboard is a **pure aggregation** of data owned by other UCs: it never mutates any aggregate, never publishes events, and never enforces any business rule of its own. Drill-down links route the administrator into UC-30 (operations), UC-27/UC-28 (approval queues), UC-31 (users), UC-33 (full reports). This UC is forward-looking enterprise design; the underlying queries are the same ones used by UC-30 and UC-33. |
+| **Pre-condition** | ❖ Actor is authenticated with role `admin`. |
+| **Post-condition** | ❖ A dashboard snapshot is returned containing the configured KPI set and the most-recent activity stream; no state is mutated. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC34-ViewDashboardPlatformOverview
+title UC-34: ADM-FR-01 — View Dashboard & Platform Overview
+skinparam ConditionEndStyle hline
+
+|Administrator|
+start
+:(1) Open Admin Dashboard;
+
+|System|
+:(2) Verify administrator session;
+:(3) Compute today's KPIs\n(orders by status, GMV, commission,\nnew registrations, pending approvals,\nactive shippers, in-flight orders);
+:(4) Resolve recent activity stream\n(last orders, last restaurants, last shipper applications);
+:(5) Return dashboard snapshot referencing MSG-ADM-25;
+
+|Administrator|
+:(6) Drill into a tile\n(orders, users, approval queues, reports);
+
+|System|
+:(7) Route to the corresponding UC\n(UC-30, UC-27, UC-28, UC-31 or UC-33);
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(2)–(5)_ | _BR-34.1_ | **Role Gate:**<br>❖ `GET /admin/dashboard` requires role `admin`; non-admin sessions receive HTTP 403 referencing `MSG-AUTH-05`. |
+| _(3)_ | _BR-34.2_ | **KPI Catalogue:**<br>❖ **Orders Today** — count grouped by status (`pending`, `paid`, `confirmed`, `preparing`, `ready_for_pickup`, `picked_up`, `delivering`, `delivered`, `cancelled`, `refunded`).<br>❖ **Financial Today** — GMV (sum of `totalAmount` for `delivered` orders today), commission (GMV × `commissionRate`, per BR-5).<br>❖ **Onboarding Today** — new registrations by role, pending restaurant approvals (`isApproved = false`), pending shipper applications (`status = 'pending_approval'`).<br>❖ **Operations** — active shippers (`shipper_applications.status = 'approved'` AND `availability = 'available'`), in-flight orders (status in {`paid`, `confirmed`, `preparing`, `ready_for_pickup`, `picked_up`, `delivering`}). |
+| _(4)_ | _BR-34.3_ | **Recent Activity Stream:**<br>❖ Last 10 orders by `createdAt`; last 5 restaurant registrations; last 5 shipper applications; last 5 platform-scope promotions.<br>❖ Each entry exposes the minimum fields needed for inline preview plus a deep link to the owning UC's detail view. |
+| _(5)_ | _BR-34.4_ | **Snapshot Contract:**<br>❖ The dashboard endpoint SHOULD return within 1 second under nominal load; all underlying queries leverage the existing indexes documented in BR-30.3.<br>❖ Identical requests within a 30-second window may be served from an in-memory cache scoped to the admin `userId`; cache is invalidated by any UC-27, UC-28, UC-29, UC-32 write.<br>❖ A successful retrieval references `MSG-ADM-25`. |
+| _(implicit)_ | _BR-34.5_ | **Read-Only Boundary:**<br>❖ UC-34 NEVER writes any aggregate, publishes any event, or affects rate limits beyond a standard `admin` quota.<br>❖ All corrective actions surfaced as drill-down links delegate to their owning UC and reuse that UC's authorisation surface and audit trail. |
+
+---
+
+### UC-35: Manage Admin Roles & Permissions
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | ADM-FR-10 — Manage Admin Roles & Permissions |
+| **Actor** | Administrator |
+| **Trigger** | ❖ Administrator opens a user account (UC-31) and chooses **Change Role**.<br>❖ Administrator submits a role-assignment decision. |
+| **Description** | Centralises the policy for assigning, revoking and viewing the canonical role set on the platform — `admin`, `restaurant`, `shipper`, `user`. Role assignment is the **only** way to grant the privileged surfaces enforced elsewhere: `restaurant` unlocks UC-11 / UC-12 / UC-13; `shipper` is granted exclusively through UC-28 approval and CANNOT be assigned directly via this UC; `admin` unlocks every `/admin/*` endpoint; `user` is the default consumer role. The platform's role model is **single-primary-role** with a backwards-compatible escape hatch (`soliRoles: string[]` on the user row) that lets a single account hold multiple operational roles where the business demands it (e.g. a restaurant owner who also runs a shipper account from the same login). UC-35 enforces the **last-administrator safeguard** identically to UC-29 to prevent platform lockout. This UC is forward-looking enterprise design; the schema (the `role` column and the `soliRoles` array) already exists. |
+| **Pre-condition** | ❖ Actor is authenticated with role `admin`.<br>❖ Target user account exists.<br>❖ Target role ∈ {`admin`, `restaurant`, `user`} for direct assignment; `shipper` is reachable only via UC-28 approval. |
+| **Post-condition** | ❖ `users.role` (primary) and `users.soliRoles` (operational set) are updated to reflect the decision; a `RoleAssignmentChangedEvent` is published.<br>❖ Active sessions of the target user are refreshed so the next request sees the new role set.<br>❖ An audit entry records the admin actor, the previous and new role sets, the reason note and the decision timestamp. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC35-ManageAdminRolesPermissions
+title UC-35: ADM-FR-10 — Manage Admin Roles & Permissions
+skinparam ConditionEndStyle hline
+
+|Administrator|
+start
+:(1) Open target user account (UC-31);
+:(2) Choose Change Role and select target role(s);
+:(3) Provide reason note;
+:(4) Submit decision;
+
+|System|
+:(5) Verify administrator session;
+:(6) Load the target user;
+if ((7) User exists AND not suspended?) then (yes)
+  if ((8) Target role payload valid\n(role ∈ {admin, restaurant, user}\nand `shipper` not directly assigned)?) then (yes)
+    if ((9) Reason note non-empty?) then (yes)
+      if ((10) Decision removes the last active admin?) then (no)
+        :(11) Apply primary role and operational role set;
+        :(12) Refresh active sessions of the target user;
+        :(13) Notify downstream services of role change;
+        :(14) Record admin actor, previous and new role sets,\nreason and decision timestamp;
+        :(15) Return updated user referencing MSG-ADM-26;
+      else (yes)
+        :(16) Return safeguard error referencing MSG-ADM-27;
+      endif
+    else (no)
+      :(17) Return validation error referencing MSG-LCYC-05;
+    endif
+  else (no)
+    :(18) Return validation error referencing MSG-ADM-28;
+  endif
+else (no)
+  if ((19) User not found?) then (yes)
+    :(20) Return not found referencing MSG-ADM-13;
+  else (no)
+    :(21) Return state error referencing MSG-ADM-31;
+  endif
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(5)_, _(11)_ | _BR-35.1_ | **Role Gate:**<br>❖ `PATCH /admin/users/:userId/role` requires role `admin`; non-admin sessions receive HTTP 403 referencing `MSG-AUTH-05`. |
+| _(8)_, _(18)_ | _BR-35.2_ | **Payload Validation:**<br>❖ `role` (primary) MUST be one of `{admin, restaurant, user}`. Direct assignment of `shipper` is rejected with HTTP 400 referencing `MSG-ADM-28`; the `shipper` role is acquired exclusively through UC-28 approval to preserve the application-and-documents audit trail (BR-1).<br>❖ `soliRoles` (optional) MUST be a subset of `{admin, restaurant, shipper, user}` AND MUST contain `role`. When omitted, `soliRoles` is reset to `[role]`.<br>❖ Any other payload shape returns HTTP 400 referencing `MSG-ADM-28`. |
+| _(9)_, _(17)_ | _BR-35.3_ | **Reason Note Requirement:**<br>❖ A non-empty `reason` (1–500 chars, trimmed) is required for every role change. Missing or whitespace-only reason returns HTTP 400 referencing `MSG-LCYC-05`. |
+| _(10)_, _(16)_ | _BR-35.4_ | **Last-Administrator Safeguard:**<br>❖ A decision that demotes the only non-suspended `admin` account is rejected with HTTP 409 referencing `MSG-ADM-27`. The safeguard runs inside the same transaction as the role update to defeat any TOCTOU race during simultaneous admin demotions.<br>❖ The check is the same predicate used in BR-29.3 so suspension and demotion cannot together remove the last administrator. |
+| _(7)_, _(21)_ | _BR-35.5_ | **Suspended-Account Guard:**<br>❖ A suspended account (`banned = true`) MUST be reactivated via UC-29 before its roles can change. Attempting role change on a suspended account returns HTTP 409 referencing `MSG-ADM-31`. |
+| _(11)–(13)_ | _BR-35.6_ | **Session Refresh & Event:**<br>❖ The transaction commits `role`, `soliRoles`, `roleUpdatedAt`, `roleUpdatedBy` and `roleUpdateReason` atomically.<br>❖ All Better Auth sessions for the target user are refreshed (claims re-issued) so the next request sees the new role set without requiring sign-out.<br>❖ A `RoleAssignmentChangedEvent` carrying `userId`, `previousRole`, `previousSoliRoles`, `newRole`, `newSoliRoles`, `actorAdminId` is published; the Notification BC dispatches a `system_announcement` to the target user (critical type, bypasses quiet hours per BR-26.3). |
+| _(14)_ | _BR-35.7_ | **Audit Trail:**<br>❖ The full before-and-after role set is preserved on the user row for the latest change; historical role transitions are reconstructable from the request-correlated application log.<br>❖ Successful changes reference `MSG-ADM-26`. |
+| _(implicit)_ | _BR-35.8_ | **Permission Scope:**<br>❖ The platform uses **coarse role-based access control**; there is no fine-grained permission system. Future fine-grained policies (e.g. read-only auditor) MUST be modelled by introducing a new role into the canonical set with a documented policy mapping, NOT by adding ad-hoc per-endpoint allowlists. |
+
+---
+
 ## 3. Appendix — Message List
 
 | Message Code | Message Content | Button |
@@ -2022,7 +2629,38 @@ stop
 | MSG-NOTI-05 | Push notification token registered. | — |
 | MSG-NOTI-06 | Push notification token removed. | — |
 | MSG-NOTI-07 | Notification preferences updated. | OK |
+| MSG-ADM-01 | Restaurant approval queue retrieved. | OK |
+| MSG-ADM-02 | Restaurant approved. | OK |
+| MSG-ADM-03 | Restaurant unapproved. | OK |
+| MSG-ADM-04 | Approval decision requires a reason note. | — |
+| MSG-ADM-05 | Shipper application queue retrieved. | OK |
+| MSG-ADM-06 | Shipper application approved. | OK |
+| MSG-ADM-07 | Shipper application rejected. | OK |
+| MSG-ADM-08 | Account suspended. | OK |
+| MSG-ADM-09 | Account reactivated. | OK |
+| MSG-ADM-10 | Resource is already in the requested state. | — |
+| MSG-ADM-11 | Cannot suspend or demote the only administrator account. | — |
+| MSG-ADM-12 | Suspension reason (and expiry, if temporary) required. | — |
+| MSG-ADM-13 | User not found. | — |
+| MSG-ADM-14 | User account list retrieved. | OK |
+| MSG-ADM-15 | User account updated. | OK |
+| MSG-ADM-16 | Admin order list retrieved. | OK |
+| MSG-ADM-17 | Admin order detail retrieved. | OK |
+| MSG-ADM-18 | Invalid admin filter values. | — |
+| MSG-ADM-19 | Administrative order action applied. | OK |
+| MSG-ADM-20 | Order cannot be transitioned in its current state. | — |
+| MSG-ADM-21 | Report generated successfully. | OK |
+| MSG-ADM-22 | Report parameters are invalid. | — |
+| MSG-ADM-23 | Report export prepared. | OK |
+| MSG-ADM-24 | Requested report type is not supported. | — |
+| MSG-ADM-25 | Dashboard snapshot retrieved. | OK |
+| MSG-ADM-26 | Role assignment updated. | OK |
+| MSG-ADM-27 | Cannot remove the last administrator role. | — |
+| MSG-ADM-28 | Invalid role assignment payload. | — |
+| MSG-ADM-29 | Shipper application not found. | — |
+| MSG-ADM-30 | Shipper application has already been decided and cannot be changed. | — |
+| MSG-ADM-31 | Account is suspended. Reactivate the account before making role changes. | — |
 
 ---
 
-*End of Software Requirements Specification — Phases 1, 2 & 3, Version 1.7*
+*End of Software Requirements Specification — Phases 1, 2, 3 & 4, Version 1.11*
