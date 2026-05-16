@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Pencil } from 'lucide-react-native';
 
-export interface ShippingAddressOption {
+export interface DeliveryAddressOption {
   id: string;
   label: string;
   isDefault?: boolean;
@@ -10,19 +10,19 @@ export interface ShippingAddressOption {
   phone: string;
 }
 
-interface ShippingAddressCardProps {
-  address: ShippingAddressOption;
+interface DeliveryAddressCardProps {
+  address: DeliveryAddressOption;
   selected: boolean;
   onSelect: () => void;
   onEdit?: () => void;
 }
 
-export function ShippingAddressCard({
+export function DeliveryAddressCard({
   address,
   selected,
   onSelect,
   onEdit,
-}: ShippingAddressCardProps) {
+}: DeliveryAddressCardProps) {
   return (
     <TouchableOpacity
       activeOpacity={0.9}

@@ -161,6 +161,34 @@ export interface UnifiedSearchResponse {
   total: UnifiedSearchTotals;
 }
 
+// ─── Delivery Estimate Types ───────────────────────────────────────────────────
+
+export interface DeliveryEstimateQuery {
+  lat: number;
+  lon: number;
+}
+
+export interface DeliveryFeeBreakdown {
+  baseFee: number;
+  distanceFee: number;
+  prepTimeMinutes: number;
+  travelTimeMinutes: number;
+  bufferMinutes: number;
+}
+
+export interface DeliveryEstimateResponse {
+  restaurantId: string;
+  distanceKm: number;
+  zone: {
+    id: string;
+    name: string;
+    radiusKm: number;
+  };
+  deliveryFee: number;
+  estimatedMinutes: number;
+  breakdown: DeliveryFeeBreakdown;
+}
+
 // ─── Screen Props ──────────────────────────────────────────────────────────────
 
 export interface ProductDetailScreenProps {

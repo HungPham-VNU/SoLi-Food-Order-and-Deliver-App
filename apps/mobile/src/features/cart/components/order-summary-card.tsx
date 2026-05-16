@@ -20,13 +20,17 @@ function SummaryRow({
   return (
     <View className="flex-row justify-between items-center">
       <Text
-        className={highlight ? 'text-primary text-sm' : 'text-on-surface-variant text-sm'}
+        className={
+          highlight ? 'text-primary text-sm' : 'text-on-surface-variant text-sm'
+        }
         style={{ fontFamily: 'Inter_400Regular' }}
       >
         {label}
       </Text>
       <Text
-        className={highlight ? 'text-primary text-sm' : 'text-on-surface text-sm'}
+        className={
+          highlight ? 'text-primary text-sm' : 'text-on-surface text-sm'
+        }
         style={{ fontFamily: 'Inter_600SemiBold' }}
       >
         {value}
@@ -80,8 +84,23 @@ export function OrderSummaryCard({ summary }: OrderSummaryCardProps) {
       )}
       <SummaryRow
         label="Delivery"
-        value={summary.delivery === 0 ? 'Free' : formatCurrency(summary.delivery)}
+        value={
+          summary.delivery === 0 ? 'Free' : formatCurrency(summary.delivery)
+        }
       />
+      {summary.estimatedMinutes != null && (
+        <View className="flex-row items-center gap-1.5 -mt-1">
+          <Text
+            className="text-on-surface-variant text-[11px]"
+            style={{ fontFamily: 'Inter_400Regular' }}
+          >
+            Estimated arrival in{' '}
+            <Text className="text-secondary" style={{ fontFamily: 'Inter_600SemiBold' }}>
+              {summary.estimatedMinutes} mins
+            </Text>
+          </Text>
+        </View>
+      )}
 
       <View className="h-px bg-surface-container" />
 

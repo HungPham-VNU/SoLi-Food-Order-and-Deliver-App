@@ -3,7 +3,7 @@
 export interface CartItem {
   id: string;
   name: string;
-  subtitle: string;
+  description: string;
   price: number;
   quantity: number;
   imageUrl: string;
@@ -18,6 +18,7 @@ export interface OrderSummary {
   discountThreshold?: number;
   discountPercent?: number;
   remainingForDiscount?: number;
+  estimatedMinutes?: number;
 }
 
 export interface CartScreenProps {
@@ -26,7 +27,7 @@ export interface CartScreenProps {
   onContinueShopping?: () => void;
 }
 
-export interface ShippingAddressScreenProps {
+export interface DeliveryAddressScreenProps {
   onBack?: () => void;
   onContinue?: (selectedAddressId: string) => void;
   onAddNewAddress?: () => void;

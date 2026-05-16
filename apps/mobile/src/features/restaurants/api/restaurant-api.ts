@@ -7,6 +7,7 @@ import {
   MenuItemListResponse,
   ModifierGroup,
   UnifiedSearchResponse,
+  DeliveryEstimateResponse,
 } from '../types';
 
 export const restaurantKeys = {
@@ -17,6 +18,9 @@ export const restaurantKeys = {
     [...restaurantKeys.all, 'search', { filters }] as const,
   details: () => [...restaurantKeys.all, 'detail'] as const,
   detail: (id: string) => [...restaurantKeys.details(), id] as const,
+  estimates: (id: string) => [...restaurantKeys.detail(id), 'estimates'] as const,
+  estimate: (id: string, lat: number, lon: number) =>
+    [...restaurantKeys.estimates(id), { lat, lon }] as const,
 };
 
 const buildSearchQuery = (
@@ -122,5 +126,22 @@ export function useMenuItemModifiers(menuItemId: string) {
         `/api/menu-items/${menuItemId}/modifier-groups`,
       ),
     enabled: !!menuItemId,
+  });
+}
+
+export function useDeliveryEstimate(
+  restaurantId: string | undefined,
+  lat: number | null,
+  lon: number | null,
+) {
+  const hasCoords = lat !== null && lon !== null;
+  return useQuery({
+    queryKey: restaurantKeys.estimate(restaurantId!, lat!, lon!),
+    queryFn: () =>
+      apiFetch<DeliveryEstimateResponse>(
+        `/api/restaurants/${restaurantId}/delivery-zones/delivery-estimate?lat=${lat}&lon=${lon}`,
+      ),
+    enabled: !!restaurantId && hasCoords,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }

@@ -12,6 +12,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import { useSession } from '@/src/lib/auth-client';
+import { LocationInitializer } from '@/src/features/location';
 
 function RootNavigation() {
   const { data: session, isPending } = useSession();
@@ -40,7 +41,12 @@ function RootNavigation() {
     );
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <>
+      <LocationInitializer />
+      <Stack screenOptions={{ headerShown: false }} />
+    </>
+  );
 }
 
 export default function AppLayout() {

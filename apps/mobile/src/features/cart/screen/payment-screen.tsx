@@ -8,18 +8,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import {
-  Banknote,
-  PlusCircle,
-  Smartphone,
-} from 'lucide-react-native';
+import { Banknote, PlusCircle, Smartphone } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
-import {
-  CheckoutHeader,
-  CheckoutFooter,
-  CheckoutProgress,
-  PaymentMethodCard,
-} from '../components';
+import { CheckoutHeader, PaymentMethodCard } from '../components';
 import type { PaymentScreenProps } from '../types';
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -84,8 +75,6 @@ const OTHER_METHODS: PaymentOptionData[] = [
   },
 ];
 
-const ORDER_TOTAL = 142.5;
-
 export function PaymentScreen({
   onBack,
   onContinue,
@@ -110,14 +99,6 @@ export function PaymentScreen({
   const handleSelect = (id: string) => {
     setSelectedId(id);
     onSelectPaymentMethod?.(id);
-  };
-
-  const handleContinue = () => {
-    if (onContinue) {
-      onContinue(selectedId);
-    } else {
-      router.push('/(customer)/checkout/order-review');
-    }
   };
 
   return (
@@ -202,14 +183,6 @@ export function PaymentScreen({
           </View>
         </View>
       </ScrollView>
-
-      <CheckoutFooter
-        total={ORDER_TOTAL}
-        totalLabel="Total Amount"
-        actionLabel="Review Order"
-        onAction={handleContinue}
-        helperText="Incl. taxes and shipping"
-      />
     </View>
   );
 }

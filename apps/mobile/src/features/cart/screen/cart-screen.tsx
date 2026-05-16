@@ -22,26 +22,33 @@ import {
   useUpdateCartItemQuantity,
   useRemoveCartItem,
 } from '../api/cart-api';
+import { useAddressStore } from '@/src/features/location/store/address-store';
+import { useDeliveryEstimate } from '@/src/features/restaurants/api/restaurant-api';
 
 // ─── Pricing Logic ─────────────────────────────────────────────────────────────
 
 const DISCOUNT_THRESHOLD = 500000; // 500k VND
 const DISCOUNT_PERCENT = 10; // 10%
-const DELIVERY_FEE = 15000; // 15k VND
+const DEFAULT_DELIVERY_FEE = 15000; // 15k VND
 
-function computeOrderSummary(subtotal: number) {
+function computeOrderSummary(
+  subtotal: number,
+  deliveryFee: number = DEFAULT_DELIVERY_FEE,
+  estimatedMinutes?: number,
+) {
   const remaining = Math.max(0, DISCOUNT_THRESHOLD - subtotal);
   const discount =
     subtotal >= DISCOUNT_THRESHOLD ? subtotal * (DISCOUNT_PERCENT / 100) : 0;
-  const total = subtotal - discount + DELIVERY_FEE;
+  const total = subtotal - discount + deliveryFee;
   return {
     subtotal,
     discount,
-    delivery: DELIVERY_FEE,
+    delivery: deliveryFee,
     total,
     discountThreshold: DISCOUNT_THRESHOLD,
     discountPercent: DISCOUNT_PERCENT,
     remainingForDiscount: remaining,
+    estimatedMinutes,
   };
 }
 
@@ -53,11 +60,18 @@ export function CartScreen({
   onContinueShopping,
 }: CartScreenProps) {
   const insets = useSafeAreaInsets();
+  const { latitude, longitude } = useAddressStore();
 
   const { data: cart, isLoading, isError } = useMyCart();
   const { mutate: updateQuantity, isPending: isUpdating } =
     useUpdateCartItemQuantity();
   const { mutate: removeItem, isPending: isRemoving } = useRemoveCartItem();
+
+  const { data: estimate } = useDeliveryEstimate(
+    cart?.restaurantId,
+    latitude,
+    longitude,
+  );
 
   const isMutating = isUpdating || isRemoving;
 
@@ -71,7 +85,12 @@ export function CartScreen({
     selectedModifiers: item.selectedModifiers,
   }));
 
-  const summary = computeOrderSummary(cart?.totalAmount || 0);
+  const deliveryFee = estimate?.deliveryFee ?? DEFAULT_DELIVERY_FEE;
+  const summary = computeOrderSummary(
+    cart?.totalAmount || 0,
+    deliveryFee,
+    estimate?.estimatedMinutes,
+  );
   const headerHeight = insets.top + 64;
   const checkoutBarHeight = 80 + insets.bottom;
 

@@ -11,43 +11,53 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import {
-  MapPin,
-  Clock,
-  FileEdit,
-  Tag,
-  ArrowRight,
-} from 'lucide-react-native';
+import { MapPin, Clock, FileEdit, Tag, ArrowRight } from 'lucide-react-native';
 import { CheckoutHeader } from '../components';
 import { formatCurrency } from '@/src/lib/format-utils';
 import { useMyCart } from '../api/cart-api';
+import { useSession } from '@/src/lib/auth-client';
+import { useAddressStore } from '@/src/features/location/store/address-store';
+import { useDeliveryEstimate } from '@/src/features/restaurants/api/restaurant-api';
 import type { CartItem } from '../types';
 
 // ─── Pricing Logic ─────────────────────────────────────────────────────────────
 
 const DISCOUNT_THRESHOLD = 500000; // 500k VND
 const DISCOUNT_PERCENT = 10; // 10%
-const DELIVERY_FEE = 15000; // 15k VND
+const DEFAULT_DELIVERY_FEE = 15000; // 15k VND
 
-function computeOrderSummary(subtotal: number) {
+function computeOrderSummary(
+  subtotal: number,
+  deliveryFee: number = DEFAULT_DELIVERY_FEE,
+  estimatedMinutes?: number,
+) {
   const remaining = Math.max(0, DISCOUNT_THRESHOLD - subtotal);
   const discount =
     subtotal >= DISCOUNT_THRESHOLD ? subtotal * (DISCOUNT_PERCENT / 100) : 0;
-  const total = subtotal - discount + DELIVERY_FEE;
+  const total = subtotal - discount + deliveryFee;
   return {
     subtotal,
     discount,
-    delivery: DELIVERY_FEE,
+    delivery: deliveryFee,
     total,
     discountThreshold: DISCOUNT_THRESHOLD,
     discountPercent: DISCOUNT_PERCENT,
     remainingForDiscount: remaining,
+    estimatedMinutes,
   };
 }
 
 export function SingleScreenCheckout() {
   const insets = useSafeAreaInsets();
+  const { selectedAddress, latitude, longitude } = useAddressStore();
+  const { data: session } = useSession();
   const { data: cart, isLoading, isError } = useMyCart();
+
+  const { data: estimate } = useDeliveryEstimate(
+    cart?.restaurantId,
+    latitude,
+    longitude,
+  );
 
   const handleBack = () => {
     router.back();
@@ -70,8 +80,13 @@ export function SingleScreenCheckout() {
   if (isError || !cart) {
     return (
       <View className="flex-1 items-center justify-center bg-surface p-6">
-        <Text className="text-on-surface text-center mb-4">Failed to load cart</Text>
-        <TouchableOpacity onPress={handleBack} className="bg-primary px-6 py-2 rounded-full">
+        <Text className="text-on-surface text-center mb-4">
+          Failed to load cart
+        </Text>
+        <TouchableOpacity
+          onPress={handleBack}
+          className="bg-primary px-6 py-2 rounded-full"
+        >
           <Text className="text-white font-bold">Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -81,19 +96,24 @@ export function SingleScreenCheckout() {
   const cartItems: CartItem[] = cart.items.map((item) => ({
     id: item.cartItemId,
     name: item.itemName,
-    subtitle: '', // Backend doesn't provide subtitle yet
-    price: item.unitPrice,
+    description: '',
+    price: item.unitPrice, // Aggregated price (base + modifiers) from backend
     quantity: item.quantity,
     imageUrl: '', // Backend doesn't provide imageUrl for cart items yet
     selectedModifiers: item.selectedModifiers,
   }));
 
-  const summary = computeOrderSummary(cart.totalAmount || 0);
+  const deliveryFee = estimate?.deliveryFee ?? DEFAULT_DELIVERY_FEE;
+  const summary = computeOrderSummary(
+    cart.totalAmount || 0,
+    deliveryFee,
+    estimate?.estimatedMinutes,
+  );
 
   return (
     <View className="flex-1 bg-surface">
       <StatusBar barStyle="dark-content" />
-      
+
       <CheckoutHeader title="Checkout" onBack={handleBack} />
 
       <ScrollView
@@ -122,7 +142,9 @@ export function SingleScreenCheckout() {
             </View>
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => router.push('/(customer)/checkout/shipping-address')}
+              onPress={() =>
+                router.push('/(customer)/checkout/delivery-address')
+              }
             >
               <Text
                 className="text-primary text-sm"
@@ -132,23 +154,22 @@ export function SingleScreenCheckout() {
               </Text>
             </TouchableOpacity>
           </View>
-          
+
           <View className="pl-10">
             <Text
               className="text-on-surface text-sm mb-0.5"
               style={{ fontFamily: 'Inter_500Medium' }}
             >
-              Alex Rivera
+              {session?.user.name || 'User'}
             </Text>
             <Text
               className="text-on-surface-variant text-sm"
               style={{ fontFamily: 'Inter_400Regular' }}
             >
-              482 Willow Creek Lane{"\n"}
-              Apt 4B, Seattle, WA 98101
+              {selectedAddress}
             </Text>
           </View>
-          
+
           <View className="pl-10 mt-2">
             <View className="flex-row items-center self-start gap-1.5 bg-primary-fixed/30 px-3 py-1.5 rounded-full">
               <Clock size={14} color="#005312" />
@@ -156,7 +177,9 @@ export function SingleScreenCheckout() {
                 className="text-on-primary-fixed-variant text-xs"
                 style={{ fontFamily: 'Inter_600SemiBold' }}
               >
-                Arrives in 30-45 mins
+                {estimate
+                  ? `Arrives in ${estimate.estimatedMinutes} mins`
+                  : 'Estimating time...'}
               </Text>
             </View>
           </View>
@@ -170,16 +193,24 @@ export function SingleScreenCheckout() {
           >
             Order Summary
           </Text>
-          
+
           <View className="bg-surface-container-lowest rounded-2xl p-2 border border-outline-variant/15">
             {cartItems.map((item, index) => (
               <View key={item.id}>
                 <View className="flex-row gap-4 p-2">
                   <View className="w-16 h-16 rounded-xl bg-surface-container overflow-hidden items-center justify-center">
                     {item.imageUrl ? (
-                      <Image source={{ uri: item.imageUrl }} className="w-full h-full" />
+                      <Image
+                        source={{ uri: item.imageUrl }}
+                        className="w-full h-full"
+                      />
                     ) : (
-                      <Text className="text-on-surface-variant" style={{ fontFamily: 'Inter_500Medium' }}>No Image</Text>
+                      <Text
+                        className="text-on-surface-variant"
+                        style={{ fontFamily: 'Inter_500Medium' }}
+                      >
+                        No Image
+                      </Text>
                     )}
                   </View>
                   <View className="flex-1 justify-center">
@@ -190,31 +221,67 @@ export function SingleScreenCheckout() {
                     >
                       {item.name}
                     </Text>
-                    {item.selectedModifiers && item.selectedModifiers.length > 0 && (
-                      <View className="mt-0.5 gap-0.5">
-                        {item.selectedModifiers.map((opt, idx) => (
-                          <Text
-                            key={`${opt.groupId}-${opt.optionId}-${idx}`}
-                            className="text-xs text-on-surface-variant leading-snug"
-                            style={{ fontFamily: 'Inter_400Regular' }}
-                          >
-                            • {opt.groupName}: {opt.optionName}
-                          </Text>
-                        ))}
+                    {item.selectedModifiers &&
+                      item.selectedModifiers.length > 0 && (
+                        <View className="mt-1 gap-1">
+                          {item.selectedModifiers.map((opt, idx) => (
+                            <View
+                              key={`${opt.groupId}-${opt.optionId}-${idx}`}
+                              className="flex-row justify-between items-center pr-2"
+                            >
+                              <Text
+                                className="text-[11px] text-on-surface-variant leading-tight flex-1 mr-4"
+                                style={{ fontFamily: 'Inter_400Regular' }}
+                              >
+                                • {opt.groupName}: {opt.optionName}
+                              </Text>
+                              {opt.price > 0 && (
+                                <Text
+                                  className="text-[10px] text-on-surface-variant"
+                                  style={{ fontFamily: 'Inter_500Medium' }}
+                                >
+                                  +{formatCurrency(opt.price)}
+                                </Text>
+                              )}
+                            </View>
+                          ))}
+                        </View>
+                      )}
+
+                    <View className="flex-row items-center justify-between mt-2">
+                      <View className="flex-row items-center gap-3">
+                        <Text
+                          className="text-sm text-on-surface"
+                          style={{ fontFamily: 'Inter_600SemiBold' }}
+                        >
+                          {formatCurrency(
+                            (item.price +
+                              (item.selectedModifiers?.reduce(
+                                (sum, m) => sum + m.price,
+                                0,
+                              ) || 0)) *
+                              item.quantity,
+                          )}
+                        </Text>
+                        <Text
+                          className="text-xs text-on-surface-variant"
+                          style={{ fontFamily: 'Inter_400Regular' }}
+                        >
+                          Qty: {item.quantity}
+                        </Text>
                       </View>
-                    )}
-                    <View className="flex-row items-center gap-3 mt-1.5">
                       <Text
-                        className="text-sm text-on-surface"
-                        style={{ fontFamily: 'Inter_600SemiBold' }}
-                      >
-                        {formatCurrency(item.price * item.quantity)}
-                      </Text>
-                      <Text
-                        className="text-xs text-on-surface-variant"
+                        className="text-[10px] text-on-surface-variant"
                         style={{ fontFamily: 'Inter_400Regular' }}
                       >
-                        Qty: {item.quantity}
+                        {formatCurrency(
+                          item.price +
+                            (item.selectedModifiers?.reduce(
+                              (sum, m) => sum + m.price,
+                              0,
+                            ) || 0),
+                        )}{' '}
+                        each
                       </Text>
                     </View>
                   </View>
@@ -224,6 +291,58 @@ export function SingleScreenCheckout() {
                 )}
               </View>
             ))}
+          </View>
+
+          {/* Price Breakdown */}
+          <View className="bg-surface-container-lowest rounded-2xl p-4 gap-3 border border-outline-variant/15">
+            <View className="flex-row justify-between items-center">
+              <Text
+                className="text-on-surface-variant text-sm"
+                style={{ fontFamily: 'Inter_400Regular' }}
+              >
+                Subtotal
+              </Text>
+              <Text
+                className="text-on-surface text-sm"
+                style={{ fontFamily: 'Inter_500Medium' }}
+              >
+                {formatCurrency(summary.subtotal)}
+              </Text>
+            </View>
+            <View className="flex-row justify-between items-center">
+              <View className="flex-row items-center gap-1.5">
+                <Text
+                  className="text-on-surface-variant text-sm"
+                  style={{ fontFamily: 'Inter_400Regular' }}
+                >
+                  Delivery Fee
+                </Text>
+              </View>
+              <Text
+                className="text-on-surface text-sm"
+                style={{ fontFamily: 'Inter_500Medium' }}
+              >
+                {summary.delivery === 0
+                  ? 'Free'
+                  : formatCurrency(summary.delivery)}
+              </Text>
+            </View>
+            {summary.discount > 0 && (
+              <View className="flex-row justify-between items-center">
+                <Text
+                  className="text-primary text-sm"
+                  style={{ fontFamily: 'Inter_400Regular' }}
+                >
+                  Discount ({summary.discountPercent}%)
+                </Text>
+                <Text
+                  className="text-primary text-sm"
+                  style={{ fontFamily: 'Inter_600SemiBold' }}
+                >
+                  -{formatCurrency(summary.discount)}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Notes Input */}
@@ -288,10 +407,13 @@ export function SingleScreenCheckout() {
               </Text>
             </TouchableOpacity>
           </View>
-          
+
           <View className="flex-row items-center gap-3">
             <View className="w-10 h-6 bg-surface-container rounded-sm items-center justify-center border border-outline-variant/30 flex-row overflow-hidden">
-              <View className="w-3.5 h-3.5 rounded-full bg-red-500/80" style={{ marginRight: -6 }} />
+              <View
+                className="w-3.5 h-3.5 rounded-full bg-red-500/80"
+                style={{ marginRight: -6 }}
+              />
               <View className="w-3.5 h-3.5 rounded-full bg-yellow-500/80" />
             </View>
             <View>
@@ -331,7 +453,7 @@ export function SingleScreenCheckout() {
             {formatCurrency(summary.total)}
           </Text>
         </View>
-        
+
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={handlePlaceOrder}

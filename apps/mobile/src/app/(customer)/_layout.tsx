@@ -5,7 +5,7 @@ export default function CustomerLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="cart" />
-      <Stack.Screen name="checkout/shipping-address" />
+      <Stack.Screen name="checkout/delivery-address" />
       <Stack.Screen name="checkout/payment" />
       <Stack.Screen name="checkout/order-review" />
       <Stack.Screen name="product/[id]" />
