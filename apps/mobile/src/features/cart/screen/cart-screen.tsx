@@ -78,7 +78,6 @@ export function CartScreen({
   const cartItems: CartItem[] = (cart?.items || []).map((item) => ({
     id: item.cartItemId,
     name: item.itemName,
-    subtitle: '', // Backend doesn't provide subtitle yet
     price: item.unitPrice,
     quantity: item.quantity,
     imageUrl: '', // Backend doesn't provide imageUrl for cart items yet

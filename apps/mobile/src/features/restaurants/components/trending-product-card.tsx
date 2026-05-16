@@ -8,6 +8,7 @@ interface TrendingProductCardProps {
   badge?: string;
   category: string;
   name: string;
+  description?: string;
   unit: string;
   price: number;
   originalPrice?: number;
@@ -20,6 +21,7 @@ export function TrendingProductCard({
   badge,
   category,
   name,
+  description,
   unit,
   price,
   originalPrice,
@@ -52,7 +54,15 @@ export function TrendingProductCard({
         <Text className="font-jakarta-sans font-bold text-sm text-on-surface">
           {name}
         </Text>
-        <Text className="text-[10px] text-outline">{unit}</Text>
+        {description && (
+          <Text 
+            numberOfLines={2} 
+            className="text-[11px] text-on-surface-variant leading-4"
+          >
+            {description}
+          </Text>
+        )}
+        <Text className="text-[10px] text-outline mt-1">{unit}</Text>
         <View className="mt-auto pt-3 flex-row items-center justify-between">
           <View className="flex-col">
             <Text className="text-secondary font-bold text-base">

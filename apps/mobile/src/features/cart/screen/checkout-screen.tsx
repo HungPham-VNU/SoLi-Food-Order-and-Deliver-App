@@ -96,7 +96,6 @@ export function SingleScreenCheckout() {
   const cartItems: CartItem[] = cart.items.map((item) => ({
     id: item.cartItemId,
     name: item.itemName,
-    description: '',
     price: item.unitPrice, // Aggregated price (base + modifiers) from backend
     quantity: item.quantity,
     imageUrl: '', // Backend doesn't provide imageUrl for cart items yet

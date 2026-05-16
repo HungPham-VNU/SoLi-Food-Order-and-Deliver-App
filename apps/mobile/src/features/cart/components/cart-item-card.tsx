@@ -41,13 +41,6 @@ export function CartItemCard({
             >
               {item.name}
             </Text>
-            <Text
-              className="text-on-surface-variant text-xs mt-0.5"
-              style={{ fontFamily: 'Inter_400Regular' }}
-              numberOfLines={1}
-            >
-              {item.subtitle}
-            </Text>
             {item.selectedModifiers && item.selectedModifiers.length > 0 && (
               <View className="mt-1 gap-0.5">
                 {item.selectedModifiers.map((mod) => (

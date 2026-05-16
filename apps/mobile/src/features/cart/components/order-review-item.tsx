@@ -24,12 +24,6 @@ export function OrderReviewItem({ item }: OrderReviewItemProps) {
         >
           {item.name}
         </Text>
-        <Text
-          className="text-xs text-on-surface-variant"
-          style={{ fontFamily: 'Inter_400Regular' }}
-        >
-          {item.subtitle}
-        </Text>
       </View>
       <View className="items-end">
         <Text

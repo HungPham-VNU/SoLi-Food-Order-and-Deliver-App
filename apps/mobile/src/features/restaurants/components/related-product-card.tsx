@@ -41,6 +41,17 @@ export function RelatedProductCard({
         {product.name}
       </Text>
 
+      {/* Description */}
+      {product.description && (
+        <Text
+          className="text-on-surface-variant text-[10px] mt-1"
+          style={{ fontFamily: 'Inter_400Regular' }}
+          numberOfLines={2}
+        >
+          {product.description}
+        </Text>
+      )}
+
       {/* Price + Add */}
       <View className="flex-row items-center justify-between mt-2">
         <Text
