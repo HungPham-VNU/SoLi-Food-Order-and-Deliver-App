@@ -22,6 +22,14 @@ COPY --from=builder /app/out/full/ .
 COPY turbo.json turbo.json
 RUN pnpm turbo run build --filter=api...
 
+FROM node:22-alpine AS production-deps
+RUN apk add --no-cache libc6-compat
+RUN npm install -g pnpm@11.1.2
+WORKDIR /app
+COPY --from=builder /app/out/json/ .
+COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN pnpm install --prod --frozen-lockfile
+
 FROM node:22-alpine AS runner
 WORKDIR /app
 
@@ -32,8 +40,8 @@ USER nestjs
 
 COPY --from=installer /app/apps/api/package.json .
 COPY --from=installer /app/apps/api/dist ./dist
-COPY --from=installer /app/node_modules ./node_modules
-COPY --from=installer /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=production-deps /app/node_modules ./node_modules
+COPY --from=production-deps /app/apps/api/node_modules ./apps/api/node_modules
 
 EXPOSE 3000
 

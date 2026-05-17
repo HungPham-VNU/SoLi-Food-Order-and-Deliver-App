@@ -26,7 +26,7 @@ FROM nginx:alpine AS runner
 WORKDIR /usr/share/nginx/html
 RUN rm -rf ./*
 COPY --from=installer /app/apps/web/dist .
-# Optional: Copy custom nginx config if needed
-# COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+# Copy custom nginx config
+COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 ENTRYPOINT ["nginx", "-g", "daemon off;"]

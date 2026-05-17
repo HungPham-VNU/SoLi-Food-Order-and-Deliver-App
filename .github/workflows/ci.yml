@@ -67,6 +67,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
           REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
 
   docker-api:
     name: Build API Docker Image
