@@ -3,7 +3,7 @@
 
 **Document Version:** 2.0
 **Status:** Final
-**Scope:** UC-1 through UC-26 — Enterprise-Style PlantUML Sequence Diagrams
+**Scope:** UC-1 through UC-35 — Enterprise-Style PlantUML Sequence Diagrams
 **Traceability:** Root message numbers correspond **directly** to Activity Diagram step numbers in `SRS_FoodDelivery.md`.
 
 ---
@@ -36,6 +36,15 @@
 - [SD-24: UC-24 — Manage Platform Promotions](#sd-24-uc-24--manage-platform-promotions)
 - [SD-25: UC-25 — Process Payment Refund](#sd-25-uc-25--process-payment-refund)
 - [SD-26: UC-26 — Manage Real-Time Notifications](#sd-26-uc-26--manage-real-time-notifications)
+- [SD-27: UC-27 — Approve or Reject Restaurant Applications](#sd-27-uc-27--approve-or-reject-restaurant-applications)
+- [SD-28: UC-28 — Approve or Reject Shipper Applications](#sd-28-uc-28--approve-or-reject-shipper-applications)
+- [SD-29: UC-29 — Suspend or Reactivate Partner Accounts](#sd-29-uc-29--suspend-or-reactivate-partner-accounts)
+- [SD-30: UC-30 — Monitor Orders and Platform Health](#sd-30-uc-30--monitor-orders-and-platform-health)
+- [SD-31: UC-31 — Search and Manage User Accounts](#sd-31-uc-31--search-and-manage-user-accounts)
+- [SD-32: UC-32 — Administrative Order Cancellation & Refund](#sd-32-uc-32--administrative-order-cancellation--refund)
+- [SD-33: UC-33 — View and Export Operational Reports](#sd-33-uc-33--view-and-export-operational-reports)
+- [SD-34: UC-34 — View Dashboard & Platform Overview](#sd-34-uc-34--view-dashboard--platform-overview)
+- [SD-35: UC-35 — Manage Admin Roles & Permissions](#sd-35-uc-35--manage-admin-roles--permissions)
 
 ---
 
@@ -70,9 +79,9 @@ activate AuthSvc
 AuthSvc -> AuthSvc : (4) Validate and authenticate credentials
 
 alt Credentials invalid or account banned
-    AuthSvc --> UI : Reject — MSG-AUTH-01
+    AuthSvc --> UI : Authentication failed
     deactivate AuthSvc
-    UI --> Actor : (7) Show MSG-AUTH-01
+    UI --> Actor : (7) Show authentication failure
 else Credentials valid
     AuthSvc -> AuthSvc : (5) Create authenticated session (TTL = 7 days)
     AuthSvc --> UI : Success — session token
@@ -89,13 +98,13 @@ activate AuthSvc
 AuthSvc -> AuthSvc : (9) Validate form and check email uniqueness
 
 alt Input invalid
-    AuthSvc --> UI : Reject — MSG-AUTH-03
+    AuthSvc --> UI : Invalid input
     deactivate AuthSvc
-    UI --> Actor : (12) Show MSG-AUTH-03
+    UI --> Actor : (12) Show input error
 else Email already registered
-    AuthSvc --> UI : Reject — MSG-AUTH-02
+    AuthSvc --> UI : Email already registered
     deactivate AuthSvc
-    UI --> Actor : (12) Show MSG-AUTH-02
+    UI --> Actor : (12) Show duplicate email error
 else Valid and unique
     AuthSvc -> AuthSvc : (10) Create account (role = 'user') and issue session
     AuthSvc --> UI : Success — session token
@@ -118,9 +127,9 @@ opt Account exists
     deactivate OTPSvc
 end
 
-AuthSvc --> UI : MSG-AUTH-04
+AuthSvc --> UI : Reset code sent
 deactivate AuthSvc
-UI --> Actor : (15) Show MSG-AUTH-04
+UI --> Actor : (15) Show reset code sent
 
 == Logout ==
 
@@ -166,9 +175,9 @@ activate SearchSvc
 SearchSvc -> SearchSvc : (3) Validate search parameters
 
 alt Parameters invalid
-    SearchSvc --> UI : Reject — MSG-DISC-01
+    SearchSvc --> UI : Invalid search parameters
     deactivate SearchSvc
-    UI --> Actor : (6) Show MSG-DISC-01
+    UI --> Actor : (6) Show search parameter error
 else Parameters valid
     SearchSvc -> Catalog : (4) Query matching restaurants and menu items\n(approved & open restaurants; available items; relevance scoring)
     activate Catalog
@@ -210,9 +219,9 @@ UI -> RestSvc : (2) Request restaurant profile (restaurantId)
 activate RestSvc
 
 alt Restaurant not found
-    RestSvc --> UI : Reject — MSG-REST-01
+    RestSvc --> UI : Restaurant not found
     deactivate RestSvc
-    UI --> Actor : (5) Show MSG-REST-01
+    UI --> Actor : (5) Show not found
 else Restaurant found
     RestSvc -> RestSvc : (3) Load full menu structure\n(categories, items, modifier groups)
     RestSvc --> UI : Restaurant profile and menu
@@ -254,21 +263,21 @@ activate CartSvc
 CartSvc -> CartSvc : (3) Validate item, modifiers and quantity
 
 alt Item unavailable or modifiers invalid
-    CartSvc --> UI : Reject — MSG-CART-01 to MSG-CART-07
+    CartSvc --> UI : Cart validation error
     deactivate CartSvc
     UI --> Actor : (9) Show validation error
 else Validation passed
     CartSvc -> CartSvc : (4) Check restaurant consistency
 
     alt Cart belongs to a different restaurant
-        CartSvc --> UI : Reject — MSG-CART-08 or MSG-CART-09
+        CartSvc --> UI : Different restaurant conflict
         deactivate CartSvc
         UI --> Actor : (8) Show different-restaurant error
     else Same restaurant or empty cart
         CartSvc -> CartSvc : (5) Merge with existing cart line or add new item\n(same modifiers → merge; max quantity = 99)
 
         alt Line quantity would exceed 99
-            CartSvc --> UI : Reject — MSG-CART-10
+            CartSvc --> UI : Quantity limit exceeded
             deactivate CartSvc
             UI --> Actor : (7) Show quantity ceiling error
         else Quantity valid
@@ -330,9 +339,9 @@ activate CartSvc
 CartSvc -> CartSvc : Validate quantity and find line
 
 alt Line not found
-    CartSvc --> UI : Reject — MSG-CART-11
+    CartSvc --> UI : Cart item not found
     deactivate CartSvc
-    UI --> Actor : (6) Show MSG-CART-11
+    UI --> Actor : (6) Show item not found
 else Line found
     CartSvc -> CartStore : (5) Save updated cart (reset TTL)
     activate CartStore
@@ -352,11 +361,11 @@ activate CartSvc
 CartSvc -> CartSvc : Validate modifier set and re-fingerprint line
 
 alt Modifiers invalid
-    CartSvc --> UI : Reject — MSG-CART-03 to MSG-CART-07
+    CartSvc --> UI : Modifier validation error
     deactivate CartSvc
     UI --> Actor : (9) Show modifier validation error
 else Merged quantity would exceed 99
-    CartSvc --> UI : Reject — MSG-CART-10
+    CartSvc --> UI : Quantity limit exceeded
     deactivate CartSvc
     UI --> Actor : (9) Show quantity overflow error
 else Valid
@@ -376,9 +385,9 @@ UI -> CartSvc : (10) Remove line item (cartItemId)
 activate CartSvc
 
 alt Line not found
-    CartSvc --> UI : Reject — MSG-CART-11
+    CartSvc --> UI : Cart item not found
     deactivate CartSvc
-    UI --> Actor : (11) Show MSG-CART-11
+    UI --> Actor : (11) Show item not found
 else Line found
     CartSvc -> CartStore : Remove line and save cart
     activate CartStore
@@ -435,25 +444,25 @@ activate OrderSvc
 OrderSvc -> OrderSvc : (2) Validate address structure
 
 alt Address structure invalid
-    OrderSvc --> UI : Reject — MSG-ADDR-01
+    OrderSvc --> UI : Invalid address
     deactivate OrderSvc
-    UI --> Actor : (9) Show MSG-ADDR-01
+    UI --> Actor : (9) Show address error
 else Structure valid
     OrderSvc -> OrderSvc : (3) Validate coordinate pairing\n(both lat/lon required, or neither)
 
     alt Coordinate pairing invalid
-        OrderSvc --> UI : Reject — MSG-ADDR-02
+        OrderSvc --> UI : Invalid coordinate pair
         deactivate OrderSvc
-        UI --> Actor : (8) Show MSG-ADDR-02
+        UI --> Actor : (8) Show coordinate error
     else Coordinates valid or absent
         note over OrderSvc : (4) Address accepted — checkout continues (UC-8)
 
         OrderSvc -> OrderSvc : (5) Verify delivery zone eligibility\n(Haversine distance vs zone radii)
 
         alt Address outside all delivery zones
-            OrderSvc --> UI : Reject — MSG-ADDR-03
+            OrderSvc --> UI : Outside delivery range
             deactivate OrderSvc
-            UI --> Actor : (7) Show MSG-ADDR-03
+            UI --> Actor : (7) Show out-of-range error
         else In delivery range
             OrderSvc -> OrderSvc : Accept address — store immutably with order
             OrderSvc --> UI : Address confirmed
@@ -500,16 +509,16 @@ ZoneUI -> ZoneSvc : (2) Authorize Restaurant Partner / Admin
 activate ZoneSvc
 
 alt Not authorized
-    ZoneSvc --> ZoneUI : Reject — MSG-ZONE-01
+    ZoneSvc --> ZoneUI : Access denied
     deactivate ZoneSvc
-    ZoneUI --> Partner : (12) Show MSG-ZONE-01
+    ZoneUI --> Partner : (12) Show access denied
 else Authorized
     ZoneSvc -> ZoneSvc : (4) Validate zone configuration
 
     alt Configuration invalid
-        ZoneSvc --> ZoneUI : Reject — MSG-ZONE-02
+        ZoneSvc --> ZoneUI : Invalid zone configuration
         deactivate ZoneSvc
-        ZoneUI --> Partner : (8) Show MSG-ZONE-02
+        ZoneUI --> Partner : (8) Show configuration error
     else Configuration valid
         ZoneSvc -> ZoneSvc : (5) Execute Create or Update
         ZoneSvc -> EventBus : (6) Synchronise zone data with ordering system
@@ -529,16 +538,16 @@ ZoneUI -> ZoneSvc : (2) Authorize actor
 activate ZoneSvc
 
 alt Not authorized
-    ZoneSvc --> ZoneUI : Reject — MSG-ZONE-01
+    ZoneSvc --> ZoneUI : Access denied
     deactivate ZoneSvc
-    ZoneUI --> Partner : (12) Show MSG-ZONE-01
+    ZoneUI --> Partner : (12) Show access denied
 else Authorized
     ZoneSvc -> ZoneSvc : Look up zone by ID
 
     alt Zone not found
-        ZoneSvc --> ZoneUI : Reject — MSG-ZONE-03
+        ZoneSvc --> ZoneUI : Zone not found
         deactivate ZoneSvc
-        ZoneUI --> Partner : (11) Show MSG-ZONE-03
+        ZoneUI --> Partner : (11) Show not found
     else Zone found
         ZoneSvc -> ZoneSvc : (9) Execute Delete
         ZoneSvc -> EventBus : Synchronise deletion with ordering system
@@ -558,9 +567,9 @@ RestUI -> ZoneSvc : (13) Validate restaurant location and active zones
 activate ZoneSvc
 
 alt No location or no active zones
-    ZoneSvc --> RestUI : Reject — MSG-ZONE-04
+    ZoneSvc --> RestUI : No delivery zones configured
     deactivate ZoneSvc
-    RestUI --> Customer : (17) Show MSG-ZONE-04
+    RestUI --> Customer : (17) Show configuration missing
 else Configuration available
     ZoneSvc -> GeoSvc : (14) Compute Haversine distance and select innermost eligible zone
     activate GeoSvc
@@ -568,9 +577,9 @@ else Configuration available
     deactivate GeoSvc
 
     alt No eligible zone
-        ZoneSvc --> RestUI : Reject — MSG-ZONE-05
+        ZoneSvc --> RestUI : Outside all delivery zones
         deactivate ZoneSvc
-        RestUI --> Customer : (16) Show MSG-ZONE-05
+        RestUI --> Customer : (16) Show out-of-zone error
     else Eligible zone found
         ZoneSvc -> ZoneSvc : Compute delivery fee and ETA
         ZoneSvc --> RestUI : Delivery fee and estimated time
@@ -608,14 +617,14 @@ control "Payment Service" as PaySvc
 
 autonumber stop
 
-Actor -> UI : (1) Confirm checkout\n(address, payment method, coupon?)
+Actor -> UI : (1) Confirm checkout
 UI -> OrderSvc : Submit checkout request [X-Idempotency-Key?]
 activate OrderSvc
 
 OrderSvc -> OrderSvc : (2) Validate checkout request
 
 alt Checkout data invalid
-    OrderSvc --> UI : Reject — MSG-ORD-01 or MSG-ORD-02
+    OrderSvc --> UI : Invalid checkout data
     deactivate OrderSvc
     UI --> Actor : (18) Show validation error
 else Data valid
@@ -631,15 +640,15 @@ else Data valid
         OrderSvc -> OrderSvc : (4) Acquire checkout lock
 
         alt Concurrent checkout in progress
-            OrderSvc --> UI : Reject — MSG-ORD-03
+            OrderSvc --> UI : Concurrent checkout in progress
             deactivate OrderSvc
-            UI --> Actor : (16) Show MSG-ORD-03
+            UI --> Actor : (16) Show concurrent checkout error
         else Lock acquired
 
             OrderSvc -> OrderSvc : (5) Validate cart, restaurant, items and modifiers
 
             alt Cart or catalog validation fails
-                OrderSvc --> UI : Reject — MSG-ORD-04 to MSG-ORD-10
+                OrderSvc --> UI : Cart or catalog validation failed
                 deactivate OrderSvc
                 UI --> Actor : (15) Show validation error
             else Validation passed
@@ -647,9 +656,9 @@ else Data valid
                 OrderSvc -> OrderSvc : (6) Compute delivery fee and check zone eligibility
 
                 alt Address outside delivery range
-                    OrderSvc --> UI : Reject — MSG-ORD-11
+                    OrderSvc --> UI : Outside delivery zone
                     deactivate OrderSvc
-                    UI --> Actor : (14) Show MSG-ORD-11
+                    UI --> Actor : (14) Show out-of-zone error
                 else In delivery range
 
                     opt Coupon code provided
@@ -662,7 +671,7 @@ else Data valid
                     OrderSvc -> OrderSvc : (8) Save order with server-authoritative pricing
 
                     alt Persistence failure
-                        OrderSvc --> UI : Reject — MSG-ORD-13 or MSG-ORD-14
+                        OrderSvc --> UI : Order persistence failed
                         deactivate OrderSvc
                         UI --> Actor : (13) Show error
                     else Order saved
@@ -728,21 +737,21 @@ activate PaySvc
 PaySvc -> PaySvc : (5) Verify payment callback authenticity\n(HMAC-SHA512 signature)
 
 alt Signature invalid
-    PaySvc --> VNPay : (15) MSG-PAY-01 — invalid signature (RspCode 97)
+    PaySvc --> VNPay : (15) Invalid signature
     deactivate PaySvc
 else Signature valid
 
     PaySvc -> PaySvc : (6) Locate payment transaction
 
     alt Transaction not found
-        PaySvc --> VNPay : (14) MSG-PAY-02 — transaction not found (RspCode 01)
+        PaySvc --> VNPay : (14) Transaction not found
         deactivate PaySvc
     else Transaction found
 
         PaySvc -> PaySvc : (7) Check transaction state
 
         alt Already in terminal state
-            PaySvc --> VNPay : (13) MSG-PAY-06 — already processed (RspCode 00)
+            PaySvc --> VNPay : (13) Already processed
             deactivate PaySvc
         else Non-terminal state
 
@@ -753,7 +762,7 @@ else Signature valid
                 activate OrderSvc
                 OrderSvc --> PaySvc : order cancelled
                 deactivate OrderSvc
-                PaySvc --> VNPay : (12) MSG-PAY-03 — amount mismatch (RspCode 04)
+                PaySvc --> VNPay : (12) Amount mismatch
                 deactivate PaySvc
             else Amount valid
 
@@ -762,14 +771,14 @@ else Signature valid
                     activate OrderSvc
                     OrderSvc --> PaySvc : order updated
                     deactivate OrderSvc
-                    PaySvc --> VNPay : (10) MSG-PAY-04 — success (RspCode 00)
+                    PaySvc --> VNPay : (10) Payment confirmed
                     deactivate PaySvc
                 else VNPay reports failure
                     PaySvc -> OrderSvc : Cancel associated order
                     activate OrderSvc
                     OrderSvc --> PaySvc : order cancelled
                     deactivate OrderSvc
-                    PaySvc --> VNPay : (11) MSG-PAY-05 — acknowledged (RspCode 00)
+                    PaySvc --> VNPay : (11) Payment failure acknowledged
                     deactivate PaySvc
                 end
             end
@@ -829,9 +838,9 @@ UI -> HistSvc : (3) Load order list and validate filters
 activate HistSvc
 
 alt Filters invalid
-    HistSvc --> UI : Reject — MSG-HIST-02
+    HistSvc --> UI : Invalid filter parameters
     deactivate HistSvc
-    UI --> Actor : (6) Show MSG-HIST-02
+    UI --> Actor : (6) Show filter error
 else Filters valid
     HistSvc -> OrderRepo : (4) Query orders scoped to current customer
     activate OrderRepo
@@ -854,9 +863,9 @@ OrderRepo --> HistSvc : order + items + status log | null
 deactivate OrderRepo
 
 alt Order not found or belongs to different customer
-    HistSvc --> UI : Reject — MSG-HIST-01
+    HistSvc --> UI : Order not found
     deactivate HistSvc
-    UI --> Actor : (10) Show MSG-HIST-01
+    UI --> Actor : (10) Show not found
 else Order found and owned
     HistSvc --> UI : Full order detail (order + items + timeline)
     deactivate HistSvc
@@ -920,7 +929,7 @@ activate RestSvc
 RestSvc -> RestSvc : (4) Authenticate session and verify role
 
 alt Role not permitted or input invalid
-    RestSvc --> UI : (18) Reject — MSG-RES-01 or MSG-RES-02
+    RestSvc --> UI : (18) Access denied or invalid input
     deactivate RestSvc
     UI --> Partner : Show error
 else Role permitted and input valid
@@ -928,7 +937,7 @@ else Role permitted and input valid
 note right of RestDB : isApproved=false, isOpen=false
     RestDB --> RestSvc : Restaurant created
     RestSvc -> ACLSvc : (8) Synchronise restaurant data with ordering system
-    RestSvc --> UI : (9) Confirm submission — MSG-RES-03
+    RestSvc --> UI : (9) Confirm submission
     deactivate RestSvc
     UI --> Partner : Show confirmation
 end
@@ -945,20 +954,20 @@ RestSvc -> RestDB : (10) Load restaurant by id
 RestDB --> RestSvc : Restaurant or not found
 
 alt Restaurant not found
-    RestSvc --> UI : (17) Return not found — MSG-REST-01
+    RestSvc --> UI : (17) Return not found
     deactivate RestSvc
     UI --> Partner : Show error
 else Restaurant exists
     RestSvc -> RestSvc : (12) Admin OR ownerId = session.user.id?
     alt Access denied
-        RestSvc --> UI : (16) Return access denied — MSG-RES-02
+        RestSvc --> UI : (16) Return access denied
         deactivate RestSvc
         UI --> Partner : Show error
     else Authorised
         RestSvc -> RestDB : (13) Apply and save profile updates
         RestDB --> RestSvc : Updated restaurant
         RestSvc -> ACLSvc : (14) Synchronise updated profile with ordering system
-        RestSvc --> UI : (15) Return updated profile — MSG-RES-04
+        RestSvc --> UI : (15) Return updated profile
         deactivate RestSvc
         UI --> Partner : Show updated profile
     end
@@ -977,7 +986,7 @@ activate RestSvc
 RestSvc -> RestDB : (22) Update restaurant approval status
 RestDB --> RestSvc : Updated restaurant
 RestSvc -> ACLSvc : (23) Synchronise approval change with ordering system
-RestSvc --> AdminUI : (24) Return approval decision — MSG-RES-05
+RestSvc --> AdminUI : (24) Return approval decision
 deactivate RestSvc
 AdminUI --> Admin : Show decision result
 
@@ -1020,7 +1029,7 @@ activate MenuSvc
 MenuSvc -> MenuSvc : (5) Verify session and authorized role
 
 alt Input fails validation
-    MenuSvc --> UI : (17) Return validation error — MSG-MENU-01 or MSG-MENU-06
+    MenuSvc --> UI : (17) Return validation error
     deactivate MenuSvc
     UI --> Partner : Show validation error
 else Input valid
@@ -1028,12 +1037,12 @@ else Input valid
     MenuDB --> MenuSvc : Owner restaurant id
 
     alt Caller does not own the restaurant
-        MenuSvc --> UI : (16) Return access denied — MSG-MENU-05
+        MenuSvc --> UI : (16) Return access denied
         deactivate MenuSvc
         UI --> Partner : Show access denied
     else Caller is admin or owns the restaurant
         alt Resource not found (update/delete)
-            MenuSvc --> UI : (15) Return not found — MSG-MENU-04 or MSG-MENU-07
+            MenuSvc --> UI : (15) Return not found
             deactivate MenuSvc
             UI --> Partner : Show not found
         else Resource exists or create operation
@@ -1089,7 +1098,7 @@ AvailSvc -> CatalogDB : (5) Load target resource by id
 CatalogDB --> AvailSvc : Resource or not found
 
 alt Resource not found
-    AvailSvc --> UI : (19) Return not found — MSG-MENU-04 or MSG-REST-01
+    AvailSvc --> UI : (19) Return not found
     deactivate AvailSvc
     UI --> Partner : Show not found
 else Resource exists
@@ -1097,26 +1106,26 @@ else Resource exists
     CatalogDB --> AvailSvc : Ownership result
 
     alt Ownership check fails
-        AvailSvc --> UI : (18) Return access denied — MSG-RES-02 or MSG-MENU-05
+        AvailSvc --> UI : (18) Return access denied
         deactivate AvailSvc
         UI --> Partner : Show access denied
     else Ownership OK
         alt Target is a menu item
             alt Item status is unavailable
-                AvailSvc --> UI : (14) Return conflict — MSG-AVAIL-01
+                AvailSvc --> UI : (14) Return publish conflict
                 deactivate AvailSvc
                 UI --> Partner : Show conflict (must use UC-12 to re-publish)
             else Item is available or out_of_stock
                 AvailSvc -> CatalogDB : (11) Toggle item availability (available ↔ out_of_stock)
                 AvailSvc -> ACLSvc : (12) Save new availability and propagate change
-                AvailSvc --> UI : (13) Confirm toggle — MSG-AVAIL-03
+                AvailSvc --> UI : (13) Confirm availability toggled
                 deactivate AvailSvc
                 UI --> Partner : Show updated item availability
             end
         else Target is the restaurant
             AvailSvc -> CatalogDB : (15) Update restaurant open/closed status
             AvailSvc -> ACLSvc : (16) Propagate availability change to customer surfaces
-            AvailSvc --> UI : (17) Confirm status change — MSG-AVAIL-02
+            AvailSvc --> UI : (17) Confirm status changed
             deactivate AvailSvc
             UI --> Partner : Show updated restaurant status
         end
@@ -1165,31 +1174,31 @@ LifecycleSvc -> OrderDB : (6) Load order by id
 OrderDB --> LifecycleSvc : Order or not found
 
 alt Order not found
-    LifecycleSvc --> UI : (28) Return not found — MSG-HIST-01
+    LifecycleSvc --> UI : (28) Return order not found
     deactivate LifecycleSvc
     UI --> Partner : Show not found
 else Order found
     LifecycleSvc -> LifecycleSvc : (8) Validate that the requested status transition is permitted
 
     alt Transition not permitted or role not allowed
-        LifecycleSvc --> UI : (27) Return role or state error — MSG-LCYC-02 or MSG-LCYC-01
+        LifecycleSvc --> UI : (27) Return role or state error
         deactivate LifecycleSvc
         UI --> Partner : Show error
     else Transition permitted
         LifecycleSvc -> LifecycleSvc : (10) Verify restaurant ownership of the order
 
         alt Ownership check fails
-            LifecycleSvc --> UI : (26) Return access denied — MSG-LCYC-03
+            LifecycleSvc --> UI : (26) Return access denied
             deactivate LifecycleSvc
             UI --> Partner : Show access denied
         else Ownership OK
             alt Action is Accept AND order has unpaid VNPay payment
-                LifecycleSvc --> UI : (15) Return state error — MSG-LCYC-04
+                LifecycleSvc --> UI : (15) Return unpaid order error
                 deactivate LifecycleSvc
                 UI --> Partner : Show state error
             else
                 alt requireNote=true AND reason is blank
-                    LifecycleSvc --> UI : (17) Return validation error — MSG-LCYC-05
+                    LifecycleSvc --> UI : (17) Return missing reason error
                     deactivate LifecycleSvc
                     UI --> Partner : Show validation error
                 else
@@ -1200,7 +1209,7 @@ else Order found
                     opt Cancellation of a VNPay-paid order
                         LifecycleSvc -> PaySvc : (24) Initiate payment refund pipeline
                     end
-                    LifecycleSvc --> UI : (25) Return updated order — MSG-LCYC-07 or MSG-LCYC-08
+                    LifecycleSvc --> UI : (25) Return updated order
                     deactivate LifecycleSvc
                     UI --> Partner : Show updated order
                 end
@@ -1250,14 +1259,14 @@ LifecycleSvc -> OrderDB : (5) Load order and verify restaurant ownership
 OrderDB --> LifecycleSvc : Order and ownership result
 
 alt Ownership fails or status is not confirmed
-    LifecycleSvc --> UI : (21) Return role or state error — MSG-LCYC-02 or MSG-LCYC-01
+    LifecycleSvc --> UI : (21) Return role or state error
     deactivate LifecycleSvc
     UI --> Partner : Show error
 else Ownership OK and status = confirmed
     LifecycleSvc -> OrderDB : (7) Advance order to Preparing and append status change to audit log
     OrderDB --> LifecycleSvc : Updated order
     LifecycleSvc -> NotifSvc : (8) Notify downstream services of status change
-    LifecycleSvc --> UI : (9) Confirm order is now Preparing — MSG-LCYC-09
+    LifecycleSvc --> UI : (9) Confirm order is now Preparing
     deactivate LifecycleSvc
     UI --> Partner : Show Preparing status
 end
@@ -1273,7 +1282,7 @@ LifecycleSvc -> OrderDB : (12) Re-verify ownership and order is still Preparing
 OrderDB --> LifecycleSvc : Order and ownership result
 
 alt Pre-conditions not met
-    LifecycleSvc --> UI : (22) Return role or state error — MSG-LCYC-02 or MSG-LCYC-01
+    LifecycleSvc --> UI : (22) Return role or state error
     deactivate LifecycleSvc
     UI --> Partner : Show error
 else Pre-conditions OK
@@ -1290,7 +1299,7 @@ else Pre-conditions OK
 note right : Dispatch notification may be delayed
     end
 
-    LifecycleSvc --> UI : (20) Confirm order is Ready for Pickup — MSG-LCYC-10
+    LifecycleSvc --> UI : (20) Confirm order is Ready for Pickup
     deactivate LifecycleSvc
     UI --> Partner : Show Ready for Pickup status
 end
@@ -1335,13 +1344,13 @@ activate ShipperSvc
 ShipperSvc -> ShipperSvc : (4) Authenticate session and validate input
 
 alt Input invalid or existing application found
-    ShipperSvc --> UI : (17) Return validation or duplicate error — MSG-SHIP-01 or MSG-SHIP-02
+    ShipperSvc --> UI : (17) Return validation or duplicate error
     deactivate ShipperSvc
     UI --> Applicant : Show error
 else Input valid and no existing application
     ShipperSvc -> ShipperDB : (6) Submit application for admin review
     ShipperDB --> ShipperSvc : Application created
-    ShipperSvc --> UI : (7) Return application receipt — MSG-SHIP-03
+    ShipperSvc --> UI : (7) Return application receipt
     deactivate ShipperSvc
     UI --> Applicant : Show receipt
 end
@@ -1358,13 +1367,13 @@ alt Decision is Approve
     ShipperSvc -> ShipperDB : (12) Activate shipper account (elevate role)
     ShipperDB --> ShipperSvc : Application approved
     ShipperSvc -> NotifSvc : (13) Notify downstream services of shipper activation
-    ShipperSvc --> AdminUI : (14) Return approved status — MSG-SHIP-04
+    ShipperSvc --> AdminUI : (14) Return approved status
     deactivate ShipperSvc
     AdminUI --> Admin : Show approved status
 else Decision is Reject
     ShipperSvc -> ShipperDB : (15) Mark application rejected with reason note
     ShipperDB --> ShipperSvc : Application rejected
-    ShipperSvc --> AdminUI : (16) Return rejected status — MSG-SHIP-05
+    ShipperSvc --> AdminUI : (16) Return rejected status
     deactivate ShipperSvc
     AdminUI --> Admin : Show rejected status
 end
@@ -1407,7 +1416,7 @@ activate ShipperSvc
 ShipperSvc -> ShipperSvc : (4) Verify session and shipper role
 
 alt Role not OK or account not approved
-    ShipperSvc --> UI : (13) Return access denied — MSG-SHIP-04
+    ShipperSvc --> UI : (13) Return access denied
     deactivate ShipperSvc
     UI --> Shipper : Show access denied
 else Role OK and account approved
@@ -1416,14 +1425,14 @@ else Role OK and account approved
         ShipperDB --> ShipperSvc : In-flight delivery result
 
         alt Active delivery exists
-            ShipperSvc --> UI : (8) Return conflict — MSG-SHIP-07
+            ShipperSvc --> UI : (8) Return active delivery conflict
             deactivate ShipperSvc
             UI --> Shipper : Show conflict
         else No active delivery
             ShipperSvc -> ShipperDB : (9) Set availability to Offline
             ShipperDB --> ShipperSvc : Updated
             ShipperSvc -> DispatchSvc : (11) Notify dispatch service of availability change
-            ShipperSvc --> UI : (12) Confirm new availability — MSG-SHIP-06
+            ShipperSvc --> UI : (12) Confirm availability updated
             deactivate ShipperSvc
             UI --> Shipper : Show Offline status
         end
@@ -1431,7 +1440,7 @@ else Role OK and account approved
         ShipperSvc -> ShipperDB : (10) Set availability to Online
         ShipperDB --> ShipperSvc : Updated
         ShipperSvc -> DispatchSvc : (11) Notify dispatch service of availability change
-        ShipperSvc --> UI : (12) Confirm new availability — MSG-SHIP-06
+        ShipperSvc --> UI : (12) Confirm availability updated
         deactivate ShipperSvc
         UI --> Shipper : Show Online status
     end
@@ -1477,21 +1486,21 @@ LifecycleSvc -> OrderDB : (5) Load order by id
 OrderDB --> LifecycleSvc : Order or not found
 
 alt Order not found
-    LifecycleSvc --> UI : (20) Return not found — MSG-HIST-01
+    LifecycleSvc --> UI : (20) Return order not found
     deactivate LifecycleSvc
     UI --> Shipper : Show not found
 else Order found
     LifecycleSvc -> LifecycleSvc : (7) Validate pickup transition is permitted
 
     alt Role not permitted
-        LifecycleSvc --> UI : (19) Return access denied — MSG-LCYC-02
+        LifecycleSvc --> UI : (19) Return role not permitted
         deactivate LifecycleSvc
         UI --> Shipper : Show access denied
     else Role permitted
         LifecycleSvc -> LifecycleSvc : (9) Shipper account is approved and online?
 
         alt Account not approved or offline
-            LifecycleSvc --> UI : (18) Return access denied — MSG-SHIP-04
+            LifecycleSvc --> UI : (18) Return account not approved
             deactivate LifecycleSvc
             UI --> Shipper : Show access denied
         else Account approved and online
@@ -1499,14 +1508,14 @@ else Order found
             OrderDB --> LifecycleSvc : Assignment result
 
             alt Self-assignment failed (concurrent claim)
-                LifecycleSvc --> UI : (17) Return conflict — MSG-DEL-02
+                LifecycleSvc --> UI : (17) Return concurrent claim conflict
                 deactivate LifecycleSvc
                 UI --> Shipper : Show conflict
             else Assignment successful
                 LifecycleSvc -> OrderDB : (13) Append status change to audit log
                 OrderDB --> LifecycleSvc : Log written
                 LifecycleSvc -> NotifSvc : (15) Notify downstream services of pickup assignment
-                LifecycleSvc --> UI : (16) Return updated order — MSG-DEL-01
+                LifecycleSvc --> UI : (16) Return updated order
                 deactivate LifecycleSvc
                 UI --> Shipper : Show updated order
             end
@@ -1554,7 +1563,7 @@ LifecycleSvc -> OrderDB : (5) Load order and verify shipper assignment
 OrderDB --> LifecycleSvc : Order and assignment result
 
 alt Ownership fails or status is not picked_up
-    LifecycleSvc --> UI : (17) Return role or state error — MSG-DEL-03 or MSG-LCYC-01
+    LifecycleSvc --> UI : (17) Return role or state error
     deactivate LifecycleSvc
     UI --> Shipper : Show error
 else Assignment OK and status = picked_up
@@ -1577,14 +1586,14 @@ LifecycleSvc -> OrderDB : (12) Re-verify assignment and order is still Deliverin
 OrderDB --> LifecycleSvc : Order and assignment result
 
 alt Pre-conditions not met
-    LifecycleSvc --> UI : (18) Return role or state error — MSG-DEL-03 or MSG-LCYC-01
+    LifecycleSvc --> UI : (18) Return role or state error
     deactivate LifecycleSvc
     UI --> Shipper : Show error
 else Pre-conditions OK
     LifecycleSvc -> OrderDB : (14) Advance order to Delivered and append status change to audit log
     OrderDB --> LifecycleSvc : Updated order
     LifecycleSvc -> NotifSvc : (15) Notify downstream services of delivery completion
-    LifecycleSvc --> UI : (16) Return updated order — MSG-DEL-04
+    LifecycleSvc --> UI : (16) Return updated order
     deactivate LifecycleSvc
     UI --> Shipper : Show Delivered confirmation
 end
@@ -1628,11 +1637,11 @@ OrderSvc -> OrderDB : (5) Load order and verify customer ownership
 OrderDB --> OrderSvc : Order or not found
 
 alt Order not found or not owned by customer
-    OrderSvc --> UI : (12) Return not found — MSG-HIST-01
+    OrderSvc --> UI : (12) Return order not found
     deactivate OrderSvc
     UI --> Actor : Show error
 else Order found and owned by customer
-    OrderSvc --> UI : (7) Return order details and status timeline — MSG-TRACK-01
+    OrderSvc --> UI : (7) Return order status and timeline
     deactivate OrderSvc
     UI --> Actor : Display current status and timeline
 end
@@ -1695,17 +1704,17 @@ LifecycleSvc -> OrderDB : (5) Load order and verify customer ownership
 OrderDB --> LifecycleSvc : Order or not found
 
 alt Order not found or not owned by customer
-    LifecycleSvc --> UI : (21) Return not found — MSG-HIST-01
+    LifecycleSvc --> UI : (21) Return order not found
     deactivate LifecycleSvc
     UI --> Actor : Show not found
 else Order found
     alt Reason is empty
-        LifecycleSvc --> UI : (20) Return validation error — MSG-CANC-01
+        LifecycleSvc --> UI : (20) Return missing reason error
         deactivate LifecycleSvc
         UI --> Actor : Show validation error
     else Reason provided
         alt Current status not in pending or paid
-            LifecycleSvc --> UI : (19) Return state error — MSG-CANC-02
+            LifecycleSvc --> UI : (19) Return invalid order state
             deactivate LifecycleSvc
             UI --> Actor : Show state error
         else Status is pending or paid
@@ -1713,7 +1722,7 @@ else Order found
             OrderDB --> LifecycleSvc : Cancellation result
 
             alt Optimistic lock failed
-                LifecycleSvc --> UI : (18) Return conflict — MSG-LCYC-06
+                LifecycleSvc --> UI : (18) Return concurrent update conflict
                 deactivate LifecycleSvc
                 UI --> Actor : Show conflict
             else Lock succeeded
@@ -1724,7 +1733,7 @@ else Order found
                     LifecycleSvc -> LifecycleSvc : (15) No refund applicable
                 end
                 LifecycleSvc -> PromoSvc : (16) Roll back any applied promotion reservations
-                LifecycleSvc --> UI : (17) Return updated order — MSG-CANC-03
+                LifecycleSvc --> UI : (17) Return cancellation confirmed
                 deactivate LifecycleSvc
                 UI --> Actor : Show cancellation confirmation
             end
@@ -1771,7 +1780,7 @@ ReviewSvc -> ReviewSvc : (4) Authenticate session
 ReviewSvc -> ReviewSvc : (5) Validate rating and comment content
 
 alt Payload invalid
-    ReviewSvc --> UI : (18) Return validation error — MSG-RATE-01
+    ReviewSvc --> UI : (18) Return invalid review
     deactivate ReviewSvc
     UI --> Actor : Show validation error
 else Payload valid
@@ -1779,12 +1788,12 @@ else Payload valid
     ReviewDB --> ReviewSvc : Order or not found
 
     alt Order not found or not owned
-        ReviewSvc --> UI : (17) Return not found — MSG-HIST-01
+        ReviewSvc --> UI : (17) Return order not found
         deactivate ReviewSvc
         UI --> Actor : Show not found
     else Order found
         alt Order status is not delivered
-            ReviewSvc --> UI : (16) Return state error — MSG-RATE-02
+            ReviewSvc --> UI : (16) Return order not eligible
             deactivate ReviewSvc
             UI --> Actor : Show state error
         else Order is delivered
@@ -1792,14 +1801,14 @@ else Payload valid
             ReviewDB --> ReviewSvc : Existing review or none
 
             alt Review already exists
-                ReviewSvc --> UI : (15) Return conflict — MSG-RATE-03
+                ReviewSvc --> UI : (15) Return review already submitted
                 deactivate ReviewSvc
                 UI --> Actor : Show conflict
             else No existing review
                 ReviewSvc -> ReviewDB : (12) Save and publish review
                 ReviewDB --> ReviewSvc : Review saved
                 ReviewSvc -> RestDB : (13) Update restaurant aggregate rating
-                ReviewSvc --> UI : (14) Return confirmation — MSG-RATE-04
+                ReviewSvc --> UI : (14) Return review confirmed
                 deactivate ReviewSvc
                 UI --> Actor : Show confirmation
             end
@@ -1847,7 +1856,7 @@ PromoSvc -> RestDB : (4) Load restaurant record
 RestDB --> PromoSvc : Restaurant or not found
 
 alt Restaurant not found, not owned, or not approved
-    PromoSvc --> UI : (19) Return access denied — MSG-PROMO-02
+    PromoSvc --> UI : (19) Return access denied
     deactivate PromoSvc
     UI --> Partner : Show access denied
 else Restaurant valid and owned
@@ -1861,7 +1870,7 @@ else Restaurant valid and owned
         PromoSvc -> PromoSvc : (8) Validate payload
 
         alt Payload invalid
-            PromoSvc --> UI : (18) Return validation error — MSG-PROMO-01
+            PromoSvc --> UI : (18) Return validation error
             deactivate PromoSvc
             UI --> Partner : Show validation error
         else Payload valid
@@ -1876,12 +1885,12 @@ else Restaurant valid and owned
                 PromoDB --> PromoSvc : Promotion or not found
 
                 alt Promotion not found or not owned by restaurant
-                    PromoSvc --> UI : (16) Return not found — MSG-PROMO-03
+                    PromoSvc --> UI : (16) Return promotion not found
                     deactivate PromoSvc
                     UI --> Partner : Show not found
                 else Promotion found
                     alt Status transition not permitted
-                        PromoSvc --> UI : (15) Return state error — MSG-PROMO-05
+                        PromoSvc --> UI : (15) Return invalid promotion transition
                         deactivate PromoSvc
                         UI --> Partner : Show state error
                     else Transition permitted
@@ -1945,20 +1954,20 @@ else Write operation
         PromoDB --> PromoSvc : Promotion or not found
 
         alt Promotion not found or does not support coupon codes
-            PromoSvc --> UI : (13) Return not found or state error — MSG-PROMO-03 or MSG-PROMO-05
+            PromoSvc --> UI : (13) Return not found or invalid state
             deactivate PromoSvc
             UI --> Admin : Show error
         else Promotion supports coupons
             PromoSvc -> PromoSvc : (9) Validate coupon batch payload
 
             alt Payload invalid
-                PromoSvc --> UI : (12) Return validation error — MSG-PROMO-01
+                PromoSvc --> UI : (12) Return validation error
                 deactivate PromoSvc
                 UI --> Admin : Show validation error
             else Payload valid
                 PromoSvc -> PromoDB : (10) Issue and save provided coupon codes
                 PromoDB --> PromoSvc : Issued codes
-                PromoSvc --> UI : (11) Return issued codes — MSG-PROMO-10
+                PromoSvc --> UI : (11) Return issued codes
                 deactivate PromoSvc
                 UI --> Admin : Show issued codes
             end
@@ -1967,7 +1976,7 @@ else Write operation
         PromoSvc -> PromoSvc : (14) Validate payload
 
         alt Payload invalid
-            PromoSvc --> UI : (21) Return validation error — MSG-PROMO-01
+            PromoSvc --> UI : (21) Return validation error
             deactivate PromoSvc
             UI --> Admin : Show validation error
         else Payload valid
@@ -1975,12 +1984,12 @@ else Write operation
             PromoDB --> PromoSvc : Promotion or not found
 
             alt Promotion not found
-                PromoSvc --> UI : (20) Return not found — MSG-PROMO-03
+                PromoSvc --> UI : (20) Return promotion not found
                 deactivate PromoSvc
                 UI --> Admin : Show not found
             else Promotion found or create
                 alt Status transition not permitted
-                    PromoSvc --> UI : (19) Return state error — MSG-PROMO-05
+                    PromoSvc --> UI : (19) Return invalid promotion transition
                     deactivate PromoSvc
                     UI --> Admin : Show state error
                 else Transition permitted
@@ -2041,7 +2050,7 @@ else Completed transaction found
         deactivate PaySvc
     else amount > 0
         alt Status already refund_pending or refunded
-            PaySvc -> PaySvc : (8) Log duplicate event and exit — MSG-REFUND-02
+            PaySvc -> PaySvc : (8) Log duplicate event and exit
             deactivate PaySvc
         else Status is completed
             PaySvc -> PayDB : (9) Mark transaction as refund in progress
@@ -2051,7 +2060,7 @@ else Completed transaction found
                 PaySvc -> PaySvc : (16) Concurrent handler is processing refund — exit
                 deactivate PaySvc
             else Lock won
-                PaySvc -> NotifSvc : (11) Notify customer that refund has been initiated — MSG-REFUND-01
+                PaySvc -> NotifSvc : (11) Notify customer refund initiated
                 PaySvc -> Gateway : (12) Submit refund request to payment gateway
                 Gateway --> PaySvc : Gateway response
 
@@ -2060,7 +2069,7 @@ else Completed transaction found
                     PayDB --> PaySvc : Updated
                     deactivate PaySvc
                 else Gateway failure
-                    PaySvc -> PayDB : (15) Record refund attempt failure; schedule retry — MSG-REFUND-04
+                    PaySvc -> PayDB : (15) Record refund failure and schedule retry
                     PayDB --> PaySvc : Updated
                     deactivate PaySvc
                 end
@@ -2126,7 +2135,7 @@ note right : in-app is always persisted
         end
     end
 
-    NotifSvc -> NotifDB : (12) Persist notification record per channel (deduplicated)
+    NotifSvc -> NotifDB : (12) Persist notification record per channel
     NotifDB --> NotifSvc : Records saved
     NotifSvc -> Dispatcher : (13) Dispatch notification to enabled channels concurrently
     activate Dispatcher
@@ -2154,6 +2163,649 @@ NotifDB --> NotifSvc : Updated
 NotifSvc --> UI : Return updated state
 deactivate NotifSvc
 UI --> User : Show updated inbox / preferences
+
+@enduml
+```
+
+---
+
+## SD-27: UC-27 — Approve or Reject Restaurant Applications
+
+```plantuml
+@startuml SD-27_ApproveRejectRestaurantApplications
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 120
+skinparam sequenceArrowThickness 1.5
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+title SD-27: UC-27 — Approve or Reject Restaurant Applications
+
+actor "Administrator" as Admin
+boundary "Restaurant Approval Queue" as UI
+control "Restaurant Service" as RestSvc
+database "Restaurant Store" as RestDB
+control "Ordering ACL Service" as ACLSvc
+
+autonumber stop
+
+== Review Approval Queue ==
+
+Admin -> UI : (1) Open Restaurant Approval Queue
+Admin -> UI : (2) Filter applications (pending / recently approved / recently revoked)
+Admin -> UI : (3) Select a restaurant and review submitted profile and documents
+Admin -> UI : (4) Choose Approve or Unapprove
+
+== Process Decision ==
+
+UI -> RestSvc : Submit approval decision
+activate RestSvc
+
+RestSvc -> RestSvc : (5) Verify administrator session
+RestSvc -> RestDB : (6) Load the target restaurant
+RestDB --> RestSvc : Restaurant or not found
+
+alt Restaurant not found
+    RestSvc --> UI : (14) Return restaurant not found
+    deactivate RestSvc
+    UI --> Admin : Show not found
+else Restaurant exists
+    alt Decision already matches current approval state
+        RestSvc --> UI : (13) Return no change
+        deactivate RestSvc
+        UI --> Admin : Show no-change
+    else Decision differs from current state
+        RestSvc -> RestDB : (9) Apply approval decision atomically
+        RestDB --> RestSvc : Updated restaurant
+        RestSvc -> ACLSvc : (10) Synchronise approval change with downstream services
+        RestSvc -> RestDB : (11) Record admin actor and decision timestamp
+        RestSvc --> UI : (12) Return updated restaurant
+        deactivate RestSvc
+        UI --> Admin : Show approval decision result
+    end
+end
+
+@enduml
+```
+
+---
+
+## SD-28: UC-28 — Approve or Reject Shipper Applications
+
+```plantuml
+@startuml SD-28_ApproveRejectShipperApplications
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 120
+skinparam sequenceArrowThickness 1.5
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+title SD-28: UC-28 — Approve or Reject Shipper Applications
+
+actor "Administrator" as Admin
+boundary "Shipper Approval Queue" as UI
+control "Shipper Service" as ShipperSvc
+database "Shipper Store" as ShipperDB
+control "Notification Service" as NotifSvc
+
+autonumber stop
+
+== Review Approval Queue ==
+
+Admin -> UI : (1) Open Shipper Approval Queue
+Admin -> UI : (2) Filter applications (pending / approved / rejected)
+Admin -> UI : (3) Select an application and review applicant identity, vehicle and licence documents
+Admin -> UI : (4) Choose Approve or Reject (Reject requires a reason note)
+
+== Process Decision ==
+
+UI -> ShipperSvc : Submit decision
+activate ShipperSvc
+
+ShipperSvc -> ShipperSvc : (5) Verify administrator session
+ShipperSvc -> ShipperDB : (6) Load the target shipper application
+ShipperDB --> ShipperSvc : Application or not found
+
+alt Application not found
+    ShipperSvc --> UI : (20) Return application not found
+    deactivate ShipperSvc
+    UI --> Admin : Show not found
+else Application found
+    alt Application not in pending state
+        ShipperSvc --> UI : (19) Return invalid application state
+        deactivate ShipperSvc
+        UI --> Admin : Show state error
+    else Application is pending
+        alt Decision is Reject AND reason note is missing
+            ShipperSvc --> UI : (10) Return missing reason error
+            deactivate ShipperSvc
+            UI --> Admin : Show validation error
+        else
+            ShipperSvc -> ShipperDB : (11) Apply decision atomically
+            ShipperDB --> ShipperSvc : Decision applied
+            alt Decision is Approve
+                ShipperSvc -> ShipperDB : (13) Elevate applicant account role to shipper
+                ShipperSvc -> NotifSvc : (14) Notify downstream services of shipper activation
+                ShipperSvc -> ShipperDB : (18) Record admin actor and decision timestamp
+                ShipperSvc --> UI : (15) Return approved status
+                deactivate ShipperSvc
+                UI --> Admin : Show approved status
+            else Decision is Reject
+                ShipperSvc -> ShipperDB : (16) Persist rejection reason on the application row
+                ShipperSvc -> ShipperDB : (18) Record admin actor and decision timestamp
+                ShipperSvc --> UI : (17) Return rejected status
+                deactivate ShipperSvc
+                UI --> Admin : Show rejected status
+            end
+        end
+    end
+end
+
+@enduml
+```
+
+---
+
+## SD-29: UC-29 — Suspend or Reactivate Partner Accounts
+
+```plantuml
+@startuml SD-29_SuspendReactivatePartnerAccounts
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 120
+skinparam sequenceArrowThickness 1.5
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+title SD-29: UC-29 — Suspend or Reactivate Partner Accounts
+
+actor "Administrator" as Admin
+boundary "User Account Screen" as UI
+control "Account Service" as AccountSvc
+database "User Store" as UserDB
+control "Notification Service" as NotifSvc
+
+autonumber stop
+
+== Suspend or Reactivate ==
+
+Admin -> UI : (1) Open the target user account
+Admin -> UI : (2) Choose Suspend or Reactivate
+Admin -> UI : (3) Provide reason note
+UI -> AccountSvc : (4) Submit decision
+activate AccountSvc
+
+AccountSvc -> AccountSvc : (5) Verify administrator session
+AccountSvc -> UserDB : (6) Load the target user account
+UserDB --> AccountSvc : User or not found
+
+alt User not found
+    AccountSvc --> UI : (23) Return account not found
+    deactivate AccountSvc
+    UI --> Admin : Show not found
+else User found
+    alt Decision is Suspend
+        alt Reason note invalid or expiry in the past
+            AccountSvc --> UI : (16) Return invalid suspension data
+            deactivate AccountSvc
+            UI --> Admin : Show validation error
+        else Payload valid
+            alt Target is the last active administrator
+                AccountSvc --> UI : (15) Return last-admin safeguard error
+                deactivate AccountSvc
+                UI --> Admin : Show safeguard error
+            else Not the last administrator
+                AccountSvc -> UserDB : (11) Apply suspension and persist reason and optional expiry
+                UserDB --> AccountSvc : Suspended
+                AccountSvc -> AccountSvc : (12) Invalidate all active sessions for the target user
+                AccountSvc -> NotifSvc : (13) Notify target user of suspension
+                AccountSvc -> UserDB : (22) Record admin actor and decision timestamp
+                AccountSvc --> UI : (14) Return account suspended
+                deactivate AccountSvc
+                UI --> Admin : Show suspension confirmed
+            end
+        end
+    else Decision is Reactivate
+        alt Account currently suspended
+            AccountSvc -> UserDB : (18) Clear suspension fields
+            UserDB --> AccountSvc : Reactivated
+            AccountSvc -> NotifSvc : (19) Notify target user of reactivation
+            AccountSvc -> UserDB : (22) Record admin actor and decision timestamp
+            AccountSvc --> UI : (20) Return account reactivated
+            deactivate AccountSvc
+            UI --> Admin : Show reactivation confirmed
+        else Account already active
+            AccountSvc --> UI : (21) Return no change
+            deactivate AccountSvc
+            UI --> Admin : Show no-change
+        end
+    end
+end
+
+@enduml
+```
+
+---
+
+## SD-30: UC-30 — Monitor Orders and Platform Health
+
+```plantuml
+@startuml SD-30_MonitorOrdersPlatformHealth
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 120
+skinparam sequenceArrowThickness 1.5
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+title SD-30: UC-30 — Monitor Orders and Platform Health
+
+actor "Administrator" as Admin
+boundary "Order Operations Console" as UI
+control "Admin Order Service" as AdminOrderSvc
+database "Order Store" as OrderDB
+
+autonumber stop
+
+== Browse All Orders ==
+
+Admin -> UI : (1) Open Order Operations console
+Admin -> UI : (2) Apply filters and sort (status, restaurant, customer, shipper, payment method, date range, total range)
+UI -> AdminOrderSvc : (3) Submit query
+activate AdminOrderSvc
+
+AdminOrderSvc -> AdminOrderSvc : (4) Verify administrator session
+
+alt Filter values invalid
+    AdminOrderSvc --> UI : (13) Return invalid filter parameters
+    deactivate AdminOrderSvc
+    UI --> Admin : Show validation error
+else Filters valid
+    AdminOrderSvc -> OrderDB : (6) Retrieve matching orders (no ownership filter)
+    OrderDB --> AdminOrderSvc : Paginated results
+    AdminOrderSvc --> UI : (7) Return paginated order list
+    deactivate AdminOrderSvc
+    UI --> Admin : Display order list
+end
+
+== Drill Into Order Detail ==
+
+Admin -> UI : (8) Select an order to drill into
+UI -> AdminOrderSvc : Load order detail
+activate AdminOrderSvc
+
+AdminOrderSvc -> AdminOrderSvc : Verify administrator session
+AdminOrderSvc -> OrderDB : (9) Load full order detail with lifecycle history, payment ledger and assigned actors
+OrderDB --> AdminOrderSvc : Order or not found
+
+alt Order not found
+    AdminOrderSvc --> UI : (12) Return order not found
+    deactivate AdminOrderSvc
+    UI --> Admin : Show not found
+else Order found
+    AdminOrderSvc --> UI : (11) Return full order detail
+    deactivate AdminOrderSvc
+    UI --> Admin : Display full order detail
+end
+
+@enduml
+```
+
+---
+
+## SD-31: UC-31 — Search and Manage User Accounts
+
+```plantuml
+@startuml SD-31_SearchManageUserAccounts
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 120
+skinparam sequenceArrowThickness 1.5
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+title SD-31: UC-31 — Search and Manage User Accounts
+
+actor "Administrator" as Admin
+boundary "User Accounts Console" as UI
+control "Admin User Service" as AdminUserSvc
+database "User Store" as UserDB
+
+autonumber stop
+
+== Search Accounts ==
+
+Admin -> UI : (1) Open User Accounts console
+Admin -> UI : (2) Apply filters (role, status, registered date range, free-text)
+UI -> AdminUserSvc : (3) Submit query
+activate AdminUserSvc
+
+AdminUserSvc -> AdminUserSvc : (4) Verify administrator session
+
+alt Filter values invalid
+    AdminUserSvc --> UI : (8) Return invalid filter parameters
+    deactivate AdminUserSvc
+    UI --> Admin : Show validation error
+else Filters valid
+    AdminUserSvc -> UserDB : (6) Retrieve matching users
+    UserDB --> AdminUserSvc : Paginated results
+    AdminUserSvc --> UI : (7) Return paginated user list
+    deactivate AdminUserSvc
+    UI --> Admin : Display user list
+end
+
+== View Profile & Act ==
+
+Admin -> UI : (9) Open a user account
+UI -> AdminUserSvc : Load user profile
+activate AdminUserSvc
+
+AdminUserSvc -> UserDB : (10) Check user exists
+UserDB --> AdminUserSvc : User or not found
+
+alt User not found
+    AdminUserSvc --> UI : (13) Return user not found
+    deactivate AdminUserSvc
+    UI --> Admin : Show not found
+else User found
+    AdminUserSvc -> UserDB : (11) Resolve owned restaurants, shipper application, recent orders and active suspension
+    UserDB --> AdminUserSvc : Enriched profile
+    AdminUserSvc --> UI : (12) Return user profile
+    deactivate AdminUserSvc
+    UI --> Admin : Display profile
+end
+
+Admin -> UI : (14) Choose an action (edit profile / suspend / reactivate / change role)
+
+alt Action is profile edit
+    UI -> AdminUserSvc : (15) Submit profile update payload
+    activate AdminUserSvc
+    AdminUserSvc -> AdminUserSvc : (16) Validate payload
+    alt Payload invalid
+        AdminUserSvc --> UI : (19) Return validation error
+        deactivate AdminUserSvc
+        UI --> Admin : Show validation error
+    else Valid
+        AdminUserSvc -> UserDB : (17) Apply and save profile updates
+        UserDB --> AdminUserSvc : Updated user
+        AdminUserSvc --> UI : (18) Return updated user
+        deactivate AdminUserSvc
+        UI --> Admin : Show updated profile
+    end
+else Action is suspend / reactivate / change role
+    UI --> Admin : (20) Delegate to UC-29 (suspend / reactivate) or UC-35 (change role)
+end
+
+@enduml
+```
+
+---
+
+## SD-32: UC-32 — Administrative Order Cancellation & Refund
+
+```plantuml
+@startuml SD-32_AdminCancelRefund
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 120
+skinparam sequenceArrowThickness 1.5
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+title SD-32: UC-32 — Administrative Order Cancellation & Refund
+
+actor "Administrator" as Admin
+boundary "Order Operations Console" as UI
+control "Order Lifecycle Service" as LifecycleSvc
+database "Order Store" as OrderDB
+control "Notification Service" as NotifSvc
+control "Payment Service" as PaySvc
+
+autonumber stop
+
+== Admin Cancel or Refund ==
+
+Admin -> UI : (1) Drill into a target order from UC-30
+Admin -> UI : (2) Choose Cancel (pending / paid / confirmed) or Refund (delivered)
+Admin -> UI : (3) Provide reason note
+UI -> LifecycleSvc : (4) Submit decision
+activate LifecycleSvc
+
+LifecycleSvc -> LifecycleSvc : (5) Verify administrator session
+LifecycleSvc -> OrderDB : (6) Load the target order
+OrderDB --> LifecycleSvc : Order or not found
+
+alt Order not found
+    LifecycleSvc --> UI : (19) Return order not found
+    deactivate LifecycleSvc
+    UI --> Admin : Show not found
+else Order found
+    LifecycleSvc -> LifecycleSvc : (8) Validate that the requested status transition is permitted for role admin in the current state
+
+    alt Transition not permitted
+        LifecycleSvc --> UI : (18) Return state or role error
+        deactivate LifecycleSvc
+        UI --> Admin : Show error
+    else Transition permitted
+        alt Reason note is empty
+            LifecycleSvc --> UI : (17) Return missing reason error
+            deactivate LifecycleSvc
+            UI --> Admin : Show validation error
+        else Reason provided
+            LifecycleSvc -> OrderDB : (11) Apply status transition
+            LifecycleSvc -> OrderDB : (12) Append admin decision to order audit log
+            OrderDB --> LifecycleSvc : Updated order
+            LifecycleSvc -> NotifSvc : (13) Notify downstream services of status change
+            opt VNPay-paid cancellation
+                LifecycleSvc -> PaySvc : (15) Initiate payment refund pipeline (UC-25)
+            end
+            LifecycleSvc --> UI : (16) Return updated order
+            deactivate LifecycleSvc
+            UI --> Admin : Show updated order
+        end
+    end
+end
+
+@enduml
+```
+
+---
+
+## SD-33: UC-33 — View and Export Operational Reports
+
+```plantuml
+@startuml SD-33_ViewExportOperationalReports
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 120
+skinparam sequenceArrowThickness 1.5
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+title SD-33: UC-33 — View and Export Operational Reports
+
+actor "Administrator" as Admin
+boundary "Reports Console" as UI
+control "Report Service" as ReportSvc
+database "Operations Store" as OpsDB
+
+autonumber stop
+
+== Generate or Export Report ==
+
+Admin -> UI : (1) Open Reports console
+Admin -> UI : (2) Choose report type and date range (orders / financial / users / promotions)
+Admin -> UI : (3) Apply optional filters (restaurant, payment method, promotion scope)
+Admin -> UI : (4) Choose View or Export (format = csv / xlsx for Export)
+UI -> ReportSvc : Submit report request
+activate ReportSvc
+
+ReportSvc -> ReportSvc : (5) Verify administrator session
+
+alt Report type unsupported
+    ReportSvc --> UI : (15) Return unsupported report type
+    deactivate ReportSvc
+    UI --> Admin : Show error
+else Report type valid
+    alt Parameters invalid or date range out of bounds
+        ReportSvc --> UI : (13) Return invalid parameters
+        deactivate ReportSvc
+        UI --> Admin : Show validation error
+    else Parameters valid
+        ReportSvc -> OpsDB : (8) Compute report payload (time series + summary KPIs)
+        OpsDB --> ReportSvc : Report data
+        alt Action is Export
+            ReportSvc -> ReportSvc : (10) Generate file in requested format (csv / xlsx)
+            ReportSvc --> UI : (11) Return exported file
+            deactivate ReportSvc
+            UI --> Admin : Prompt file download
+        else Action is View
+            ReportSvc --> UI : (12) Return report data
+            deactivate ReportSvc
+            UI --> Admin : Render report on screen
+        end
+    end
+end
+
+@enduml
+```
+
+---
+
+## SD-34: UC-34 — View Dashboard & Platform Overview
+
+```plantuml
+@startuml SD-34_ViewDashboardPlatformOverview
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 120
+skinparam sequenceArrowThickness 1.5
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+title SD-34: UC-34 — View Dashboard & Platform Overview
+
+actor "Administrator" as Admin
+boundary "Admin Dashboard" as UI
+control "Dashboard Service" as DashboardSvc
+database "Operations Store" as OpsDB
+
+autonumber stop
+
+== Load Dashboard ==
+
+Admin -> UI : (1) Open Admin Dashboard
+UI -> DashboardSvc : Request dashboard snapshot
+activate DashboardSvc
+
+DashboardSvc -> DashboardSvc : (2) Verify administrator session
+DashboardSvc -> OpsDB : (3) Compute today's KPIs (orders by status, GMV, commission, new registrations, pending approvals, active shippers, in-flight orders)
+OpsDB --> DashboardSvc : KPI data
+DashboardSvc -> OpsDB : (4) Resolve recent activity stream (last orders, last restaurants, last shipper applications)
+OpsDB --> DashboardSvc : Activity data
+DashboardSvc --> UI : (5) Return dashboard snapshot
+deactivate DashboardSvc
+UI --> Admin : Render dashboard
+
+== Navigate to Detail ==
+
+Admin -> UI : (6) Drill into a tile (orders, users, approval queues, reports)
+UI --> Admin : (7) Route to corresponding UC (UC-30, UC-27, UC-28, UC-31 or UC-33)
+
+@enduml
+```
+
+---
+
+## SD-35: UC-35 — Manage Admin Roles & Permissions
+
+```plantuml
+@startuml SD-35_ManageAdminRolesPermissions
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 120
+skinparam sequenceArrowThickness 1.5
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+title SD-35: UC-35 — Manage Admin Roles & Permissions
+
+actor "Administrator" as Admin
+boundary "Role Management Screen" as UI
+control "Admin User Service" as AdminUserSvc
+database "User Store" as UserDB
+control "Notification Service" as NotifSvc
+
+autonumber stop
+
+== Assign or Change Role ==
+
+Admin -> UI : (1) Open target user account (UC-31)
+Admin -> UI : (2) Choose Change Role and select target role(s)
+Admin -> UI : (3) Provide reason note
+UI -> AdminUserSvc : (4) Submit decision
+activate AdminUserSvc
+
+AdminUserSvc -> AdminUserSvc : (5) Verify administrator session
+AdminUserSvc -> UserDB : (6) Load the target user
+UserDB --> AdminUserSvc : User or not found
+
+alt User not found
+    AdminUserSvc --> UI : (20) Return user not found
+    deactivate AdminUserSvc
+    UI --> Admin : Show not found
+else User found but suspended
+    AdminUserSvc --> UI : (21) Return suspended account error
+    deactivate AdminUserSvc
+    UI --> Admin : Show state error (must reactivate first)
+else User found and active
+    alt Target role payload invalid
+        AdminUserSvc --> UI : (18) Return invalid role payload
+        deactivate AdminUserSvc
+        UI --> Admin : Show validation error
+    else Payload valid
+        alt Reason note is empty
+            AdminUserSvc --> UI : (17) Return missing reason error
+            deactivate AdminUserSvc
+            UI --> Admin : Show validation error
+        else Reason provided
+            alt Decision removes the last active admin
+                AdminUserSvc --> UI : (16) Return last-admin safeguard error
+                deactivate AdminUserSvc
+                UI --> Admin : Show safeguard error
+            else Safeguard passes
+                AdminUserSvc -> UserDB : (11) Apply primary role and operational role set
+                UserDB --> AdminUserSvc : Updated user
+                AdminUserSvc -> AdminUserSvc : (12) Refresh active sessions of the target user
+                AdminUserSvc -> NotifSvc : (13) Notify downstream services of role change
+                AdminUserSvc -> UserDB : (14) Record admin actor, previous and new role sets, reason and decision timestamp
+                AdminUserSvc --> UI : (15) Return updated user
+                deactivate AdminUserSvc
+                UI --> Admin : Show role updated
+            end
+        end
+    end
+end
 
 @enduml
 ```
