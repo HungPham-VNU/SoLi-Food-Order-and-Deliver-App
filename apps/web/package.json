@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
+    "test": "echo \"No tests configured for web\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
