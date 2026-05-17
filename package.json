@@ -8,7 +8,8 @@
     "dev:mobile": "pnpm --filter mobile dev",
     "dev:web": "pnpm --filter web dev",
     "build:web": "pnpm --filter web build",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "test": "turbo run test"
   },
   "devDependencies": {
     "prettier": "^3.8.1",

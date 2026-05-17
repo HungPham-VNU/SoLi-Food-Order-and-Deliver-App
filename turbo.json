@@ -1,15 +1,23 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["NODE_ENV", "DATABASE_URL", "REDIS_URL"],
   "tasks": {
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
     "build": {
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", ".expo/**", "web-build/**"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["transit"]
     },
     "lint": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["transit"]
+    },
+    "typecheck": {
+      "dependsOn": ["transit"],
+      "outputs": ["node_modules/.cache/tsbuildinfo.json"]
     },
     "dev": {
       "cache": false,
