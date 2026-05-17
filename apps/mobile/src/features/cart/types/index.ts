@@ -20,7 +20,7 @@ export interface OrderSummary {
   estimatedMinutes?: number;
 }
 
-export interface CheckoutSummary extends OrderSummary {}
+export type CheckoutSummary = OrderSummary;
 
 export interface CartScreenProps {
   onBack?: () => void;

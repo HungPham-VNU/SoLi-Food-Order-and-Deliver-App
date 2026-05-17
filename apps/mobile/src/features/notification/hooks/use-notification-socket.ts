@@ -13,7 +13,8 @@ const getWsUrl = (baseUrl: string) => {
       url.pathname = url.pathname.slice(4);
     }
     return url.toString().replace(/\/$/, '');
-  } catch (e) {
+  } catch (err) {
+    console.error('[NotifSocket] Error occurred while parsing WS URL:', err);
     return baseUrl.replace('/api', '');
   }
 };
@@ -23,7 +24,8 @@ const WS_URL = getWsUrl(BASE_URL);
 export function useNotificationSocket() {
   const socketRef = useRef<Socket | null>(null);
   const { data: session } = useSession();
-  const { addNotification, markReadInStore, markAllReadInStore } = useNotificationStore();
+  const { addNotification, markReadInStore, markAllReadInStore } =
+    useNotificationStore();
 
   useEffect(() => {
     // We don't have a direct token in better-auth-expo, it uses cookies.
@@ -32,17 +34,17 @@ export function useNotificationSocket() {
     // We need to get the "token" which is likely the session ID or similar.
     // Looking at api-client.ts, it uses authClient.getCookie().
     // If the backend is configured to accept the cookie in handshake, we're good.
-    // But the guide explicitly says auth: { token }. 
+    // But the guide explicitly says auth: { token }.
     // Let's assume the session object or a cookie value can be used as the token.
-    
+
     if (!session?.session) return;
 
     // Connect to the /notifications namespace
     const socket = io(`${WS_URL}/notifications`, {
-      // For now, let's pass a dummy token if we don't have the exact one, 
+      // For now, let's pass a dummy token if we don't have the exact one,
       // but in a real scenario we'd extract the session token.
       // Better Auth session token is what the backend expects.
-      auth: { token: session.session.id }, 
+      auth: { token: session.session.id },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
@@ -53,13 +55,16 @@ export function useNotificationSocket() {
       console.log('[NotifSocket] Connected');
     });
 
-    socket.on('connection:established', (data: { userId: string; room: string }) => {
-      console.log('[NotifSocket] Authenticated as', data.userId);
-    });
+    socket.on(
+      'connection:established',
+      (data: { userId: string; room: string }) => {
+        console.log('[NotifSocket] Authenticated as', data.userId);
+      },
+    );
 
     socket.on('notification.created', (payload: NotificationPayload) => {
       addNotification(payload);
-      
+
       // Show in-app banner
       Toast.show({
         type: 'success',
@@ -68,17 +73,22 @@ export function useNotificationSocket() {
         onPress: () => {
           // Handle tap logic later
           Toast.hide();
-        }
+        },
       });
     });
 
-    socket.on('notification.read', (data: { id: string; readAt: string } | { all: true; readAt: string }) => {
-      if ('all' in data) {
-        markAllReadInStore();
-      } else {
-        markReadInStore(data.id);
-      }
-    });
+    socket.on(
+      'notification.read',
+      (
+        data: { id: string; readAt: string } | { all: true; readAt: string },
+      ) => {
+        if ('all' in data) {
+          markAllReadInStore();
+        } else {
+          markReadInStore(data.id);
+        }
+      },
+    );
 
     socket.on('auth:expired', () => {
       console.warn('[NotifSocket] Session expired — disconnecting');

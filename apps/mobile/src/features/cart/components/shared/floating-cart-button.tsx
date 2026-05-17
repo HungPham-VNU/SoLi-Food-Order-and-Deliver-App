@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { ShoppingCart } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { formatCurrency } from '@/src/lib/format-utils';
 import { useMyCart } from '../../hooks';
 
 export function FloatingCartButton() {
@@ -18,7 +17,7 @@ export function FloatingCartButton() {
   const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <View 
+    <View
       className="absolute right-6 z-50"
       style={{ bottom: insets.bottom + 16 }}
     >
@@ -36,7 +35,9 @@ export function FloatingCartButton() {
         <View className="relative">
           <ShoppingCart size={28} color="#ffffff" />
           <View className="absolute -top-2 -right-2 bg-error rounded-full min-w-[20px] h-5 justify-center items-center px-1 border-2 border-primary-container">
-            <Text className="text-white text-[10px] font-bold font-jakarta-sans">{itemCount}</Text>
+            <Text className="text-white text-[10px] font-bold font-jakarta-sans">
+              {itemCount}
+            </Text>
           </View>
         </View>
       </TouchableOpacity>

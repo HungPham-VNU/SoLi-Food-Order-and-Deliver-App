@@ -21,7 +21,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { formatCurrency } from '@/src/lib/format-utils';
 import { RestaurantMenuScreenProps } from '../types';
-import { useRestaurant, useRestaurantCategories, useRestaurantMenu } from '../api';
+import {
+  useRestaurant,
+  useRestaurantCategories,
+  useRestaurantMenu,
+} from '../api';
 import { useMyCart } from '@/src/features/cart';
 import { useRouter } from 'expo-router';
 
@@ -39,25 +43,25 @@ export function RestaurantMenuScreen({
   const [isFavorited, setIsFavorited] = useState(false);
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
 
-  const { 
-    data: restaurant, 
-    isLoading: isLoadingRest, 
+  const {
+    data: restaurant,
+    isLoading: isLoadingRest,
     error: restError,
-    isError: isErrorRest 
+    isError: isErrorRest,
   } = useRestaurant(restaurantId);
-  
-  const { 
-    data: menuData, 
-    isLoading: isLoadingMenu, 
+
+  const {
+    data: menuData,
+    isLoading: isLoadingMenu,
     error: menuError,
-    isError: isErrorMenu 
+    isError: isErrorMenu,
   } = useRestaurantMenu(restaurantId);
-  
-  const { 
-    data: categories, 
-    isLoading: isLoadingCats, 
+
+  const {
+    data: categories,
+    isLoading: isLoadingCats,
     error: catsError,
-    isError: isErrorCats 
+    isError: isErrorCats,
   } = useRestaurantCategories(restaurantId);
 
   const { data: cart } = useMyCart();
@@ -87,11 +91,18 @@ export function RestaurantMenuScreen({
   }
 
   if (isError || !restaurant) {
-    const errorMsg = restError?.message || menuError?.message || catsError?.message || 'Restaurant not found';
+    const errorMsg =
+      restError?.message ||
+      menuError?.message ||
+      catsError?.message ||
+      'Restaurant not found';
     return (
       <View className="flex-1 items-center justify-center bg-surface p-6">
         <Text className="text-on-surface text-center mb-4">{errorMsg}</Text>
-        <TouchableOpacity onPress={onBack} className="bg-primary px-6 py-2 rounded-full">
+        <TouchableOpacity
+          onPress={onBack}
+          className="bg-primary px-6 py-2 rounded-full"
+        >
           <Text className="text-white font-bold">Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -100,24 +111,26 @@ export function RestaurantMenuScreen({
 
   const handleToggleFavorite = async () => {
     if (isTogglingFavorite) return;
-    
+
     const previousState = isFavorited;
     setIsFavorited(!previousState);
     setIsTogglingFavorite(true);
-    
+
     try {
       if (onFavoriteToggle) {
-        await onFavoriteToggle(restaurantId);
+        onFavoriteToggle(restaurantId);
       }
     } catch (err) {
       setIsFavorited(previousState);
       Alert.alert('Error', 'Failed to update favorite status');
+      console.error('Error toggling favorite:', err);
     } finally {
       setIsTogglingFavorite(false);
     }
   };
 
-  const itemCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  const itemCount =
+    cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
   return (
     <View className="flex-1 bg-surface">
@@ -156,7 +169,10 @@ export function RestaurantMenuScreen({
         {/* Hero Section */}
         <View className="relative w-full h-80">
           <Image
-            source={{ uri: (restaurant.coverImageUrl || restaurant.logoUrl) ?? undefined }}
+            source={{
+              uri:
+                (restaurant.coverImageUrl || restaurant.logoUrl) ?? undefined,
+            }}
             className="w-full h-full"
             contentFit="cover"
           />
@@ -191,7 +207,11 @@ export function RestaurantMenuScreen({
               <View className="flex-row items-center gap-1">
                 <Truck size={14} color="#ffffff" />
                 <Text className="text-white text-sm font-medium">
-                  {restaurant.deliveryFee === 0 ? 'Free' : (restaurant.deliveryFee ? `+${restaurant.deliveryFee}` : '—')}
+                  {restaurant.deliveryFee === 0
+                    ? 'Free'
+                    : restaurant.deliveryFee
+                      ? `+${restaurant.deliveryFee}`
+                      : '—'}
                 </Text>
               </View>
             </View>
@@ -258,7 +278,7 @@ export function RestaurantMenuScreen({
           </Text>
           <View className="flex-col gap-6">
             {filteredItems.map((item) => (
-              <View 
+              <View
                 key={item.id}
                 className="relative bg-surface-container-lowest rounded-3xl shadow-sm border border-surface-variant/20"
               >
@@ -294,7 +314,7 @@ export function RestaurantMenuScreen({
                     <Text className="font-jakarta-sans font-bold text-lg text-secondary">
                       {formatCurrency(item.price ?? 0)}
                     </Text>
-                    <View className="w-10 h-10" /> 
+                    <View className="w-10 h-10" />
                   </View>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -321,11 +341,11 @@ export function RestaurantMenuScreen({
 
       {/* Sticky Bottom View Cart Bar */}
       {cart && cart.items && cart.items.length > 0 && (
-        <View 
+        <View
           className="absolute bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl pb-8 pt-4 px-6 shadow-lg rounded-t-xl border-t border-surface-container-high/50"
           style={{ paddingBottom: Math.max(insets.bottom, 24) }}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.push('/(customer)/cart')}
             activeOpacity={0.9}
           >

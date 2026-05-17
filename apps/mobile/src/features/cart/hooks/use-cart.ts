@@ -6,7 +6,6 @@ import {
   removeCartItem,
   clearCart,
 } from '../api/cart-api';
-import { AddItemToCartRequest } from '../types';
 
 export const cartKeys = {
   all: ['cart'] as const,

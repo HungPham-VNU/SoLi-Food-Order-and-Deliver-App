@@ -103,7 +103,7 @@ export function OrderHistoryScreen() {
               className="text-on-surface-variant text-center"
               style={{ fontFamily: 'Inter_400Regular' }}
             >
-              You haven't placed any orders yet.
+              You haven&apos;t placed any orders yet.
             </Text>
           </View>
         ) : (
