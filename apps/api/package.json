@@ -93,19 +93,23 @@
   "jest": {
     "moduleFileExtensions": [
       "js",
+      "mjs",
       "json",
       "ts"
     ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": [
+      "^.+\\.(t|j|mj)s$": [
         "ts-jest",
         {
           "tsconfig": "tsconfig.test.json"
         }
       ]
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@thallesp/nestjs-better-auth|better-auth|@better-auth/drizzle-adapter|@better-auth/expo)/)"
+    ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/$1",
       "^(\\.{1,2}/.*)\\.js$": "$1"
