@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import messaging from '@react-native-firebase/messaging';
+import { getMessaging, getToken, onTokenRefresh } from '@react-native-firebase/messaging';
 import { notificationApi } from '../api';
 import { useSession } from '@/src/lib/auth-client';
 
@@ -9,9 +9,19 @@ export function usePushToken() {
   const { data: session } = useSession();
 
   useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+
     if (session) {
-      registerPushToken();
+      registerPushToken().then((unsub) => {
+        unsubscribe = unsub;
+      });
     }
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [session]);
 }
 
@@ -29,9 +39,10 @@ async function registerPushToken() {
     // 2. Get FCM token (Firebase)
     // Note: This requires the app to be correctly configured with google-services.json/GoogleService-Info.plist
     // If running in Expo Go, this might fail or require a dev client.
+    const messaging = getMessaging();
     let token: string;
     try {
-      token = await messaging().getToken();
+      token = await getToken(messaging);
     } catch (error) {
       console.warn('[PushToken] Failed to get FCM token. Ensure Firebase is configured.', error);
       return;
@@ -44,7 +55,7 @@ async function registerPushToken() {
     console.log('[PushToken] Registered successfully');
 
     // 4. Listen for token refresh
-    const unsubscribe = messaging().onTokenRefresh(async (newToken) => {
+    const unsubscribe = onTokenRefresh(messaging, async (newToken) => {
       try {
         await notificationApi.registerPushToken(newToken, platform);
       } catch (err) {
