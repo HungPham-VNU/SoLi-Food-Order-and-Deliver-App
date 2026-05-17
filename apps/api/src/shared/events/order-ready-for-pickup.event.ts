@@ -15,9 +15,9 @@ export class OrderReadyForPickupEvent {
     public readonly restaurantAddress: string,
     public readonly customerId: string,
     public readonly deliveryAddress: {
-      street: string;
-      district: string;
-      city: string;
+      street?: string;
+      district?: string;
+      city?: string;
       latitude?: number;
       longitude?: number;
     },

@@ -1,12 +1,12 @@
-# Software Requirements Specification
+﻿# Software Requirements Specification
 
-## SoLi Food Delivery Application — Phases 1, 2, 3 & 4
+## SoLi Food Delivery Application
 
 ---
 
 | Field              | Detail                                                    |
 |--------------------|-----------------------------------------------------------|
-| **Document Title** | Software Requirements Specification — Phases 1, 2, 3 & 4  |
+| **Document Title** | Software Requirements Specification — SoLi Food Delivery Application |
 | **Version**        | 1.11                                                      |
 | **Status**         | Draft                                                     |
 | **Prepared by**    | Development Team                                          |
@@ -24,12 +24,12 @@
 | 1.3     | 2026-05-14 | Dev Team         | Extracted Message Rules into dedicated per-UC tables (TechMarket-aligned). Renumbered all Activity Diagrams with stable sequential numbering (removed `A`-labels). Refactored all Activity Diagrams to a single end node. Business Rules now reference message codes only — no inline message text. |
 | 1.4     | 2026-05-15 | Dev Team         | Centralized all per-UC Message Rules into one global Messages appendix (§3). Applied `<br>` line-break formatting throughout all UC header tables and Business Rules cells for improved readability. |
 | 1.5     | 2026-05-15 | Dev Team         | Added `<br>` separator between bold rule title and first ❖ bullet in all Business Rules Description cells for consistent visual separation across all 10 UCs (69 BR rows updated). |
-| 1.6     | 2026-05-15 | Dev Team         | Integrated **Phase 2 — Restaurant & Delivery Operations** (UC-11 through UC-19): Restaurant Registration & Profile Management, Manage Menu Catalog, Toggle Item & Restaurant Availability, Accept or Reject Order, Prepare Order for Pickup, Shipper Registration, Manage Shipper Availability, Accept Delivery Assignment, Deliver Order. Extended global Message Appendix (§3) with 35 new codes for `MSG-RES`, `MSG-MENU`, `MSG-AVAIL`, `MSG-LCYC`, `MSG-SHIP`, and `MSG-DEL` domains. |
-| 1.7     | 2026-05-15 | Dev Team         | Integrated **Phase 3 — Customer Interaction, Promotion & Notification** (UC-20 through UC-26): Track Order Status, Cancel Order, Submit Rating & Review, Manage Restaurant Promotions, Manage Platform Promotions, Process Payment Refund, Manage Real-Time Notifications. Extended global Message Appendix (§3) with 30 new codes for `MSG-TRACK`, `MSG-CANC`, `MSG-RATE`, `MSG-PROMO`, `MSG-REFUND`, and `MSG-NOTI` domains. |
-| 1.8     | 2026-05-15 | Dev Team         | Deep backend audit of Phase 3 (UC-20–UC-26). Fixed 9 critical/high mis-alignments: removed non-existent `DELETE /promotions/restaurant/:id` trigger; restricted `→cancelled` to admin-only in BR-23.3; completely rewrote BR-24.4 to reflect admin-provided `codes: string[]` model with immediate `ConflictException` on collision (no retry); added HTTP 204 note for admin DELETE in BR-24.7; restructured UC-25 diagram so Notification BC fan-out is shown as an independent parallel `@EventsHandler`, not a sequential Payment BC step; completed `OrderCancelledAfterPaymentEvent` payload in BR-21.5 and BR-25.1 (`customerId`, `paymentMethod`, `cancelledAt`); updated BR-25.7 to document both `order_cancelled` (idempotent) and `refund_initiated` notifications; expanded BR-26.2 channel table to cover all implemented event-type/channel mappings from source code. |
+| 1.6     | 2026-05-15 | Dev Team         | Added UC-11 through UC-19 — Restaurant & Delivery Operations: Restaurant Registration & Profile Management, Manage Menu Catalog, Toggle Item & Restaurant Availability, Accept or Reject Order, Prepare Order for Pickup, Shipper Registration, Manage Shipper Availability, Accept Delivery Assignment, Deliver Order. Extended global Message Appendix (§3) with 35 new codes for `MSG-RES`, `MSG-MENU`, `MSG-AVAIL`, `MSG-LCYC`, `MSG-SHIP`, and `MSG-DEL` domains. |
+| 1.7     | 2026-05-15 | Dev Team         | Added UC-20 through UC-26 — Customer Interaction, Promotion & Notification: Track Order Status, Cancel Order, Submit Rating & Review, Manage Restaurant Promotions, Manage Platform Promotions, Process Payment Refund, Manage Real-Time Notifications. Extended global Message Appendix (§3) with 30 new codes for `MSG-TRACK`, `MSG-CANC`, `MSG-RATE`, `MSG-PROMO`, `MSG-REFUND`, and `MSG-NOTI` domains. |
+| 1.8     | 2026-05-15 | Dev Team         | Deep backend audit of UC-20–UC-26. Fixed 9 critical/high mis-alignments: removed non-existent `DELETE /promotions/restaurant/:id` trigger; restricted `→cancelled` to admin-only in BR-23.3; completely rewrote BR-24.4 to reflect admin-provided `codes: string[]` model with immediate `ConflictException` on collision (no retry); added HTTP 204 note for admin DELETE in BR-24.7; restructured UC-25 diagram so Notification BC fan-out is shown as an independent parallel `@EventsHandler`, not a sequential Payment BC step; completed `OrderCancelledAfterPaymentEvent` payload in BR-21.5 and BR-25.1 (`customerId`, `paymentMethod`, `cancelledAt`); updated BR-25.7 to document both `order_cancelled` (idempotent) and `refund_initiated` notifications; expanded BR-26.2 channel table to cover all implemented event-type/channel mappings from source code. |
 | 1.9     | 2026-05-16 | Dev Team         | Refactored all 26 Activity Diagrams to business-level presentation. Removed implementation details (HTTP status codes, API endpoint paths, database table and field names, internal event class names, optimistic locking mechanics, Redis/ACL terminology, DTO and service class references) from all diagram step labels while preserving complete flow logic, all MSG code references, actor swimlanes, and BR cross-reference numbering unchanged. Business Rules tables are untouched. |
-| 1.10    | 2026-05-17 | Dev Team         | Integrated **Phase 4 — Administration & Governance** (UC-27 through UC-35): Review Restaurant Applications, Review Shipper Applications, Suspend or Reactivate Partner Accounts, Monitor Orders and Platform Operations, Search and Manage User Accounts, Administrative Order Cancellation & Refund, View and Export Operational Reports, View Admin Dashboard, Manage Roles and Permissions. Backend-implemented UCs (UC-27 restaurant approval, UC-30 admin order monitoring, UC-32 admin cancellation/refund) match observed endpoints; backend-pending UCs (UC-28 shipper review, UC-29 suspension, UC-31 user management, UC-33 reports, UC-34 dashboard, UC-35 role management) are written as enterprise target designs aligned with the existing schema, role model and CQRS architecture. Closes the BR-1 (Partner Verification) and BR-5 (Commission Calculation) traceability loops opened in Phases 1–3. Extended global Message Appendix (§3) with 28 new codes in the `MSG-ADM` domain (MSG-ADM-01 through MSG-ADM-28). |
-| 1.11    | 2026-05-18 | Dev Team         | Full audit and refinement of Phase 4 (UC-27–UC-35). Corrected UC canonical names in ToC, section headings and header tables (UC-27, UC-28, UC-30, UC-34, UC-35 renamed to match finalized UC decomposition). Added Phase 4 to Table of Contents and updated §1.2 Scope. Fixed two wrong message code references in UC-28 activity diagram (MSG-PROMO-05→MSG-ADM-30, MSG-AUTH-05→MSG-ADM-29). Removed inner `stop` nodes from UC-28 and UC-31 diagrams (single-stop convention). Corrected `sortBy` filter field values from camelCase to `snake_case` and `sortDir`→`sortOrder` in UC-30 Pre-condition and BR-30.2 to match the actual `AdminOrderFiltersDto`. Removed implementation-detail migration filename from BR-30.3. Added promotion rollback note to BR-32.4. Softened UC-34 BR-34.4 performance target from MUST to SHOULD. Removed suspended-account guard from UC-35 Pre-condition (relocated exclusively to BR-35.5); updated UC-35 step (21) and BR-35.5 to reference new `MSG-ADM-31`. Generalized MSG-ADM-10 text from “Account” to “Resource”. Cleaned Phase 4 intro paragraph of API endpoint reference. Extended Message Appendix with MSG-ADM-29, MSG-ADM-30, MSG-ADM-31 (total 31 ADM codes). |
+| 1.10    | 2026-05-17 | Dev Team         | Added UC-27 through UC-35 — Administration & Governance: Approve or Reject Restaurant Applications, Approve or Reject Shipper Applications, Suspend or Reactivate Partner Accounts, Monitor Orders and Platform Health, Search and Manage User Accounts, Administrative Order Cancellation & Refund, View and Export Operational Reports, View Dashboard & Platform Overview, Manage Admin Roles & Permissions. UC-27, UC-30, and UC-32 correspond to implemented backend functionality; UC-28, UC-29, UC-31, UC-33, UC-34, and UC-35 are specified as target enterprise designs aligned with the existing schema, role model, and CQRS architecture. Completes the BR-1 (Partner Verification) and BR-5 (Commission Calculation) traceability coverage. Extended global Message Appendix (§3) with 28 new codes in the `MSG-ADM` domain (MSG-ADM-01 through MSG-ADM-28). |
+| 1.11    | 2026-05-18 | Dev Team         | Full audit and refinement of UC-27–UC-35. Corrected UC canonical names in ToC, section headings and header tables (UC-27, UC-28, UC-30, UC-34, UC-35 renamed to match finalized UC decomposition). Updated §1.2 Scope. Fixed two wrong message code references in UC-28 activity diagram (MSG-PROMO-05→MSG-ADM-30, MSG-AUTH-05→MSG-ADM-29). Removed inner `stop` nodes from UC-28 and UC-31 diagrams (single-stop convention). Corrected `sortBy` filter field values from camelCase to `snake_case` and `sortDir`→`sortOrder` in UC-30 Pre-condition and BR-30.2 to match the actual `AdminOrderFiltersDto`. Removed implementation-detail migration filename from BR-30.3. Added promotion rollback note to BR-32.4. Softened UC-34 BR-34.4 performance target from MUST to SHOULD. Removed suspended-account guard from UC-35 Pre-condition (relocated exclusively to BR-35.5); updated UC-35 step (21) and BR-35.5 to reference new `MSG-ADM-31`. Generalized MSG-ADM-10 text from “Account” to “Resource”. Extended Message Appendix with MSG-ADM-29, MSG-ADM-30, MSG-ADM-31 (total 31 ADM codes). |
 
 ---
 
@@ -43,7 +43,7 @@
    - 1.5 Notation
    - 1.6 References
 2. [Functional Requirements — Use Cases](#2-functional-requirements--use-cases)
-   - **Phase 1 — Foundation & Customer Ordering Core**
+   - **Foundation & Customer Ordering Core (UC-1 – UC-10)**
      - UC-1: User Authentication
      - UC-2: Discover Restaurants & Food
      - UC-3: View Restaurant Details
@@ -54,7 +54,7 @@
      - UC-8: Place Order
      - UC-9: Make Online Payment (VNPay)
      - UC-10: View Order History
-   - **Phase 2 — Restaurant & Delivery Operations**
+   - **Restaurant & Delivery Operations (UC-11 – UC-19)**
      - UC-11: Restaurant Registration & Profile Management
      - UC-12: Manage Menu Catalog
      - UC-13: Toggle Item & Restaurant Availability
@@ -64,7 +64,7 @@
      - UC-17: Manage Shipper Availability
      - UC-18: Accept Delivery Assignment
      - UC-19: Deliver Order
-   - **Phase 3 — Customer Interaction, Promotion & Notification**
+   - **Customer Interaction, Promotion & Notification (UC-20 – UC-26)**
      - UC-20: Track Order Status
      - UC-21: Cancel Order
      - UC-22: Submit Rating & Review
@@ -72,7 +72,7 @@
      - UC-24: Manage Platform Promotions
      - UC-25: Process Payment Refund
      - UC-26: Manage Real-Time Notifications
-   - **Phase 4 — Administration & Governance**
+   - **Administration & Governance (UC-27 – UC-35)**
      - UC-27: Approve or Reject Restaurant Applications
      - UC-28: Approve or Reject Shipper Applications
      - UC-29: Suspend or Reactivate Partner Accounts
@@ -90,13 +90,13 @@
 
 ### 1.1 Purpose
 
-This Software Requirements Specification (SRS) defines the functional requirements for Phase 1 of the **SoLi Food Delivery** application. It serves as the authoritative reference for system behavior shared between design, development, QA, and stakeholder review.
+This Software Requirements Specification (SRS) defines the functional requirements for the **SoLi Food Delivery** application. It serves as the authoritative reference for system behavior shared between design, development, QA, and stakeholder review.
 
 ### 1.2 Scope
 
-This SRS covers the end-to-end ordering platform across three writing phases:
+This SRS covers the end-to-end ordering platform across all functional domains:
 
-**Phase 1 — Foundation & Customer Ordering Core (UC-1 through UC-10):**
+**Foundation & Customer Ordering Core (UC-1 – UC-10):**
 - User authentication and session management
 - Restaurant and food discovery
 - Cart management and checkout
@@ -104,7 +104,7 @@ This SRS covers the end-to-end ordering platform across three writing phases:
 - Order placement and VNPay online payment
 - Order history and reorder
 
-**Phase 2 — Restaurant & Delivery Operations (UC-11 through UC-19):**
+**Restaurant & Delivery Operations (UC-11 – UC-19):**
 - Restaurant partner onboarding (registration, admin approval, profile management)
 - Menu catalog management (categories, items, modifier groups and options)
 - Real-time item and restaurant availability control (BR-8)
@@ -113,16 +113,16 @@ This SRS covers the end-to-end ordering platform across three writing phases:
 - Shipper onboarding and online/offline availability
 - Self-assigned delivery pickup and end-to-end delivery completion
 
-**Phase 3 — Customer Interaction, Promotion & Notification (UC-20 through UC-26):**
+**Customer Interaction, Promotion & Notification (UC-20 – UC-26):**
 - Real-time order tracking via authoritative reads and WebSocket pushes
 - Customer-initiated order cancellation with payment-aware refund triggering
-- Post-delivery rating and review (target enterprise design)
+- Post-delivery rating and review
 - Restaurant-scoped promotion authoring and lifecycle management
 - Platform-wide promotion authoring, coupon-code issuance and stacking governance
 - Cross-context payment refund pipeline (`completed → refund_pending → refunded`)
 - Multi-channel notification dispatch (in-app, push, email) with per-user preferences and quiet hours
 
-**Phase 4 — Administration & Governance (UC-27 through UC-35):**
+**Administration & Governance (UC-27 – UC-35):**
 - Restaurant partner approval and revocation (closes BR-1 loop from UC-11)
 - Shipper application review, approval and rejection queue
 - Account suspension and reactivation with session invalidation and last-admin safeguard
@@ -249,7 +249,7 @@ stop
 | _(5)_ | _BR-AUTH-3_ | **Session Creation Rules:**<br>❖ A session record is created with `expiresAt = now + sessionTtl` (default 7 days).<br>❖ `ipAddress` and `userAgent` are stored for audit purposes.<br>❖ Session token is returned in the HTTP response and used as a Bearer token on all subsequent requests. |
 | _(8)–(9)_ | _BR-AUTH-4_ | **Validate Rules (Sign Up):**<br>❖ `name` must be a non-empty string.<br>❖ `email` must be a valid email format.<br>❖ `password` must be at least 8 characters and contain at least one letter and one digit.<br>❖ Invalid input returns HTTP 400 referencing `MSG-AUTH-03`. |
 | _(12)_ | _BR-AUTH-5_ | **Sign Up Duplicate Email Rules:**<br>❖ If the email is already registered, system returns HTTP 409 referencing `MSG-AUTH-02`. |
-| _(10)_ | _BR-AUTH-6_ | **Account Initialization Rules:**<br>❖ New accounts are created with `role = 'user'`.<br>❖ Elevation to `'restaurant'`, `'shipper'`, or `'admin'` is handled in Phase 2/Phase 4 flows.<br>❖ Passwords are stored as secure hashes; plaintext is never persisted. |
+| _(10)_ | _BR-AUTH-6_ | **Account Initialization Rules:**<br>❖ New accounts are created with `role = 'user'`.<br>❖ Elevation to `'restaurant'`, `'shipper'`, or `'admin'` is handled through the partner onboarding and administration workflows (see UC-11, UC-16, and UC-35).<br>❖ Passwords are stored as secure hashes; plaintext is never persisted. |
 | _(14)–(15)_ | _BR-AUTH-7_ | **Forgot Password Rules:**<br>❖ System creates a verification record with a single-use OTP valid for 60 minutes.<br>❖ System responds HTTP 200 referencing `MSG-AUTH-04` regardless of whether the email exists (anti-enumeration).<br>❖ The OTP is dispatched via the configured channel (email / SMS). |
 | _(17)_ | _BR-AUTH-8_ | **Logout Rules:**<br>❖ The session record is deleted immediately.<br>❖ Any subsequent requests using the invalidated token receive HTTP 401 referencing `MSG-AUTH-05`. |
 | _(all protected routes)_ | _BR-AUTH-9_ | **Session Validation Rules:**<br>❖ Every protected endpoint requires a valid non-expired Bearer token.<br>❖ Missing or expired token returns HTTP 401 referencing `MSG-AUTH-05`.<br>❖ The session's associated user is attached to the request context. |
@@ -518,7 +518,7 @@ stop
 | _(2)–(3)_, _(8)_, _(9)_ | _BR-6.1_ | **Validate Rules:**<br>❖ `street`, `district`, and `city` are required non-empty strings.<br>❖ `latitude` and `longitude` are optional, but if either is provided both must be present.<br>❖ Coordinates must lie within Vietnam's geographic bounds.<br>❖ Invalid input returns HTTP 400 referencing `MSG-ADDR-01` (general validation) or `MSG-ADDR-02` (coordinate pairing). |
 | _(4)–(5)_, _(7)_ | _BR-6.2_ | **Delivery Zone Eligibility Rules (via UC-8):**<br>❖ Delivery eligibility is evaluated at checkout (UC-8, BR-8.6) via Haversine distance between the address coordinates and the restaurant's delivery zone center.<br>❖ The innermost eligible zone is selected. If the address falls outside all active delivery zones, system returns HTTP 422 referencing `MSG-ADDR-03`. |
 | _(6)_ | _BR-6.3_ | **Address Immutability Rules:**<br>❖ The delivery address is stored in the `orders.delivery_address` JSONB column at order placement.<br>❖ Once stored, it cannot be changed. Address correction requires order cancellation and re-placement. |
-| _—_ | _BR-6.4_ | **Address Book (Deferred):**<br>❖ A persistent customer address book (`customer_addresses` table) is not implemented in Phase 1. Addresses are captured inline at checkout only.<br>❖ Future releases will support address save, list, update, and delete. |
+| _—_ | _BR-6.4_ | **Address Book (Deferred):**<br>❖ A persistent customer address book (`customer_addresses` table) is not yet implemented. Addresses are captured inline at checkout only.<br>❖ Future releases will support address save, list, update, and delete. |
 
 ---
 
@@ -670,10 +670,10 @@ stop
 | _(5)_, _(15)_ | _BR-8.4_ | **Cart Validate Rules:**<br>❖ Cart must be non-empty. If empty, system returns HTTP 400 referencing `MSG-ORD-04`.<br>❖ The restaurant's Ordering ACL snapshot must exist. If missing, system returns HTTP 422 referencing `MSG-ORD-05`.<br>❖ Restaurant must have `isApproved = true`. If not, HTTP 422 referencing `MSG-ORD-06`.<br>❖ Restaurant must have `isOpen = true`. If not, HTTP 422 referencing `MSG-ORD-07`. |
 | _(5)_, _(15)_ | _BR-8.5_ | **Item and Modifier Validation Rules:**<br>❖ Each cart item's Ordering ACL snapshot must exist. Delisted item → HTTP 422 referencing `MSG-ORD-08`.<br>❖ Item's `restaurantId` in snapshot must match cart's restaurant. Mismatch → HTTP 422 referencing `MSG-ORD-09`.<br>❖ Item `status` must be `'available'`. If `'out_of_stock'` or `'unavailable'` → HTTP 422 referencing `MSG-ORD-10`.<br>❖ Modifier groups, options, availability flags, and min/max constraints are re-validated against the current ACL snapshot at checkout time. |
 | _(6)_, _(14)_ | _BR-8.6_ | **Delivery Pricing Rules:**<br>❖ Haversine distance is computed against the restaurant's delivery zone snapshots. The innermost eligible zone is selected (per BR-7.6).<br>❖ If the delivery address falls outside all zones → HTTP 422 referencing `MSG-ORD-11`.<br>❖ `shippingFee` is computed per BR-7.7.<br>❖ If coordinates or zone snapshots are unavailable, `shippingFee = 0` and a warning is logged (graceful degradation). |
-| _(7)_ | _BR-8.7_ | **Promotion Reservation Rules:**<br>❖ Promotion reservation is non-blocking. If reservation fails or returns `discountAmount = 0`, checkout continues without a discount.<br>❖ Promotion usage is confirmed after successful order persistence. Failures in confirmation are reconciled by a scheduled task (Phase 3). |
+| _(7)_ | _BR-8.7_ | **Promotion Reservation Rules:**<br>❖ Promotion reservation is non-blocking. If reservation fails or returns `discountAmount = 0`, checkout continues without a discount.<br>❖ Promotion usage is confirmed after successful order persistence. Failures in confirmation are reconciled by a scheduled task. |
 | _(8)_, _(13)_ | _BR-8.8_ | **Server-Authoritative Pricing Rules:**<br>❖ Order line `unitPrice` and modifier prices are taken from ACL snapshots at checkout time, not from the values stored at add-to-cart time.<br>❖ `itemsTotal` must be > 0. If ≤ 0 → HTTP 422 referencing `MSG-ORD-12`.<br>❖ `totalAmount = max(0, itemsTotal + shippingFee − discountAmount)`. |
 | _(8)_, _(13)_ | _BR-8.9_ | **Atomic Persistence Rules:**<br>❖ The `orders`, `order_items`, and initial `order_status_logs` row are inserted in a single database transaction.<br>❖ A `UNIQUE` constraint on `orders.cartId` prevents two orders from the same cart.<br>❖ Duplicate constraint violation → HTTP 409 referencing `MSG-ORD-13`.<br>❖ Generic database failure → HTTP 500 referencing `MSG-ORD-14`. |
-| _(8)_ | _BR-8.10_ | **Initial Order State Rules:**<br>❖ New order `status = 'pending'`.<br>❖ `expiresAt = now + RESTAURANT_ACCEPT_TIMEOUT_SECONDS` (default 600 s). Orders not acknowledged by the restaurant within this window are auto-cancelled (Phase 2). |
+| _(8)_ | _BR-8.10_ | **Initial Order State Rules:**<br>❖ New order `status = 'pending'`.<br>❖ `expiresAt = now + RESTAURANT_ACCEPT_TIMEOUT_SECONDS` (default 600 s). Orders not acknowledged by the restaurant within this window are auto-cancelled by the order-timeout scheduler. |
 | _(9)–(10)_ | _BR-8.11_ | **Payment Initiation Rules:**<br>❖ For `paymentMethod = 'vnpay'`: a `payment_transactions` row is created with `status = 'pending'`, and a VNPay redirect URL is generated and included in the response.<br>❖ For `paymentMethod = 'cod'`: no payment transaction is created at checkout; payment is collected at delivery.<br>❖ VNPay URL generation failure is logged but non-blocking; payment timeout reconciliation is handled by UC-9 (BR-9.7). |
 | _(11)–(12)_ | _BR-8.12_ | **Post-Persistence Rules:**<br>❖ `OrderPlacedEvent` is published exactly once after successful persistence.<br>❖ Cart deletion (`cart:<customerId>`) is best-effort; failure does not invalidate the order.<br>❖ Successful response: HTTP 201 referencing `MSG-ORD-15` with payload `{ orderId, status: 'pending', totalAmount, shippingFee, discountAmount, paymentUrl?, estimatedDeliveryMinutes? }`. |
 
@@ -815,9 +815,9 @@ stop
 
 ---
 
-### Phase 2 — Restaurant & Delivery Operations
+### Restaurant & Delivery Operations (UC-11 – UC-19)
 
-Phase 2 covers the operational use cases of the two supply-side actors that complete the platform: the **Restaurant Partner** (who owns the catalog and prepares orders) and the **Delivery Personnel** (also referred to as **Shipper**, who fulfils last-mile delivery). All Phase 2 use cases share the underlying `order_status` state machine introduced in Phase 1, the Restaurant–Ordering ACL snapshot mechanism (D3-B), and the same authentication and authorization stack used in Phase 1.
+This section covers the operational use cases of the two supply-side actors that complete the platform: the **Restaurant Partner** (who owns the catalog and prepares orders) and the **Delivery Personnel** (also referred to as **Shipper**, who fulfils last-mile delivery). These use cases share the underlying `order_status` state machine, the Restaurant–Ordering ACL snapshot mechanism (D3-B), and the authentication and authorization stack established in UC-1.
 
 ---
 
@@ -1040,7 +1040,7 @@ stop
 | **Trigger** | ❖ Restaurant Partner accepts a new order (`PATCH /orders/:id/confirm`) — transitions `pending → confirmed` (T-01, COD) or `paid → confirmed` (T-04, VNPay paid).<br>❖ Restaurant Partner rejects a new order (`PATCH /orders/:id/cancel` with a reason note) — transitions `pending → cancelled` (T-03), `paid → cancelled` (T-05), or `confirmed → cancelled` (T-07). |
 | **Description** | Authorises the restaurant to decide whether an incoming order proceeds. Acceptance moves the order into `confirmed`, after which UC-15 (Prepare Order for Pickup) becomes the only forward path. Rejection requires a reason note for the audit log, and — for VNPay-paid orders cancelled from `paid` or `confirmed` — automatically triggers the refund pipeline by publishing `OrderCancelledAfterPaymentEvent`. All transitions are routed through the central CQRS `TransitionOrderCommand`, which enforces role, ownership, state validity, and optimistic locking (`version` column). |
 | **Pre-condition** | ❖ Actor is authenticated.<br>❖ Actor has role `restaurant` (limited to own restaurant's orders) or `admin` (any order).<br>❖ The order is in a state that allows the requested transition: `pending` (for T-01 / T-03), `paid` (for T-04 / T-05), or `confirmed` (for T-07).<br>❖ For T-01 by role `restaurant`: `order.paymentMethod = 'cod'`.<br>❖ For cancel transitions: a non-empty `reason` note is supplied. |
-| **Post-condition** | ❖ `orders.status` is updated; `orders.version` is incremented atomically.<br>❖ A new `order_status_logs` row records `fromStatus`, `toStatus`, `triggeredBy`, `triggeredByRole`, and `note` (if any).<br>❖ `OrderStatusChangedEvent` is published after commit.<br>❖ For T-05 / T-07 on a VNPay order: `OrderCancelledAfterPaymentEvent` is published, which drives the refund pipeline (Phase 3 scope). |
+| **Post-condition** | ❖ `orders.status` is updated; `orders.version` is incremented atomically.<br>❖ A new `order_status_logs` row records `fromStatus`, `toStatus`, `triggeredBy`, `triggeredByRole`, and `note` (if any).<br>❖ `OrderStatusChangedEvent` is published after commit.<br>❖ For T-05 / T-07 on a VNPay order: `OrderCancelledAfterPaymentEvent` is published, which drives the refund pipeline (see UC-25). |
 
 #### Activities Flow
 
@@ -1105,7 +1105,7 @@ stop
 | Activity | BR Code | Description |
 |---|---|---|
 | _(5)–(6)_, _(28)_ | _BR-14.1_ | **Order Loading Rules:**<br>❖ The order is loaded by id. A non-existent id returns HTTP 404 referencing `MSG-HIST-01`.<br>❖ Idempotency: if the order is already in the requested target status, the system returns the order unchanged (no new audit row, no event). |
-| _(8)–(9)_ | _BR-14.2_ | **Transition Validity Rules:**<br>❖ Allowed transitions for this UC (restaurant / admin actors): T-01 (`pending → confirmed`), T-03 (`pending → cancelled`), T-04 (`paid → confirmed`), T-05 (`paid → cancelled`), T-07 (`confirmed → cancelled`).<br>❖ T-03 and T-05 additionally allow roles `customer` and `system` per the TRANSITIONS map; `customer`-initiated cancellation is specified in Phase 3 (Customer Cancel Order). `system`-initiated cancellation is triggered by the order-timeout scheduler and does not route through this use-case endpoint.<br>❖ Any other `(fromStatus, toStatus)` pair returns HTTP 422 referencing `MSG-LCYC-01`.<br>❖ Each transition has an `allowedRoles` set; a role outside the set returns HTTP 403 referencing `MSG-LCYC-02`. |
+| _(8)–(9)_ | _BR-14.2_ | **Transition Validity Rules:**<br>❖ Allowed transitions for this UC (restaurant / admin actors): T-01 (`pending → confirmed`), T-03 (`pending → cancelled`), T-04 (`paid → confirmed`), T-05 (`paid → cancelled`), T-07 (`confirmed → cancelled`).<br>❖ T-03 and T-05 additionally allow roles `customer` and `system` per the TRANSITIONS map; `customer`-initiated cancellation is specified in UC-21 (Cancel Order). `system`-initiated cancellation is triggered by the order-timeout scheduler and does not route through this use-case endpoint.<br>❖ Any other `(fromStatus, toStatus)` pair returns HTTP 422 referencing `MSG-LCYC-01`.<br>❖ Each transition has an `allowedRoles` set; a role outside the set returns HTTP 403 referencing `MSG-LCYC-02`. |
 | _(10)–(11)_ | _BR-14.3_ | **Restaurant Ownership Rules:**<br>❖ For role `restaurant`, the target order's `restaurantId` must belong to a restaurant whose `ownerId = session.user.id`, resolved via the Ordering ACL snapshot; otherwise HTTP 403 referencing `MSG-LCYC-03`.<br>❖ For role `admin`, the ownership check is bypassed. |
 | _(12)–(15)_ | _BR-14.4_ | **Payment-Method Pre-condition Rules (T-01):**<br>❖ Role `restaurant` may execute T-01 (`pending → confirmed`) only when `order.paymentMethod = 'cod'`.<br>❖ A `restaurant`-initiated T-01 on a VNPay order returns HTTP 422 referencing `MSG-LCYC-04`. VNPay orders must first reach `paid` via the payment context (system actor, T-02), after which T-04 (`paid → confirmed`) becomes available. |
 | _(16)–(17)_ | _BR-14.5_ | **Reject Reason Rules:**<br>❖ T-03, T-05 and T-07 carry `requireNote = true`. A missing or whitespace-only `reason` returns HTTP 400 referencing `MSG-LCYC-05`. |
@@ -1191,7 +1191,7 @@ stop
 | **Use Case ID — Name** | DEL-FR-01 — Shipper Registration |
 | **Actor** | Delivery Personnel (prospective Shipper), Administrator |
 | **Trigger** | ❖ A signed-in user submits a Shipper Application form containing personal information, government-issued identification, vehicle type and licence-plate number, and a driving-licence reference image.<br>❖ An administrator reviews a submitted application and approves or rejects it. |
-| **Description** | Onboards a new Delivery Personnel partner to the platform. Mirrors the same admin-gated verification pattern used for Restaurant Registration (UC-11): the application is created in a `pending_approval` state and the applicant cannot perform delivery operations until an administrator approves the application, which elevates the account's role to `shipper`. This use case represents the **target enterprise design**; the backend implementation is scheduled for completion in a subsequent Phase 2 sprint and is not yet present in the current codebase. |
+| **Description** | Onboards a new Delivery Personnel partner to the platform. Mirrors the same admin-gated verification pattern used for Restaurant Registration (UC-11): the application is created in a `pending_approval` state and the applicant cannot perform delivery operations until an administrator approves the application, which elevates the account's role to `shipper`. |
 | **Pre-condition** | ❖ Applicant is authenticated.<br>❖ Applicant does not yet have role `shipper` on their account.<br>❖ Applicant does not have a pending or approved shipper application on record.<br>❖ For approve / reject: actor has role `admin`. |
 | **Post-condition** | ❖ A `shipper_applications` row exists with `status = 'pending_approval'`, holding the submitted personal, vehicle, and document references.<br>❖ On administrator approval: the applicant's account role is elevated to `shipper`; a `ShipperApprovedEvent` is published; the shipper becomes eligible for UC-17 (availability) and UC-18 (pickup).<br>❖ On administrator rejection: the application row is marked `rejected` with a reason note; the applicant's role is unchanged. |
 
@@ -1254,7 +1254,7 @@ stop
 | **Use Case ID — Name** | DEL-FR-02 — Manage Shipper Availability |
 | **Actor** | Delivery Personnel (approved Shipper) |
 | **Trigger** | ❖ Shipper toggles their online/offline status from the mobile shipper console. |
-| **Description** | Lets an approved shipper opt in or out of the dispatch pool in real time. Only shippers whose status is `online` are considered candidates for new pickup assignments in UC-18. The shipper cannot go offline while holding an order in `picked_up` or `delivering` (i.e. an in-flight delivery); such an attempt is rejected. This use case represents the **target enterprise design**; the backend implementation is scheduled for completion in a subsequent Phase 2 sprint. |
+| **Description** | Lets an approved shipper opt in or out of the dispatch pool in real time. Only shippers whose status is `online` are considered candidates for new pickup assignments in UC-18. The shipper cannot go offline while holding an order in `picked_up` or `delivering` (i.e. an in-flight delivery); such an attempt is rejected. |
 | **Pre-condition** | ❖ Actor is authenticated.<br>❖ Actor has role `shipper` (approved through UC-16).<br>❖ For setting status to `offline`: no order owned by this shipper is in `picked_up` or `delivering`. |
 | **Post-condition** | ❖ The shipper's availability status is updated to `online` or `offline`.<br>❖ A `ShipperAvailabilityChangedEvent` is published so the dispatch service updates its candidate index. |
 
@@ -1380,7 +1380,7 @@ stop
 | **Use Case ID — Name** | DEL-FR-04 — Deliver Order |
 | **Actor** | Delivery Personnel (assigned Shipper), Administrator |
 | **Trigger** | ❖ Assigned shipper starts the delivery leg (`PATCH /orders/:id/en-route`) — transitions `picked_up → delivering` (T-10).<br>❖ Assigned shipper marks the order as delivered to the customer (`PATCH /orders/:id/deliver`) — transitions `delivering → delivered` (T-11). |
-| **Description** | Completes the order fulfilment as a single unified business workflow with two sequential transitions: T-10 (`picked_up → delivering`) starts the en-route leg and T-11 (`delivering → delivered`) closes the order. Both transitions enforce **assigned-shipper ownership** — only the user whose id matches `orders.shipperId` (or an administrator) can advance the order. Each transition emits `OrderStatusChangedEvent` so the customer's order-tracking surface (Phase 3) and the COD payment-on-delivery reconciliation can react. |
+| **Description** | Completes the order fulfilment as a single unified business workflow with two sequential transitions: T-10 (`picked_up → delivering`) starts the en-route leg and T-11 (`delivering → delivered`) closes the order. Both transitions enforce **assigned-shipper ownership** — only the user whose id matches `orders.shipperId` (or an administrator) can advance the order. Each transition emits `OrderStatusChangedEvent` so the customer's order-tracking surface (UC-20) and the COD payment-on-delivery reconciliation can react. |
 | **Pre-condition** | ❖ Actor is authenticated.<br>❖ Actor has role `shipper` and `actorId = orders.shipperId`, OR actor has role `admin`.<br>❖ T-10 requires `order.status = 'picked_up'`; T-11 requires `order.status = 'delivering'`. |
 | **Post-condition** | ❖ `orders.status` advances to `delivering` and subsequently to `delivered`; `orders.version` is incremented on each transition.<br>❖ A `order_status_logs` row is appended for each transition.<br>❖ `OrderStatusChangedEvent` is published after each transition.<br>❖ On T-11, downstream consumers (notification, COD payment reconciliation, rating eligibility) react to the `delivered` status. |
 
@@ -1434,13 +1434,13 @@ stop
 | _(6)_, _(13)_ | _BR-19.2_ | **Sequential Transition Rules:**<br>❖ T-10 requires `order.status = 'picked_up'`; any other source state returns HTTP 422 referencing `MSG-LCYC-01`.<br>❖ T-11 requires `order.status = 'delivering'`; any other source state returns HTTP 422 referencing `MSG-LCYC-01`.<br>❖ Idempotent re-issue: if the order is already in the requested target status the system returns it unchanged. |
 | _(7)_, _(14)_ | _BR-19.3_ | **Atomicity & Concurrency Rules:**<br>❖ Each transition runs the status update plus audit-log insert in a single DB transaction.<br>❖ Optimistic locking on `version` rejects concurrent updates with HTTP 409 referencing `MSG-LCYC-06`. |
 | _(8)_, _(15)_ | _BR-19.4_ | **Event Publication Rules:**<br>❖ Each successful T-10 and T-11 publishes `OrderStatusChangedEvent` after commit with the corresponding `fromStatus` / `toStatus`.<br>❖ Neither T-10 nor T-11 triggers a refund event; T-12 (`delivered → refunded`) is an admin-only post-delivery dispute path and is out of scope for this UC. |
-| _(15)–(16)_ | _BR-19.5_ | **Delivery Completion Side-Effects Rules:**<br>❖ The `delivered` status is the trigger for downstream Phase 3 features: customer rating eligibility, order-history "delivered" filter, and COD payment-on-delivery reconciliation against `totalAmount`.<br>❖ A delivered order can only advance to `refunded` via T-12 (admin-only dispute resolution); no other forward transition is defined. |
+| _(15)–(16)_ | _BR-19.5_ | **Delivery Completion Side-Effects Rules:**<br>❖ The `delivered` status is the trigger for downstream workflows: customer rating eligibility (UC-22), order-history "delivered" filter (UC-10), and COD payment-on-delivery reconciliation against `totalAmount`.<br>❖ A delivered order can only advance to `refunded` via T-12 (admin-only dispute resolution); no other forward transition is defined. |
 
 ---
 
-### Phase 3 — Customer Interaction, Promotion & Notification
+### Customer Interaction, Promotion & Notification (UC-20 – UC-26)
 
-Phase 3 introduces the customer-facing interaction surface that follows order placement (real-time tracking and self-service cancellation), the **rating and review** loop that closes the order lifecycle, and the cross-cutting **promotion**, **payment refund** and **notification** services consumed by all bounded contexts. The phase formalises the cancellation-after-payment refund pipeline already wired by Phase 2 transitions T-05, T-07 and T-12, and specifies the multi-channel delivery contract (in-app, push, email) that surfaces every order, payment and refund event to the right actor within seconds. Where a feature is not yet implemented in the current backend (for example, customer rating and review), the use case is written as the **target enterprise design** so it can be implemented later without re-specification.
+This section specifies the customer-facing interaction surface following order placement (real-time tracking and self-service cancellation), the **rating and review** loop that closes the order lifecycle, and the cross-cutting **promotion**, **payment refund** and **notification** services consumed by all bounded contexts. These use cases formalise the cancellation-after-payment refund pipeline wired by transitions T-05, T-07 and T-12, and specify the multi-channel delivery contract (in-app, push, email) that surfaces every order, payment and refund event to the right actor within seconds.
 
 ---
 
@@ -1451,7 +1451,7 @@ Phase 3 introduces the customer-facing interaction surface that follows order pl
 | **Use Case ID — Name** | CUS-FR-08 — Track Order Status |
 | **Actor** | Customer (authenticated, role `user`) |
 | **Trigger** | ❖ Customer opens an active order in the mobile or web client.<br>❖ Customer's open session receives an `OrderStatusChangedEvent` push over the Notification WebSocket gateway.<br>❖ Client falls back to polling `GET /orders/:id` or `GET /orders/:id/timeline` when the WebSocket is unavailable. |
-| **Description** | Provides the customer with a live view of one of their own orders. The use case combines an authoritative read API (`GET /orders/:id` and `GET /orders/:id/timeline`) with a real-time push channel served by the Notification gateway. Status updates originate from the `OrderStatusChangedEvent` published by every Phase 2 transition (T-01 through T-12); the customer surface reflects each transition within seconds while staying consistent with the order-history reads (UC-10, BR-10.4 — uniform 404 for non-owners). |
+| **Description** | Provides the customer with a live view of one of their own orders. The use case combines an authoritative read API (`GET /orders/:id` and `GET /orders/:id/timeline`) with a real-time push channel served by the Notification gateway. Status updates originate from the `OrderStatusChangedEvent` published by every order status transition (T-01 through T-12); the customer surface reflects each transition within seconds while staying consistent with the order-history reads (UC-10, BR-10.4 — uniform 404 for non-owners). |
 | **Pre-condition** | ❖ Customer is authenticated.<br>❖ The order is owned by the customer (`orders.customerId = session.user.id`).<br>❖ For real-time push: an active WebSocket connection to the Notification gateway exists for the caller's session. |
 | **Post-condition** | ❖ The client surfaces the order's current `status`, the chronological `order_status_logs` timeline, and any derived ETA.<br>❖ Subsequent transitions are reflected in the client either via WebSocket push or by the next poll cycle. |
 
@@ -1559,7 +1559,7 @@ stop
 
 | Activity | BR Code | Description |
 |---|---|---|
-| _(4)–(6)_, _(21)_ | _BR-21.1_ | **Ownership & Role Gate:**<br>❖ The endpoint is callable by any authenticated session; role-resolution maps the caller to the most-privileged role (admin > restaurant > shipper > customer).<br>❖ For role `customer`, `orders.customerId` MUST equal `session.user.id` — otherwise HTTP 404 referencing `MSG-HIST-01` (no order-existence leak).<br>❖ Restaurant-initiated (T-07) and admin-initiated cancellations follow Phase 2 UC-14 and are out of scope for this UC. |
+| _(4)–(6)_, _(21)_ | _BR-21.1_ | **Ownership & Role Gate:**<br>❖ The endpoint is callable by any authenticated session; role-resolution maps the caller to the most-privileged role (admin > restaurant > shipper > customer).<br>❖ For role `customer`, `orders.customerId` MUST equal `session.user.id` — otherwise HTTP 404 referencing `MSG-HIST-01` (no order-existence leak).<br>❖ Restaurant-initiated (T-07) and admin-initiated cancellations follow UC-14 (Accept or Reject Order) and are out of scope for this UC. |
 | _(7)_, _(20)_ | _BR-21.2_ | **Mandatory Reason Note:**<br>❖ Per the `TRANSITIONS` map, both T-03 and T-05 set `requireNote = true`.<br>❖ The handler rejects requests with a missing or whitespace-only `reason` with HTTP 400 referencing `MSG-CANC-01`.<br>❖ The accepted note is persisted on the `order_status_logs` row so downstream support and analytics can audit the cancellation reason. |
 | _(8)_, _(19)_ | _BR-21.3_ | **Customer-Cancellable Window:**<br>❖ A customer may only cancel while the order is in `pending` or `paid`. Once the order reaches `confirmed`, `preparing`, `ready_for_pickup`, `picked_up`, `delivering`, `delivered`, `cancelled` or `refunded`, the customer endpoint returns HTTP 422 referencing `MSG-CANC-02`.<br>❖ This rule mirrors `ALLOWED_TRANSITIONS` exactly: `pending → cancelled` and `paid → cancelled` are the only customer-eligible cancellation edges. |
 | _(10)–(11)_, _(18)_ | _BR-21.4_ | **Atomicity & Optimistic Locking:**<br>❖ The status update, version bump and audit-log insert run inside a single DB transaction.<br>❖ The `UPDATE orders SET status = 'cancelled', version = version + 1 WHERE id = $1 AND version = $expected` predicate fails when a concurrent action (e.g., a restaurant `accept` for T-01/T-02) commits first.<br>❖ Lock-loss returns HTTP 409 referencing `MSG-LCYC-06`; the client SHOULD refresh and re-evaluate cancellation eligibility. |
@@ -1571,14 +1571,12 @@ stop
 
 ### UC-22: Submit Rating & Review
 
-> **Implementation status:** target enterprise design. The Rating & Review BC is **not yet implemented** in the current backend. This UC specifies the contract the future module MUST satisfy; all field names, statuses and message codes are reserved for the implementing team.
-
 | Field | Detail |
 |---|---|
 | **Use Case ID — Name** | CUS-FR-10 — Submit Rating & Review |
 | **Actor** | Customer (authenticated, role `user`) |
 | **Trigger** | ❖ Customer opens a delivered order and selects **Rate & Review**.<br>❖ Customer submits `POST /reviews` with `{ orderId, stars, comment? }`. |
-| **Description** | Lets a customer rate a delivered order on a 1–5 star scale and optionally leave a free-text comment. Exactly one review per `(orderId, customerId)` pair may exist. The review is owned by the Review BC, references the order by UUID only (D-P7 cross-context isolation), and is the input to the restaurant's aggregate rating projection consumed by UC-2 / UC-3 listings. Reviews are moderation-ready: the schema reserves a `status` column (`published`, `hidden`, `removed`) so admins (Phase 4) can hide abusive content without deleting the row. |
+| **Description** | Lets a customer rate a delivered order on a 1–5 star scale and optionally leave a free-text comment. Exactly one review per `(orderId, customerId)` pair may exist. The review is owned by the Review BC, references the order by UUID only (D-P7 cross-context isolation), and is the input to the restaurant's aggregate rating projection consumed by UC-2 / UC-3 listings. Reviews are moderation-ready: the schema reserves a `status` column (`published`, `hidden`, `removed`) so administrators can hide abusive content without deleting the row. |
 | **Pre-condition** | ❖ Customer is authenticated.<br>❖ The referenced order is owned by the customer (`orders.customerId = session.user.id`).<br>❖ The referenced order has `status = 'delivered'`.<br>❖ No existing review row exists for `(orderId, customerId)`. |
 | **Post-condition** | ❖ A new `reviews` row is persisted with `status = 'published'`.<br>❖ A `RestaurantRatingChangedEvent` is published; the Restaurant Catalog BC updates the aggregate rating projection for the restaurant (`ratingSum`, `ratingCount`, derived `averageRating`).<br>❖ The review is visible on the restaurant detail screen (UC-3). |
 
@@ -1632,7 +1630,7 @@ stop
 | _(9)_, _(16)_ | _BR-22.3_ | **Delivered-Only Eligibility:**<br>❖ A review may only be submitted when `order.status = 'delivered'`.<br>❖ Any other status (including `refunded` post-dispute and `cancelled`) returns HTTP 422 referencing `MSG-RATE-02`.<br>❖ This guarantees the rating reflects an actually-delivered experience. |
 | _(10)–(11)_, _(15)_ | _BR-22.4_ | **One-Review-Per-Order Uniqueness:**<br>❖ A UNIQUE constraint on `(orderId, customerId)` enforces a single review row per order.<br>❖ Duplicate-submission attempts return HTTP 409 referencing `MSG-RATE-03`.<br>❖ Editing an existing review uses `PATCH /reviews/:id` (subject to BR-22.6), not re-`POST`. |
 | _(12)–(13)_ | _BR-22.5_ | **Cross-BC Projection Update:**<br>❖ The review insert and the `RestaurantRatingChangedEvent` publish run in the same DB transaction (outbox or transactional EventBus, whichever is in use).<br>❖ The Restaurant Catalog BC subscribes to the event and updates `restaurants.ratingSum`, `restaurants.ratingCount` and the derived `averageRating` projection used by UC-2 / UC-3 — the Review BC NEVER writes to the `restaurants` table directly (D-P7). |
-| _(12)_ | _BR-22.6_ | **Moderation-Ready Schema:**<br>❖ `reviews.status ∈ {'published', 'hidden', 'removed'}`. Customer endpoints only operate on `published` rows; admins (Phase 4) can transition to `hidden` (visible to author only) or `removed` (soft-delete).<br>❖ A `PATCH /reviews/:id` endpoint allows the original author to edit `stars` / `comment` while `status = 'published'`; non-owners receive `MSG-RATE-06` and non-existent ids return `MSG-RATE-05`. |
+| _(12)_ | _BR-22.6_ | **Moderation-Ready Schema:**<br>❖ `reviews.status ∈ {'published', 'hidden', 'removed'}`. Customer endpoints only operate on `published` rows; administrators can transition to `hidden` (visible to author only) or `removed` (soft-delete).<br>❖ A `PATCH /reviews/:id` endpoint allows the original author to edit `stars` / `comment` while `status = 'published'`; non-owners receive `MSG-RATE-06` and non-existent ids return `MSG-RATE-05`. |
 
 ---
 
@@ -1913,7 +1911,7 @@ stop
 | Activity | BR Code | Description |
 |---|---|---|
 | _(1)–(3)_ | _BR-26.1_ | **Event Subscription Surface:**<br>❖ The Notification BC subscribes to the following events (current backend): `OrderPlacedEvent`, `OrderStatusChangedEvent`, `OrderCancelledAfterPaymentEvent`, `PaymentConfirmedEvent`, `PaymentFailedEvent`.<br>❖ Recipient resolution uses the event payload directly for customer-facing notifications (`event.customerId`) and a denormalised Restaurant ACL snapshot (`notification-restaurant-acl.repository.ts`) for restaurant-facing types like `new_order_received`. The handler NEVER calls back into the publishing BC. |
-| _(2)_, _(12)_ | _BR-26.2_ | **Notification Type ↔ Channel Mapping:**<br>❖ The static `STATUS_TRANSITION_NOTIFICATION` table in `order-status-changed.handler.ts` maps every Phase 2 transition to its notification type and default channel set; transitions not in the map produce no notification (silent skip).<br>❖ Verified channel assignments from the backend source:<br>\u25ba `order_placed` — customer: `in_app + push`; restaurant: `new_order_received` — `in_app + push`.<br>\u25ba `payment_confirmed` — customer: `in_app + push + email`.<br>\u25ba `order_cancelled` (T-03, T-05, T-07) — customer: `in_app + push + email`.<br>\u25ba `order_delivered` (T-11) — customer: `in_app + push + email`.<br>\u25ba `order_refunded` (T-12) — customer: `in_app + email` only (no push).<br>\u25ba `refund_initiated` (`OrderCancelledAfterPaymentEvent`) — customer: `in_app + email` only (no push).<br>\u25ba Most other mid-lifecycle status transitions — `in_app + push`.<br>❖ Channels are filtered further by per-user `notification_preferences` (BR-26.3) before dispatch. |
+| _(2)_, _(12)_ | _BR-26.2_ | **Notification Type ↔ Channel Mapping:**<br>❖ The static `STATUS_TRANSITION_NOTIFICATION` table in `order-status-changed.handler.ts` maps every order status transition to its notification type and default channel set; transitions not in the map produce no notification (silent skip).<br>❖ Verified channel assignments from the backend source:<br>\u25ba `order_placed` — customer: `in_app + push`; restaurant: `new_order_received` — `in_app + push`.<br>\u25ba `payment_confirmed` — customer: `in_app + push + email`.<br>\u25ba `order_cancelled` (T-03, T-05, T-07) — customer: `in_app + push + email`.<br>\u25ba `order_delivered` (T-11) — customer: `in_app + push + email`.<br>\u25ba `order_refunded` (T-12) — customer: `in_app + email` only (no push).<br>\u25ba `refund_initiated` (`OrderCancelledAfterPaymentEvent`) — customer: `in_app + email` only (no push).<br>\u25ba Most other mid-lifecycle status transitions — `in_app + push`.<br>❖ Channels are filtered further by per-user `notification_preferences` (BR-26.3) before dispatch. |
 | _(3)–(5)_, _(7)–(11)_ | _BR-26.3_ | **Preferences, Mutes & Quiet Hours:**<br>❖ Each user has at most one `notification_preferences` row; when missing, `DEFAULT_PREFERENCES` apply (push + in-app + email enabled, SMS disabled, no muted types, no quiet hours, timezone `Asia/Ho_Chi_Minh`).<br>❖ Channels are filtered by the per-channel boolean flags; the `mutedTypes` JSONB array suppresses delivery while still persisting the `notifications` row for audit.<br>❖ Quiet hours are timezone-aware (computed via `QuietHoursService`) and suppress ONLY the `push` channel; `in_app` is always persisted so the inbox remains complete. Critical types — `system_announcement`, `new_order_received` — bypass both mutes and quiet hours.<br>❖ Invalid preference payloads return HTTP 400 referencing `MSG-NOTI-01`; a successful `PATCH /notifications/my/preferences` returns the updated row and references `MSG-NOTI-07`. |
 | _(12)_ | _BR-26.4_ | **Idempotency Contract:**<br>❖ The idempotency key is `notif:{type}:{sourceId}:{recipientId}:{channel}`. `sourceId` is `orderId` for order/payment events.<br>❖ The handler upserts on this key; redelivery of the same event (CQRS retry, RabbitMQ at-least-once, manual replay) results in a no-op. This is the primary defence against duplicate notifications when both `OrderStatusChangedEvent` and `OrderCancelledAfterPaymentEvent` fire for the same T-05 transition. |
 | _(13)–(14)_ | _BR-26.5_ | **Multi-Channel Dispatch:**<br>❖ `ChannelDispatcherService` dispatches per enabled channel in fire-and-forget mode; delivery failure on one channel NEVER aborts the others.<br>❖ Each delivery attempt writes a `notification_deliveries` row with status `pending → succeeded` or `failed` (plus error detail).<br>❖ Push delivery uses FCM via `firebase-push.provider.ts`; email uses Nodemailer; in-app uses the WebSocket gateway and falls through to inbox-only when no socket is connected (read on next `GET /notifications/my`). |
@@ -1923,9 +1921,9 @@ stop
 
 ---
 
-### Phase 4 — Administration & Governance
+### Administration & Governance (UC-27 – UC-35)
 
-Phase 4 specifies the **administrative control plane** of the platform — the set of use cases that allow the **Administrator** actor to govern partner onboarding, account lifecycle, operational health, financial reporting and platform-level role assignments. These use cases sit on top of every preceding phase: they read and mutate the same aggregates (restaurants, shipper applications, orders, payments, promotions, users) without re-defining their domain rules. Phase 4 therefore closes the BR-1 (Partner Verification) and BR-5 (Commission Calculation) traceability loops opened in Phases 1–3 and adds the missing admin-side workflows for partner approval queues, suspension, monitoring, reporting and role governance.<br>Where a Phase 4 capability is already fully implemented in the backend (administrative restaurant approval — see UC-11 BR-11.6; administrative order monitoring — cross-tenant read surface, see UC-30; administrative cancellation and post-delivery refund — see UC-21, UC-25 BR-25.8) the corresponding UC documents the observed behaviour and cross-references the primary BR. Where the capability is **partially implemented (schema-only)** or **forward-looking enterprise design** (shipper application queue, account suspension, user account management, reports & export, dashboard, role management) the UC is written as the **target enterprise design** that aligns with the existing architecture, role model and domain conventions so it can be wired without re-specification.
+This section specifies the **administrative control plane** of the platform — the set of use cases that allow the **Administrator** actor to govern partner onboarding, account lifecycle, operational health, financial reporting and platform-level role assignments. These use cases read and mutate the same aggregates (restaurants, shipper applications, orders, payments, promotions, users) defined in the preceding sections without re-defining their domain rules. They complete the traceability for BR-1 (Partner Verification) and BR-5 (Commission Calculation) and add the admin-side workflows for partner approval queues, suspension, monitoring, reporting and role governance.
 
 ---
 
@@ -1992,7 +1990,7 @@ stop
 | **Use Case ID — Name** | ADM-FR-03 — Approve or Reject Shipper Applications |
 | **Actor** | Administrator |
 | **Trigger** | ❖ Administrator opens the Shipper Approval Queue and selects an application to review.<br>❖ Administrator submits an approval decision (approve / reject with a reason note). |
-| **Description** | Completes the Delivery Personnel onboarding cycle initiated in UC-16. The administrator inspects pending shipper applications — applicant identity, vehicle type, licence-plate number, and the referenced national-ID and driving-licence images — and approves or rejects each one. On approval, the applicant's account role is elevated to `shipper` atomically with the application status update, and a `ShipperApprovedEvent` is published so the Delivery BC and Notification BC react. Rejection requires a reason note that is surfaced to the applicant via `MSG-SHIP-05`. This use case represents the target enterprise design; the underlying admin endpoints are scheduled for the same Phase 2 sprint that delivers UC-16. |
+| **Description** | Completes the Delivery Personnel onboarding cycle initiated in UC-16. The administrator inspects pending shipper applications — applicant identity, vehicle type, licence-plate number, and the referenced national-ID and driving-licence images — and approves or rejects each one. On approval, the applicant's account role is elevated to `shipper` atomically with the application status update, and a `ShipperApprovedEvent` is published so the Delivery BC and Notification BC react. Rejection requires a reason note that is surfaced to the applicant via `MSG-SHIP-05`. |
 | **Pre-condition** | ❖ Actor is authenticated with role `admin`.<br>❖ A `shipper_applications` row exists in `status = 'pending_approval'`.<br>❖ For reject: a non-empty reason note is supplied. |
 | **Post-condition** | ❖ On approval: the application row reaches `status = 'approved'`; the applicant's account role is elevated to `shipper`; `ShipperApprovedEvent` is published.<br>❖ On rejection: the application row reaches `status = 'rejected'` with the reason note persisted; the applicant's role is unchanged.<br>❖ An audit entry records the admin actor and the decision timestamp. |
 

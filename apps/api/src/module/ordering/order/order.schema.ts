@@ -75,9 +75,9 @@ export type TriggeredByRole = (typeof triggeredByRoleEnum.enumValues)[number];
 // ---------------------------------------------------------------------------
 
 export type DeliveryAddress = {
-  street: string;
-  district: string;
-  city: string;
+  street?: string;
+  district?: string;
+  city?: string;
   latitude?: number;
   longitude?: number;
 };

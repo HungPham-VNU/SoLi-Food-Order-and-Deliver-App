@@ -186,14 +186,14 @@ export class OrderStatusLogEntryDto {
 // ---------------------------------------------------------------------------
 
 export class DeliveryAddressResponseDto {
-  @ApiProperty()
-  street!: string;
+  @ApiPropertyOptional()
+  street?: string;
 
-  @ApiProperty()
-  district!: string;
+  @ApiPropertyOptional()
+  district?: string;
 
-  @ApiProperty()
-  city!: string;
+  @ApiPropertyOptional()
+  city?: string;
 
   @ApiPropertyOptional()
   latitude?: number;

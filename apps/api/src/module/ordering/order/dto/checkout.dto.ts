@@ -17,23 +17,26 @@ import type { DeliveryAddress } from '../order.schema';
 // ---------------------------------------------------------------------------
 
 export class DeliveryAddressDto implements DeliveryAddress {
-  @ApiProperty({ example: '123 Nguyen Hue Blvd' })
+  @ApiPropertyOptional({ example: '123 Nguyen Hue Blvd' })
+  @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(500)
-  street!: string;
+  street?: string;
 
-  @ApiProperty({ example: 'District 1' })
+  @ApiPropertyOptional({ example: 'District 1' })
+  @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(200)
-  district!: string;
+  district?: string;
 
-  @ApiProperty({ example: 'Ho Chi Minh City' })
+  @ApiPropertyOptional({ example: 'Ho Chi Minh City' })
+  @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(200)
-  city!: string;
+  city?: string;
 
   @ApiPropertyOptional({
     description:
