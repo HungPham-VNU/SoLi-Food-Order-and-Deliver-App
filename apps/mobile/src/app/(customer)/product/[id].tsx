@@ -31,9 +31,9 @@ export default function ProductDetailPage() {
 
   const handleTabPress = (tabId: string) => {
     if (tabId === "home") {
-      router.navigate("/(customer)");
+      router.navigate("/(customer)/(tabs)/" as any);
     } else {
-      router.navigate(`/(customer)/(tabs)/${tabId}`);
+      router.navigate(`/(customer)/(tabs)/${tabId}` as any);
     }
   };
 

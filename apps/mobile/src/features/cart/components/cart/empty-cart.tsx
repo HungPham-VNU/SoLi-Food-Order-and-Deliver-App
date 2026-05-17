@@ -24,7 +24,7 @@ export function EmptyCart({ onContinueShopping }: EmptyCartProps) {
         className="text-on-surface-variant text-sm text-center leading-relaxed"
         style={{ fontFamily: 'Inter_400Regular' }}
       >
-        Looks like you haven't added any items yet. Head back to explore fresh
+        Looks like you haven&apos;t added any items yet. Head back to explore fresh
         produce and more!
       </Text>
 

@@ -5,6 +5,7 @@ import { Menu, ChevronDown, User as UserIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAddressStore } from '@/src/features/location';
 import { useSession } from '@/src/lib/auth-client';
+import { NotificationBell } from '@/src/features/notification';
 
 interface HomeTopBarProps {
   insetsTop: number;
@@ -48,6 +49,8 @@ export function HomeTopBar({ insetsTop }: HomeTopBarProps) {
             <ChevronDown size={18} color="#00490e" />
           </TouchableOpacity>
         </View>
+
+        <NotificationBell color="#1a1c1c" />
 
         <TouchableOpacity 
           className="w-10 h-10 rounded-full bg-surface-container overflow-hidden ring-2 ring-primary/20 shadow-sm items-center justify-center"

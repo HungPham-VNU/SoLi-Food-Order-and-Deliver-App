@@ -301,7 +301,7 @@ export function WelcomeScreen({
                 maxWidth: 240,
               }}
             >
-              By continuing, you agree to Harvest Market's
+              By continuing, you agree to Harvest Market&apos;s
               <Text
                 className="text-[#0d631b]"
                 style={{ fontFamily: "Inter_500Medium" }}

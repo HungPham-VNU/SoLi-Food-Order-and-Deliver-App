@@ -1,5 +1,5 @@
-import { OrdersScreen } from '@/src/features/orders';
+import { OrderHistoryScreen } from '@/src/features/orders';
 
 export default function OrdersRoute() {
-  return <OrdersScreen />;
+  return <OrderHistoryScreen />;
 }

@@ -28,3 +28,10 @@ export const clearCart = () =>
   apiFetch<void>('/api/carts/my', {
     method: 'DELETE',
   });
+
+export const checkoutCart = (data: import('../types').CheckoutDto, idempotencyKey?: string) =>
+  apiFetch<import('../types').CheckoutResponseDto>('/api/carts/my/checkout', {
+    method: 'POST',
+    headers: idempotencyKey ? { 'X-Idempotency-Key': idempotencyKey } : undefined,
+    body: JSON.stringify(data),
+  });

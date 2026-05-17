@@ -22,7 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { formatCurrency } from '@/src/lib/format-utils';
 import { RestaurantMenuScreenProps } from '../types';
 import { useRestaurant, useRestaurantCategories, useRestaurantMenu } from '../api';
-import { useMyCart } from '@/src/features/cart/api/cart-api';
+import { useMyCart } from '@/src/features/cart';
 import { useRouter } from 'expo-router';
 
 export function RestaurantMenuScreen({

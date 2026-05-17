@@ -13,11 +13,17 @@ import { useEffect, useState } from 'react';
 
 import { useSession } from '@/src/lib/auth-client';
 import { LocationInitializer } from '@/src/features/location';
+import { useNotificationSocket, usePushToken } from '@/src/features/notification';
+import Toast from 'react-native-toast-message';
 
 function RootNavigation() {
   const { data: session, isPending } = useSession();
   const segments = useSegments();
   const router = useRouter();
+
+  // Initialize notifications
+  useNotificationSocket();
+  usePushToken();
 
   useEffect(() => {
     if (isPending) return;
@@ -45,6 +51,7 @@ function RootNavigation() {
     <>
       <LocationInitializer />
       <Stack screenOptions={{ headerShown: false }} />
+      <Toast />
     </>
   );
 }

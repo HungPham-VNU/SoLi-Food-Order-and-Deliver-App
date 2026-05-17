@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatCurrency } from '@/src/lib/format-utils';
 import { MenuItemDetailScreenProps, ModifierGroup } from '../types';
 import { useMenuItem, useMenuItemModifiers } from '../api/restaurant-api';
-import { useMyCart } from '@/src/features/cart/api/cart-api';
+import { useMyCart } from '@/src/features/cart';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const areModifierSelectionsEqual = (a: Record<string, string[]>, b: Record<string, string[]>) => {

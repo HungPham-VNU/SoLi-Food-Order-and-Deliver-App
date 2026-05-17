@@ -295,7 +295,7 @@ export function SignInScreen({
             className="text-[#40493d] text-sm"
             style={{ fontFamily: "Inter_400Regular" }}
           >
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Text
               className="text-[#8b5000]"
               style={{ fontFamily: "PlusJakartaSans_700Bold" }}

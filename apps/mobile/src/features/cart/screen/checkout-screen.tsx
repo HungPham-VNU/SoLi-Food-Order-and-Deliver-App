@@ -26,10 +26,12 @@ export function SingleScreenCheckout() {
     isError,
     estimate,
     selectedAddress,
+    selectedPaymentMethod,
     cartItems,
     summary,
     handleBack,
     handlePlaceOrder,
+    isPlacingOrder,
   } = useCheckout();
 
   if (isLoading) {
@@ -82,15 +84,18 @@ export function SingleScreenCheckout() {
 
         <CheckoutPriceBreakdown summary={summary} />
 
-        <CheckoutPromoSection />
+        <CheckoutPromoSection onApply={(code) => console.log('Applying promo:', code)} />
 
-        <CheckoutPaymentSection />
+        <CheckoutPaymentSection
+          paymentMethod={selectedPaymentMethod ?? undefined}
+        />
       </ScrollView>
 
       <CheckoutBottomBar
         total={summary.total}
         onPlaceOrder={handlePlaceOrder}
         paddingBottom={Math.max(insets.bottom, 16)}
+        isPlacingOrder={isPlacingOrder}
       />
     </View>
   );

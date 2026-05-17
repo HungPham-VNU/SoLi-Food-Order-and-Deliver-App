@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,26 +11,26 @@ import { router } from 'expo-router';
 import { Banknote, PlusCircle, Smartphone } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import { CheckoutHeader, PaymentMethodCard } from '../components';
-import type { PaymentScreenProps } from '../types';
+import { useCheckoutStore } from '../store/checkout-store';
+import type { PaymentScreenProps, PaymentMethod } from '../types';
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
-type SavedCard = {
-  id: string;
-  last4: string;
-  expiry: string;
-};
-
-type PaymentOptionData = {
-  id: string;
-  label: string;
-  tone: 'dark' | 'neutral' | 'soft' | 'surface';
-  icon: React.ReactNode;
-};
-
-const SAVED_CARDS: SavedCard[] = [
-  { id: 'card-4242', last4: '4242', expiry: '12/26' },
-  { id: 'card-8812', last4: '8812', expiry: '08/25' },
+const SAVED_CARDS: PaymentMethod[] = [
+  {
+    id: 'card-4242',
+    brand: 'Visa',
+    last4: '4242',
+    expiry: '12/26',
+    type: 'card',
+  },
+  {
+    id: 'card-8812',
+    brand: 'Mastercard',
+    last4: '8812',
+    expiry: '08/25',
+    type: 'card',
+  },
 ];
 
 const GoogleIcon = () => (
@@ -54,24 +54,50 @@ const GoogleIcon = () => (
   </Svg>
 );
 
+type PaymentOptionData = {
+  id: string;
+  label: string;
+  tone: 'dark' | 'neutral' | 'soft' | 'surface';
+  icon: React.ReactNode;
+  method: PaymentMethod;
+};
+
 const OTHER_METHODS: PaymentOptionData[] = [
   {
     id: 'apple-pay',
     label: 'Apple Pay',
     tone: 'dark',
     icon: <Smartphone size={18} color="#ffffff" />,
+    method: {
+      id: 'apple-pay',
+      brand: 'Apple Pay',
+      last4: 'Apple Pay',
+      type: 'apple-pay',
+    },
   },
   {
     id: 'google-pay',
     label: 'Google Pay',
     tone: 'neutral',
     icon: <GoogleIcon />,
+    method: {
+      id: 'google-pay',
+      brand: 'Google Pay',
+      last4: 'Google Pay',
+      type: 'google-pay',
+    },
   },
   {
     id: 'cash',
     label: 'Cash on Delivery',
     tone: 'soft',
     icon: <Banknote size={18} color="#0d631b" />,
+    method: {
+      id: 'cash',
+      brand: 'Cash',
+      last4: 'Cash',
+      type: 'cash',
+    },
   },
 ];
 
@@ -82,7 +108,7 @@ export function PaymentScreen({
   onSelectPaymentMethod,
 }: PaymentScreenProps) {
   const insets = useSafeAreaInsets();
-  const [selectedId, setSelectedId] = useState(SAVED_CARDS[0]?.id ?? '');
+  const { selectedPaymentMethod, setSelectedPaymentMethod } = useCheckoutStore();
 
   const headerHeight = useMemo(() => insets.top + 64, [insets.top]);
   const footerInset = Math.max(insets.bottom, 16);
@@ -96,9 +122,14 @@ export function PaymentScreen({
     }
   };
 
-  const handleSelect = (id: string) => {
-    setSelectedId(id);
-    onSelectPaymentMethod?.(id);
+  const handleSelect = (method: PaymentMethod) => {
+    setSelectedPaymentMethod(method);
+    onSelectPaymentMethod?.(method);
+    if (onContinue) {
+      onContinue(method);
+    } else {
+      router.back();
+    }
   };
 
   return (
@@ -137,10 +168,10 @@ export function PaymentScreen({
               <PaymentMethodCard
                 key={card.id}
                 type="card"
-                label={`•••• ${card.last4}`}
+                label={`${card.brand} •••• ${card.last4}`}
                 subtitle={card.expiry}
-                selected={selectedId === card.id}
-                onPress={() => handleSelect(card.id)}
+                selected={selectedPaymentMethod?.id === card.id}
+                onPress={() => handleSelect(card)}
               />
             ))}
 
@@ -176,8 +207,8 @@ export function PaymentScreen({
                 label={option.label}
                 icon={option.icon}
                 tone={option.tone}
-                selected={selectedId === option.id}
-                onPress={() => handleSelect(option.id)}
+                selected={selectedPaymentMethod?.id === option.id}
+                onPress={() => handleSelect(option.method)}
               />
             ))}
           </View>

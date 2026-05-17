@@ -11,9 +11,5 @@ export default function OrderReviewRoute() {
     router.replace('/(customer)/(tabs)');
   };
 
-  return (
-    <OrderReviewScreen 
-      onPlaceOrder={handlePlaceOrder}
-    />
-  );
+  return <OrderReviewScreen onPlaceOrder={handlePlaceOrder} />;
 }

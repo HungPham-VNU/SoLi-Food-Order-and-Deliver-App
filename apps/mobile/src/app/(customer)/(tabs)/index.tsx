@@ -1,5 +1,5 @@
 import { HomeScreen } from '@/src/features/restaurants';
 
-export default function HomeTab() {
-  return <HomeScreen />;
-}
+const HomeTab = () => <HomeScreen />;
+
+export default HomeTab;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { ArrowRight } from 'lucide-react-native';
 import { formatCurrency } from '@/src/lib/format-utils';
 
@@ -7,12 +7,14 @@ interface CheckoutBottomBarProps {
   total: number;
   onPlaceOrder: () => void;
   paddingBottom?: number;
+  isPlacingOrder?: boolean;
 }
 
 export function CheckoutBottomBar({
   total,
   onPlaceOrder,
   paddingBottom = 16,
+  isPlacingOrder = false,
 }: CheckoutBottomBarProps) {
   return (
     <View
@@ -37,15 +39,24 @@ export function CheckoutBottomBar({
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={onPlaceOrder}
-        className="w-full bg-primary rounded-full py-4 flex-row items-center justify-center gap-2 shadow-lg"
+        disabled={isPlacingOrder}
+        className={`w-full bg-primary rounded-full py-4 flex-row items-center justify-center gap-2 shadow-lg ${
+          isPlacingOrder ? 'opacity-70' : ''
+        }`}
       >
-        <Text
-          className="text-on-primary text-base"
-          style={{ fontFamily: 'Inter_700Bold' }}
-        >
-          Place Order
-        </Text>
-        <ArrowRight size={20} color="#ffffff" />
+        {isPlacingOrder ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <>
+            <Text
+              className="text-on-primary text-base"
+              style={{ fontFamily: 'Inter_700Bold' }}
+            >
+              Place Order
+            </Text>
+            <ArrowRight size={20} color="#ffffff" />
+          </>
+        )}
       </TouchableOpacity>
     </View>
   );

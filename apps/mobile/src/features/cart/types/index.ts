@@ -36,11 +36,20 @@ export interface DeliveryAddressScreenProps {
   onSelectAddress?: (addressId: string) => void;
 }
 
+export interface PaymentMethod {
+  id: string;
+  brand: string;
+  last4: string;
+  expiry?: string;
+  color?: string;
+  type: 'card' | 'apple-pay' | 'google-pay' | 'cash';
+}
+
 export interface PaymentScreenProps {
   onBack?: () => void;
-  onContinue?: (selectedPaymentMethodId: string) => void;
+  onContinue?: (paymentMethod: PaymentMethod) => void;
   onAddPaymentMethod?: () => void;
-  onSelectPaymentMethod?: (paymentMethodId: string) => void;
+  onSelectPaymentMethod?: (paymentMethod: PaymentMethod) => void;
 }
 
 export interface ReviewScreenProps {
@@ -100,4 +109,29 @@ export interface CartResponse {
   totalAmount: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface DeliveryAddressDto {
+  street: string;
+  district: string;
+  city: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface CheckoutDto {
+  deliveryAddress: DeliveryAddressDto;
+  paymentMethod: 'cod' | 'vnpay';
+  note?: string;
+}
+
+export interface CheckoutResponseDto {
+  orderId: string;
+  status: string;
+  totalAmount: number;
+  shippingFee: number;
+  paymentMethod: 'cod' | 'vnpay';
+  paymentUrl?: string;
+  estimatedDeliveryMinutes?: number;
+  createdAt: string;
 }

@@ -3,6 +3,9 @@ import Constants from 'expo-constants';
 import { authClient } from '@/src/lib/auth-client';
 
 const getBaseUrl = () => {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL.replace(/\/+$/, '');
+  }
   const debuggerHost = Constants.expoConfig?.hostUri;
   const localhost = debuggerHost?.split(':')[0] || 'localhost';
   return `http://${localhost}:3000`.replace(/\/+$/, '');
