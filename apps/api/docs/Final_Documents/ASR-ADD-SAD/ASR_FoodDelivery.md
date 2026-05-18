@@ -77,7 +77,7 @@ Each ASR is annotated with a confidence label:
 The implemented architecture is a **Modular Monolith** with:
 
 - Bounded contexts: `restaurant-catalog`, `ordering`, `payment`, `promotion`, `notification`, `image`, `auth`
-- **Selective CQRS** (`@nestjs/cqrs`): used for order placement and payment IPN handling; standard service/repository layering elsewhere
+- **Selective CQRS** (`@nestjs/cqrs`): used for order placement (`PlaceOrderCommand`), order lifecycle transitions (`TransitionOrderCommand`), and payment IPN handling (`ProcessIpnCommand`); standard service/repository layering elsewhere
 - **In-process synchronous EventBus** for cross-BC integration (no external message broker)
 - **Anti-Corruption Layer (ACL) snapshot projections** maintained by event handlers
 - **Dependency-Inversion ports** (`PAYMENT_INITIATION_PORT`, `PROMOTION_APPLICATION_PORT`) between Ordering and Payment / Promotion
@@ -105,7 +105,7 @@ The following drivers shape the architecture and are referenced by ASRs througho
 | AD-2 | **Integrity & non-repudiation of online payments** | BR-4, BR-P4, [process-ipn.handler.ts](../../../src/module/payment/commands/process-ipn.handler.ts) | HMAC-SHA512 IPN verification before any state change; optimistic locking (`version`) on `payment_transactions`; constant-time signature comparison |
 | AD-3 | **Decoupling of bounded contexts under one deployable** | [Strategies §Modular Monolith Blueprint](Quality-Attributes-Architecture-Strategies.md), [ordering.module.ts](../../../src/module/ordering/ordering.module.ts) | Synchronous in-process EventBus; ACL snapshot tables (`ordering_*_snapshots`); DIP ports for outbound calls |
 | AD-4 | **Real-time order-status visibility (≤ 5 s)** | Utility Tree (Performance → Update propagation), US-CUS-track | Socket.IO gateway; Redis presence reference-counting; per-user rooms |
-| AD-5 | **State-machine integrity of order lifecycle** | BR (status transitions), [order-lifecycle.service.ts](../../../src/module/ordering/order-lifecycle/order-lifecycle.service.ts) | Hand-crafted transition table; `orders.version` optimistic lock; `order_status_logs` audit trail |
+| AD-5 | **State-machine integrity of order lifecycle** | BR (status transitions), [transitions.ts](../../../src/module/ordering/order-lifecycle/constants/transitions.ts), [transition-order.handler.ts](../../../src/module/ordering/order-lifecycle/commands/transition-order.handler.ts) | Hand-crafted TRANSITIONS map in `constants/transitions.ts`; enforcement + optimistic lock in `TransitionOrderHandler`; `OrderLifecycleService` handles ownership-only checks; `order_status_logs` audit trail |
 | AD-6 | **Single-restaurant cart constraint** | BR-2 | Enforced in cart service before append; Redis-only cart store (no DB schema for carts) |
 | AD-7 | **Delivery radius constraint** | BR-3 | Haversine in `GeoService`; ACL snapshot of `delivery_zones`; validated synchronously in `PlaceOrderHandler` |
 | AD-8 | **Manual partner verification gate** | BR-1 | Admin approval state machine on `restaurants` and `shippers`; restricted role grants until approved |
@@ -241,10 +241,10 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Stimulus           | Any actor (customer, restaurant, shipper, admin, scheduled task) requests an order status transition                                                            |
 | Stimulus Source    | Any of the above                                                                                                                                               |
 | Environment        | Normal + concurrent operation                                                                                                                                  |
-| Artifact           | [OrderLifecycleService](../../../src/module/ordering/order-lifecycle/order-lifecycle.service.ts); `orders.version`; `order_status_logs`                        |
+| Artifact           | [TRANSITIONS map](../../../src/module/ordering/order-lifecycle/constants/transitions.ts) (closed transition matrix); [TransitionOrderHandler](../../../src/module/ordering/order-lifecycle/commands/transition-order.handler.ts) (enforcement + optimistic lock); [OrderLifecycleService](../../../src/module/ordering/order-lifecycle/services/order-lifecycle.service.ts) (ownership checks); `orders.version`; `order_status_logs` |
 | Response           | Disallowed transitions rejected with a typed error; allowed transitions commit atomically and append an audit log                                              |
 | Response Measure   | 100 % of disallowed transitions rejected; 100 % committed transitions logged; concurrent transition attempts fail-safe via optimistic-lock retry / rejection   |
-| Architectural Tactics | Hand-crafted transition matrix; optimistic locking on `version`; transactional INSERT into `order_status_logs`                                                  |
+| Architectural Tactics | Hand-crafted TRANSITIONS map (D6-A) in `constants/transitions.ts`; `TransitionOrderHandler` enforces via `@CommandHandler`; optimistic locking on `version`; transactional INSERT into `order_status_logs` |
 
 ### QA-R-04 — Single-Restaurant Cart Invariant *[Implemented]*
 
@@ -310,7 +310,7 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Response Measure   | 100 % denial rate for missing / mismatched roles in route tests                                                                            |
 | Architectural Tactics | Multi-role bitmap-equivalent (CSV) checked via OR-logic helper; Better Auth `admin()` plugin for admin scoping                           |
 
-### QA-S-04 — Dev-Only Identity Middleware Must Not Reach Production *[Partial]*
+### QA-S-04 — Dev-Only Identity Middleware Must Not Reach Production *[Not Implemented — Open Security Gap]*
 
 | Element            | Description                                                                                                                          |
 |--------------------|--------------------------------------------------------------------------------------------------------------------------------------|
@@ -318,9 +318,10 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Stimulus Source    | Deployment pipeline                                                                                                                  |
 | Environment        | Production                                                                                                                           |
 | Artifact           | [`DevTestUserMiddleware`](../../../src/lib/dev-test-user.middleware.ts)                                                              |
-| Response           | Middleware short-circuits or is removed from the global middleware chain in `NODE_ENV=production`                                    |
+| Response           | Middleware removed from the global middleware chain in `NODE_ENV=production`                                                         |
 | Response Measure   | 100 % of production builds reject `x-test-user-id` header; verified by deployment smoke test                                         |
-| Architectural Tactics | Environment-gated registration in `app.module.ts`; CI gate on production build (Planned)                                              |
+| **Current Gap**    | **`app.module.ts` registers this middleware unconditionally for ALL routes (`'*'`) with no `NODE_ENV` check. The middleware itself has no environment guard. Any caller who sends `x-test-user-id` in production would have `req.user` injected. Production builds must add environment gating before deployment.** |
+| Architectural Tactics | Add `if (process.env.NODE_ENV !== 'production')` guard in `AppModule.configure()`; enforce via CI gate on production Docker image (Planned) |
 
 ### QA-S-05 — Input Validation & Stored-XSS Protection *[Implemented]*
 
@@ -434,7 +435,7 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Stimulus           | A `NotificationCreated` event fires                                                                                      |
 | Stimulus Source    | Cross-BC event handlers                                                                                                  |
 | Environment        | Customer in foreground / background / offline                                                                            |
-| Artifact           | [ChannelDispatcherService]; `InAppChannel`, `EmailChannel`, `PushChannel`                                                |
+| Artifact           | [ChannelDispatcherService](../../../src/module/notification/services/channel-dispatcher.service.ts); `InAppChannelService`, `EmailChannelService`, `PushChannelService` |
 | Response           | Channels chosen by user preferences and presence; each channel delivers independently                                    |
 | Response Measure   | Per-channel success rate ≥ 95 % when provider is healthy; delivery attempts logged in `notification_delivery_logs`        |
 
@@ -461,7 +462,7 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Stimulus Source    | Any actor                                                                                                                |
 | Environment        | Any                                                                                                                      |
 | Artifact           | `order_status_logs` table                                                                                                |
-| Response           | One row per transition: `{orderId, fromStatus, toStatus, actorId, actorRole, reason, timestamp}`                         |
+| Response           | One row per transition: `{orderId, fromStatus, toStatus, triggeredBy (UUID|null), triggeredByRole, note, createdAt}`; `fromStatus` is nullable for the initial creation entry |
 | Response Measure   | 100 % of committed transitions audited; queryable by orderId, actor, or time range                                       |
 
 ### QA-SUP-02 — Structured Logging on Cross-BC Events *[Partial]*
@@ -610,7 +611,7 @@ The following sections enumerate ASRs **per functional area**, grouped using the
 | ASR-AUTH-03 | Role-Based Authorization | RBAC across customer / restaurant / shipper / admin | **Security**: `user.role` CSV with `hasRole()` OR-logic; `@nestjs/cqrs` handlers + route guards enforce; admin role separated via Better Auth `admin()` plugin. 100 % denial of unauthorized requests. **Auditability**: privileged action logging (QA-SUP-01). |
 | ASR-AUTH-04 | Multi-Role User | A user may simultaneously hold `restaurant` and `user` roles | **Modifiability**: avoids enum constraints; CSV in `user.role` supports OR-checks. **Conceptual Integrity**: role names defined in one place ([lib/auth.ts](../../../src/lib/auth.ts)). |
 | ASR-AUTH-05 | Phone OTP (stub today) | Phone-based verification | **Interoperability** (Planned production): integrate real SMS provider behind an interface; current implementation logs OTP to console for dev. |
-| ASR-AUTH-06 | Dev Test User Middleware | Bypass auth in non-production | **Security**: gated to non-prod (per QA-S-04); never reachable in production builds. |
+| ASR-AUTH-06 | Dev Test User Middleware | Bypass auth in non-production | **Security** (QA-S-04 — Open Gap): currently registered unconditionally in `app.module.ts`; **NODE_ENV guard is missing**. Must add `if (process.env.NODE_ENV !== 'production')` guard before deploying. Never reachable in production builds once gating is added. |
 
 ## 4.2 Restaurant Discovery & Catalog
 
@@ -636,7 +637,7 @@ The following sections enumerate ASRs **per functional area**, grouped using the
 |----|----------|-------------|----------------------------|
 | ASR-CHK-01 | Place order | Atomic transition cart → order | **Reliability**: single Drizzle transaction over `orders`, `order_items`, `order_status_logs`; `OrderPlacedEvent` emitted **after** commit. **Idempotency** (QA-R-01): Redis key + DB `UNIQUE(cart_id)`. **Performance** (QA-P-03): p95 ≤ 3 s end-to-end. |
 | ASR-CHK-02 | Delivery radius validation (BR-3) | Customer address must be within restaurant zone | **Reliability**: synchronous haversine check against ACL snapshot; reject with structured error when out of zone. **Conceptual Integrity**: single GeoService used everywhere. |
-| ASR-CHK-03 | Pricing snapshot | Order line items capture `unit_price`, `modifiers_total`, name | **Reliability**: prices captured at order time from ACL snapshot; immune to subsequent menu edits. **Auditability**: full price history in `order_items`. |
+| ASR-CHK-03 | Pricing snapshot | Order line items capture `unit_price`, `modifiers_price`, item name, and `subtotal` | **Reliability**: prices captured at order time from ACL snapshot; immune to subsequent menu edits. **Auditability**: full price history in `order_items`. |
 | ASR-CHK-04 | Promotion application | Discount reservation, confirm, rollback | **Modifiability**: `IPromotionApplicationPort` (QA-M-01-style). **Reliability**: 4-phase protocol (`preview`, `computeAndReserve`, `confirm`, `rollback`) ensures atomicity across order placement. **Idempotency**: reservation keyed by pre-generated `tempOrderId`. |
 | ASR-CHK-05 | Idempotency headers | `X-Idempotency-Key` honored | **Reliability** (QA-R-01); fast path Redis short-circuit. |
 
@@ -647,7 +648,7 @@ The following sections enumerate ASRs **per functional area**, grouped using the
 | ASR-PAY-01 | VNPay URL generation | Construct signed payment URL | **Security** (QA-S-01): HMAC-SHA512 over canonical URL-encoded `vnp_*` params; secret never logged. **Interoperability**: strict adherence to VNPay spec. |
 | ASR-PAY-02 | IPN handling | Server-to-server callback from VNPay | **Security**: signature verification **before** any DB action; constant-time comparison. **Reliability** (QA-R-02): terminal-state short-circuit; optimistic-lock `version`; `UNIQUE(provider_txn_id)` backstop. **Integrity**: amount validated against stored transaction (BR-P4). |
 | ASR-PAY-03 | Order status coupling to payment | `PENDING → PAID` only on `PaymentConfirmedEvent`; `PENDING → CANCELLED` on `PaymentFailedEvent` | **Conceptual Integrity** (QA-CI-01): payment events drive order lifecycle via Ordering BC; payment never writes to `orders` directly. |
-| ASR-PAY-04 | Payment timeout | Pending VNPay transactions expire after `PAYMENT_PENDING_TIMEOUT_MINUTES` | **Reliability**: scheduled task ([payment-timeout.task.ts](../../../src/module/payment/tasks/payment-timeout.task.ts)) emits `PaymentFailedEvent`; idempotent. |
+| ASR-PAY-04 | Payment timeout | Pending VNPay transactions expire after `PAYMENT_SESSION_TIMEOUT_SECONDS` (env var, default 1 800 s) via `expiresAt` set at creation time | **Reliability**: scheduled task ([payment-timeout.task.ts](../../../src/module/payment/tasks/payment-timeout.task.ts)) runs every minute, finds transactions past `expiresAt`, transitions them to `failed` via optimistic lock, emits `PaymentFailedEvent`; idempotent. **Note**: timeout is an env var (not runtime-configurable via app_settings). |
 | ASR-PAY-05 | Refund (post-paid cancellation) | Order cancelled after payment triggers refund | **Reliability**: `OrderCancelledAfterPaymentEvent` consumed by Payment BC ([order-cancelled-after-payment.handler.ts](../../../src/module/payment/events/order-cancelled-after-payment.handler.ts)). Refund process partially implemented; full automation **[Planned]**. |
 | ASR-PAY-06 | COD path | Cash-on-delivery orders bypass VNPay | **Conceptual Integrity**: same `OrderPlacedEvent` shape; payment method enum drives port behavior. |
 
@@ -655,7 +656,7 @@ The following sections enumerate ASRs **per functional area**, grouped using the
 
 | ID | Function | Description | Architectural Requirements |
 |----|----------|-------------|----------------------------|
-| ASR-LC-01 | Hand-crafted state machine | Status transitions defined declaratively | **Reliability** (QA-R-03): closed transition matrix; invalid transitions rejected with typed errors. **Maintainability**: new statuses are local changes (QA-M-02). |
+| ASR-LC-01 | Hand-crafted state machine | Status transitions defined declaratively in a closed TRANSITIONS map | **Reliability** (QA-R-03): TRANSITIONS map in [`constants/transitions.ts`](../../../src/module/ordering/order-lifecycle/constants/transitions.ts) defines T-01–T-12; `TransitionOrderHandler` ([commands/transition-order.handler.ts](../../../src/module/ordering/order-lifecycle/commands/transition-order.handler.ts)) enforces via CQRS; invalid transitions rejected with typed errors. **Maintainability**: new statuses are local changes (QA-M-02). |
 | ASR-LC-02 | Optimistic locking | `orders.version` incremented on every transition | **Reliability**: concurrent transitions fail-safe; loser retries or surfaces conflict. |
 | ASR-LC-03 | Lifecycle event publication | `OrderStatusChangedEvent`, `OrderReadyForPickupEvent` | **Interoperability**: Notification BC subscribes; **Performance** (QA-P-02): customer receives push / WebSocket ≤ 5 s p95. |
 | ASR-LC-04 | Cancellation rules | Pre-/post-payment cancellation paths differ | **Reliability**: pre-payment cancellation simply transitions; post-payment cancellation emits `OrderCancelledAfterPaymentEvent` to trigger refund (ASR-PAY-05). |
@@ -695,7 +696,7 @@ The following sections enumerate ASRs **per functional area**, grouped using the
 |----|----------|-------------|----------------------------|
 | ASR-ADM-01 | Partner approval (BR-1) | Admin approves restaurant / shipper applications | **Security**: admin role required; **Auditability**: state change logged; **Manageability**: decision effective ≤ 1 minute. |
 | ASR-ADM-02 | Monitoring view | List active orders + filters | **Performance**: p95 ≤ 2 s with data freshness ≤ 60 s for 1 000 active orders. **Scalability**: paginated. |
-| ASR-ADM-03 | Operational config | Admin-tunable thresholds (e.g., payment timeout, stuck-order threshold) | **Manageability**: backed by `app_settings` table ([common/app-settings.schema.ts](../../../src/module/ordering/common/app-settings.schema.ts)); changes effective ≤ 5 minutes without redeploy. |
+| ASR-ADM-03 | Operational config | Admin-tunable runtime thresholds | **Manageability**: backed by `app_settings` table ([app-settings.schema.ts](../../../src/module/ordering/common/app-settings.schema.ts)); three seeded keys: `ORDER_IDEMPOTENCY_TTL_SECONDS` (300 s default), `RESTAURANT_ACCEPT_TIMEOUT_SECONDS` (600 s default), `CART_ABANDONED_TTL_SECONDS` (86 400 s default); changes effective without redeploy. **Note**: payment expiry (`PAYMENT_SESSION_TIMEOUT_SECONDS`) is an env var, not runtime-configurable via app_settings. |
 | ASR-ADM-04 | Reports | Read-only aggregations over orders / GMV | **Performance**: planned async report generation; **Security**: RBAC-scoped data access; **Auditability**: log report access. **[Partial]** |
 
 ---
@@ -757,7 +758,8 @@ The following sections enumerate ASRs **per functional area**, grouped using the
 ## 6.7 Background Jobs
 
 - `@nestjs/schedule` for cron / interval triggers:
-  - Payment timeout sweeper ([payment-timeout.task.ts](../../../src/module/payment/tasks/payment-timeout.task.ts))
+  - Payment timeout sweeper ([payment-timeout.task.ts](../../../src/module/payment/tasks/payment-timeout.task.ts)) — runs every minute; expires `payment_transactions` past `expiresAt` (set from `PAYMENT_SESSION_TIMEOUT_SECONDS` env var); publishes `PaymentFailedEvent`
+  - Order timeout sweeper ([order-timeout.task.ts](../../../src/module/ordering/order-lifecycle/tasks/order-timeout.task.ts)) — runs every minute; auto-cancels `orders` past `expiresAt` (set from `RESTAURANT_ACCEPT_TIMEOUT_SECONDS` app_setting, default 600 s); dispatches `TransitionOrderCommand` so T-03/T-05 run through the same CQRS path
   - Device-token cleanup ([device-token-cleanup.task.ts](../../../src/module/notification/tasks/device-token-cleanup.task.ts))
   - WebSocket heartbeat
 - All tasks idempotent; safe under instance crashes.
@@ -772,7 +774,7 @@ The matrix below traces ASRs back to the architectural decisions that satisfy th
 |-------------------|---------------------------------|----------|
 | QA-R-01, ASR-CHK-01, ASR-CHK-05 | D5-A Redis idempotency + D5-B DB UNIQUE | [place-order.handler.ts](../../../src/module/ordering/order/commands/place-order.handler.ts), `orders.cart_id` UNIQUE |
 | QA-R-02, ASR-PAY-02 | Signature-first IPN handler + optimistic lock | [process-ipn.handler.ts](../../../src/module/payment/commands/process-ipn.handler.ts), [vnpay.service.ts](../../../src/module/payment/services/vnpay.service.ts) |
-| QA-R-03, ASR-LC-01, QA-CI-01 | Hand-crafted state machine + closed enum | [order-lifecycle.service.ts](../../../src/module/ordering/order-lifecycle/order-lifecycle.service.ts), [order.schema.ts](../../../src/module/ordering/order/order.schema.ts) |
+| QA-R-03, ASR-LC-01, QA-CI-01 | Hand-crafted TRANSITIONS map + `TransitionOrderHandler` enforces closed enum | [transitions.ts](../../../src/module/ordering/order-lifecycle/constants/transitions.ts), [transition-order.handler.ts](../../../src/module/ordering/order-lifecycle/commands/transition-order.handler.ts), [order.schema.ts](../../../src/module/ordering/order/order.schema.ts) |
 | QA-P-02, QA-A-02, ASR-NOTE-02 | Socket.IO + Redis presence ref-count | [notification.gateway.ts](../../../src/module/notification/gateway/notification.gateway.ts) |
 | QA-M-01, ASR-PAY-01 | `IPaymentInitiationPort` DIP | [payment-initiation.port.ts](../../../src/shared/ports/payment-initiation.port.ts), [payment.module.ts](../../../src/module/payment/payment.module.ts) |
 | QA-M-03, ASR-NOTE-01 | Provider abstractions per channel | [push-provider.interface.ts](../../../src/module/notification/channels/push/push-provider.interface.ts), [email-provider.interface.ts](../../../src/module/notification/channels/email/email-provider.interface.ts) |
@@ -785,8 +787,9 @@ The matrix below traces ASRs back to the architectural decisions that satisfy th
 | QA-SC-02, ASR-CART-01 | Redis-only cart + ioredis | [cart.redis-repository.ts](../../../src/module/ordering/cart/cart.redis-repository.ts), [redis.module.ts](../../../src/lib/redis/redis.module.ts) |
 | QA-SUP-01, ASR-LC-01 | `order_status_logs` audit table | [order.schema.ts](../../../src/module/ordering/order/order.schema.ts) |
 | ASR-CHK-02, AD-7 | Haversine in GeoService + ACL zone snapshots | [geo.service.ts](../../../src/lib/geo/geo.service.ts), [delivery-zone-snapshot.schema.ts](../../../src/module/ordering/acl/schemas/delivery-zone-snapshot.schema.ts) |
-| ASR-PAY-04 | Cron-driven timeout sweeper | [payment-timeout.task.ts](../../../src/module/payment/tasks/payment-timeout.task.ts) |
-| ASR-ADM-03 | App-settings table | [app-settings.schema.ts](../../../src/module/ordering/common/app-settings.schema.ts) |
+| ASR-PAY-04 | Cron-driven payment timeout sweeper | [payment-timeout.task.ts](../../../src/module/payment/tasks/payment-timeout.task.ts) |
+| ASR-LC-01 (timeout) | Cron-driven order timeout sweeper (restaurant accept window) | [order-timeout.task.ts](../../../src/module/ordering/order-lifecycle/tasks/order-timeout.task.ts), `RESTAURANT_ACCEPT_TIMEOUT_SECONDS` in `app_settings` |
+| ASR-ADM-03 | Runtime-configurable thresholds in `app_settings` | [app-settings.schema.ts](../../../src/module/ordering/common/app-settings.schema.ts), [ordering.constants.ts](../../../src/module/ordering/common/ordering.constants.ts) |
 | QA-A-03, QA-I-02 | Provider factories with Noop / Stub fallback | [notification.module.ts](../../../src/module/notification/notification.module.ts) |
 | C-3, QA-SC-01 | `@nestjs/cqrs` in-process EventBus | [ordering.module.ts](../../../src/module/ordering/ordering.module.ts), [payment.module.ts](../../../src/module/payment/payment.module.ts) |
 | C-2 | Drizzle ORM single PG database | [drizzle.module.ts](../../../src/drizzle/drizzle.module.ts), [schema.ts](../../../src/drizzle/schema.ts) |
@@ -798,7 +801,8 @@ The matrix below traces ASRs back to the architectural decisions that satisfy th
 | Confidence | Count | Examples |
 |------------|------:|----------|
 | **Implemented** | 24 | QA-P-01, QA-R-01, QA-R-02, QA-R-03, QA-R-04, QA-S-01, QA-S-02, QA-S-03, QA-S-05, QA-M-01, QA-M-02, QA-M-03, QA-MA-01, QA-MA-02, QA-T-01, QA-T-02, QA-CI-01, QA-CI-02, QA-SC-02, QA-I-01, QA-I-02, QA-I-03, QA-A-03, QA-SUP-01 |
-| **Partial** | 10 | QA-P-02, QA-P-04, QA-A-01, QA-A-02, QA-S-04, QA-SC-01, QA-SUP-02, QA-U-01, ASR-PAY-05, ASR-ADM-04 |
+| **Partial** | 9 | QA-P-02, QA-P-04, QA-A-01, QA-A-02, QA-SC-01, QA-SUP-02, QA-U-01, ASR-PAY-05, ASR-ADM-04 |
+| **Not Implemented — Open Gap** | 1 | QA-S-04 (DevTestUserMiddleware unconditionally registered; no NODE_ENV guard in `app.module.ts`) |
 | **Planned** | 6 | QA-R-05, QA-S-06, QA-SUP-03, ASR-DEL-01–04 |
 
 ---
