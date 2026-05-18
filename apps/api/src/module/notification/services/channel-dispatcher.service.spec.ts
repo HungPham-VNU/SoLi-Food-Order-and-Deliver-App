@@ -14,6 +14,8 @@
  * Phase: N-4 — Multi-Channel Delivery
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+
 // Mock the gateway module before any imports to avoid loading better-auth (ESM-only package)
 // which is incompatible with the CommonJS unit test configuration.
 jest.mock('../gateway/notification.gateway', () => ({

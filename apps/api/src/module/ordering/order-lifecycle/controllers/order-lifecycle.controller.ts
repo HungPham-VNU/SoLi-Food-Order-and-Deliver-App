@@ -83,6 +83,7 @@ export class OrderLifecycleController {
     @Session() session: UserSession,
   ) {
     const actorRole = this.resolveRole(session.user.role);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.commandBus.execute(
       new TransitionOrderCommand(id, 'confirmed', session.user.id, actorRole),
     );
@@ -105,6 +106,7 @@ export class OrderLifecycleController {
     @Session() session: UserSession,
   ) {
     const actorRole = this.resolveRole(session.user.role);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.commandBus.execute(
       new TransitionOrderCommand(id, 'preparing', session.user.id, actorRole),
     );
@@ -127,6 +129,7 @@ export class OrderLifecycleController {
     @Session() session: UserSession,
   ) {
     const actorRole = this.resolveRole(session.user.role);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.commandBus.execute(
       new TransitionOrderCommand(
         id,
@@ -157,6 +160,7 @@ export class OrderLifecycleController {
     @Session() session: UserSession,
   ) {
     const actorRole = this.resolveRole(session.user.role);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.commandBus.execute(
       new TransitionOrderCommand(id, 'picked_up', session.user.id, actorRole),
     );
@@ -179,6 +183,7 @@ export class OrderLifecycleController {
     @Session() session: UserSession,
   ) {
     const actorRole = this.resolveRole(session.user.role);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.commandBus.execute(
       new TransitionOrderCommand(id, 'delivering', session.user.id, actorRole),
     );
@@ -201,6 +206,7 @@ export class OrderLifecycleController {
     @Session() session: UserSession,
   ) {
     const actorRole = this.resolveRole(session.user.role);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.commandBus.execute(
       new TransitionOrderCommand(id, 'delivered', session.user.id, actorRole),
     );
@@ -232,6 +238,7 @@ export class OrderLifecycleController {
     @Body() dto: CancelOrderDto,
   ) {
     const actorRole = this.resolveRole(session.user.role);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.commandBus.execute(
       new TransitionOrderCommand(
         id,
@@ -269,6 +276,7 @@ export class OrderLifecycleController {
     if (!hasRole(session.user.role, 'admin')) {
       throw new ForbiddenException('Only admins can process refunds.');
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.commandBus.execute(
       new TransitionOrderCommand(
         id,

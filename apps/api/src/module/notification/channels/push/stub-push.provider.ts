@@ -33,7 +33,7 @@ import type {
 export class StubPushProvider implements IPushProvider {
   private readonly logger = new Logger(StubPushProvider.name);
 
-  async send(options: PushSendOptions): Promise<PushSendResult> {
+  send(options: PushSendOptions): Promise<PushSendResult> {
     this.logger.log(
       `[StubPush] Would send push to ${options.tokens.length} token(s): ` +
         `"${options.title}" — "${options.body}" ` +
@@ -41,10 +41,10 @@ export class StubPushProvider implements IPushProvider {
     );
 
     // Simulate immediate delivery success for all tokens
-    return {
+    return Promise.resolve({
       successCount: options.tokens.length,
       failureCount: 0,
       invalidTokens: [],
-    };
+    });
   }
 }

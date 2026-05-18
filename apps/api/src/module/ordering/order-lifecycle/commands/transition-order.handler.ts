@@ -18,7 +18,7 @@ import { TransitionOrderCommand } from './transition-order.command';
 import { OrderRepository } from '../repositories/order.repository';
 import { OrderLifecycleService } from '../services/order-lifecycle.service';
 import { RestaurantSnapshotRepository } from '../../acl/repositories/restaurant-snapshot.repository';
-import { TRANSITIONS } from '../constants/transitions';
+import { TRANSITIONS, type TransitionRule } from '../constants/transitions';
 import { OrderStatusChangedEvent } from '@/shared/events/order-status-changed.event';
 import { OrderReadyForPickupEvent } from '@/shared/events/order-ready-for-pickup.event';
 import { OrderCancelledAfterPaymentEvent } from '@/shared/events/order-cancelled-after-payment.event';
@@ -75,7 +75,7 @@ export class TransitionOrderHandler implements ICommandHandler<TransitionOrderCo
     // 3. Validate transition exists in the TRANSITIONS map
     // -------------------------------------------------------------------------
     const transitionKey = `${order.status}→${toStatus}`;
-    const rule = TRANSITIONS[transitionKey];
+    const rule = TRANSITIONS[transitionKey] as TransitionRule | undefined;
     if (!rule) {
       throw new UnprocessableEntityException(
         `Cannot transition order from '${order.status}' to '${toStatus}'.`,

@@ -143,7 +143,7 @@ export class NotificationGateway
 
     // Store userId on the socket so handleDisconnect can access it without
     // a separate Redis lookup.
-    client.data.userId = userId;
+    (client.data as { userId?: string }).userId = userId;
 
     // Join the per-user room — all devices/tabs for this user share one room.
     // Room naming convention: 'room:user:{userId}'
@@ -219,7 +219,7 @@ export class NotificationGateway
       this.sessionTimers.delete(client.id);
     }
 
-    const userId = client.data.userId as string | undefined;
+    const userId = (client.data as { userId?: string }).userId;
     if (userId) {
       // DECR reference count. When count reaches 0 (last connection closed)
       // UserPresenceService deletes the key so isOnline() returns false.
@@ -245,7 +245,7 @@ export class NotificationGateway
    */
   @SubscribeMessage(WS_NOTIFICATION_PING)
   handlePing(client: Socket): void {
-    const userId = client.data.userId as string | undefined;
+    const userId = (client.data as { userId?: string }).userId;
     if (!userId) return;
 
     // Fire-and-forget — heartbeat failures are non-critical.
