@@ -4,9 +4,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import type { OrderTotals } from "@/features/orders/types/order.types";
+} from '@/components/ui/card';
+import type { OrderTotals } from '@/features/orders/types/order.types';
 
 type OrderDetailPaymentProps = {
   totals: OrderTotals;
@@ -17,14 +16,18 @@ function formatPrice(value: number) {
   return `$${value.toFixed(2)}`;
 }
 
-export function OrderDetailPayment({ totals, paymentMethod }: OrderDetailPaymentProps) {
-  const total = totals.subtotal + totals.serviceFee + totals.deliveryFee + totals.tax;
+export function OrderDetailPayment({
+  totals,
+  paymentMethod,
+}: OrderDetailPaymentProps) {
+  const total =
+    totals.subtotal + totals.serviceFee + totals.deliveryFee + totals.tax;
 
   const lineItems = [
-    { label: "Subtotal", value: totals.subtotal },
-    { label: "Service Fee", value: totals.serviceFee },
-    { label: "Delivery Fee", value: totals.deliveryFee },
-    { label: "Estimated Taxes", value: totals.tax },
+    { label: 'Subtotal', value: totals.subtotal },
+    { label: 'Service Fee', value: totals.serviceFee },
+    { label: 'Delivery Fee', value: totals.deliveryFee },
+    { label: 'Estimated Taxes', value: totals.tax },
   ];
 
   return (
@@ -39,7 +42,9 @@ export function OrderDetailPayment({ totals, paymentMethod }: OrderDetailPayment
         {lineItems.map(({ label, value }) => (
           <div key={label} className="flex justify-between text-sm">
             <span className="text-stone-500 font-body">{label}</span>
-            <span className="text-on-surface font-medium font-body">{formatPrice(value)}</span>
+            <span className="text-on-surface font-medium font-body">
+              {formatPrice(value)}
+            </span>
           </div>
         ))}
       </CardContent>
@@ -47,7 +52,9 @@ export function OrderDetailPayment({ totals, paymentMethod }: OrderDetailPayment
       {/* shadcn CardFooter — naturally gets border-t and bg-muted/50, we override */}
       <CardFooter className="mt-6 px-6 pb-6 pt-4 bg-transparent border-t border-surface-container flex-col items-stretch gap-1 rounded-b-2xl">
         <div className="flex justify-between items-center">
-          <span className="font-headline font-bold text-lg text-on-surface">Total</span>
+          <span className="font-headline font-bold text-lg text-on-surface">
+            Total
+          </span>
           <span className="font-headline font-extrabold text-2xl text-secondary">
             {formatPrice(total)}
           </span>

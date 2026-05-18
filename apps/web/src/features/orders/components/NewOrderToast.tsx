@@ -1,18 +1,21 @@
-import { useEffect, useState } from "react";
-import { useOrderStore } from "@/features/orders/stores/orderStore";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from 'react';
+import { useOrderStore } from '@/features/orders/stores/orderStore';
+import { Button } from '@/components/ui/button';
 
 export function NewOrderToast() {
   const { newOrderToast, acceptOrder, dismissToast } = useOrderStore();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined;
     if (newOrderToast) {
-      const t = setTimeout(() => setVisible(true), 100);
-      return () => clearTimeout(t);
+      t = setTimeout(() => setVisible(true), 100);
     } else {
-      setVisible(false);
+      t = setTimeout(() => setVisible(false), 0);
     }
+    return () => {
+      if (t) clearTimeout(t);
+    };
   }, [newOrderToast]);
 
   if (!newOrderToast) return null;
@@ -22,19 +25,22 @@ export function NewOrderToast() {
       role="alert"
       aria-live="assertive"
       className={[
-        "fixed bottom-6 right-6 z-50 max-w-sm w-full",
-        "bg-surface-container-lowest rounded-xl",
-        "shadow-[0_8px_32px_rgba(0,0,0,0.14)]",
-        "border-l-8 border-primary",
-        "p-5 transition-all duration-500",
-        visible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0",
-      ].join(" ")}
-      style={{ animation: "subtleBounce 3s ease-in-out infinite" }}
+        'fixed bottom-6 right-6 z-50 max-w-sm w-full',
+        'bg-surface-container-lowest rounded-xl',
+        'shadow-[0_8px_32px_rgba(0,0,0,0.14)]',
+        'border-l-8 border-primary',
+        'p-5 transition-all duration-500',
+        visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0',
+      ].join(' ')}
+      style={{ animation: 'subtleBounce 3s ease-in-out infinite' }}
     >
       <div className="flex gap-4">
         {/* Notification icon */}
         <div className="w-12 h-12 bg-surface-container rounded-full flex items-center justify-center flex-shrink-0">
-          <span className="material-symbols-outlined text-primary" aria-hidden="true">
+          <span
+            className="material-symbols-outlined text-primary"
+            aria-hidden="true"
+          >
             notifications_active
           </span>
         </div>
@@ -48,14 +54,12 @@ export function NewOrderToast() {
             {(() => {
               const itemCount = newOrderToast.detail?.items?.length ?? 0;
               const total = newOrderToast.detail?.totals?.total;
-              const itemLabel = itemCount === 1 ? "item" : "items";
+              const itemLabel = itemCount === 1 ? 'item' : 'items';
               const totalStr =
-                total != null
-                  ? `$${total.toFixed(2)} total`
-                  : "";
+                total != null ? `$${total.toFixed(2)} total` : '';
               return itemCount > 0
-                ? `${itemCount} ${itemLabel}${totalStr ? ` • ${totalStr}` : ""}`
-                : totalStr || "New order received";
+                ? `${itemCount} ${itemLabel}${totalStr ? ` • ${totalStr}` : ''}`
+                : totalStr || 'New order received';
             })()}
           </p>
 

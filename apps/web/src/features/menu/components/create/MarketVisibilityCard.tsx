@@ -1,6 +1,5 @@
 import { Eye, Lightbulb } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 
 export function MarketVisibilityCard() {
   return (
