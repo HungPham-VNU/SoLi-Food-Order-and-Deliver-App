@@ -68,7 +68,6 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-react-jsx": "^7.28.6",
-    "@expo/config-plugins": "~55.0.9",
     "@types/react": "~19.2.14",
     "autoprefixer": "^10.4.21",
     "babel-preset-expo": "^55.0.12",

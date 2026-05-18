@@ -358,9 +358,6 @@ importers:
       '@babel/plugin-transform-react-jsx':
         specifier: ^7.28.6
         version: 7.28.6(@babel/core@7.29.0)
-      '@expo/config-plugins':
-        specifier: ~55.0.9
-        version: 55.0.9
       '@types/react':
         specifier: ~19.2.14
         version: 19.2.14

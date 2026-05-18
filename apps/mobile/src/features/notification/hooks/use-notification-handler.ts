@@ -1,7 +1,12 @@
 import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import messaging from '@react-native-firebase/messaging';
+import { 
+  getMessaging, 
+  onMessage, 
+  onNotificationOpenedApp, 
+  getInitialNotification 
+} from '@react-native-firebase/messaging';
 import { useNotificationStore } from '@/src/store/notification-store';
 import { useNotificationNavigation } from '../utils/navigation';
 import { notificationApi } from '../api';
@@ -41,9 +46,11 @@ export function useNotificationHandler() {
 
   // 2. Handle Push Notification Taps & Messages
   useEffect(() => {
+    const messaging = getMessaging();
+
     // Foreground message listener (Firebase)
     // Manually trigger a local notification so it shows up while the app is open
-    const unsubscribeOnMessage = messaging().onMessage(async (remoteMessage) => {
+    const unsubscribeOnMessage = onMessage(messaging, async (remoteMessage) => {
       console.log('[NotificationHandler] Foreground message received:', remoteMessage);
       
       // If the backend sends a 'notification' object, Android might handle it.
@@ -62,7 +69,7 @@ export function useNotificationHandler() {
     });
 
     // Background/Quit tap listener
-    const unsubscribeOnMessageOpenedApp = messaging().onNotificationOpenedApp(
+    const unsubscribeOnMessageOpenedApp = onNotificationOpenedApp(messaging, 
       (remoteMessage) => {
         console.log('[NotificationHandler] Notification caused app to open from background:', remoteMessage);
         if (remoteMessage.data) {
@@ -75,8 +82,7 @@ export function useNotificationHandler() {
     );
 
     // Initial notification (App opened from quit state)
-    messaging()
-      .getInitialNotification()
+    getInitialNotification(messaging)
       .then((remoteMessage) => {
         if (remoteMessage) {
           console.log('[NotificationHandler] Notification caused app to open from quit state:', remoteMessage);

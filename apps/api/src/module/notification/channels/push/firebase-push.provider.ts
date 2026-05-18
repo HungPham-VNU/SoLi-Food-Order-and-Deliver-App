@@ -317,7 +317,7 @@ export class FirebasePushProvider implements IPushProvider {
             title,
             body,
             channelId: 'default',
-            priority: 'high',
+            notificationPriority: 'PRIORITY_HIGH',
             sound: 'default',
           },
         },

@@ -10,7 +10,8 @@ import {
 import NetInfo from '@react-native-community/netinfo';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
-import messaging from '@react-native-firebase/messaging';
+import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
+import * as Notifications from 'expo-notifications';
 
 import { useSession } from '@/src/lib/auth-client';
 import { LocationInitializer } from '@/src/features/location';
@@ -22,9 +23,33 @@ import {
 import Toast from 'react-native-toast-message';
 
 // Register background handler
-messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+setBackgroundMessageHandler(getMessaging(), async (remoteMessage) => {
   console.log('[BackgroundMessage] Received:', remoteMessage);
-  // No direct UI action here, but you can update local storage or just log it.
+  
+  // If the app is in background or closed, we may need to manually trigger a notification
+  // for data-only messages. For messages with a 'notification' block, Android handles them automatically.
+  // But for reliability across different Android versions/distributions, we check here.
+  const title = remoteMessage.notification?.title || remoteMessage.data?.title;
+  const body = remoteMessage.notification?.body || remoteMessage.data?.body;
+
+  if (title || body) {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: (title || 'UIT Food Notification') as string,
+          body: (body || 'Open the app to see details') as string,
+          data: remoteMessage.data,
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+          color: '#0d631b',
+          channelId: 'default',
+        },
+        trigger: null,
+      });
+    } catch (error) {
+      console.error('[BackgroundMessage] Failed to schedule notification:', error);
+    }
+  }
 });
 
 function RootNavigation() {

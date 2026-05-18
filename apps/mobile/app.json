@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "uitfood",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.truongdanh.uitfood",
@@ -28,7 +27,6 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.truongdanh.uitfood",
       "googleServicesFile": "./google-services.json"
@@ -48,8 +46,8 @@
           "defaultChannel": "default"
         }
       ],
-      "@react-native-firebase/app",
-      "@react-native-firebase/messaging",
+      "@react-native-firebase/app/app.plugin.js",
+      "@react-native-firebase/messaging/app.plugin.js",
       [
         "expo-splash-screen",
         {
