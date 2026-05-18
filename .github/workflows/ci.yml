@@ -63,7 +63,9 @@ jobs:
             ${{ runner.os }}-turbo-
 
       - name: Lint, Test, and Build
-        run: pnpm turbo run lint test build --affected --cache-dir=".turbo"
+        run: |
+          pnpm turbo run lint test --affected --cache-dir=".turbo"
+          pnpm turbo run build --affected --filter=!mobile --cache-dir=".turbo"
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
           REDIS_URL: redis://localhost:6379
@@ -146,4 +148,4 @@ jobs:
 
       - name: Build Mobile (EAS)
         working-directory: apps/mobile
-        run: eas build --platform android --profile development --non-interactive
+        run: eas build --platform android --profile development --non-interactive --no-wait
