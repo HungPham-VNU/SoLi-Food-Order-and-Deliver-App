@@ -234,7 +234,7 @@ export class FirebasePushProvider implements IPushProvider {
           `[FirebasePush] ====================================================\n` +
             `[FirebasePush] FCM PERMISSION CHECK FAILED — push notifications WILL NOT be delivered!\n` +
             `[FirebasePush]\n` +
-            `[FirebasePush] Error: ${JSON.parse(result.body).error?.message ?? result.body}\n` +
+            `[FirebasePush] Error: ${(JSON.parse(result.body) as { error?: { message?: string } }).error?.message ?? result.body}\n` +
             `[FirebasePush]\n` +
             `[FirebasePush] The service account lacks the 'cloudmessaging.messages.create' permission.\n` +
             `[FirebasePush] Fix (choose ONE option):\n` +

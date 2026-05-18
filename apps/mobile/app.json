@@ -10,6 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.truongdanh.uitfood",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We use your location to find nearby restaurants and improve delivery accuracy."
       }

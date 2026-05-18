@@ -16,6 +16,8 @@
  * Phase: N-4 — Multi-Channel Delivery
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { PushChannelService } from './push.channel.service';
 import { DeviceTokenRepository } from '../../repositories/device-token.repository';

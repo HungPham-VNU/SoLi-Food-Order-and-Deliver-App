@@ -61,8 +61,11 @@ async function main() {
         .where(eq(schema.restaurants.ownerId, ownerId));
     }
     console.log('✅ Old seed data and snapshots cleared.');
-  } catch (error: any) {
-    console.warn('⚠️  Warning: Could not clear old data:', error.message);
+  } catch (error: unknown) {
+    console.warn(
+      '⚠️  Warning: Could not clear old data:',
+      error instanceof Error ? error.message : String(error),
+    );
   }
 
   // 3. Define Restaurants near the target location

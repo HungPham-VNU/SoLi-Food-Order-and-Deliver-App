@@ -46,6 +46,7 @@
  * Phase: N-5 — Preferences + Device Token Cleanup (quiet hours gate)
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
 // Mock the gateway module before any imports to avoid loading better-auth (ESM-only package)
 // which is incompatible with the CommonJS unit test configuration.
 jest.mock('../gateway/notification.gateway', () => ({

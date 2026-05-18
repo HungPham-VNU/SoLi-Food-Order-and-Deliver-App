@@ -26,7 +26,7 @@ import type {
 export class NoopEmailProvider implements IEmailProvider {
   private readonly logger = new Logger(NoopEmailProvider.name);
 
-  async sendMail(options: EmailSendOptions): Promise<void> {
+  sendMail(options: EmailSendOptions): Promise<void> {
     this.logger.warn(
       `[NoopEmail] SMTP not configured — suppressing email to <${options.to}>: "${options.subject}"`,
     );
