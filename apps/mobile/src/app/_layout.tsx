@@ -10,22 +10,25 @@ import {
 import NetInfo from '@react-native-community/netinfo';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
+import {
+  getMessaging,
+  setBackgroundMessageHandler,
+} from '@react-native-firebase/messaging';
 import * as Notifications from 'expo-notifications';
 
 import { useSession } from '@/src/lib/auth-client';
 import { LocationInitializer } from '@/src/features/location';
-import { 
-  useNotificationSocket, 
+import {
+  useNotificationSocket,
   usePushToken,
-  useNotificationHandler
+  useNotificationHandler,
 } from '@/src/features/notification';
 import Toast from 'react-native-toast-message';
 
 // Register background handler
 setBackgroundMessageHandler(getMessaging(), async (remoteMessage) => {
   console.log('[BackgroundMessage] Received:', remoteMessage);
-  
+
   // If the app is in background or closed, we may need to manually trigger a notification
   // for data-only messages. For messages with a 'notification' block, Android handles them automatically.
   // But for reliability across different Android versions/distributions, we check here.
@@ -42,12 +45,14 @@ setBackgroundMessageHandler(getMessaging(), async (remoteMessage) => {
           sound: true,
           priority: Notifications.AndroidNotificationPriority.HIGH,
           color: '#0d631b',
-          channelId: 'default',
         },
         trigger: null,
       });
     } catch (error) {
-      console.error('[BackgroundMessage] Failed to schedule notification:', error);
+      console.error(
+        '[BackgroundMessage] Failed to schedule notification:',
+        error,
+      );
     }
   }
 });

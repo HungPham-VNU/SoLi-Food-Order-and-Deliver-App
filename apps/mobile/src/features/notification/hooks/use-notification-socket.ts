@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { useSession } from '@/src/lib/auth-client';
+import { useSession, authClient } from '@/src/lib/auth-client';
 import { useNotificationStore } from '@/src/store/notification-store';
 import { NotificationPayload } from '../types';
 import { BASE_URL } from '@/src/lib/api-client';
@@ -39,11 +39,16 @@ export function useNotificationSocket() {
 
     if (!session?.session) return;
 
+    // Better Auth Expo stores the session token in SecureStore headers instead of exposing it to the UI by default.
+    // If session.session.token is undefined, we fall back to extracting it from the generated cookie string.
+    const cookieStr = authClient.getCookie() || '';
+    const rawToken =
+      (session.session as any).token ||
+      cookieStr.replace('uitfood.session_token=', '').split(';')[0];
+
     // Connect to the /notifications namespace
     const socket = io(`${WS_URL}/notifications`, {
-      // Use the actual session token, not the session ID.
-      // session.session.id is the database UUID, session.session.token is the secret.
-      auth: { token: session.session.token },
+      auth: { token: rawToken },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,

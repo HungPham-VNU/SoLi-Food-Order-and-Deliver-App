@@ -4,7 +4,10 @@ import { NotificationType } from '../types';
 export function useNotificationNavigation() {
   const router = useRouter();
 
-  const navigateFromNotification = (type: NotificationType, data: Record<string, any>) => {
+  const navigateFromNotification = (
+    type: NotificationType,
+    data: Record<string, any>,
+  ) => {
     switch (type) {
       case 'order_placed':
       case 'order_confirmed':
@@ -28,9 +31,9 @@ export function useNotificationNavigation() {
 
       case 'new_order_received':
         if (data.orderId) {
-          router.push(`/(restaurant)/orders/${data.orderId}`);
+          router.push(`/(restaurant)/orders/${data.orderId}` as any);
         } else {
-          router.push('/(restaurant)/(tabs)/orders');
+          router.push('/(restaurant)/(tabs)/orders' as any);
         }
         break;
 

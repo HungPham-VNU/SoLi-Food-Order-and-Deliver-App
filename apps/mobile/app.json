@@ -42,8 +42,7 @@
         "expo-notifications",
         {
           "icon": "./assets/images/android-icon-monochrome.png",
-          "color": "#0d631b",
-          "defaultChannel": "default"
+          "color": "#0d631b"
         }
       ],
       "@react-native-firebase/app/app.plugin.js",

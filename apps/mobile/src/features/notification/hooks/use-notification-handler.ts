@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { 
-  getMessaging, 
-  onMessage, 
-  onNotificationOpenedApp, 
-  getInitialNotification 
+import {
+  getMessaging,
+  onMessage,
+  onNotificationOpenedApp,
+  getInitialNotification,
 } from '@react-native-firebase/messaging';
 import { useNotificationStore } from '@/src/store/notification-store';
 import { useNotificationNavigation } from '../utils/navigation';
@@ -15,7 +15,8 @@ import { NotificationType } from '../types';
 // Configure how notifications are handled when the app is in the foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -35,7 +36,10 @@ export function useNotificationHandler() {
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF231F7C',
       }).catch((err) => {
-        console.warn('[NotificationHandler] Failed to set notification channel:', err);
+        console.warn(
+          '[NotificationHandler] Failed to set notification channel:',
+          err,
+        );
       });
     }
 
@@ -51,16 +55,21 @@ export function useNotificationHandler() {
     // Foreground message listener (Firebase)
     // Manually trigger a local notification so it shows up while the app is open
     const unsubscribeOnMessage = onMessage(messaging, async (remoteMessage) => {
-      console.log('[NotificationHandler] Foreground message received:', remoteMessage);
-      
+      console.log(
+        '[NotificationHandler] Foreground message received:',
+        remoteMessage,
+      );
+
       // If the backend sends a 'notification' object, Android might handle it.
       // But for consistent UX across platforms/versions, we can manually trigger it
       // if it wasn't already handled by the OS.
       if (remoteMessage.data?.title || remoteMessage.notification?.title) {
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: (remoteMessage.notification?.title || remoteMessage.data?.title) as string,
-            body: (remoteMessage.notification?.body || remoteMessage.data?.body) as string,
+            title: (remoteMessage.notification?.title ||
+              remoteMessage.data?.title) as string,
+            body: (remoteMessage.notification?.body ||
+              remoteMessage.data?.body) as string,
             data: remoteMessage.data,
           },
           trigger: null,
@@ -69,31 +78,37 @@ export function useNotificationHandler() {
     });
 
     // Background/Quit tap listener
-    const unsubscribeOnMessageOpenedApp = onNotificationOpenedApp(messaging, 
+    const unsubscribeOnMessageOpenedApp = onNotificationOpenedApp(
+      messaging,
       (remoteMessage) => {
-        console.log('[NotificationHandler] Notification caused app to open from background:', remoteMessage);
+        console.log(
+          '[NotificationHandler] Notification caused app to open from background:',
+          remoteMessage,
+        );
         if (remoteMessage.data) {
           navigateFromNotification(
             remoteMessage.data.type as NotificationType,
-            remoteMessage.data
+            remoteMessage.data,
           );
         }
-      }
+      },
     );
 
     // Initial notification (App opened from quit state)
-    getInitialNotification(messaging)
-      .then((remoteMessage) => {
-        if (remoteMessage) {
-          console.log('[NotificationHandler] Notification caused app to open from quit state:', remoteMessage);
-          if (remoteMessage.data) {
-            navigateFromNotification(
-              remoteMessage.data.type as NotificationType,
-              remoteMessage.data
-            );
-          }
+    getInitialNotification(messaging).then((remoteMessage) => {
+      if (remoteMessage) {
+        console.log(
+          '[NotificationHandler] Notification caused app to open from quit state:',
+          remoteMessage,
+        );
+        if (remoteMessage.data) {
+          navigateFromNotification(
+            remoteMessage.data.type as NotificationType,
+            remoteMessage.data,
+          );
         }
-      });
+      }
+    });
 
     return () => {
       unsubscribeOnMessage();
@@ -105,9 +120,15 @@ export function useNotificationHandler() {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'active') {
-        notificationApi.getUnreadCount()
+        notificationApi
+          .getUnreadCount()
           .then((res) => setUnreadCount(res.count))
-          .catch((err) => console.warn('[NotificationHandler] Failed to refresh unread count:', err));
+          .catch((err) =>
+            console.warn(
+              '[NotificationHandler] Failed to refresh unread count:',
+              err,
+            ),
+          );
       }
     });
 

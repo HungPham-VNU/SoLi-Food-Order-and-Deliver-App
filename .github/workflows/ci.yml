@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
@@ -7,8 +7,33 @@ on:
     branches: [master]
 
 jobs:
+  setup:
+    name: Setup & Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Security Audit
+        run: pnpm audit --audit-level high
+
   check:
-    name: Monorepo Checks
+    name: Lint, Typecheck & Test
+    needs: setup
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -62,65 +87,93 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-turbo-
 
-      - name: Lint, Test, and Build
+      - name: Lint, Typecheck, and Unit Test
         run: |
-          pnpm turbo run lint test --affected --cache-dir=".turbo"
-          pnpm turbo run build --affected --filter=!mobile --cache-dir=".turbo"
+          pnpm turbo run lint typecheck test --affected --cache-dir=".turbo"
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
           REDIS_URL: redis://localhost:6379
           NODE_ENV: test
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ndtruongdanhs-projects
-  docker-api:
-    name: Build API Docker Image
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
+      - name: E2E Tests (API)
+        run: |
+          pnpm turbo run test:e2e --filter=api --cache-dir=".turbo"
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+
+  docker:
+    name: Build & Push Docker Images
     needs: check
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build API Image
+      - name: Extract metadata (API)
+        id: meta-api
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-api
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,format=short
+
+      - name: Build & Push API Image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/api/Dockerfile
-          push: false
-          tags: food-delivery-api:latest
+          push: ${{ github.ref == 'refs/heads/master' }}
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  docker-web:
-    name: Build Web Docker Image
-    needs: check
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Extract metadata (Web)
+        id: meta-web
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-web
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,format=short
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Web Image
+      - name: Build & Push Web Image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/web/Dockerfile
-          push: false
-          tags: food-delivery-web:latest
+          push: ${{ github.ref == 'refs/heads/master' }}
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   mobile-eas:
-    name: Trigger EAS Build
+    name: Mobile CD (EAS)
     needs: check
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    if: github.event_name == 'pull_request' || (github.ref == 'refs/heads/master' && github.event_name == 'push')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -146,6 +199,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Mobile (EAS)
+      - name: Build Mobile (EAS Preview)
+        if: github.event_name == 'pull_request'
         working-directory: apps/mobile
-        run: eas build --platform android --profile development --non-interactive --no-wait
+        run: eas build --platform android --profile preview --non-interactive --no-wait
+
+      - name: Build Mobile (EAS Production)
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        working-directory: apps/mobile
+        run: eas build --platform android --profile production --non-interactive --no-wait
