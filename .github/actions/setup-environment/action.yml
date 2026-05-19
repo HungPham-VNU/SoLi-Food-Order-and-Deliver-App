@@ -1,0 +1,19 @@
+name: 'Setup Environment'
+description: 'Sets up pnpm, Node.js, and installs dependencies'
+runs:
+  using: "composite"
+  steps:
+    - name: Install (Setup pnpm)
+      uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      with:
+        version: 11.1.2
+
+    - name: Install (Setup Node)
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      with:
+        node-version: 22
+        cache: 'pnpm'
+
+    - name: Install (Dependencies)
+      shell: bash
+      run: pnpm install --frozen-lockfile

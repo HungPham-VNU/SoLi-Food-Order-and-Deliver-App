@@ -4,185 +4,30 @@ on:
   push:
     branches: [master]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   validate:
-    name: Validate (Check, Scan, Test, Build)
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_USER: user
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: food_order_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - name: Code (Checkout)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    uses: ./.github/workflows/validate.yml
+    secrets:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
-      - name: Install (Setup pnpm)
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.1.2
-
-      - name: Install (Setup Node)
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'pnpm'
-
-      - name: Install (Dependencies)
-        run: pnpm install --frozen-lockfile
-
-      - name: Turbo Cache
-        id: turbo-cache
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-turbo-
-
-      - name: Check (Lint & Typecheck)
-        run: pnpm turbo run lint typecheck --affected --cache-dir=".turbo"
-        env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
-
-      - name: Security Scan (Audit)
-        run: pnpm audit --audit-level high
-
-      - name: Unit Test
-        run: pnpm turbo run test --affected --cache-dir=".turbo"
-        env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
-          REDIS_URL: redis://localhost:6379
-          NODE_ENV: test
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
-
-      - name: Build
-        run: pnpm turbo run build --affected --cache-dir=".turbo"
-        env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
-
-      - name: Test (E2E)
-        run: pnpm turbo run test:e2e --filter=api --cache-dir=".turbo"
-        env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
-          REDIS_URL: redis://localhost:6379
-          NODE_ENV: test
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
-
-  package-publish-docker:
-    name: Package & Publish Docker
+  publish-docker:
     needs: validate
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    uses: ./.github/workflows/publish-docker.yml
+    with:
+      gh_actor: ${{ github.actor }}
+      gh_repository: ${{ github.repository }}
+    secrets: inherit
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Extract metadata (API)
-        id: meta-api
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}-api
-          tags: |
-            type=ref,event=branch
-            type=sha,format=short
-
-      - name: Build & Push API Image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/api/Dockerfile
-          push: true
-          tags: ${{ steps.meta-api.outputs.tags }}
-          labels: ${{ steps.meta-api.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Extract metadata (Web)
-        id: meta-web
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}-web
-          tags: |
-            type=ref,event=branch
-            type=sha,format=short
-
-      - name: Build & Push Web Image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/web/Dockerfile
-          push: true
-          tags: ${{ steps.meta-web.outputs.tags }}
-          labels: ${{ steps.meta-web.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  package-mobile:
-    name: Package Mobile (EAS)
+  publish-mobile:
     needs: validate
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install (Setup pnpm)
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.1.2
-
-      - name: Install (Setup Node)
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'pnpm'
-
-      - name: Setup Expo
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Install (Dependencies)
-        run: pnpm install --frozen-lockfile
-
-      - name: Package (EAS Build Production)
-        working-directory: apps/mobile
-        run: eas build --platform android --profile production --non-interactive --no-wait
+    uses: ./.github/workflows/publish-mobile.yml
+    secrets:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
