@@ -18,6 +18,9 @@ jobs:
 
   publish-docker:
     needs: validate
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/publish-docker.yml
     with:
       gh_actor: ${{ github.actor }}
