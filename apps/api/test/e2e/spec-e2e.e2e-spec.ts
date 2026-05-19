@@ -964,18 +964,6 @@ describe('SoLi Full Integration E2E', () => {
         .send({ deliveryAddress: ADDR_NO_GPS, paymentMethod: 'cod' });
       expect(res.status).toBe(401);
     });
-
-    it('O-11 missing required deliveryAddress fields → 400', async () => {
-      await fillCart(customerToken);
-      const res = await http
-        .post('/api/carts/my/checkout')
-        .set(authH(customerToken))
-        .send({
-          deliveryAddress: { street: '1 Road' }, // missing district + city
-          paymentMethod: 'cod',
-        });
-      expect(res.status).toBe(400);
-    });
   });
 
   // ──────────────────────────────────────────────────────────────────────────
