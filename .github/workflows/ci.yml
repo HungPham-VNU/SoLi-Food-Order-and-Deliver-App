@@ -69,6 +69,11 @@ jobs:
       - name: Security Scan (Audit)
         run: pnpm audit --audit-level high
 
+      - name: Migrate Database
+        run: pnpm --filter api db:push
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
+
       - name: Unit Test
         run: pnpm turbo run test --affected --cache-dir=".turbo"
         env:

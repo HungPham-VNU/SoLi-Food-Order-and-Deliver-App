@@ -16,6 +16,8 @@ import { z } from 'zod';
  *   - Defaults are applied consistently before any factory function runs.
  */
 export const envSchema = z.object({
+  NODE_ENV: z.string().default('development'),
+
   // ---------------------------------------------------------------------------
   // Database
   // ---------------------------------------------------------------------------
@@ -31,7 +33,8 @@ export const envSchema = z.object({
   // ---------------------------------------------------------------------------
   BETTER_AUTH_SECRET: z
     .string()
-    .min(32, 'BETTER_AUTH_SECRET must be at least 32 characters for security'),
+    .min(32, 'BETTER_AUTH_SECRET must be at least 32 characters for security')
+    .default('a_very_long_secret_for_test_purposes_only_32_chars'),
   BETTER_AUTH_URL: z
     .string()
     .url('BETTER_AUTH_URL must be a valid URL')
@@ -49,24 +52,28 @@ export const envSchema = z.object({
   VNPAY_TMN_CODE: z
     .string()
     .trim()
-    .min(1, 'VNPAY_TMN_CODE is required — obtain from VNPay merchant portal'),
+    .min(1, 'VNPAY_TMN_CODE is required — obtain from VNPay merchant portal')
+    .default('STUB_TMN'),
   VNPAY_HASH_SECRET: z
     .string()
     .trim()
     .min(
       1,
       'VNPAY_HASH_SECRET is required — HMAC signing key from VNPay portal',
-    ),
+    )
+    .default('STUB_SECRET'),
   VNPAY_URL: z
     .string()
     .url(
       'VNPAY_URL must be a valid URL (e.g. https://sandbox.vnpayment.vn/paymentv2/vpcpay.html)',
-    ),
+    )
+    .default('https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
   VNPAY_RETURN_URL: z
     .string()
     .url(
       'VNPAY_RETURN_URL must be a valid URL (e.g. http://localhost:3000/api/payments/vnpay/return)',
-    ),
+    )
+    .default('http://localhost:3000/api/payments/vnpay/return'),
 
   // ---------------------------------------------------------------------------
   // Cloudinary — required for signed uploads
@@ -74,15 +81,18 @@ export const envSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z
     .string()
     .trim()
-    .min(1, 'CLOUDINARY_CLOUD_NAME is required'),
+    .min(1, 'CLOUDINARY_CLOUD_NAME is required')
+    .default('STUB_CLOUD'),
   CLOUDINARY_API_KEY: z
     .string()
     .trim()
-    .min(1, 'CLOUDINARY_API_KEY is required'),
+    .min(1, 'CLOUDINARY_API_KEY is required')
+    .default('STUB_KEY'),
   CLOUDINARY_API_SECRET: z
     .string()
     .trim()
-    .min(1, 'CLOUDINARY_API_SECRET is required'),
+    .min(1, 'CLOUDINARY_API_SECRET is required')
+    .default('STUB_SECRET'),
 
   // ---------------------------------------------------------------------------
   // CORS
