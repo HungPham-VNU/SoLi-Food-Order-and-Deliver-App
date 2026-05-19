@@ -89,8 +89,14 @@ jobs:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
+      - name: Setup Database (Migrate)
+        run: pnpm turbo run db:push --filter=api
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
+          NODE_ENV: test
+
       - name: Test (E2E)
-        run: pnpm turbo run test:e2e --filter=api --cache-dir=".turbo"
+        run: pnpm turbo run test:e2e --filter=api --cache-dir=".turbo" -- --detectOpenHandles --forceExit
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
           REDIS_URL: redis://localhost:6379
