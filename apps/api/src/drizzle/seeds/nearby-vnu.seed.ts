@@ -90,13 +90,32 @@ const seedImages = {
 
 const nearbyVnuImages = Object.values(seedImages);
 
-const nearbyVnuOwner = {
-  id: '44444444-4444-4444-8444-444444444444',
-  accountId: '44444444-4444-4444-9444-444444444444',
-  name: 'Nearby VNU Restaurant Owner',
-  email: 'nearby-vnu-owner@soli.dev',
-  password: 'password1234',
-};
+const nearbyVnuOwners = [
+  {
+    id: '44444444-4444-4444-8444-444444444401',
+    accountId: '44444444-4444-4444-9444-444444444401',
+    name: 'Bún Chả Owner',
+    email: 'buncha-owner@soli.dev',
+    password: 'password1234',
+    restaurantName: 'Bún Chả Làng Đại Học',
+  },
+  {
+    id: '44444444-4444-4444-8444-444444444402',
+    accountId: '44444444-4444-4444-9444-444444444402',
+    name: 'Coffee House Owner',
+    email: 'coffee-owner@soli.dev',
+    password: 'password1234',
+    restaurantName: 'The Coffee House - KTX Khu B',
+  },
+  {
+    id: '44444444-4444-4444-8444-444444444403',
+    accountId: '44444444-4444-4444-9444-444444444403',
+    name: 'Cơm Tấm Owner',
+    email: 'comtam-owner@soli.dev',
+    password: 'password1234',
+    restaurantName: 'Cơm Tấm Cali - Thủ Đức',
+  },
+];
 
 const restaurantSeedNames = [
   'Bún Chả Làng Đại Học',
@@ -125,18 +144,19 @@ function withSeedImage<T extends { price: number; imageUrl?: string }>(
 async function main() {
   console.log('🌱 Starting nearby VNU seeding...');
 
-  // 1. Seed a dedicated owner user and credential account.
-  const ownerId = nearbyVnuOwner.id;
+  // 1. Seed dedicated owner users and credential accounts.
+  const oldOwnerId = '44444444-4444-4444-8444-444444444444';
+  const ownerIds = [oldOwnerId, ...nearbyVnuOwners.map((o) => o.id)];
 
-  // 2. Clear old seed data for this owner and corresponding snapshots.
-  console.log(`🗑  Cleaning up existing nearby VNU data for owner: ${ownerId}`);
+  // 2. Clear old seed data for these owners and corresponding snapshots.
+  console.log(`🗑  Cleaning up existing nearby VNU data...`);
   try {
     const existingRestaurants = await db
       .select({ id: schema.restaurants.id })
       .from(schema.restaurants)
       .where(
         or(
-          eq(schema.restaurants.ownerId, ownerId),
+          inArray(schema.restaurants.ownerId, ownerIds),
           inArray(schema.restaurants.name, restaurantSeedNames),
         ),
       );
@@ -181,8 +201,8 @@ async function main() {
         .delete(schema.restaurants)
         .where(inArray(schema.restaurants.id, restaurantIds));
     }
-    await db.delete(schema.account).where(eq(schema.account.userId, ownerId));
-    await db.delete(schema.user).where(eq(schema.user.id, ownerId));
+    await db.delete(schema.account).where(inArray(schema.account.userId, ownerIds));
+    await db.delete(schema.user).where(inArray(schema.user.id, ownerIds));
     console.log('✅ Old seed data and snapshots cleared.');
     await db.delete(schema.images).where(
       inArray(
@@ -198,29 +218,31 @@ async function main() {
   }
 
   const now = new Date();
-  const passwordHash = await hashPassword(nearbyVnuOwner.password);
 
-  await db.insert(schema.user).values({
-    id: nearbyVnuOwner.id,
-    name: nearbyVnuOwner.name,
-    email: nearbyVnuOwner.email,
-    emailVerified: true,
-    role: 'restaurant',
-    createdAt: now,
-    updatedAt: now,
-  });
-  await db.insert(schema.account).values({
-    id: nearbyVnuOwner.accountId,
-    accountId: nearbyVnuOwner.id,
-    providerId: 'credential',
-    userId: nearbyVnuOwner.id,
-    password: passwordHash,
-    createdAt: now,
-    updatedAt: now,
-  });
-  console.log(
-    `Seeded restaurant owner account: ${nearbyVnuOwner.email} / ${nearbyVnuOwner.password}`,
-  );
+  for (const owner of nearbyVnuOwners) {
+    const passwordHash = await hashPassword(owner.password);
+    await db.insert(schema.user).values({
+      id: owner.id,
+      name: owner.name,
+      email: owner.email,
+      emailVerified: true,
+      role: 'restaurant',
+      createdAt: now,
+      updatedAt: now,
+    });
+    await db.insert(schema.account).values({
+      id: owner.accountId,
+      accountId: owner.id,
+      providerId: 'credential',
+      userId: owner.id,
+      password: passwordHash,
+      createdAt: now,
+      updatedAt: now,
+    });
+    console.log(
+      `Seeded restaurant owner account: ${owner.email} / ${owner.password} for ${owner.restaurantName}`,
+    );
+  }
 
   await db.insert(schema.images).values(nearbyVnuImages);
   console.log(`Seeded ${nearbyVnuImages.length} Cloudinary image records.`);
@@ -229,7 +251,7 @@ async function main() {
   const restaurantsData = [
     {
       id: uuidv4(),
-      ownerId,
+      ownerId: nearbyVnuOwners[0].id,
       name: 'Bún Chả Làng Đại Học',
       description:
         'Đặc sản Bún chả Hà Nội ngay tại Làng Đại học, thơm ngon nóng hổi.',
@@ -245,7 +267,7 @@ async function main() {
     },
     {
       id: uuidv4(),
-      ownerId,
+      ownerId: nearbyVnuOwners[1].id,
       name: 'The Coffee House - KTX Khu B',
       description: 'Không gian học tập và thư giãn lý tưởng cho sinh viên.',
       address: 'KTX Khu B ĐHQG, Dĩ An, Bình Dương',
@@ -260,7 +282,7 @@ async function main() {
     },
     {
       id: uuidv4(),
-      ownerId,
+      ownerId: nearbyVnuOwners[2].id,
       name: 'Cơm Tấm Cali - Thủ Đức',
       description: 'Hệ thống cơm tấm nổi tiếng với sườn nướng mật ong.',
       address: 'Xa lộ Hà Nội, Thủ Đức, TP.HCM',
