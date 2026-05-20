@@ -159,11 +159,21 @@ export function MenuItemDetailScreen({
       
       {/* Hero Image Area with Overlaid Navigation */}
       <View className="relative w-full h-72 shrink-0">
-        <Image 
-          source={{ uri: item.imageUrl }}
-          className="w-full h-full rounded-b-xl"
-          contentFit="cover"
-        />
+        {item.imageUrl ? (
+          <Image
+            source={{ uri: item.imageUrl }}
+            className="w-full h-full rounded-b-xl"
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
+        ) : (
+          <View className="w-full h-full rounded-b-xl bg-surface-container items-center justify-center">
+            <Text className="text-on-surface-variant font-medium">
+              No image
+            </Text>
+          </View>
+        )}
         <View className="absolute top-0 w-full flex-row justify-between items-start px-4 py-6" style={{ paddingTop: insets.top + 10 }}>
           <TouchableOpacity 
             onPress={onBack}

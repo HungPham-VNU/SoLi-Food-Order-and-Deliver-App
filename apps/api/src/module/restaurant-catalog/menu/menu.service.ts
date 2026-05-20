@@ -20,6 +20,8 @@ import type {
 import { RestaurantService } from '@/module/restaurant-catalog/restaurant/restaurant.service';
 import { MenuItemUpdatedEvent } from '@/shared/events/menu-item-updated.event';
 import type { MenuItemModifierSnapshot } from '@/shared/events/menu-item-updated.event';
+import { ImageService } from '@/module/image/image.service';
+import type { CreateImageDto } from '@/module/image/dto/image.dto';
 
 export interface FindByRestaurantOptions {
   categoryId?: string;
@@ -40,6 +42,7 @@ export class MenuService {
     private readonly repo: MenuRepository,
     private readonly restaurantService: RestaurantService,
     private readonly eventBus: EventBus,
+    private readonly imageService: ImageService,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -89,6 +92,19 @@ export class MenuService {
     await this.assertOwnership(id, requesterId, isAdmin);
     const item = await this.repo.update(id, dto);
     // null = no modifier data in this event; projector will preserve existing snapshot modifiers
+    this.publishMenuItemEvent(item, null);
+    return item;
+  }
+
+  async updateImage(
+    id: string,
+    requesterId: string,
+    isAdmin: boolean,
+    dto: CreateImageDto,
+  ): Promise<MenuItem> {
+    await this.assertOwnership(id, requesterId, isAdmin);
+    await this.imageService.create(dto);
+    const item = await this.repo.update(id, { imageUrl: dto.secureUrl });
     this.publishMenuItemEvent(item, null);
     return item;
   }

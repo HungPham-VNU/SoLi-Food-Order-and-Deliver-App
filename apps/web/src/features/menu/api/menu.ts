@@ -1,4 +1,11 @@
 import type { MenuItem, MenuOverview } from '@/features/menu/types';
+import { apiClient } from '@/lib/api-client';
+import type { CloudinaryImageMetadata } from '@/features/image/api/cloudinary-upload';
+
+interface MenuItemListResponse {
+  data: MenuItem[];
+  total: number;
+}
 
 // Mock menu items — replace with real API calls
 export const mockMenuItems: MenuItem[] = [
@@ -61,4 +68,35 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
 export async function fetchMenuOverview(): Promise<MenuOverview> {
   await new Promise((resolve) => setTimeout(resolve, 300));
   return mockMenuOverview;
+}
+
+export async function attachMenuItemImage(
+  menuItemId: string,
+  image: CloudinaryImageMetadata,
+): Promise<MenuItem> {
+  const { data } = await apiClient.post<MenuItem>(
+    `/api/menu-items/${menuItemId}/image`,
+    image,
+  );
+  return data;
+}
+
+export async function createMenuItem(
+  item: Omit<MenuItem, 'id' | 'isAvailable' | 'category'> & {
+    restaurantId: string;
+    categoryId?: string;
+  },
+): Promise<MenuItem> {
+  const { data } = await apiClient.post<MenuItem>('/api/menu-items', item);
+  return data;
+}
+
+export async function fetchMenuItemsByRestaurant(
+  restaurantId: string,
+): Promise<MenuItemListResponse> {
+  const { data } = await apiClient.get<MenuItemListResponse>(
+    '/api/menu-items',
+    { params: { restaurantId } },
+  );
+  return data;
 }

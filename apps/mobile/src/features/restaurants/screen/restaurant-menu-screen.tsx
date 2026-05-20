@@ -131,6 +131,7 @@ export function RestaurantMenuScreen({
 
   const itemCount =
     cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  const restaurantImageUrl = restaurant.coverImageUrl || restaurant.logoUrl;
 
   return (
     <View className="flex-1 bg-surface">
@@ -168,14 +169,17 @@ export function RestaurantMenuScreen({
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Hero Section */}
         <View className="relative w-full h-80">
-          <Image
-            source={{
-              uri:
-                (restaurant.coverImageUrl || restaurant.logoUrl) ?? undefined,
-            }}
-            className="w-full h-full"
-            contentFit="cover"
-          />
+          {restaurantImageUrl ? (
+            <Image
+              source={{ uri: restaurantImageUrl }}
+              className="w-full h-full"
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <View className="w-full h-full bg-primary" />
+          )}
           <LinearGradient
             colors={[
               'rgba(0,0,0,0.6)',
@@ -299,7 +303,7 @@ export function RestaurantMenuScreen({
                       </Text>
                     </View>
                     <View className="w-24 h-24 rounded-2xl bg-surface-container overflow-hidden border border-outline-variant/15">
-                      {item.imageUrl && (
+                      {item.imageUrl ? (
                         <Image
                           source={{ uri: item.imageUrl }}
                           className="w-full h-full"
@@ -307,6 +311,12 @@ export function RestaurantMenuScreen({
                           transition={200}
                           cachePolicy="memory-disk"
                         />
+                      ) : (
+                        <View className="w-full h-full items-center justify-center">
+                          <Text className="text-xs font-medium text-on-surface-variant">
+                            No image
+                          </Text>
+                        </View>
                       )}
                     </View>
                   </View>

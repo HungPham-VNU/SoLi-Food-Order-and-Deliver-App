@@ -1,17 +1,24 @@
+import { useState } from 'react';
 import { CreateMenuItemHeader } from '@/features/menu/components/create/CreateMenuItemHeader';
 import { ProductEssenceCard } from '@/features/menu/components/create/ProductEssenceCard';
 import { DietaryTagsCard } from '@/features/menu/components/create/DietaryTagsCard';
 import { MediaUploadCard } from '@/features/menu/components/create/MediaUploadCard';
 import { MarketVisibilityCard } from '@/features/menu/components/create/MarketVisibilityCard';
 import { CreateMenuItemFooter } from '@/features/menu/components/create/CreateMenuItemFooter';
+import type { CloudinaryImageMetadata } from '@/features/image/api/cloudinary-upload';
 
 export default function CreateMenuItemPage() {
+  const [uploadedImage, setUploadedImage] =
+    useState<CloudinaryImageMetadata | null>(null);
+
   const handleCancel = () => {
     window.history.back();
   };
 
   const handleSave = () => {
-    console.log('Saving menu item...');
+    console.log('Saving menu item...', {
+      imageUrl: uploadedImage?.secureUrl,
+    });
   };
 
   const handleDiscard = () => {
@@ -19,7 +26,9 @@ export default function CreateMenuItemPage() {
   };
 
   const handlePublish = () => {
-    console.log('Publishing menu item...');
+    console.log('Publishing menu item...', {
+      imageUrl: uploadedImage?.secureUrl,
+    });
   };
 
   return (
@@ -35,7 +44,7 @@ export default function CreateMenuItemPage() {
 
         {/* Right Column: Media & Status */}
         <div className="col-span-12 lg:col-span-4 space-y-8">
-          <MediaUploadCard />
+          <MediaUploadCard onImageUploaded={setUploadedImage} />
           <MarketVisibilityCard />
         </div>
       </div>

@@ -26,9 +26,11 @@ import {
   RestaurantResponseDto,
   UpdateRestaurantDto,
 } from './dto/restaurant.dto';
+import { CreateImageDto } from '@/module/image/dto/image.dto';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiBody,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
@@ -134,6 +136,58 @@ export class RestaurantController {
     @Body() dto: UpdateRestaurantDto,
   ) {
     return this.service.update(
+      id,
+      session.user.id,
+      hasRole(session.user.role, 'admin'),
+      dto,
+    );
+  }
+
+  @Post(':id/logo-image')
+  @Roles(['admin', 'restaurant'])
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token' })
+  @ApiOperation({
+    summary: 'Attach restaurant logo image',
+    description:
+      'Stores Cloudinary upload metadata and updates the restaurant logoUrl.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ type: CreateImageDto })
+  @ApiCreatedResponse({ type: RestaurantResponseDto })
+  @ApiForbiddenResponse({ description: 'You do not own this restaurant' })
+  @ApiNotFoundResponse({ description: 'Restaurant not found' })
+  updateLogoImage(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Session() session: UserSession,
+    @Body() dto: CreateImageDto,
+  ) {
+    return this.service.updateLogoImage(
+      id,
+      session.user.id,
+      hasRole(session.user.role, 'admin'),
+      dto,
+    );
+  }
+
+  @Post(':id/cover-image')
+  @Roles(['admin', 'restaurant'])
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token' })
+  @ApiOperation({
+    summary: 'Attach restaurant cover image',
+    description:
+      'Stores Cloudinary upload metadata and updates the restaurant coverImageUrl.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ type: CreateImageDto })
+  @ApiCreatedResponse({ type: RestaurantResponseDto })
+  @ApiForbiddenResponse({ description: 'You do not own this restaurant' })
+  @ApiNotFoundResponse({ description: 'Restaurant not found' })
+  updateCoverImage(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Session() session: UserSession,
+    @Body() dto: CreateImageDto,
+  ) {
+    return this.service.updateCoverImage(
       id,
       session.user.id,
       hasRole(session.user.role, 'admin'),

@@ -17,5 +17,6 @@ import { ImageService } from './image.service';
     ImageService,
     ImageRepository,
   ],
+  exports: [ImageService],
 })
 export class ImageModule {}

@@ -43,6 +43,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { CreateImageDto } from '@/module/image/dto/image.dto';
 
 @ApiTags('Menu')
 @ApiBearerAuth()
@@ -238,6 +239,39 @@ export class MenuController {
     @Body() dto: UpdateMenuItemDto,
   ) {
     return this.service.update(
+      id,
+      session.user.id,
+      hasRole(session.user.role, 'admin'),
+      dto,
+    );
+  }
+
+  @Post(':id/image')
+  @Roles(['admin', 'restaurant'])
+  @ApiOperation({
+    summary: 'Attach menu item image',
+    description:
+      'Stores Cloudinary upload metadata and updates the menu item imageUrl.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ type: CreateImageDto })
+  @ApiCreatedResponse({
+    description: 'Menu item image attached successfully',
+    type: MenuItemResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'User is not owner of the restaurant',
+  })
+  @ApiNotFoundResponse({ description: 'Menu item not found' })
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid access token',
+  })
+  updateImage(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Session() session: UserSession,
+    @Body() dto: CreateImageDto,
+  ) {
+    return this.service.updateImage(
       id,
       session.user.id,
       hasRole(session.user.role, 'admin'),

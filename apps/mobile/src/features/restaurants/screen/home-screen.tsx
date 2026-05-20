@@ -233,11 +233,19 @@ export function HomeScreen() {
                     className="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm active:scale-[0.98] border border-surface-variant/20"
                   >
                     <View className="h-40 w-full relative">
-                      <Image
-                        source={imageUrl ? { uri: imageUrl } : undefined}
-                        className="w-full h-full"
-                        contentFit="cover"
-                      />
+                      {imageUrl ? (
+                        <Image
+                          source={{ uri: imageUrl }}
+                          className="w-full h-full"
+                          contentFit="cover"
+                          transition={200}
+                          cachePolicy="memory-disk"
+                        />
+                      ) : (
+                        <View className="w-full h-full bg-surface-container items-center justify-center">
+                          <Utensils size={40} color="#707a6c" />
+                        </View>
+                      )}
                       <View className="absolute top-3 right-3 bg-surface-container-lowest/95 px-2.5 py-1 rounded-full flex-row items-center gap-1 shadow-md">
                         <Star size={16} color="#8b5000" fill="#8b5000" />
                         <Text className="font-jakarta-sans text-sm font-bold text-on-background">

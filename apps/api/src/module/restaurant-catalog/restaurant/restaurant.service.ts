@@ -12,6 +12,8 @@ import {
 import { CreateRestaurantDto, UpdateRestaurantDto } from './dto/restaurant.dto';
 import type { Restaurant } from '@/module/restaurant-catalog/restaurant/restaurant.schema';
 import { RestaurantUpdatedEvent } from '@/shared/events/restaurant-updated.event';
+import { ImageService } from '@/module/image/image.service';
+import type { CreateImageDto } from '@/module/image/dto/image.dto';
 
 // ---------------------------------------------------------------------------
 // Pagination constants — enforced in all list/search endpoints (Issue #5)
@@ -24,6 +26,7 @@ export class RestaurantService {
   constructor(
     private readonly repo: RestaurantRepository,
     private readonly eventBus: EventBus,
+    private readonly imageService: ImageService,
   ) {}
 
   async findAll(
@@ -66,6 +69,24 @@ export class RestaurantService {
     if (!updated) throw new NotFoundException(`Restaurant ${id} not found`);
     this.publishRestaurantEvent(updated);
     return updated;
+  }
+
+  async updateLogoImage(
+    id: string,
+    requesterId: string,
+    isAdmin: boolean,
+    dto: CreateImageDto,
+  ): Promise<Restaurant> {
+    return this.attachImage(id, requesterId, isAdmin, dto, 'logoUrl');
+  }
+
+  async updateCoverImage(
+    id: string,
+    requesterId: string,
+    isAdmin: boolean,
+    dto: CreateImageDto,
+  ): Promise<Restaurant> {
+    return this.attachImage(id, requesterId, isAdmin, dto, 'coverImageUrl');
   }
 
   async remove(id: string): Promise<void> {
@@ -135,5 +156,26 @@ export class RestaurantService {
         restaurant.cuisineType ?? null,
       ),
     );
+  }
+
+  private async attachImage(
+    id: string,
+    requesterId: string,
+    isAdmin: boolean,
+    dto: CreateImageDto,
+    targetField: 'logoUrl' | 'coverImageUrl',
+  ): Promise<Restaurant> {
+    const restaurant = await this.findOne(id);
+    if (!isAdmin && restaurant.ownerId !== requesterId) {
+      throw new ForbiddenException('You do not own this restaurant');
+    }
+
+    await this.imageService.create(dto);
+    const updated = await this.repo.update(id, {
+      [targetField]: dto.secureUrl,
+    } satisfies UpdateRestaurantDto);
+    if (!updated) throw new NotFoundException(`Restaurant ${id} not found`);
+    this.publishRestaurantEvent(updated);
+    return updated;
   }
 }
