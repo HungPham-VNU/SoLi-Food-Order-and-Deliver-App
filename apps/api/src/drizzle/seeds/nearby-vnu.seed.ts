@@ -2,7 +2,8 @@ import 'dotenv/config';
 import { db } from '../db';
 import * as schema from '../schema';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, or } from 'drizzle-orm';
+import { hashPassword } from 'better-auth/crypto';
 
 /**
  * Nearby VNU (Làng Đại học) Seed Script
@@ -14,24 +15,136 @@ import { eq, inArray } from 'drizzle-orm';
  * It also populates the Ordering ACL snapshots to ensure "Add to Cart" works.
  */
 
+type SeedImage = {
+  publicId: string;
+  secureUrl: string;
+  width: number;
+  height: number;
+};
+
+const image = (
+  publicId: string,
+  remoteImageId: string,
+  width = 1200,
+  height = 800,
+): SeedImage => ({
+  publicId,
+  secureUrl: `https://res.cloudinary.com/demo/image/fetch/c_fill,w_${width},h_${height},q_auto,f_auto/https://images.unsplash.com/${remoteImageId}`,
+  width,
+  height,
+});
+
+const seedImages = {
+  bunChaLogo: image(
+    'nearby-vnu/restaurants/bun-cha-logo',
+    'photo-1555396273-367ea4eb4db5',
+    512,
+    512,
+  ),
+  bunChaCover: image(
+    'nearby-vnu/restaurants/bun-cha-cover',
+    'photo-1551218808-94e220e084d2',
+  ),
+  coffeeLogo: image(
+    'nearby-vnu/restaurants/coffee-house-logo',
+    'photo-1495474472287-4d71bcdd2085',
+    512,
+    512,
+  ),
+  coffeeCover: image(
+    'nearby-vnu/restaurants/coffee-house-cover',
+    'photo-1509042239860-f550ce710b93',
+  ),
+  comTamLogo: image(
+    'nearby-vnu/restaurants/com-tam-logo',
+    'photo-1504674900247-0877df9cc836',
+    512,
+    512,
+  ),
+  comTamCover: image(
+    'nearby-vnu/restaurants/com-tam-cover',
+    'photo-1544025162-d76694265947',
+  ),
+  bunChaSpecial: image(
+    'nearby-vnu/menu/bun-cha-special',
+    'photo-1569718212165-3a8278d5f624',
+  ),
+  bunChaRegular: image(
+    'nearby-vnu/menu/bun-cha-regular',
+    'photo-1559314809-0d155014e29e',
+  ),
+  peachTea: image('nearby-vnu/menu/peach-tea', 'photo-1556679343-c7306c1976bc'),
+  blackTeaMacchiato: image(
+    'nearby-vnu/menu/black-tea-macchiato',
+    'photo-1572442388796-11668a67e53d',
+  ),
+  comTamSuon: image(
+    'nearby-vnu/menu/com-tam-suon',
+    'photo-1544025162-d76694265947',
+  ),
+  comTamCombo: image(
+    'nearby-vnu/menu/com-tam-suon-bi-cha',
+    'photo-1504674900247-0877df9cc836',
+  ),
+} satisfies Record<string, SeedImage>;
+
+const nearbyVnuImages = Object.values(seedImages);
+
+const nearbyVnuOwner = {
+  id: '44444444-4444-4444-8444-444444444444',
+  accountId: '44444444-4444-4444-9444-444444444444',
+  name: 'Nearby VNU Restaurant Owner',
+  email: 'nearby-vnu-owner@soli.dev',
+  password: 'password1234',
+};
+
+const restaurantSeedNames = [
+  'Bún Chả Làng Đại Học',
+  'The Coffee House - KTX Khu B',
+  'Cơm Tấm Cali - Thủ Đức',
+];
+
+function withSeedImage<T extends { price: number; imageUrl?: string }>(
+  item: T,
+): T & { imageUrl?: string } {
+  if (item.imageUrl) return item;
+
+  const imageByPrice: Record<number, string> = {
+    42000: seedImages.blackTeaMacchiato.secureUrl,
+    45000: seedImages.peachTea.secureUrl,
+    65000: seedImages.comTamSuon.secureUrl,
+    75000: seedImages.comTamCombo.secureUrl,
+  };
+
+  return {
+    ...item,
+    imageUrl: imageByPrice[item.price],
+  };
+}
+
 async function main() {
   console.log('🌱 Starting nearby VNU seeding...');
 
-  // 1. Get an owner user (reusing Owner 1 from existing seed)
-  const ownerId = '11111111-1111-4111-8111-111111111111';
+  // 1. Seed a dedicated owner user and credential account.
+  const ownerId = nearbyVnuOwner.id;
 
-  // 2. Clear old seed data for this owner and corresponding snapshots
-  console.log(`🗑  Cleaning up existing data for owner: ${ownerId}`);
+  // 2. Clear old seed data for this owner and corresponding snapshots.
+  console.log(`🗑  Cleaning up existing nearby VNU data for owner: ${ownerId}`);
   try {
     const existingRestaurants = await db
       .select({ id: schema.restaurants.id })
       .from(schema.restaurants)
-      .where(eq(schema.restaurants.ownerId, ownerId));
+      .where(
+        or(
+          eq(schema.restaurants.ownerId, ownerId),
+          inArray(schema.restaurants.name, restaurantSeedNames),
+        ),
+      );
 
     if (existingRestaurants.length > 0) {
       const restaurantIds = existingRestaurants.map((r) => r.id);
 
-      // Delete from snapshots first (Ordering BC)
+      // Delete from snapshots first (Ordering and Notification BCs).
       await db
         .delete(schema.orderingMenuItemSnapshots)
         .where(
@@ -53,20 +166,64 @@ async function main() {
             restaurantIds,
           ),
         );
+      await db
+        .delete(schema.notificationRestaurantSnapshots)
+        .where(
+          inArray(
+            schema.notificationRestaurantSnapshots.restaurantId,
+            restaurantIds,
+          ),
+        );
 
       // Delete from upstream tables (Catalog BC)
       // Cascading deletes in schema might handle some, but we'll be explicit where safe
       await db
         .delete(schema.restaurants)
-        .where(eq(schema.restaurants.ownerId, ownerId));
+        .where(inArray(schema.restaurants.id, restaurantIds));
     }
+    await db.delete(schema.account).where(eq(schema.account.userId, ownerId));
+    await db.delete(schema.user).where(eq(schema.user.id, ownerId));
     console.log('✅ Old seed data and snapshots cleared.');
+    await db.delete(schema.images).where(
+      inArray(
+        schema.images.publicId,
+        nearbyVnuImages.map((asset) => asset.publicId),
+      ),
+    );
   } catch (error: unknown) {
     console.warn(
       '⚠️  Warning: Could not clear old data:',
       error instanceof Error ? error.message : String(error),
     );
   }
+
+  const now = new Date();
+  const passwordHash = await hashPassword(nearbyVnuOwner.password);
+
+  await db.insert(schema.user).values({
+    id: nearbyVnuOwner.id,
+    name: nearbyVnuOwner.name,
+    email: nearbyVnuOwner.email,
+    emailVerified: true,
+    role: 'restaurant',
+    createdAt: now,
+    updatedAt: now,
+  });
+  await db.insert(schema.account).values({
+    id: nearbyVnuOwner.accountId,
+    accountId: nearbyVnuOwner.id,
+    providerId: 'credential',
+    userId: nearbyVnuOwner.id,
+    password: passwordHash,
+    createdAt: now,
+    updatedAt: now,
+  });
+  console.log(
+    `Seeded restaurant owner account: ${nearbyVnuOwner.email} / ${nearbyVnuOwner.password}`,
+  );
+
+  await db.insert(schema.images).values(nearbyVnuImages);
+  console.log(`Seeded ${nearbyVnuImages.length} Cloudinary image records.`);
 
   // 3. Define Restaurants near the target location
   const restaurantsData = [
@@ -81,6 +238,8 @@ async function main() {
       isOpen: true,
       isApproved: true,
       cuisineType: 'Vietnamese',
+      logoUrl: seedImages.bunChaLogo.secureUrl,
+      coverImageUrl: seedImages.bunChaCover.secureUrl,
       latitude: 10.8935,
       longitude: 106.792,
     },
@@ -94,6 +253,8 @@ async function main() {
       isOpen: true,
       isApproved: true,
       cuisineType: 'Cafe',
+      logoUrl: seedImages.coffeeLogo.secureUrl,
+      coverImageUrl: seedImages.coffeeCover.secureUrl,
       latitude: 10.8928,
       longitude: 106.7915,
     },
@@ -107,6 +268,8 @@ async function main() {
       isOpen: true,
       isApproved: true,
       cuisineType: 'Vietnamese',
+      logoUrl: seedImages.comTamLogo.secureUrl,
+      coverImageUrl: seedImages.comTamCover.secureUrl,
       latitude: 10.894,
       longitude: 106.791,
     },
@@ -179,6 +342,7 @@ async function main() {
           description: 'Đầy đủ chả miếng, chả viên, nem rán.',
           price: 45000,
           status: 'available' as const,
+          imageUrl: seedImages.bunChaSpecial.secureUrl,
         },
         {
           id: uuidv4(),
@@ -188,11 +352,12 @@ async function main() {
           description: 'Chả miếng và chả viên.',
           price: 35000,
           status: 'available' as const,
+          imageUrl: seedImages.bunChaRegular.secureUrl,
         },
       ];
 
       for (const item of items) {
-        await db.insert(schema.menuItems).values(item);
+        await db.insert(schema.menuItems).values(withSeedImage(item));
 
         const modGroupId = uuidv4();
         await db.insert(schema.modifierGroups).values({
@@ -288,7 +453,7 @@ async function main() {
       ];
 
       for (const item of items) {
-        await db.insert(schema.menuItems).values(item);
+        await db.insert(schema.menuItems).values(withSeedImage(item));
 
         const sizeGroupId = uuidv4();
         await db.insert(schema.modifierGroups).values({
@@ -426,7 +591,7 @@ async function main() {
       ];
 
       for (const item of items) {
-        await db.insert(schema.menuItems).values(item);
+        await db.insert(schema.menuItems).values(withSeedImage(item));
 
         const sideGroupId = uuidv4();
         await db.insert(schema.modifierGroups).values({
