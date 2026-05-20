@@ -27,36 +27,38 @@ import {
 import Toast from 'react-native-toast-message';
 
 // Register background handler
-setBackgroundMessageHandler(getMessaging(), async (remoteMessage) => {
-  console.log('[BackgroundMessage] Received:', remoteMessage);
+if (Platform.OS !== 'web') {
+  setBackgroundMessageHandler(getMessaging(), async (remoteMessage) => {
+    console.log('[BackgroundMessage] Received:', remoteMessage);
 
-  // If the app is in background or closed, we may need to manually trigger a notification
-  // for data-only messages. For messages with a 'notification' block, Android handles them automatically.
-  // But for reliability across different Android versions/distributions, we check here.
-  const title = remoteMessage.notification?.title || remoteMessage.data?.title;
-  const body = remoteMessage.notification?.body || remoteMessage.data?.body;
+    // If the app is in background or closed, we may need to manually trigger a notification
+    // for data-only messages. For messages with a 'notification' block, Android handles them automatically.
+    // But for reliability across different Android versions/distributions, we check here.
+    const title = remoteMessage.notification?.title || remoteMessage.data?.title;
+    const body = remoteMessage.notification?.body || remoteMessage.data?.body;
 
-  if (title || body) {
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: (title || 'UIT Food Notification') as string,
-          body: (body || 'Open the app to see details') as string,
-          data: remoteMessage.data,
-          sound: true,
-          priority: Notifications.AndroidNotificationPriority.HIGH,
-          color: '#0d631b',
-        },
-        trigger: null,
-      });
-    } catch (error) {
-      console.error(
-        '[BackgroundMessage] Failed to schedule notification:',
-        error,
-      );
+    if (title || body) {
+      try {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: (title || 'UIT Food Notification') as string,
+            body: (body || 'Open the app to see details') as string,
+            data: remoteMessage.data,
+            sound: true,
+            priority: Notifications.AndroidNotificationPriority.HIGH,
+            color: '#0d631b',
+          },
+          trigger: null,
+        });
+      } catch (error) {
+        console.error(
+          '[BackgroundMessage] Failed to schedule notification:',
+          error,
+        );
+      }
     }
-  }
-});
+  });
+}
 
 function RootNavigation() {
   const { data: session, isPending } = useSession();
