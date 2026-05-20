@@ -1,30 +1,56 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { Order } from "@/features/orders/types/order.types";
+import type { VariantProps } from "class-variance-authority";
+import { badgeVariants } from "@/components/ui/badge";
+import type { OrderDetail, OrderStatus } from "@/features/orders/types";
+import { STATUS_LABEL, KANBAN_GROUP } from "@/features/orders/types";
 
+type BadgeVariant = VariantProps<typeof badgeVariants>["variant"];
+
+const STATUS_BADGE: Partial<Record<OrderStatus, BadgeVariant>> = {
+  pending:          "order-neutral",
+  paid:             "order-delivery",
+  confirmed:        "order-preparing",
+  preparing:        "order-preparing",
+  ready_for_pickup: "order-ready",
+  picked_up:        "order-ready",
+  delivering:       "order-delivery",
+  delivered:        "order-ready",
+  cancelled:        "order-neutral",
+  refunded:         "order-neutral",
+};
 
 type OrderDetailHeaderProps = {
-  order: Order;
+  order: Omit<OrderDetail, "timeline">;
+  onConfirm?:        () => void;
+  onStartPreparing?: () => void;
+  onMarkReady?:      () => void;
+  onCancel?:         () => void;
+  isPending?:        boolean;
 };
 
-// Map tag variant -> order badge variant (already defined in badge.tsx)
-const TAG_TO_BADGE: Record<string, "order-neutral" | "order-priority" | "order-delivery" | "order-preparing" | "order-ready"> = {
-  unaccepted: "order-neutral",
-  review: "order-neutral",
-  high_priority: "order-priority",
-  delivery: "order-delivery",
-  preparing: "order-preparing",
-  ready: "order-ready",
-  ready_pickup: "order-ready",
-};
+export function OrderDetailHeader({
+  order,
+  onConfirm,
+  onStartPreparing,
+  onMarkReady,
+  onCancel,
+  isPending,
+}: OrderDetailHeaderProps) {
+  const badge   = STATUS_BADGE[order.status] ?? "order-neutral";
+  const group   = KANBAN_GROUP[order.status];
+  const shortId = `#${order.orderId.slice(-6).toUpperCase()}`;
 
-export function OrderDetailHeader({ order }: OrderDetailHeaderProps) {
-  const badgeVariant = TAG_TO_BADGE[order.tag.variant] ?? "order-neutral";
+  const placedAt = new Date(order.createdAt).toLocaleString("vi-VN", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+
+  const cancellable = group === "incoming" || group === "preparing";
 
   return (
     <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-      {/* Left: back link + title + timestamp */}
       <div className="space-y-1">
         <Link
           to="/orders"
@@ -38,37 +64,63 @@ export function OrderDetailHeader({ order }: OrderDetailHeaderProps) {
 
         <div className="flex items-center gap-3">
           <h1 className="text-3xl font-extrabold text-on-surface tracking-tight font-headline">
-            Order {order.orderNumber}
+            Order {shortId}
           </h1>
-          {/* Keep the Stitch-exact pill style via className override on Badge */}
           <Badge
-            variant={badgeVariant}
+            variant={badge}
             className="px-3 py-1 h-auto rounded-full text-xs font-bold uppercase tracking-wider"
           >
-            {order.tag.label}
+            {STATUS_LABEL[order.status]}
           </Badge>
         </div>
 
-        {order.detail?.placedAt && (
-          <p className="text-stone-500 font-medium font-body">
-            Placed on {order.detail.placedAt}
-          </p>
-        )}
+        <p className="text-stone-500 font-medium font-body">
+          Placed on {placedAt}
+        </p>
       </div>
 
-      {/* Right: action buttons */}
+      {/* Action buttons — shown based on current group/status */}
       <div className="flex items-center gap-3">
-        <Button
-          variant="outline"
-          className="rounded-full border-outline-variant text-primary font-bold hover:bg-surface-container hover:text-primary px-6 py-2.5 h-auto"
-        >
-          Print Receipt
-        </Button>
-        <Button
-          className="rounded-full bg-secondary-container text-on-secondary-container font-bold shadow-sm hover:brightness-95 active:scale-95 px-6 py-2.5 h-auto"
-        >
-          Mark as Ready
-        </Button>
+        {cancellable && onCancel && (
+          <Button
+            variant="outline"
+            className="rounded-full border-destructive/40 text-destructive font-bold hover:bg-destructive/10 px-6 py-2.5 h-auto"
+            onClick={onCancel}
+            disabled={isPending}
+          >
+            Cancel Order
+          </Button>
+        )}
+
+        {group === "incoming" && onConfirm && (
+          <Button
+            className="rounded-full bg-primary text-white font-bold px-6 py-2.5 h-auto"
+            onClick={onConfirm}
+            disabled={isPending}
+          >
+            Confirm Order
+          </Button>
+        )}
+
+        {order.status === "confirmed" && onStartPreparing && (
+          <Button
+            className="rounded-full bg-blue-500 text-white font-bold px-6 py-2.5 h-auto"
+            onClick={onStartPreparing}
+            disabled={isPending}
+          >
+            Start Preparing
+          </Button>
+        )}
+
+        {order.status === "preparing" && onMarkReady && (
+          <Button
+            className="rounded-full bg-secondary-container text-on-secondary-container font-bold shadow-sm px-6 py-2.5 h-auto"
+            onClick={onMarkReady}
+            disabled={isPending}
+          >
+            Mark as Ready
+          </Button>
+        )}
       </div>
     </header>
   );

@@ -1,18 +1,30 @@
 import { useState } from 'react';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
+import { useSignUp } from '@/features/auth/hooks/useSignUp';
+
+const schema = z.object({
+  email: z.email('Enter a valid email address'),
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+type FormValues = z.infer<typeof schema>;
 
 export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const navigate = useNavigate();
+  const { mutate: signUp, isPending, error } = useSignUp();
 
-  const handleSubmit = (e: React.SubmitEvent) => {
-    e.preventDefault();
-    navigate('/auth/register/business', { state: { step1Completed: true } });
-  };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   return (
     <div className="bg-surface-container-lowest rounded-xl p-8 md:p-10 shadow-sm border border-outline-variant/10">
@@ -25,7 +37,27 @@ export function RegisterForm() {
         </p>
       </div>
 
-      <form className="space-y-6" onSubmit={handleSubmit}>
+      <form className="space-y-6" onSubmit={handleSubmit((data) => signUp(data))}>
+        {/* Name */}
+        <div className="space-y-2">
+          <Label
+            htmlFor="nameInput"
+            className="font-label font-semibold text-xs text-on-surface-variant uppercase tracking-wider ml-1"
+          >
+            Full Name
+          </Label>
+          <Input
+            id="nameInput"
+            type="text"
+            placeholder="Your name"
+            className="w-full h-14 px-4 bg-surface-container-high border-0 rounded-lg focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:bg-surface-container-lowest transition-all placeholder:text-stone-400"
+            {...register('name')}
+          />
+          {errors.name && (
+            <p className="text-xs text-destructive ml-1">{errors.name.message}</p>
+          )}
+        </div>
+
         {/* Email */}
         <div className="space-y-2">
           <Label
@@ -39,25 +71,11 @@ export function RegisterForm() {
             type="email"
             placeholder="chef@restaurant.com"
             className="w-full h-14 px-4 bg-surface-container-high border-0 rounded-lg focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:bg-surface-container-lowest transition-all placeholder:text-stone-400"
-            required
+            {...register('email')}
           />
-        </div>
-
-        {/* Phone */}
-        <div className="space-y-2">
-          <Label
-            htmlFor="phoneInput"
-            className="font-label font-semibold text-xs text-on-surface-variant uppercase tracking-wider ml-1"
-          >
-            Phone Number
-          </Label>
-          <Input
-            id="phoneInput"
-            type="tel"
-            placeholder="+1 (555) 000-0000"
-            className="w-full h-14 px-4 bg-surface-container-high border-0 rounded-lg focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:bg-surface-container-lowest transition-all placeholder:text-stone-400"
-            required
-          />
+          {errors.email && (
+            <p className="text-xs text-destructive ml-1">{errors.email.message}</p>
+          )}
         </div>
 
         {/* Password */}
@@ -74,7 +92,7 @@ export function RegisterForm() {
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
               className="w-full h-14 px-4 pr-12 bg-surface-container-high border-0 rounded-lg focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:bg-surface-container-lowest transition-all placeholder:text-stone-400"
-              required
+              {...register('password')}
             />
             <Button
               type="button"
@@ -91,15 +109,23 @@ export function RegisterForm() {
               )}
             </Button>
           </div>
+          {errors.password && (
+            <p className="text-xs text-destructive ml-1">{errors.password.message}</p>
+          )}
         </div>
+
+        {error && (
+          <p className="text-xs text-destructive text-center">{error.message}</p>
+        )}
 
         {/* Submit CTA */}
         <div className="pt-4">
           <Button
             type="submit"
+            disabled={isPending}
             className="editorial-gradient w-full h-14 rounded-full text-white font-headline font-bold text-lg shadow-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            Create Account
+            {isPending ? 'Creating account…' : 'Create Account'}
             <ArrowRight className="w-5 h-5" />
           </Button>
         </div>
@@ -119,7 +145,6 @@ export function RegisterForm() {
 
       {/* OAuth Buttons */}
       <div className="grid grid-cols-2 gap-4">
-        {/* Google */}
         <Button
           type="button"
           variant="outline"
@@ -146,7 +171,6 @@ export function RegisterForm() {
           <span className="font-semibold text-sm">Google</span>
         </Button>
 
-        {/* Apple */}
         <Button
           type="button"
           variant="outline"
@@ -163,7 +187,7 @@ export function RegisterForm() {
       <div className="mt-8 text-center">
         <p className="text-sm text-on-surface-variant">
           Already have an account?{' '}
-          <a href="#" className="text-primary font-bold hover:underline ml-1">
+          <a href="/auth/login" className="text-primary font-bold hover:underline ml-1">
             Sign In
           </a>
         </p>

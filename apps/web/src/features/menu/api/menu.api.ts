@@ -1,0 +1,63 @@
+import { apiClient } from '@/lib/api-client';
+import type { MenuItem, MenuCategory, MenuItemListResponse } from '../types';
+
+export interface CreateMenuItemDto {
+  restaurantId: string;
+  name: string;
+  price: number;
+  categoryId?: string;
+  description?: string;
+  sku?: string;
+  imageUrl?: string;
+  tags?: string[];
+}
+
+export interface UpdateMenuItemDto {
+  name?: string;
+  price?: number;
+  categoryId?: string;
+  description?: string;
+  sku?: string;
+  imageUrl?: string;
+  tags?: string[];
+  status?: 'available' | 'unavailable' | 'out_of_stock';
+}
+
+export interface CreateMenuCategoryDto {
+  restaurantId: string;
+  name: string;
+  displayOrder?: number;
+}
+
+export const menuApi = {
+  getItems: (restaurantId: string, params?: { categoryId?: string; status?: string; offset?: number; limit?: number }) =>
+    apiClient.get<MenuItemListResponse>('/api/menu-items', {
+      params: { restaurantId, status: 'all', ...params },
+    }).then((r) => r.data),
+
+  getItem: (id: string) =>
+    apiClient.get<MenuItem>(`/api/menu-items/${id}`).then((r) => r.data),
+
+  getCategories: (restaurantId: string) =>
+    apiClient.get<MenuCategory[]>('/api/menu-items/categories', {
+      params: { restaurantId },
+    }).then((r) => r.data),
+
+  createItem: (dto: CreateMenuItemDto) =>
+    apiClient.post<MenuItem>('/api/menu-items', dto).then((r) => r.data),
+
+  updateItem: (id: string, dto: UpdateMenuItemDto) =>
+    apiClient.patch<MenuItem>(`/api/menu-items/${id}`, dto).then((r) => r.data),
+
+  toggleSoldOut: (id: string) =>
+    apiClient.patch<MenuItem>(`/api/menu-items/${id}/sold-out`).then((r) => r.data),
+
+  deleteItem: (id: string) =>
+    apiClient.delete(`/api/menu-items/${id}`),
+
+  createCategory: (dto: CreateMenuCategoryDto) =>
+    apiClient.post<MenuCategory>('/api/menu-items/categories', dto).then((r) => r.data),
+
+  deleteCategory: (id: string) =>
+    apiClient.delete(`/api/menu-items/categories/${id}`),
+};

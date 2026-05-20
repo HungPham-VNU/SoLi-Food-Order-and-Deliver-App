@@ -1,13 +1,15 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RegisterPage } from '@/app/pages/auth/register/RegisterPage';
 import { RegisterLocationPage } from '@/app/pages/auth/register/RegisterBusinessPage';
 import { RegisterPendingPage } from '@/app/pages/auth/register/RegisterPendingPage';
 import { LoginPage } from '@/app/pages/auth/login/LoginPage';
+import { DashboardPage } from '@/app/pages/dashboard/DashboardPage';
 import { MenuManagementPage } from '@/app/pages/menu/MenuManagementPage';
 import CreateMenuItemPage from '@/app/pages/menu/CreateMenuItemPage';
 import { OrdersPage } from '@/app/pages/orders/OrdersPage';
 import { OrderDetailPage } from '@/app/pages/orders/OrderDetailPage';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { RequireAuth } from '@/components/auth/RequireAuth';
 
 export const router = createBrowserRouter([
   {
@@ -27,66 +29,44 @@ export const router = createBrowserRouter([
     element: <LoginPage />,
   },
   {
-    path: '/',
-    element: <MainLayout />,
-    handle: {
-      breadcrumb: 'Home',
-    },
+    element: <RequireAuth />,
     children: [
       {
-        path: 'orders',
-        handle: {
-          breadcrumb: 'Orders',
-        },
+        path: '/',
+        element: <MainLayout />,
         children: [
           {
             index: true,
-            element: <OrdersPage />,
+            element: <Navigate to="/dashboard" replace />,
           },
           {
-            path: ':orderId',
-            element: <OrderDetailPage />,
-            handle: {
-              breadcrumb: 'Order Detail',
-            },
-          },
-        ],
-      },
-      {
-        path: 'orders',
-        handle: {
-          breadcrumb: 'Orders',
-        },
-        children: [
-          {
-            index: true,
-            element: <OrdersPage />,
+            path: 'dashboard',
+            element: <DashboardPage />,
+            handle: { breadcrumb: 'Dashboard' },
           },
           {
-            path: ':orderId',
-            element: <OrderDetailPage />,
-            handle: {
-              breadcrumb: 'Order Detail',
-            },
-          },
-        ],
-      },
-      {
-        path: 'menu',
-        handle: {
-          breadcrumb: 'Menu',
-        },
-        children: [
-          {
-            index: true,
-            element: <MenuManagementPage />,
+            path: 'orders',
+            handle: { breadcrumb: 'Orders' },
+            children: [
+              { index: true, element: <OrdersPage /> },
+              {
+                path: ':orderId',
+                element: <OrderDetailPage />,
+                handle: { breadcrumb: 'Order Detail' },
+              },
+            ],
           },
           {
-            path: 'create',
-            element: <CreateMenuItemPage />,
-            handle: {
-              breadcrumb: 'Create Item',
-            },
+            path: 'menu',
+            handle: { breadcrumb: 'Menu' },
+            children: [
+              { index: true, element: <MenuManagementPage /> },
+              {
+                path: 'create',
+                element: <CreateMenuItemPage />,
+                handle: { breadcrumb: 'Create Item' },
+              },
+            ],
           },
         ],
       },

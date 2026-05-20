@@ -1,5 +1,11 @@
 import { useParams, Navigate } from "react-router-dom";
-import { useOrderStore } from "@/features/orders/stores/orderStore";
+import { useOrderDetail, useOrderTimeline } from "@/features/orders/hooks/useOrders";
+import {
+  useConfirmOrder,
+  useStartPreparing,
+  useMarkReady,
+  useCancelOrder,
+} from "@/features/orders/hooks/useOrderMutations";
 import { OrderDetailHeader } from "@/features/orders/components/OrderDetailHeader";
 import { OrderDetailItems } from "@/features/orders/components/OrderDetailItems";
 import { OrderDetailCustomer } from "@/features/orders/components/OrderDetailCustomer";
@@ -10,63 +16,86 @@ import { OrderDetailNotes } from "@/features/orders/components/OrderDetailNotes"
 
 export function OrderDetailPage() {
   const { orderId } = useParams<{ orderId: string }>();
-  const orders = useOrderStore((s) => s.orders);
-  // isLoaded tracks whether the store has finished its initial load.
-  // The current store uses synchronous initial state, so it is always true;
-  // update this selector when async loading is introduced.
-  const isLoaded = useOrderStore((s) => !s.isLoading);
-  const order = orders.find((o) => o.id === orderId);
 
-  if (!isLoaded) {
-    // Store is still loading — render nothing to avoid a premature redirect.
-    return null;
+  const { data: order, isLoading, isError } = useOrderDetail(orderId);
+  const { data: timeline = [] } = useOrderTimeline(orderId);
+
+  const confirm      = useConfirmOrder();
+  const startPrepare = useStartPreparing();
+  const markReady    = useMarkReady();
+  const cancelOrder  = useCancelOrder();
+
+  const isPending =
+    confirm.isPending ||
+    startPrepare.isPending ||
+    markReady.isPending ||
+    cancelOrder.isPending;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-muted-foreground font-body">
+        Loading order…
+      </div>
+    );
   }
 
-  if (!order) {
+  if (isError || !order) {
     return <Navigate to="/orders" replace />;
   }
 
-  const detail = order.detail;
+  const { street, district, city } = order.deliveryAddress;
+  const addressStr = [street, district, city].filter(Boolean).join(", ");
+  const itemsTotal = order.totalAmount - order.shippingFee;
+
+  const handleCancel = () => {
+    const reason = window.prompt("Reason for cancellation:");
+    if (!reason?.trim()) return;
+    cancelOrder.mutate({ id: order.orderId, reason: reason.trim() });
+  };
 
   return (
     <>
-      {/* Page header: back button + order title + action buttons */}
-      <OrderDetailHeader order={order} />
+      <OrderDetailHeader
+        order={order}
+        onConfirm={() => confirm.mutate(order.orderId)}
+        onStartPreparing={() => startPrepare.mutate(order.orderId)}
+        onMarkReady={() => markReady.mutate(order.orderId)}
+        onCancel={handleCancel}
+        isPending={isPending}
+      />
 
-      {/* Bento grid — matches Stitch layout: 2/3 + 1/3 on large screens */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* ── Left column (2/3): items + customer–payment grid ── */}
+        {/* Left column (2/3): items + customer/payment */}
         <div className="lg:col-span-2 space-y-6">
-          {detail?.items && detail.items.length > 0 && (
-            <OrderDetailItems items={detail.items} />
-          )}
+          {order.items.length > 0 && <OrderDetailItems items={order.items} />}
 
-          {/* Customer + Payment side-by-side on md+ */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {detail?.customer && (
-              <OrderDetailCustomer customer={detail.customer} />
-            )}
-            {detail?.totals && detail?.paymentMethod && (
-              <OrderDetailPayment
-                totals={detail.totals}
-                paymentMethod={detail.paymentMethod}
-              />
-            )}
+            <OrderDetailCustomer
+              customer={{
+                name: "Customer",
+                phone: "—",
+                address: addressStr,
+              }}
+            />
+            <OrderDetailPayment
+              totals={{
+                subtotal:    itemsTotal,
+                serviceFee:  0,
+                deliveryFee: order.shippingFee,
+                tax:         0,
+              }}
+              paymentMethod={order.paymentMethod === "cod" ? "Cash on Delivery" : "VNPay"}
+            />
           </div>
         </div>
 
-        {/* ── Right column (1/3): timeline + map + notes ── */}
+        {/* Right column (1/3): timeline + map + notes */}
         <div className="space-y-6">
-          {detail?.history && detail.history.length > 0 && (
-            <OrderDetailHistory history={detail.history} />
-          )}
+          {timeline.length > 0 && <OrderDetailHistory timeline={timeline} />}
 
-          <OrderDetailMap location={detail?.deliveryLocation} />
+          <OrderDetailMap location={addressStr} />
 
-          {detail?.kitchenNotes && (
-            <OrderDetailNotes notes={detail.kitchenNotes} />
-          )}
+          {order.note && <OrderDetailNotes notes={order.note} />}
         </div>
       </div>
     </>

@@ -6,18 +6,18 @@ import {
   AtSign,
   MapPin,
 } from 'lucide-react';
+import { useFormContext } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import type { RestaurantFormValues } from '@/features/restaurant/schemas/restaurant.schema';
 
 export function RegisterBusinessForm() {
+  const {
+    register,
+    formState: { errors },
+  } = useFormContext<RestaurantFormValues>();
+
   return (
     <div className="xl:col-span-7 space-y-8">
       <div>
@@ -33,7 +33,7 @@ export function RegisterBusinessForm() {
       <div className="space-y-6">
         {/* Restaurant Identification */}
         <Card className="bg-surface-container-lowest border border-outline-variant/20 shadow-sm rounded-2xl ring-0">
-          <CardHeader className="border-b border-outline-variant/10 ">
+          <CardHeader className="border-b border-outline-variant/10">
             <CardTitle className="flex items-center gap-3">
               <div className="p-2 bg-surface-container rounded-lg">
                 <Store className="w-6 h-6 text-on-surface-variant" />
@@ -58,7 +58,29 @@ export function RegisterBusinessForm() {
                   className="w-full pl-11 pr-4 py-3 h-auto bg-surface-container border border-outline-variant/20 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-surface-container-lowest transition-all font-headline"
                   placeholder="e.g. The Green Bistro"
                   type="text"
-                  required
+                  {...register('name')}
+                />
+              </div>
+              {errors.name && (
+                <p className="text-xs text-destructive ml-1">{errors.name.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="cuisineType"
+                className="text-sm font-semibold text-on-surface-variant font-headline"
+              >
+                Cuisine Type (Optional)
+              </Label>
+              <div className="relative">
+                <UtensilsCrossed className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50 w-5 h-5 pointer-events-none z-10" />
+                <Input
+                  id="cuisineType"
+                  className="w-full pl-11 pr-4 py-3 h-auto bg-surface-container border border-outline-variant/20 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-surface-container-lowest transition-all font-headline"
+                  placeholder="e.g. Vietnamese, Italian"
+                  type="text"
+                  {...register('cuisineType')}
                 />
               </div>
             </div>
@@ -91,11 +113,14 @@ export function RegisterBusinessForm() {
                   <Input
                     id="storePhone"
                     className="w-full pl-11 pr-4 py-3 h-auto bg-surface-container border border-outline-variant/20 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-surface-container-lowest transition-all"
-                    placeholder="+1 (555) 000-0000"
+                    placeholder="+84 (0) 000-0000"
                     type="tel"
-                    required
+                    {...register('phone')}
                   />
                 </div>
+                {errors.phone && (
+                  <p className="text-xs text-destructive ml-1">{errors.phone.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -103,7 +128,7 @@ export function RegisterBusinessForm() {
                   htmlFor="businessEmail"
                   className="text-sm font-semibold text-on-surface-variant"
                 >
-                  Public Business Email
+                  Public Business Email (Optional)
                 </Label>
                 <div className="relative">
                   <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50 w-5 h-5 pointer-events-none z-10" />
@@ -112,7 +137,6 @@ export function RegisterBusinessForm() {
                     className="w-full pl-11 pr-4 py-3 h-auto bg-surface-container border border-outline-variant/20 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-surface-container-lowest transition-all"
                     placeholder="contact@restaurant.com"
                     type="email"
-                    required
                   />
                 </div>
               </div>
@@ -138,83 +162,18 @@ export function RegisterBusinessForm() {
                 htmlFor="streetAddress"
                 className="text-sm font-semibold text-on-surface-variant"
               >
-                Street Address
+                Full Address
               </Label>
               <Input
                 id="streetAddress"
                 className="w-full px-4 py-3 h-auto bg-surface-container border border-outline-variant/20 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-surface-container-lowest transition-all"
-                placeholder="123 Gastronomy St."
+                placeholder="123 Nguyen Hue, District 1, Ho Chi Minh City"
                 type="text"
-                required
+                {...register('address')}
               />
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="city"
-                  className="text-sm font-semibold text-on-surface-variant"
-                >
-                  City
-                </Label>
-                <Input
-                  id="city"
-                  className="w-full px-4 py-3 h-auto bg-surface-container border border-outline-variant/20 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-surface-container-lowest transition-all"
-                  placeholder="New York"
-                  type="text"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="stateSelect"
-                  className="text-sm font-semibold text-on-surface-variant"
-                >
-                  State
-                </Label>
-                <Select required>
-                  <SelectTrigger
-                    id="stateSelect"
-                    className="w-full h-auto px-4 py-3 bg-surface-container border border-outline-variant/20 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-surface-container-lowest transition-all"
-                  >
-                    <SelectValue placeholder="Select State" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="NY">NY</SelectItem>
-                    <SelectItem value="CA">CA</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="zipCode"
-                  className="text-sm font-semibold text-on-surface-variant"
-                >
-                  ZIP Code
-                </Label>
-                <Input
-                  id="zipCode"
-                  className="w-full px-4 py-3 h-auto bg-surface-container border border-outline-variant/20 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-surface-container-lowest transition-all"
-                  placeholder="10001"
-                  type="text"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label
-                htmlFor="suiteInput"
-                className="text-sm font-semibold text-on-surface-variant"
-              >
-                Floor, Suite, or Unit (Optional)
-              </Label>
-              <Input
-                id="suiteInput"
-                className="w-full px-4 py-3 h-auto bg-surface-container border border-outline-variant/20 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-surface-container-lowest transition-all"
-                placeholder="e.g. Unit 4B"
-                type="text"
-              />
+              {errors.address && (
+                <p className="text-xs text-destructive ml-1">{errors.address.message}</p>
+              )}
             </div>
           </CardContent>
         </Card>

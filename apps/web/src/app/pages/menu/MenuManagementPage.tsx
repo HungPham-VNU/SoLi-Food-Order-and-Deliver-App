@@ -2,86 +2,150 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MenuItemCard } from '@/features/menu/components/MenuItemCard';
 import { MenuSidebar } from '@/features/menu/components/MenuSidebar';
-import { mockMenuItems, mockMenuOverview } from '@/features/menu/api/menu';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-
-// Filter tabs dummy data
-const filterTabs = ['Farm Fresh', 'Artisan Bakery', 'Dairy & Cheese', 'Pantry'];
+import { useMenuItems, useMenuCategories } from '@/features/menu/hooks/useMenu';
+import { useDeleteMenuItem, useUpdateMenuItem } from '@/features/menu/hooks/useMenuMutations';
+import { useMyRestaurant, useUpdateRestaurant } from '@/features/restaurant/hooks/useRestaurants';
+import type { MenuItem } from '@/features/menu/types';
 
 export function MenuManagementPage() {
   const navigate = useNavigate();
-  const [storeOnline, setStoreOnline] = useState(true);
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
-  const handleAddItem = () => {
-    navigate('/menu/create');
+  const { data: restaurant } = useMyRestaurant();
+  const restaurantId = restaurant?.id;
+  const isOpen = restaurant?.isOpen ?? false;
+
+  const { data: itemsResponse, isLoading: itemsLoading } = useMenuItems(restaurantId);
+  const { data: categories = [] } = useMenuCategories(restaurantId);
+
+  const deleteItem = useDeleteMenuItem(restaurantId ?? '');
+  const updateItem = useUpdateMenuItem(restaurantId ?? '');
+  const updateRestaurant = useUpdateRestaurant();
+
+  const allItems = itemsResponse?.data ?? [];
+  const filteredItems = activeCategoryId
+    ? allItems.filter((i) => i.categoryId === activeCategoryId)
+    : allItems;
+
+  const availableItems = allItems.filter((i) => i.status === 'available').length;
+  const unavailableItems = allItems.filter((i) => i.status === 'unavailable').length;
+  const outOfStockItems = allItems.filter((i) => i.status === 'out_of_stock').length;
+
+  const overview = {
+    totalItems: allItems.length,
+    availableItems,
+    unavailableItems,
+    outOfStockItems,
+    categories,
+  };
+
+  const handleAddItem = () => navigate('/menu/create');
+
+  const handleDelete = (id: string) => {
+    if (confirm('Delete this menu item?')) {
+      deleteItem.mutate(id);
+    }
+  };
+
+  const handleToggleAvailability = (id: string, currentStatus: MenuItem['status']) => {
+    if (currentStatus === 'out_of_stock') return;
+    const nextStatus = currentStatus === 'available' ? 'unavailable' : 'available';
+    updateItem.mutate({ id, dto: { status: nextStatus } });
+  };
+
+  const handleEdit = (item: MenuItem) => {
+    navigate(`/menu/edit/${item.id}`);
+  };
+
+  const handleStoreToggle = () => {
+    if (!restaurant) return;
+    updateRestaurant.mutate({ id: restaurant.id, data: { isOpen: !restaurant.isOpen } });
   };
 
   return (
     <>
       <main className="flex-1 p-6 md:p-10 bg-surface min-h-screen">
-        {/* Restaurant Status Header */}
+        {/* Header */}
         <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <h1 className="font-headline text-4xl font-extrabold text-on-surface tracking-tight">
               Menu Management
             </h1>
             <p className="text-on-surface-variant mt-2 text-lg">
-              Curate your seasonal offerings and manage live availability.
+              {restaurant ? restaurant.name : 'Loading restaurant...'}
             </p>
           </div>
 
-          {/* Quick Status Control Card */}
+          {/* Store Status Card */}
           <Card className="bg-surface-container-lowest rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-outline-variant/10 ring-0 py-0 gap-0">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-2xl bg-green-100 flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined text-3xl font-variation-settings-['FILL'_1]">
+              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${isOpen ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
+                <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
                   storefront
                 </span>
               </div>
-              <div className="pr-4">
+              <div className="pr-4 flex-1">
                 <p className="text-xs font-bold uppercase tracking-widest text-outline">
                   Store Visibility
                 </p>
-                <p className="text-sm font-bold text-primary">
-                  {storeOnline ? 'Currently Accepting Orders' : 'Store Offline'}
+                <p className={`text-sm font-bold ${isOpen ? 'text-green-700' : 'text-muted-foreground'}`}>
+                  {isOpen ? 'Currently Accepting Orders' : 'Store Offline'}
                 </p>
+                {updateRestaurant.isError && (
+                  <p className="text-xs text-destructive mt-0.5">
+                    Update failed — try again
+                  </p>
+                )}
               </div>
               <Button
-                onClick={() => setStoreOnline(!storeOnline)}
-                className="bg-primary px-6 py-2.5 rounded-full text-white font-bold text-sm shadow-md hover:opacity-90 transition-opacity"
+                onClick={handleStoreToggle}
+                disabled={updateRestaurant.isPending || !restaurant}
+                className={`px-6 py-2.5 rounded-full font-bold text-sm shadow-md transition-opacity hover:opacity-90 ${
+                  isOpen
+                    ? 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    : 'bg-primary text-white'
+                }`}
               >
-                {storeOnline ? 'Go Offline' : 'Go Online'}
+                {updateRestaurant.isPending ? 'Saving…' : isOpen ? 'Go Offline' : 'Go Online'}
               </Button>
             </CardContent>
           </Card>
         </div>
 
-        {/* Dashboard Bento Grid */}
+        {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-12">
-          {/* Main Menu Control */}
           <div className="lg:col-span-8 space-y-6">
-            {/* Categories Horizontal Scroll */}
+            {/* Category Filter Tabs */}
             <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
               <Button
                 type="button"
                 variant="ghost"
-                className="h-auto flex-shrink-0 px-6 py-3 bg-primary-fixed text-on-primary-fixed rounded-full font-bold flex items-center gap-2 hover:bg-primary-fixed"
+                onClick={() => setActiveCategoryId(null)}
+                className={`h-auto flex-shrink-0 px-6 py-3 rounded-full font-bold flex items-center gap-2 ${
+                  activeCategoryId === null
+                    ? 'bg-primary-fixed text-on-primary-fixed hover:bg-primary-fixed'
+                    : 'bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container'
+                }`}
               >
-                <span className="material-symbols-outlined text-sm font-variation-settings-['FILL'_1]">
-                  grid_view
-                </span>{' '}
+                <span className="material-symbols-outlined text-sm">grid_view</span>
                 All Items
               </Button>
 
-              {filterTabs.map((tab) => (
+              {categories.map((cat) => (
                 <Button
                   type="button"
-                  key={tab}
+                  key={cat.id}
                   variant="ghost"
-                  className="h-auto flex-shrink-0 px-6 py-3 bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container rounded-full font-semibold transition-colors"
+                  onClick={() => setActiveCategoryId(cat.id)}
+                  className={`h-auto flex-shrink-0 px-6 py-3 rounded-full font-semibold transition-colors ${
+                    activeCategoryId === cat.id
+                      ? 'bg-primary-fixed text-on-primary-fixed hover:bg-primary-fixed'
+                      : 'bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container'
+                  }`}
                 >
-                  {tab}
+                  {cat.name}
                 </Button>
               ))}
 
@@ -97,23 +161,32 @@ export function MenuManagementPage() {
 
             {/* Items List */}
             <div className="space-y-4">
-              {mockMenuItems.map((item) => (
+              {itemsLoading && (
+                <p className="text-on-surface-variant text-sm py-8 text-center">Loading menu items…</p>
+              )}
+              {!itemsLoading && filteredItems.length === 0 && (
+                <p className="text-on-surface-variant text-sm py-8 text-center">
+                  No items yet.{' '}
+                  <button onClick={handleAddItem} className="text-primary font-bold hover:underline">
+                    Add your first item
+                  </button>
+                </p>
+              )}
+              {filteredItems.map((item) => (
                 <MenuItemCard
                   key={item.id}
                   item={item}
-                  onEdit={(item) => console.log('edit', item)}
-                  onDelete={(id) => console.log('delete', id)}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onToggleAvailability={handleToggleAvailability}
                 />
               ))}
             </div>
           </div>
 
-          {/* Right Rail Stats & Quick Actions */}
+          {/* Sidebar */}
           <div className="lg:col-span-4 space-y-6">
-            <MenuSidebar
-              overview={mockMenuOverview}
-              onAddItem={handleAddItem}
-            />
+            <MenuSidebar overview={overview} onAddItem={handleAddItem} />
           </div>
         </div>
       </main>

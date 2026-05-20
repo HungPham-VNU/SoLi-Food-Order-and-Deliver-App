@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   UtensilsCrossed,
-  LayoutGrid,
+  LayoutDashboard,
   ClipboardList,
   Utensils,
   CircleHelp,
@@ -22,7 +22,7 @@ const mainNavItems = [
   {
     title: 'Dashboard',
     url: '/dashboard',
-    icon: LayoutGrid,
+    icon: LayoutDashboard,
   },
   {
     title: 'Orders',

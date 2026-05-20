@@ -1,37 +1,38 @@
-export type MenuItemCategory =
-  | 'salads'
-  | 'desserts'
-  | 'breads'
-  | 'mains'
-  | 'drinks'
-  | 'sides';
-
 export type MenuItemStatus = 'available' | 'unavailable' | 'out_of_stock';
 
 export interface MenuItem {
   id: string;
+  restaurantId: string;
   name: string;
-  description: string;
+  description?: string | null;
   price: number;
-  sku: string;
-  category: MenuItemCategory;
+  sku?: string | null;
+  categoryId?: string | null;
   status: MenuItemStatus;
-  imageUrl?: string;
-  /** Whether the item is currently visible on the storefront */
-  isAvailable: boolean;
-  /** Tags like "New", "Popular", "Seasonal" */
-  tags?: string[];
+  imageUrl?: string | null;
+  tags?: string[] | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface MenuCategory {
-  id: MenuItemCategory;
-  label: string;
-  count: number;
+  id: string;
+  restaurantId: string;
+  name: string;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MenuItemListResponse {
+  data: MenuItem[];
+  total: number;
 }
 
 export interface MenuOverview {
   totalItems: number;
   availableItems: number;
+  unavailableItems: number;
   outOfStockItems: number;
   categories: MenuCategory[];
 }

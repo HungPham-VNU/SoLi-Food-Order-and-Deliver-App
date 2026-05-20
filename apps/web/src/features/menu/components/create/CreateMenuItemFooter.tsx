@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 interface CreateMenuItemFooterProps {
   onDiscard: () => void;
   onPublish: () => void;
+  isPending?: boolean;
 }
 
 export function CreateMenuItemFooter({
   onDiscard,
   onPublish,
+  isPending,
 }: CreateMenuItemFooterProps) {
   return (
     <div className="mt-12 flex items-center justify-between bg-card p-6 rounded-3xl shadow-sm border border-border/50">
@@ -28,9 +30,10 @@ export function CreateMenuItemFooter({
         </Button>
         <Button
           onClick={onPublish}
+          disabled={isPending}
           className="px-10 py-2.5 bg-primary text-primary-foreground rounded-full font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all"
         >
-          Publish Item
+          {isPending ? 'Publishing…' : 'Publish Item'}
         </Button>
       </div>
     </div>

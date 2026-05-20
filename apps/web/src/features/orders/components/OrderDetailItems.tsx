@@ -1,38 +1,13 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import type { OrderItem } from "@/features/orders/types/order.types";
+import type { OrderItem } from "@/features/orders/types";
 
 type OrderDetailItemsProps = {
   items: OrderItem[];
 };
 
-function formatPrice(value: number) {
-  return `$${value.toFixed(2)}`;
-}
-
-/** Renders a food image thumbnail with a graceful icon fallback on load error. */
-function ItemImage({ imageUrl, name }: { imageUrl?: string; name: string }) {
-  const [isImageError, setIsImageError] = useState(false);
-
-  if (imageUrl && !isImageError) {
-    return (
-      <img
-        src={imageUrl}
-        alt={name}
-        className="w-full h-full object-cover"
-        onError={() => setIsImageError(true)}
-      />
-    );
-  }
-
-  return (
-    <div className="w-full h-full flex items-center justify-center text-outline">
-      <span className="material-symbols-outlined text-2xl" aria-hidden="true">
-        restaurant
-      </span>
-    </div>
-  );
+function formatVND(value: number) {
+  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
 }
 
 export function OrderDetailItems({ items }: OrderDetailItemsProps) {
@@ -41,7 +16,6 @@ export function OrderDetailItems({ items }: OrderDetailItemsProps) {
       className="rounded-2xl ring-0 shadow-none bg-surface-container-lowest gap-0 py-0"
       aria-labelledby="order-items-heading"
     >
-      {/* Tinted header bar matching Stitch design */}
       <CardHeader className="px-6 py-4 bg-surface-container-low border-b border-outline-variant/10 rounded-t-2xl">
         <CardTitle
           id="order-items-heading"
@@ -54,35 +28,36 @@ export function OrderDetailItems({ items }: OrderDetailItemsProps) {
       <CardContent className="p-6">
         <ul className="space-y-6" role="list">
           {items.map((item, index) => (
-            <li key={item.id}>
+            <li key={item.orderItemId}>
               <div className="flex items-start gap-4">
-                {/* Food image thumbnail */}
-                <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container">
-                  <ItemImage imageUrl={item.imageUrl} name={item.name} />
+                <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container flex items-center justify-center">
+                  <span className="material-symbols-outlined text-outline text-2xl" aria-hidden="true">
+                    restaurant
+                  </span>
                 </div>
 
-                {/* Item details */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between gap-2">
                     <h4 className="font-bold text-on-surface font-headline">
-                      {item.name}
+                      {item.itemName}
                     </h4>
                     <span className="font-headline font-bold text-primary flex-shrink-0">
-                      {formatPrice(item.unitPrice)}
+                      {formatVND(item.subtotal)}
                     </span>
                   </div>
                   <p className="text-sm text-stone-500 mt-1 font-body">
-                    Qty: {item.quantity}
+                    Qty: {item.quantity} × {formatVND(item.unitPrice)}
+                    {item.modifiersPrice > 0 && ` + ${formatVND(item.modifiersPrice)} extras`}
                   </p>
 
-                  {item.modifiers && item.modifiers.length > 0 && (
+                  {item.modifiers.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {item.modifiers.map((mod, i) => (
                         <span
                           key={i}
                           className="text-xs px-2 py-1 bg-surface-container rounded-md text-stone-600 font-body"
                         >
-                          {mod.label}
+                          {mod.groupName}: {mod.optionName}
                         </span>
                       ))}
                     </div>
@@ -90,7 +65,6 @@ export function OrderDetailItems({ items }: OrderDetailItemsProps) {
                 </div>
               </div>
 
-              {/* shadcn Separator between items */}
               {index < items.length - 1 && (
                 <Separator className="mt-6 bg-surface-container" />
               )}

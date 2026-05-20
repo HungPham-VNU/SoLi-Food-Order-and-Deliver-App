@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { MenuItem } from '@/features/menu/types';
+import type { MenuItem } from '@/features/menu/types';
 import { Edit2, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -7,12 +6,16 @@ interface MenuItemCardProps {
   item: MenuItem;
   onEdit?: (item: MenuItem) => void;
   onDelete?: (id: string) => void;
+  onToggleAvailability?: (id: string, currentStatus: MenuItem['status']) => void;
 }
 
-export function MenuItemCard({ item, onEdit, onDelete }: MenuItemCardProps) {
-  const [isAvailable, setIsAvailable] = useState(item.isAvailable);
+export function MenuItemCard({ item, onEdit, onDelete, onToggleAvailability }: MenuItemCardProps) {
+  const isAvailable = item.status === 'available';
+  const isSoldOut = item.status === 'out_of_stock';
 
-  const isSoldOut = item.status === 'out_of_stock' || !isAvailable;
+  const handleToggle = () => {
+    onToggleAvailability?.(item.id, item.status);
+  };
 
   return (
     <Card
@@ -64,11 +67,13 @@ export function MenuItemCard({ item, onEdit, onDelete }: MenuItemCardProps) {
             </div>
             <div className="text-right">
               <p className="font-headline text-lg font-extrabold text-secondary">
-                ${item.price.toFixed(2)}
+                {item.price.toLocaleString('vi-VN')}₫
               </p>
-              <p className="text-[10px] text-outline font-bold uppercase tracking-tighter mt-1">
-                SKU: {item.sku}
-              </p>
+              {item.sku && (
+                <p className="text-[10px] text-outline font-bold uppercase tracking-tighter mt-1">
+                  SKU: {item.sku}
+                </p>
+              )}
             </div>
           </div>
 
@@ -77,36 +82,26 @@ export function MenuItemCard({ item, onEdit, onDelete }: MenuItemCardProps) {
               <span className="text-xs font-bold text-on-surface-variant">
                 Live Status:
               </span>
-              <div
-                className={`h-2 w-2 rounded-full ${
-                  isSoldOut ? 'bg-error' : 'bg-primary'
-                }`}
-              />
-              <span
-                className={`text-xs font-bold uppercase ${
-                  isSoldOut ? 'text-error' : 'text-primary'
-                }`}
-              >
-                {isSoldOut ? 'Unavailable' : 'Available'}
+              <div className={`h-2 w-2 rounded-full ${isSoldOut ? 'bg-error' : isAvailable ? 'bg-primary' : 'bg-outline'}`} />
+              <span className={`text-xs font-bold uppercase ${isSoldOut ? 'text-error' : isAvailable ? 'text-primary' : 'text-outline'}`}>
+                {isSoldOut ? 'Sold Out' : isAvailable ? 'Available' : 'Unavailable'}
               </span>
             </div>
 
-            {!isSoldOut && (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onEdit?.(item)}
-                  className="p-2 bg-surface-container-high rounded-xl text-on-surface hover:bg-primary-fixed transition-colors"
-                >
-                  <Edit2 className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => onDelete?.(item.id)}
-                  className="p-2 bg-surface-container-high rounded-xl text-error hover:bg-error-container transition-colors"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => onEdit?.(item)}
+                className="p-2 bg-surface-container-high rounded-xl text-on-surface hover:bg-primary-fixed transition-colors"
+              >
+                <Edit2 className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => onDelete?.(item.id)}
+                className="p-2 bg-surface-container-high rounded-xl text-error hover:bg-error-container transition-colors"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -121,7 +116,7 @@ export function MenuItemCard({ item, onEdit, onDelete }: MenuItemCardProps) {
                 type="checkbox"
                 className="sr-only peer"
                 checked={isAvailable}
-                onChange={(e) => setIsAvailable(e.target.checked)}
+                onChange={handleToggle}
               />
               <div className="w-11 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
             </div>

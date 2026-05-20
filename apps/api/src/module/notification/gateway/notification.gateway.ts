@@ -59,7 +59,9 @@ import {
 @WebSocketGateway({
   namespace: '/notifications',
   cors: {
-    origin: process.env.CORS_ORIGIN ?? '*',
+    origin: (process.env.CORS_ORIGIN || 'http://localhost:5173')
+      .split(',')
+      .map((o) => o.trim()),
     credentials: true,
   },
 })

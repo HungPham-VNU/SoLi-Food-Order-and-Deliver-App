@@ -13,6 +13,13 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.setGlobalPrefix('api');
 
+  app.enableCors({
+    origin: (process.env.CORS_ORIGIN || 'http://localhost:5173')
+      .split(',')
+      .map((o) => o.trim()),
+    credentials: true,
+  });
+
   // Serve static development assets (FCM test page, service worker, etc.)
   // from the apps/api/public/ directory.
   //
@@ -77,7 +84,7 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(3000);
+  await app.listen(process.env.PORT ?? 3000);
 }
 
 // eslint-disable-next-line
