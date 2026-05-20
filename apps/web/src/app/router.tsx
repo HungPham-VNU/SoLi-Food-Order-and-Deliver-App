@@ -6,6 +6,7 @@ import { LoginPage } from '@/app/pages/auth/login/LoginPage';
 import { DashboardPage } from '@/app/pages/dashboard/DashboardPage';
 import { MenuManagementPage } from '@/app/pages/menu/MenuManagementPage';
 import CreateMenuItemPage from '@/app/pages/menu/CreateMenuItemPage';
+import EditMenuItemPage from '@/app/pages/menu/EditMenuItemPage';
 import { OrdersPage } from '@/app/pages/orders/OrdersPage';
 import { OrderDetailPage } from '@/app/pages/orders/OrderDetailPage';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -65,6 +66,11 @@ export const router = createBrowserRouter([
                 path: 'create',
                 element: <CreateMenuItemPage />,
                 handle: { breadcrumb: 'Create Item' },
+              },
+              {
+                path: 'edit/:itemId',
+                element: <EditMenuItemPage />,
+                handle: { breadcrumb: 'Edit Item' },
               },
             ],
           },

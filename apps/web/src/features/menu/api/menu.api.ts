@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client';
-import type { MenuItem, MenuCategory, MenuItemListResponse } from '../types';
+import type { MenuItem, MenuCategory, MenuItemListResponse, ModifierGroup, ModifierOption } from '../types';
 
 export interface CreateMenuItemDto {
   restaurantId: string;
@@ -27,6 +27,36 @@ export interface CreateMenuCategoryDto {
   restaurantId: string;
   name: string;
   displayOrder?: number;
+}
+
+export interface CreateModifierGroupDto {
+  name: string;
+  minSelections?: number;
+  maxSelections?: number;
+  displayOrder?: number;
+}
+
+export interface UpdateModifierGroupDto {
+  name?: string;
+  minSelections?: number;
+  maxSelections?: number;
+  displayOrder?: number;
+}
+
+export interface CreateModifierOptionDto {
+  name: string;
+  price?: number;
+  isDefault?: boolean;
+  displayOrder?: number;
+  isAvailable?: boolean;
+}
+
+export interface UpdateModifierOptionDto {
+  name?: string;
+  price?: number;
+  isDefault?: boolean;
+  displayOrder?: number;
+  isAvailable?: boolean;
 }
 
 export const menuApi = {
@@ -60,4 +90,30 @@ export const menuApi = {
 
   deleteCategory: (id: string) =>
     apiClient.delete(`/api/menu-items/categories/${id}`),
+
+  // Modifier Groups
+  getModifierGroups: (menuItemId: string) =>
+    apiClient.get<ModifierGroup[]>(`/api/menu-items/${menuItemId}/modifier-groups`).then((r) => r.data),
+
+  getModifierGroup: (menuItemId: string, groupId: string) =>
+    apiClient.get<ModifierGroup>(`/api/menu-items/${menuItemId}/modifier-groups/${groupId}`).then((r) => r.data),
+
+  createModifierGroup: (menuItemId: string, dto: CreateModifierGroupDto) =>
+    apiClient.post<ModifierGroup>(`/api/menu-items/${menuItemId}/modifier-groups`, dto).then((r) => r.data),
+
+  updateModifierGroup: (menuItemId: string, groupId: string, dto: UpdateModifierGroupDto) =>
+    apiClient.patch<ModifierGroup>(`/api/menu-items/${menuItemId}/modifier-groups/${groupId}`, dto).then((r) => r.data),
+
+  deleteModifierGroup: (menuItemId: string, groupId: string) =>
+    apiClient.delete(`/api/menu-items/${menuItemId}/modifier-groups/${groupId}`),
+
+  // Modifier Options
+  createModifierOption: (menuItemId: string, groupId: string, dto: CreateModifierOptionDto) =>
+    apiClient.post<ModifierOption>(`/api/menu-items/${menuItemId}/modifier-groups/${groupId}/options`, dto).then((r) => r.data),
+
+  updateModifierOption: (menuItemId: string, groupId: string, optionId: string, dto: UpdateModifierOptionDto) =>
+    apiClient.patch<ModifierOption>(`/api/menu-items/${menuItemId}/modifier-groups/${groupId}/options/${optionId}`, dto).then((r) => r.data),
+
+  deleteModifierOption: (menuItemId: string, groupId: string, optionId: string) =>
+    apiClient.delete(`/api/menu-items/${menuItemId}/modifier-groups/${groupId}/options/${optionId}`),
 };
