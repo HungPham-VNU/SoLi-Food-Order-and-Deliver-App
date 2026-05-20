@@ -7,8 +7,8 @@
 | Field              | Detail                                                                               |
 |--------------------|--------------------------------------------------------------------------------------|
 | **Document Title** | Architecturally Significant Requirements — SoLi Food Delivery                        |
-| **Version**        | 2.5                                                                                  |
-| **Status**         | Audited — rebuilt from codebase reality across ASR body and §7 traceability; unsupported mappings, runtime contradictions, and implementation overclaims removed; ReviewNotes companion document created |
+| **Version**        | 2.6                                                                                  |
+| **Status**         | Audited — rechecked against backend, web, and mobile implementation; weak trace mappings, driver mismatches, client-fallback overclaims, and Appendix count ambiguity removed; ReviewNotes companion document updated |
 | **Date**           | 2026-05-18                                                                           |
 | **Authors**        | Architecture Team                                                                    |
 | **Scope**          | NestJS Backend (`apps/api`), Web (`apps/web`), Mobile (`apps/mobile`)                |
@@ -60,7 +60,7 @@ The platform is **partially implemented (~70–80 % code complete)**. The codeba
 
 1. **Confirmed ASRs** — directly observable in the implemented codebase (e.g., dual-layer idempotency for order placement, ACL snapshot projections, VNPay HMAC verification).
 2. **Implied ASRs** — supported by the codebase but not exhaustively realized; e.g., partial real-time WebSocket presence; partial automated test coverage.
-3. **Forward-looking ASRs** — unimplemented requirements explicitly required by [Business Rules](../Business_Rules.md), [Use Case Specification](../USE_CASE_SPECIFICATION.md), and [SRS](../SRS_FoodDelivery.md), kept as architectural design targets (e.g., shipper dispatch atomicity, refund automation, multi-region failover — *deferred*).
+3. **Forward-looking ASRs** — unimplemented requirements explicitly required by [Business Rules](../Business_Rules.md), [Use Case Specification](../USE_CASE_SPECIFICATION.md), and [SRS](../SRS_FoodDelivery.md), kept as architectural design targets (e.g., shipper approval workflow, stuck-order diagnostics, production refund retry automation).
 
 Each ASR is annotated with a confidence label:
 - **[Implemented]** — verified in code
@@ -80,6 +80,7 @@ The implemented architecture is a **Modular Monolith** with:
 - Redis for cart state, idempotency keys, distributed locks, and WebSocket presence
 - Socket.IO gateway for real-time notifications
 - VNPay payment gateway (HMAC-SHA512), Cloudinary image CDN, FCM push, Nodemailer email
+- Client implementation reality: the mobile app initializes a Socket.IO notification hook, registers FCM tokens, and fetches the REST notification inbox on demand; a 60-second `useUnreadCount()` polling hook exists but is not wired to any component. Mobile order detail loads `/orders/my/:id` through React Query with no automatic order-detail polling. The web app currently contains a restaurant/admin UI shell and local mock order-board store; it does not implement a notification socket or live order API integration.
 
 **Out of scope (explicitly NOT in current architecture, to prevent overclaiming):**
 - Microservices, service mesh, gRPC
@@ -103,9 +104,12 @@ The following drivers shape the architecture and are referenced by ASRs througho
 | AD-5 | **State-machine integrity of order lifecycle** | BR (status transitions), [transitions.ts](../../../src/module/ordering/order-lifecycle/constants/transitions.ts), [transition-order.handler.ts](../../../src/module/ordering/order-lifecycle/commands/transition-order.handler.ts) | Hand-crafted TRANSITIONS map in `constants/transitions.ts`; enforcement + optimistic lock in `TransitionOrderHandler`; `OrderLifecycleService` handles ownership-only checks; `order_status_logs` audit trail |
 | AD-6 | **Single-restaurant cart constraint** | BR-2 | Enforced in cart service before append; Redis-only cart store (no DB schema for carts) |
 | AD-7 | **Delivery radius constraint** | BR-3 | Haversine in `GeoService`; ACL snapshot of `delivery_zones`; validated synchronously in `PlaceOrderHandler` |
-| AD-8 | **Manual partner verification gate** | BR-1 | Restaurant approval currently implemented as boolean `restaurants.isApproved` / `isOpen` plus admin approve/unapprove endpoints; shipper application approval remains planned and has no current backend module/table |
-| AD-9 | **Graceful degradation of optional notification services** | Vision & Scope §QA, notification module factories | Provider abstractions (`EmailProvider`, `PushProvider`) with Noop/Stub fallbacks; notification/refund side-effect handlers log failures without blocking committed core flows |
+| AD-8 | **Partner approval integrity** | BR-1 | Restaurant approval currently uses boolean `restaurants.isApproved` / `isOpen` plus admin approve/unapprove endpoints; future shipper approval must preserve admin-only partner-role elevation and explicit decision integrity |
+| AD-9 | **Graceful degradation of optional notification services** | Vision & Scope §QA, notification module factories | Provider abstractions (`EmailProvider`, `PushProvider`) with Noop/Stub fallbacks; notification side-effect handlers log failures without blocking committed core flows |
 | AD-10 | **Auditability of privileged actions** | Quality Attribute (Supportability), use-case logging requirements | Structured logger usage; `order_status_logs`, `payment_transactions`, `notification_delivery_logs` |
+| AD-11 | **Public endpoint abuse control** | QA-S-06, security requirements | Planned edge or Nest throttling for login, registration, and public search endpoints; current `apps/api` has no `@nestjs/throttler` registration |
+| AD-12 | **Post-commit compensation reliability** | QA-R-08; refund and promotion compensation flows | Post-commit module side effects for refund handling and promotion rollback must remain idempotent, failure-isolated, and operationally recoverable without implying distributed consistency infrastructure |
+| AD-13 | **Safe non-production identity bypass** | QA-S-04, QA-T-02; [dev-test-user.middleware.ts](../../../src/lib/dev-test-user.middleware.ts) | Synthetic identity injection is allowed only in explicit dev/test contexts; production builds must gate or exclude the middleware before any request path can consume test-user headers |
 
 ---
 
@@ -120,23 +124,23 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Element            | Description                                                                                                                                                                                                                                                |
 |--------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Stimulus           | Customer submits a restaurant / item search query                                                                                                                                                                                                          |
-| Stimulus Source    | Mobile (Expo) or Web (Vite) client                                                                                                                                                                                                                         |
+| Stimulus Source    | Customer client                                                                                                                                                                                                                                            |
 | Environment        | Normal operational load (≤ 1× projected peak)                                                                                                                                                                                                              |
 | Artifact           | `restaurant-catalog/search` controller + repository ([search.repository.ts](../../../src/module/restaurant-catalog/search/search.repository.ts)); PostgreSQL                                                                                              |
 | Response           | First page of results returned with pagination metadata                                                                                                                                                                                                    |
 | Response Measure   | p95 ≤ 2 s; page size ≤ 20; results ordered deterministically                                                                                                                                                                                              |
-| Architectural Tactics | Paginated queries (`skip`/`take`); indexed lookups; planned Redis read-through caching for hot queries (Cache-Aside)                                                                                                                                       |
+| Architectural Tactics | Paginated queries (`offset`/`limit`); approved/open composite index on restaurants; planned Redis read-through caching for hot queries (Cache-Aside)                                                                                                      |
 
 ### QA-P-02 — Order Status Propagation to Customer *[Partial]*
 
 | Element            | Description                                                                                                                                  |
 |--------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
 | Stimulus           | Order status transitions (e.g., `confirmed → preparing`)                                                                                     |
-| Stimulus Source    | Restaurant operator (web), Shipper (mobile), or system task                                                                                  |
+| Stimulus Source    | Restaurant / shipper / admin HTTP client, or system task                                                                                     |
 | Environment        | Normal load; customer device online; WebSocket session active                                                                                |
 | Artifact           | [NotificationGateway](../../../src/module/notification/gateway/notification.gateway.ts) → `room:user:{userId}`; Socket.IO `/notifications` ns |
-| Response           | Customer client receives `WS_NOTIFICATION_CREATED` event; UI updates without a refresh                                                       |
-| Response Measure   | End-to-end latency from `OrderStatusChangedEvent` publish to client receipt ≤ 5 s p95                                                        |
+| Response           | Connected notification clients receive `WS_NOTIFICATION_CREATED`; persisted notification rows remain available for REST inbox reloads         |
+| Response Measure   | Backend event-to-WebSocket emit latency target ≤ 5 s p95; client screen refresh/rendering behavior is implementation-specific and currently only partial |
 | Architectural Tactics | In-process EventBus → event handler → WebSocket emit; Redis-tracked presence enables fan-out only to active sessions                         |
 
 ### QA-P-03 — Checkout End-to-End Latency *[Implemented]*
@@ -144,7 +148,7 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Element            | Description                                                                                                                                       |
 |--------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
 | Stimulus           | Customer submits Place-Order request                                                                                                              |
-| Stimulus Source    | Customer mobile / web client                                                                                                                      |
+| Stimulus Source    | Customer client                                                                                                                                    |
 | Environment        | Normal load; payment method = COD                                                                                                                 |
 | Artifact           | [PlaceOrderHandler](../../../src/module/ordering/order/commands/place-order.handler.ts); Drizzle transaction over `orders`, `order_items`, `order_status_logs` |
 | Response           | Order persisted; `OrderPlacedEvent` dispatched; response returned                                                                                 |
@@ -156,11 +160,11 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Element            | Description                                                                                                              |
 |--------------------|--------------------------------------------------------------------------------------------------------------------------|
 | Stimulus           | Restaurant edits menu item price / availability                                                                          |
-| Stimulus Source    | Restaurant web client                                                                                                    |
+| Stimulus Source    | Restaurant management client                                                                                             |
 | Environment        | Normal load                                                                                                              |
 | Artifact           | Restaurant-catalog → publishes `MenuItemUpdatedEvent` ([menu-item-updated.event.ts](../../../src/shared/events/menu-item-updated.event.ts)); Ordering ACL projector |
 | Response           | `ordering_menu_item_snapshots` updated; subsequent place-order uses fresh data                                           |
-| Response Measure   | Snapshot freshness ≤ 60 s under normal load; ≤ 10 s under peak (best-effort, synchronous in-process)                     |
+| Response Measure   | Propagation target ≤ 10 s; current same-process event dispatch is expected to complete substantially faster, but formal latency measurement is still pending |
 
 ---
 
@@ -174,8 +178,8 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Stimulus Source    | Any client                                                                                                                        |
 | Environment        | Calendar month, normal + occasional partial outage                                                                                |
 | Artifact           | Better Auth integration ([lib/auth.ts](../../../src/lib/auth.ts)); PostgreSQL session store                                       |
-| Response           | Successful authentication or graceful retryable error (HTTP 5xx with backoff hint)                                                |
-| Response Measure   | Monthly availability ≥ 99.5 % (single-region MVP target; ≥ 99.9 % requires planned LB + multi-instance topology)                  |
+| Response           | Successful authentication when PostgreSQL/auth dependencies are available; failures surface as standard HTTP errors without relying on in-memory session state |
+| Response Measure   | Availability target: 99.5 percent deployment objective for the authentication path; operational validation and resilience evidence are still pending |
 | Architectural Tactics | Stateless app instances (planned horizontal scale); fail-fast at startup on config errors; restart-friendly Docker container       |
 
 ### QA-A-02 — Real-Time Channel Graceful Degradation *[Partial]*
@@ -185,9 +189,9 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Stimulus           | WebSocket connection lost (network, server restart)                                                                      |
 | Stimulus Source    | Customer / shipper / restaurant client                                                                                   |
 | Environment        | Mobile network handover, degraded connectivity                                                                            |
-| Artifact           | NotificationGateway client SDK                                                                                            |
-| Response           | Client falls back to polling `/api/notifications`; no permanent loss of notifications (durable in `notifications` table)  |
-| Response Measure   | Notifications recoverable for ≥ 30 days; reconnect resumes server-side delivery without duplication                       |
+| Artifact           | NotificationGateway plus REST NotificationController                                                                      |
+| Response           | Backend supports recovery through the REST inbox at `/api/notifications/my`; mobile implements a notification socket and on-demand inbox fetch, while the defined unread-count polling hook is not wired and automatic order-detail polling is not implemented across clients |
+| Response Measure   | In-app notifications are persisted with a 90-day `expiresAt`; reconnect re-joins the per-user room and new deliveries remain idempotent by notification key |
 | Architectural Tactics | Durable notification store; idempotent `notification.id`; per-user room rejoin on reconnect                              |
 
 ### QA-A-03 — Optional Notification-Channel Degradation *[Implemented]*
@@ -210,11 +214,11 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Element            | Description                                                                                                                                                          |
 |--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Stimulus           | Client retries Place-Order request after timeout or unknown response                                                                                                  |
-| Stimulus Source    | Mobile / web client                                                                                                                                                  |
+| Stimulus Source    | Customer client                                                                                                                                     |
 | Environment        | Network instability                                                                                                                                                  |
 | Artifact           | [PlaceOrderHandler](../../../src/module/ordering/order/commands/place-order.handler.ts); Redis `idempotency:order:{key}`; `orders.cart_id` UNIQUE constraint         |
 | Response           | Identical `orderId` returned; no duplicate `orders` row; no double-charge                                                                                            |
-| Response Measure   | Zero duplicate orders across N retries with identical `X-Idempotency-Key` within `IDEMPOTENCY_TTL_FALLBACK_SECONDS`                                                  |
+| Response Measure   | Zero duplicate orders across retries with identical `X-Idempotency-Key` within `ORDER_IDEMPOTENCY_TTL_SECONDS` (fallback 300 s)                                      |
 | Architectural Tactics | D5-A Redis idempotency key (fast path); D5-B DB `UNIQUE(cart_id)` (backstop); transactional commit before publishing `OrderPlacedEvent`                              |
 
 ### QA-R-02 — Payment IPN Webhook Idempotency *[Implemented]*
@@ -262,7 +266,7 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Environment        | Concurrent acceptance                                                                                                    |
 | Artifact           | T-09 (`ready_for_pickup → picked_up`) in [TransitionOrderHandler](../../../src/module/ordering/order-lifecycle/commands/transition-order.handler.ts); `orders.version`; `orders.shipperId` |
 | Response           | At most one shipper bound to the order; loser receives a typed conflict response                                         |
-| Response Measure   | 0 dual-assignment incidents under load test                                                                              |
+| Response Measure   | Logical guarantee: at most one shipper assignment per successful optimistic-lock commit on the same order row; concurrent validation remains operational work |
 | Architectural Tactics | Shipper self-assignment occurs inside the same optimistic-lock status update that advances T-09; losing concurrent requests receive `ConflictException` |
 
 ### QA-R-06 — Payment Timeout Recovery *[Implemented]*
@@ -274,7 +278,7 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Environment        | Normal scheduled execution (`@Cron(EVERY_MINUTE)`)                                                                                                                              |
 | Artifact           | [PaymentTimeoutTask](../../../src/module/payment/tasks/payment-timeout.task.ts); `payment_transactions.expiresAt`; `PaymentFailedEvent`                                          |
 | Response           | Expired transaction transitioned to `failed` via optimistic lock; `PaymentFailedEvent` published; Ordering BC handler auto-cancels the order through the CQRS path              |
-| Response Measure   | 100 % of expired transactions processed within ≤ 1 minute after the `expiresAt` deadline; zero duplicate `PaymentFailedEvent` dispatches under multi-pod deployment             |
+| Response Measure   | Expired transactions are selected by the every-minute sweeper; optimistic locking prevents duplicate state changes, but multi-pod duplicate-event behavior requires deployment validation |
 | Architectural Tactics | Scheduled sweeper with optimistic-lock concurrency guard; event-driven cancellation cascade; terminal-state protection prevents double-processing                             |
 
 ### QA-R-07 — Restaurant Acceptance Timeout *[Implemented]*
@@ -286,20 +290,20 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Environment        | Normal scheduled execution (`@Cron(EVERY_MINUTE)`)                                                                                                                              |
 | Artifact           | [OrderTimeoutTask](../../../src/module/ordering/order-lifecycle/tasks/order-timeout.task.ts); `RESTAURANT_ACCEPT_TIMEOUT_SECONDS` (from `app_settings`); `TransitionOrderCommand` |
 | Response           | Order auto-cancelled via the same CQRS `TransitionOrderCommand` path used by all actors; T-05 fires for paid orders triggering the refund event automatically                   |
-| Response Measure   | 100 % of expired orders auto-cancelled within ≤ 1 minute of `expiresAt`; zero stuck `pending` or `paid` orders past the timeout threshold                                      |
+| Response Measure   | Eligible expired orders are scanned every minute and routed through `TransitionOrderCommand`; stuck-order diagnostics / alerting remain planned                                    |
 | Architectural Tactics | Scheduler scan; reuse of existing CQRS command path (no bespoke cancellation logic); acceptance window configurable at runtime via `app_settings` without redeployment        |
 
-### QA-R-08 — Refund Compensation Reliability *[Partial]*
+### QA-R-08 — Refund and Promotion Compensation Reliability *[Partial]*
 
 | Element            | Description                                                                                                                                                                     |
 |--------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Stimulus           | A VNPay-paid order is cancelled through a refund-triggering transition (T-05 `paid→cancelled` or T-07 `confirmed→cancelled`)                                                     |
-| Stimulus Source    | Ordering BC emits `OrderCancelledAfterPaymentEvent`                                                                                                                             |
+| Stimulus           | A VNPay-paid order is cancelled through a refund-triggering transition, or an order with a reserved promotion fails / is cancelled                                               |
+| Stimulus Source    | Ordering BC emits `OrderCancelledAfterPaymentEvent` or `OrderStatusChangedEvent(cancelled/refunded)`                                                                             |
 | Environment        | Normal; VNPay Refund API stubbed in current implementation (production retry TBD)                                                                                               |
-| Artifact           | [OrderCancelledAfterPaymentHandler](../../../src/module/payment/events/order-cancelled-after-payment.handler.ts); `payment_transactions` (`completed` → `refund_pending` → `refunded`) |
-| Response           | Refund initiated asynchronously in Payment BC; handler exceptions logged and swallowed; order cancellation never blocked or rolled back by a refund failure                     |
-| Response Measure   | Cancellation commit correctness unaffected by refund outcome in all tested scenarios; refund failures recorded with `orderId` and `transactionId` for manual remediation        |
-| Architectural Tactics | Event-driven async compensation; failure containment (exception swallowing in handler); handler isolation — Payment BC operates only on `payment_transactions`, never calls back to Ordering BC |
+| Artifact           | [OrderCancelledAfterPaymentHandler](../../../src/module/payment/events/order-cancelled-after-payment.handler.ts); [PromotionRollbackOnCancellationHandler](../../../src/module/ordering/order-lifecycle/events/promotion-rollback-on-cancellation.handler.ts); [PromotionService](../../../src/module/promotion/services/promotion.service.ts) |
+| Response           | Payment refund state is advanced in Payment BC; promotion reservations/usages are rolled back through the promotion port; failures are logged and do not roll back the already committed order state |
+| Response Measure   | Order cancellation / failed checkout correctness is independent of refund or promotion-rollback outcome; real refund retry automation remains planned, while promotion counter rollback is implemented idempotently |
+| Architectural Tactics | Event-driven async compensation; failure containment in payment/refund handlers; promotion rollback through `PROMOTION_APPLICATION_PORT` with idempotent counter decrements and usage status updates |
 
 ---
 
@@ -314,7 +318,7 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Environment        | Public IPN endpoint                                                                                                                               |
 | Artifact           | [VNPayService.verifyReturnUrl / verifyIpn](../../../src/module/payment/services/vnpay.service.ts); `crypto.timingSafeEqual`                       |
 | Response           | Request rejected; no state mutation; no events emitted                                                                                            |
-| Response Measure   | 100 % rejection of payloads with invalid HMAC-SHA512 signatures in penetration tests                                                              |
+| Response Measure   | Invalid HMAC-SHA512 payloads are rejected before state mutation; penetration / negative security tests are recommended validation                                                    |
 | Architectural Tactics | Signature verification **before** any DB lookup; constant-time comparison; ordered URL-encoded canonicalization per VNPay spec                    |
 
 ### QA-S-02 — Authentication & Session Management *[Implemented]*
@@ -354,7 +358,7 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | **Current Gap**    | **`app.module.ts` registers this middleware unconditionally for ALL routes (`'*'`) with no `NODE_ENV` check. The middleware itself has no environment guard. Any caller who sends `x-test-user-id` in production would have `req.user` injected. Production builds must add environment gating before deployment.** |
 | Architectural Tactics | Add `if (process.env.NODE_ENV !== 'production')` guard in `AppModule.configure()`; enforce via CI gate on production Docker image (Planned) |
 
-### QA-S-05 — Input Validation & Stored-XSS Protection *[Implemented]*
+### QA-S-05 — Input Validation & Injection Resistance *[Implemented]*
 
 | Element            | Description                                                                                                                  |
 |--------------------|------------------------------------------------------------------------------------------------------------------------------|
@@ -362,7 +366,7 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Stimulus Source    | Authenticated or public client                                                                                                 |
 | Environment        | Any                                                                                                                          |
 | Artifact           | Global `ValidationPipe({ transform: true })` in [main.ts](../../../src/main.ts); class-validator DTOs                         |
-| Response           | Disallowed fields stripped; lengths enforced; rendering relies on framework default escaping                                  |
+| Response           | DTO validation rejects malformed payloads; Drizzle parameterization protects database access; stored review-text sanitization remains planned with UC-22 |
 | Response Measure   | Invalid DTO payloads rejected before service-layer mutation; SQL injection prevented by Drizzle parameterized queries        |
 
 ### QA-S-06 — Rate Limiting on Public Endpoints *[Planned]*
@@ -385,14 +389,14 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 
 | Element            | Description                                                                                                                |
 |--------------------|----------------------------------------------------------------------------------------------------------------------------|
-| Stimulus           | Browse / search load reaches 2× projected peak                                                                              |
-| Stimulus Source    | Aggregate customer traffic                                                                                                  |
+| Stimulus           | Browse / search traffic and active notification sessions grow beyond the single-instance baseline during peak hour         |
+| Stimulus Source    | Aggregate customer traffic and active WebSocket sessions                                                                     |
 | Environment        | Peak hour                                                                                                                  |
 | Artifact           | Stateless NestJS API instances behind a load balancer (planned deployment topology); PostgreSQL primary                     |
 | Response           | Additional API instances can absorb stateless HTTP traffic; WebSocket fan-out requires sticky sessions or a Socket.IO Redis adapter before true multi-instance delivery correctness |
-| Response Measure   | p95 search response ≤ 2 s under 2× peak in load tests; CPU < 70 % per instance                                              |
+| Response Measure   | Architecture target: p95 search response ≤ 2 s for stateless HTTP traffic; formal load testing and per-instance CPU thresholds remain pending validation |
 | Architectural Tactics | Stateless HTTP design (no in-memory session); Redis-shared cart, idempotency, and presence; database connection pooling; WebSocket room membership remains process-local in the current gateway |
-| Constraint         | **In-process synchronous EventBus** implies event delivery is local to the instance that publishes; this is acceptable today because the publisher and all listeners live in the same module graph. Multi-instance deployments must NOT split event handling between instances, OR a future migration to an external broker is required before such a split. |
+| Constraint         | **In-process synchronous EventBus** assumes all participating modules live inside the same application instance. Replicated full-instance scaling behind a load balancer remains valid for the modular monolith, but separating publishers and listeners into different deployables would require an external broker before that topology is viable. |
 
 ### QA-SC-02 — Cart and Idempotency Storage Scaling *[Implemented]*
 
@@ -401,9 +405,9 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Stimulus           | High concurrent cart mutation / order submission                                                                         |
 | Stimulus Source    | Customer fleet                                                                                                           |
 | Environment        | Peak                                                                                                                     |
-| Artifact           | Redis cluster; ioredis client with backoff retry                                                                          |
+| Artifact           | Redis service/instance accessed through an `ioredis` client with capped backoff retry                                      |
 | Response           | Cart writes complete in O(1) per key; idempotency lookup is O(1)                                                         |
-| Response Measure   | p95 cart op ≤ 50 ms                                                                                                      |
+| Response Measure   | Target p95 cart operation ≤ 50 ms; benchmark validation remains operational work                                         |
 | Architectural Tactics | Per-customer cart key; per-idempotency-key set with TTL; lazy-connect + capped exponential backoff retry                 |
 
 ---
@@ -429,9 +433,9 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Stimulus           | Add a new lifecycle status (e.g., `awaiting_courier`)                                                                                |
 | Stimulus Source    | Operations roadmap                                                                                                                   |
 | Environment        | Development                                                                                                                          |
-| Artifact           | `order.schema.ts` enum; `OrderLifecycleService.transitions`; notification handlers                                                   |
+| Artifact           | `order.schema.ts` enum; `TRANSITIONS` map; notification handlers                                                                  |
 | Response           | New status added to enum, transition matrix, and audit log writer                                                                    |
-| Response Measure   | Required changes ≤ 3 files in `module/ordering`; transition-matrix tests assert closed set                                           |
+| Response Measure   | Required changes are concentrated in the order enum, transition map, and notification mapping; transition-matrix tests are recommended validation |
 
 ### QA-FL-03 — Replacing a Notification Channel Provider *[Implemented]*
 
@@ -457,29 +461,29 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Environment        | Public Internet                                                                                                                   |
 | Artifact           | [VNPayService](../../../src/module/payment/services/vnpay.service.ts); `vnp_*` parameters; `crypto` HMAC-SHA512                   |
 | Response           | Payment URL generated; return + IPN parsed; signed correctly; result persisted                                                    |
-| Response Measure   | Conformance to VNPay spec (signature, order, encoding) verified by sandbox testing                                                |
+| Response Measure   | Conformance to VNPay spec is verifiable through sandbox/manual tests for signature, ordering, and encoding                         |
 
 ### QA-I-02 — Push Notification Multi-Channel Dispatch *[Implemented]*
 
 | Element            | Description                                                                                                              |
 |--------------------|--------------------------------------------------------------------------------------------------------------------------|
-| Stimulus           | A `NotificationCreated` event fires                                                                                      |
+| Stimulus           | NotificationService persists a notification row from a domain-event handler                                             |
 | Stimulus Source    | Cross-BC event handlers                                                                                                  |
 | Environment        | Customer in foreground / background / offline                                                                            |
 | Artifact           | [ChannelDispatcherService](../../../src/module/notification/services/channel-dispatcher.service.ts); `InAppChannelService`, `EmailChannelService`, `PushChannelService` |
 | Response           | Channels chosen by user preferences and presence; each channel delivers independently                                    |
-| Response Measure   | Per-channel success rate ≥ 95 % when provider is healthy; delivery attempts logged in `notification_delivery_logs`        |
+| Response Measure   | Delivery attempts are recorded in `notification_delivery_logs`; provider success-rate targets require operational monitoring |
 
 ### QA-I-03 — Image Upload via Cloudinary *[Implemented]*
 
 | Element            | Description                                                                                                              |
 |--------------------|--------------------------------------------------------------------------------------------------------------------------|
 | Stimulus           | Restaurant uploads a menu-item image                                                                                     |
-| Stimulus Source    | Restaurant web client                                                                                                    |
+| Stimulus Source    | Restaurant management client                                                                                             |
 | Environment        | Normal                                                                                                                   |
 | Artifact           | [Cloudinary provider](../../../src/module/image/cloudinary.provider.ts); signed upload                                   |
 | Response           | Image uploaded to Cloudinary; URL persisted in `images` table                                                            |
-| Response Measure   | Upload latency p95 ≤ 5 s for images ≤ 2 MB                                                                                |
+| Response Measure   | Target upload latency p95 ≤ 5 s for images ≤ 2 MB; actual latency depends on Cloudinary/network conditions               |
 
 ---
 
@@ -503,9 +507,9 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Stimulus           | An event handler fails (e.g., ACL projection error, channel dispatch error)                                              |
 | Stimulus Source    | Internal                                                                                                                 |
 | Environment        | Production                                                                                                               |
-| Artifact           | NestJS `Logger`; never-rethrow contract in `@EventsHandler` classes                                                       |
+| Artifact           | NestJS `Logger`; handler-specific failure policies in `@EventsHandler` classes                                            |
 | Response           | Error logged at ERROR level with context (`eventType`, `aggregateId`); notification and refund handlers absorb failures, while ACL projectors currently log and rethrow after failed snapshot writes |
-| Response Measure   | Mean time to detect ≤ 5 minutes (manual / log-based until APM is integrated)                                              |
+| Response Measure   | Handler failures are logged with contextual IDs; ≤ 5 minute detection requires active log monitoring until APM is integrated |
 | Gap                | No central log aggregation or correlation IDs in the implemented baseline; APM / OpenTelemetry is future work             |
 
 ### QA-SUP-03 — Stuck-Order Diagnostics *[Planned]*
@@ -558,10 +562,10 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Environment        | CI                                                                                                                       |
 | Artifact           | Jest unit + e2e tests; payment e2e ([test/payment.e2e-spec.ts](../../../test/payment.e2e-spec.ts))                       |
 | Response           | Tests pass deterministically against ephemeral DB + Redis + stub providers                                               |
-| Response Measure   | Test suite green on every push; pure-function rules (haversine, pricing) covered ≥ 90 %                                  |
+| Response Measure   | Existing e2e/spec coverage exercises payment, order, cart, ACL, promotion, and notification paths; coverage thresholds are not formalized |
 | Architectural Tactics | Provider abstractions allow `NoopEmailProvider` / `StubPushProvider` in tests; injectable `RedisService` permits mocking |
 
-### QA-T-02 — Test Authentication Bypass for E2E *[Implemented]*
+### QA-T-02 — Test Authentication Bypass for E2E *[Partial]*
 
 | Element            | Description                                                                                                              |
 |--------------------|--------------------------------------------------------------------------------------------------------------------------|
@@ -570,7 +574,7 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Environment        | Non-production                                                                                                            |
 | Artifact           | `DevTestUserMiddleware`                                                                                                   |
 | Response           | Synthetic user injected from `x-test-user-id`; roles granted for test scenarios                                          |
-| Response Measure   | Test setup ≤ 1 line per request; never active in production (per QA-S-04)                                                |
+| Response Measure   | Test setup uses request headers; production safety is not satisfied until QA-S-04 environment gating is implemented       |
 
 ---
 
@@ -599,7 +603,7 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Environment        | Normal                                                                                                                    |
 | Artifact           | Restaurant-catalog public endpoints                                                                                      |
 | Response           | Stable pagination cursors; consistent ordering across requests                                                            |
-| Response Measure   | ≥ 90 % task-completion rate in usability tests; deterministic ordering verified by tests                                  |
+| Response Measure   | Deterministic backend ordering is implemented; user task-completion metrics remain a client usability-test target         |
 
 ---
 
@@ -614,7 +618,7 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Environment        | Any                                                                                                                       |
 | Artifact           | `orderStatusEnum` in [order.schema.ts](../../../src/module/ordering/order/order.schema.ts)                               |
 | Response           | All modules consume the same enum; cross-BC consumers receive status as a string literal type matching the enum           |
-| Response Measure   | Zero parallel status vocabularies across modules; contract tests assert the allowed set                                   |
+| Response Measure   | Zero parallel status vocabularies across implemented modules; contract tests for the allowed set are recommended validation |
 
 ### QA-CI-02 — Event Envelope Consistency *[Implemented]*
 
@@ -625,7 +629,7 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Environment        | Development                                                                                                              |
 | Artifact           | [shared/events](../../../src/shared/events) — all events are immutable POJOs with explicit constructors                  |
 | Response           | New event follows the same shape and is exported through the barrel `index.ts`                                           |
-| Response Measure   | Linter / review enforces; all consumers import only from `@/shared/events`                                                |
+| Response Measure   | Code review currently enforces event-shape consistency; automated lint/fitness rules are planned                         |
 
 ---
 
@@ -675,7 +679,7 @@ Column definitions:
 | No. | Domain | Function | Description | Architectural Requirements | Note |
 |-----|--------|----------|-------------|----------------------------|------|
 | 1 | Restaurant & Delivery Operations | **Restaurant Registration & Profile Management** (UC-11) | Restaurant owners register their business and manage their profile. New restaurants default to `isApproved = false` and `isOpen = false`; administrators can approve or unapprove the restaurant. Approved profile updates propagate to dependent bounded contexts. | **Security:**<br>- Restaurant role required for profile management; admin role required for approve / unapprove endpoints<br>**Reliability:**<br>- Current implementation uses boolean approval flags (`isApproved`, `isOpen`), not a pending/approved/rejected state machine; unapproved restaurants are excluded from public discovery and rejected at checkout<br>**Interoperability:**<br>- Create / update / approve / unapprove publishes `RestaurantUpdatedEvent`; Ordering ACL projector refreshes `ordering_restaurant_snapshots`; Notification ACL projector refreshes `notification_restaurant_snapshots` in-process<br>**Manageability:**<br>- Approval effective immediately in the source DB and projected synchronously to local ACL tables in the same process<br>**Auditability:**<br>- Restaurant approval does not currently persist admin actor, decision reason, or old/new approval audit rows outside ordinary logs | [Partial] |
-| 2 | | **Manage Menu Catalog** (UC-12) | Restaurant owners create, update, and remove menu categories, items, modifier groups, and modifier options. Changes feed the checkout validation pipeline at the next order. | **Interoperability:**<br>- `MenuItemUpdatedEvent` published on create / update / sold-out changes; Ordering ACL projector upserts `ordering_menu_item_snapshots` so UC-8 validates against a local Ordering read model<br>- Images uploaded via Cloudinary signed upload; URL persisted in `images` table — image bytes never stored on backend<br>**Reliability:**<br>- ACL projectors are idempotent upserts (`ON CONFLICT DO UPDATE`); failures are logged and currently rethrown, with no broker/outbox retry in the MVP baseline<br>- Snapshot freshness target ≤ 60 s under normal load in the single-process deployment model<br>**Security:**<br>- Restaurant owner verified against `restaurantId` ownership in service layer — a restaurant can only manage its own catalog | [Implemented] |
+| 2 | | **Manage Menu Catalog** (UC-12) | Restaurant owners create, update, and remove menu categories, items, modifier groups, and modifier options. Changes feed the checkout validation pipeline at the next order. | **Interoperability:**<br>- `MenuItemUpdatedEvent` published on create / update / sold-out changes; Ordering ACL projector upserts `ordering_menu_item_snapshots` so UC-8 validates against a local Ordering read model<br>- Images uploaded via Cloudinary signed upload; URL persisted in `images` table — image bytes never stored on backend<br>**Reliability:**<br>- ACL projectors are idempotent upserts (`ON CONFLICT DO UPDATE`); failures are logged and currently rethrown, with no broker/outbox retry in the MVP baseline<br>- Snapshot propagation target ≤ 10 s; current same-process event dispatch is expected to complete substantially faster, but formal latency measurement is still pending<br>**Security:**<br>- Restaurant owner verified against `restaurantId` ownership in service layer — a restaurant can only manage its own catalog | [Implemented] |
 | 3 | | **Toggle Item & Restaurant Availability** (UC-13) | Restaurant owners mark menu items as sold out or available, and open or close their restaurant for orders. Availability changes take effect at checkout within seconds. | **Interoperability:**<br>- `MenuItemUpdatedEvent` / `RestaurantUpdatedEvent` published synchronously on every toggle; Ordering ACL snapshots updated in-process — UC-4 rejects `out_of_stock` items; UC-8 rejects closed restaurants at checkout<br>**Performance:**<br>- Availability change visible to customers ≤ 10 s under peak load (synchronous in-process pipeline)<br>**Conceptual Integrity:**<br>- `isOpen` is the single authoritative flag for restaurant order-acceptance; `available` / `out_of_stock` is the canonical item-level flag — no parallel availability signals anywhere in the system<br>**Security:**<br>- Toggle restricted to authenticated restaurant owner; `restaurantId` ownership verified in service layer | [Implemented] |
 | 4 | | **Accept or Reject Order** (UC-14) | Restaurant operators accept or reject incoming orders within the configured window (default 600 s from `RESTAURANT_ACCEPT_TIMEOUT_SECONDS`). Rejection requires a reason note. Post-VNPay-payment rejection triggers the refund pipeline. | **Reliability:**<br>- Closed TRANSITIONS map in [`constants/transitions.ts`](../../../src/module/ordering/order-lifecycle/constants/transitions.ts) enforces T-01 (`pending → confirmed`), T-03 (`pending → cancelled`), T-04 (`paid → confirmed`), T-05 (`paid → cancelled`) — invalid transitions rejected with HTTP 422<br>- Optimistic lock (`orders.version`) prevents concurrent double-accept or race conditions<br>- Auto-cancellation by `OrderTimeoutTask` (`@Cron(EVERY_MINUTE)`) if restaurant does not respond within `RESTAURANT_ACCEPT_TIMEOUT_SECONDS`; dispatched via `TransitionOrderCommand` through the same CQRS path<br>**Security:**<br>- Restaurant role with `restaurantId` ownership verification required — operator cannot act on another restaurant's orders<br>**Auditability:**<br>- Transition recorded in `order_status_logs` with `triggeredBy` UUID, `triggeredByRole`, `note`, and `createdAt` | [Implemented] |
 | 5 | | **Prepare Order for Pickup** (UC-15) | Restaurant staff mark an accepted order as preparing and then ready for pickup. The system records the lifecycle transition and emits pickup-ready/status events for downstream consumers. | **Reliability:**<br>- T-06 (`confirmed → preparing`) and T-08 (`preparing → ready_for_pickup`) both routed through `TransitionOrderCommand`; idempotent via optimistic lock — duplicate submissions produce a conflict response, not a duplicate event<br>- T-08 publishes `OrderReadyForPickupEvent` after commit and `OrderStatusChangedEvent`; current Notification BC maps the status event to a customer `order_ready_for_pickup` notification, while dedicated shipper dispatch remains partial/planned<br>**Performance:**<br>- Customer status notification delivered ≤ 5 s p95 via WebSocket / FCM under single-instance gateway conditions<br>**Security:**<br>- Restaurant role with `restaurantId` ownership check required for this transition<br>**Auditability:**<br>- Transition recorded in `order_status_logs` with actor, role, and timestamp | [Implemented] |
@@ -689,13 +693,13 @@ Column definitions:
 
 | No. | Domain | Function | Description | Architectural Requirements | Note |
 |-----|--------|----------|-------------|----------------------------|------|
-| 1 | Customer Interaction, Promotion & Notification | **Track Order Status** (UC-20) | Customers monitor the real-time progression of their active order. Each status transition is persisted and can be pushed to the device within seconds without requiring a manual refresh. | **Performance:**<br>- Status update delivered ≤ 5 s p95 in the single-instance baseline: `TransitionOrderCommand` commit → `OrderStatusChangedEvent` dispatch → persisted notification → WebSocket emit to `room:user:{userId}` → client receipt<br>**Availability:**<br>- WebSocket failure degrades gracefully to REST polling `/api/notifications`; `notifications` table provides durable backfill for reconnecting clients<br>**Reliability:**<br>- `OrderStatusChangedEvent` emitted only after successful DB commit — no phantom events on transaction rollback<br>- Redis presence ref-count (`ws:connections:{userId}`) + per-socket expiry timer cleared in `handleDisconnect` — prevents WebSocket connection resource leaks<br>**Security:**<br>- Socket.IO connection authenticated server-side via bearer token (userId resolved at connect); per-user rooms (`room:user:{userId}`) prevent cross-user notification observation<br>- Customer-owned order reads are implemented in `/orders/my/:id`; the generic lifecycle `GET /orders/:id` and `/orders/:id/timeline` surfaces do not currently enforce ownership and need tightening before production exposure | [Partial] |
+| 1 | Customer Interaction, Promotion & Notification | **Track Order Status** (UC-20) | Customers monitor the progression of their active order. Each status transition is persisted and can be pushed to connected notification clients; explicit order-detail polling is not implemented across the current clients. | **Performance:**<br>- Status update delivered ≤ 5 s p95 target in the single-instance baseline: `TransitionOrderCommand` commit → `OrderStatusChangedEvent` dispatch → persisted notification → WebSocket emit to `room:user:{userId}`; client screen refresh behavior remains partial<br>**Availability:**<br>- Backend supports recovery through REST notification inbox reads; mobile implements Socket.IO notifications and on-demand inbox fetch, while the defined unread-count polling hook is not wired and web order real-time integration is not proven by current source<br>**Reliability:**<br>- `OrderStatusChangedEvent` emitted only after successful DB commit — no phantom events on transaction rollback<br>- Redis presence ref-count (`ws:connections:{userId}`) + per-socket expiry timer cleared in `handleDisconnect` — prevents WebSocket connection resource leaks<br>**Security:**<br>- Socket.IO connection authenticated server-side via bearer token (userId resolved at connect); per-user rooms (`room:user:{userId}`) prevent cross-user notification observation<br>- Customer-owned order reads are implemented in `/orders/my/:id`; the generic lifecycle `GET /orders/:id` and `/orders/:id/timeline` surfaces do not currently enforce ownership and need tightening before production exposure | [Partial] |
 | 2 | | **Cancel Order** (UC-21) | Customers cancel an active order before pickup. Pre-payment (COD) cancellations transition directly to `cancelled`; post-VNPay-payment cancellations additionally trigger the refund pipeline. | **Reliability:**<br>- T-03 (`pending → cancelled`) for COD; T-05 (`paid → cancelled`) for VNPay — both routed through `TransitionOrderCommand` — same closed state machine applies to all actors<br>- Post-payment cancellation publishes `OrderCancelledAfterPaymentEvent`; refund handler failure (UC-25) is isolated and never rolls back the cancellation<br>**Security:**<br>- `orders.customerId` ownership enforced at service layer; HTTP 404 returned for non-owned orders (prevents order-existence enumeration)<br>**Auditability:**<br>- Recorded in `order_status_logs` with `triggeredByRole = 'customer'`, `note`, and `createdAt` | [Implemented] |
 | 3 | | **Submit Rating & Review** (UC-22) | Customers rating a delivered order is a planned use case. Backend review persistence, moderation, and rating-propagation events are not part of the current baseline. | **Reliability:**<br>- Planned invariant: one review per delivered order per customer<br>**Security:**<br>- Planned gate: authenticated customer may review only their own delivered order<br>**Conceptual Integrity:**<br>- Planned design must reference orders by UUID and use the existing `orderStatusEnum` `delivered` state as the eligibility gate<br>**Supportability:**<br>- Planned moderation should preserve review history rather than hard-delete records | [Planned] |
 | 4 | | **Manage Restaurant Promotions** (UC-23) | Restaurant owners create, configure, activate, pause, and deactivate promotions (percentage / flat discounts, optional coupon codes, usage caps, validity windows) scoped to their restaurant. | **Reliability:**<br>- 4-phase reservation at checkout: `preview` (read-only eligibility) → `computeAndReserve` (atomic counter increment + reservation row) → `confirm` (on order success) → `rollback` (compensating write on failure) — discount never applied to a failed order<br>**Flexibility:**<br>- `IPromotionApplicationPort` (DIP token `PROMOTION_APPLICATION_PORT`) decouples Ordering BC from all Promotion BC internals — zero concrete Promotion imports in `module/ordering`<br>**Security:**<br>- Restaurant owner scoped to own `restaurantId`; ownership enforced in service layer<br>**Conceptual Integrity:**<br>- Promotion state machine (`draft → active → paused → expired`) enforced at service layer; disallowed transitions return HTTP 422 | [Implemented] |
 | 5 | | **Manage Platform Promotions** (UC-24) | Platform administrators create and manage platform-wide promotions and generate coupon-code batches, targeting all restaurants or a specific one. | **Security:**<br>- Admin role required for all platform-scope operations; platform vs restaurant scope constraints validated in service code<br>**Reliability:**<br>- `UNIQUE(code)` at DB level; duplicate code raises `ConflictException` immediately — no silent retry or skip<br>**Conceptual Integrity:**<br>- Same Promotion schema and status rules as UC-23 — no separate admin-only promotion aggregate<br>**Supportability:**<br>- Service-level logger records admin promotion operations, but no persistent actor UUID audit table is implemented for promotion administration | [Implemented] |
 | 6 | | **Process Payment Refund** (UC-25) | When a VNPay-paid order is cancelled, Payment BC handles refund compensation asynchronously without blocking the committed order cancellation. The actual VNPay refund call is stubbed in the current implementation. | **Reliability:**<br>- `OrderCancelledAfterPaymentHandler` in Payment BC transitions `payment_transactions` from `completed` to `refund_pending` to `refunded` using optimistic locking; handler exception swallowed and logged — cancellation is never rolled back due to refund failure<br>**Conceptual Integrity:**<br>- Payment BC is the sole component responsible for VNPay financial state; Ordering BC only publishes the domain event — no direct VNPay API calls from `module/ordering`<br>**Interoperability:**<br>- Real VNPay Refund API call and retry task are planned; current code treats the stub as success for sandbox/testing and emits customer `order_cancelled` / `refund_initiated` notifications through Notification BC<br>**Auditability:**<br>- Refund state transitions recorded in `payment_transactions`; customer notifications persisted in Notification BC | [Partial] |
-| 7 | | **Manage Real-Time Notifications** (UC-26) | Users receive in-app, FCM push, and email notifications for order and payment events. Users view their inbox, mark messages as read, and manage device tokens for push delivery. | **Interoperability:**<br>- Multi-channel dispatch via [`ChannelDispatcherService`](../../../src/module/notification/services/channel-dispatcher.service.ts); provider abstractions (`EmailProvider`, `PushProvider`) with Noop / Stub fallback — order and payment flows never blocked by notification failures<br>**Availability:**<br>- Provider failure isolated per channel; core flows (order placement, payment IPN) entirely unaffected by notification errors<br>**Performance:**<br>- In-app notification via WebSocket ≤ 5 s p95; FCM and email dispatched asynchronously<br>**Reliability:**<br>- `notifications` table provides durable inbox; survives WebSocket disconnection; REST backfill available for ≥ 30 days<br>- Push device tokens cleaned up by `DeviceTokenCleanupTask` on stale registrations<br>**Security:**<br>- Socket.IO connection authenticated at connect via bearer token; push tokens registered per user-device pair<br>**Supportability:**<br>- Every dispatch attempt logged in `notification_delivery_logs` with channel, outcome, and error detail for failed attempts | [Implemented] |
+| 7 | | **Manage Real-Time Notifications** (UC-26) | Users receive in-app, FCM push, and email notifications for order and payment events. Users view their inbox, mark messages as read, and manage device tokens for push delivery. | **Interoperability:**<br>- Multi-channel dispatch via [`ChannelDispatcherService`](../../../src/module/notification/services/channel-dispatcher.service.ts); provider abstractions (`EmailProvider`, `PushProvider`) with Noop / Stub fallback — order and payment flows never blocked by notification failures<br>**Availability:**<br>- Provider failure isolated per channel; core flows (order placement, payment IPN) entirely unaffected by notification errors<br>**Performance:**<br>- In-app notification via WebSocket ≤ 5 s p95 target in the single-instance baseline; FCM and email dispatched asynchronously<br>**Reliability:**<br>- `notifications` table provides durable inbox; survives WebSocket disconnection; in-app rows are assigned a 90-day `expiresAt`<br>- Push device tokens cleaned up by `DeviceTokenCleanupTask` on stale registrations<br>**Security:**<br>- Socket.IO connection authenticated at connect via bearer token; push tokens registered per user-device pair<br>**Supportability:**<br>- Every dispatch attempt logged in `notification_delivery_logs` with channel, outcome, and error detail for failed attempts | [Implemented] |
 
 ---
 
@@ -719,11 +723,11 @@ Column definitions:
 |-----|------------|-----------|-------------|
 | C-1 | **Modular Monolith** — single deployable | MVP scale; reduces operational complexity | All BCs live in one process; horizontal scaling = scale the whole app; cross-BC integration uses in-process EventBus + DIP ports |
 | C-2 | **PostgreSQL single primary** | Strong transactional semantics needed for order placement & payment | Cross-BC consistency through ACID transactions inside one BC + in-process events between BCs; no distributed transactions |
-| C-3 | **In-process synchronous EventBus** (no broker) | Operational simplicity for MVP | Splitting BCs across instances is not supported without first introducing an external broker (Outbox + broker) — see QA-SC-01 |
+| C-3 | **In-process synchronous EventBus** (no broker) | Operational simplicity for MVP | Replicated full-application instances are valid for scaling the modular monolith, but separating publishers and listeners into different deployables is not supported without first introducing an external broker — see QA-SC-01 |
 | C-4 | **NestJS + Drizzle + Better Auth** | Selected by team; community-supported; type-safe | All modules use NestJS DI; schemas declared via Drizzle; auth routes auto-managed by Better Auth |
 | C-5 | **Vietnamese market (VNPay only for MVP)** | Business requirement (BR-4) | VNPay-specific signature, currency in VND, integration adapter; no PCI scope (no card data stored) |
 | C-6 | **HTTPS everywhere in production** | OWASP, payment integration | TLS termination at reverse proxy; not enforced inside the Node process |
-| C-7 | **Single-region deployment** | Cost / scope for MVP | RTO / RPO not formalized; backups via PostgreSQL native; multi-region failover is post-MVP |
+| C-7 | **Single-region deployment** | Cost / scope for MVP | RTO / RPO and backup automation are not formalized; PostgreSQL-native backup is a deployment responsibility; multi-region failover is post-MVP |
 | C-8 | **Mobile and web clients are separate apps** | Distinct UX | Shared OpenAPI / Better Auth contract; backend agnostic to client kind |
 | C-9 | **TypeScript end-to-end** | Type-safety, monorepo turborepo | Shared types impossible across packages without explicit publication; current codebase keeps API types internal |
 | C-10 | **Cloudinary for images** | Offload storage / CDN | Backend does not store image bytes |
@@ -770,12 +774,12 @@ Column definitions:
 
 ## 6.7 Background Jobs
 
-- `@nestjs/schedule` for cron / interval triggers:
-  - Payment timeout sweeper ([payment-timeout.task.ts](../../../src/module/payment/tasks/payment-timeout.task.ts)) — runs every minute; expires `payment_transactions` past `expiresAt` (set from `PAYMENT_SESSION_TIMEOUT_SECONDS` env var); publishes `PaymentFailedEvent`
-  - Order timeout sweeper ([order-timeout.task.ts](../../../src/module/ordering/order-lifecycle/tasks/order-timeout.task.ts)) — runs every minute; auto-cancels `orders` past `expiresAt` (set from `RESTAURANT_ACCEPT_TIMEOUT_SECONDS` app_setting, default 600 s); dispatches `TransitionOrderCommand` so T-03/T-05 run through the same CQRS path
-  - Device-token cleanup ([device-token-cleanup.task.ts](../../../src/module/notification/tasks/device-token-cleanup.task.ts))
-   - WebSocket connection metrics (`@Interval` in NotificationGateway) and client-driven heartbeat refresh of Redis presence TTL
-- All tasks idempotent; safe under instance crashes.
+- Background jobs use `@nestjs/schedule` cron / interval triggers.
+- Payment timeout sweeper ([payment-timeout.task.ts](../../../src/module/payment/tasks/payment-timeout.task.ts)) runs every minute; expires `payment_transactions` past `expiresAt` (set from `PAYMENT_SESSION_TIMEOUT_SECONDS` env var); publishes `PaymentFailedEvent`.
+- Order timeout sweeper ([order-timeout.task.ts](../../../src/module/ordering/order-lifecycle/tasks/order-timeout.task.ts)) runs every minute; auto-cancels `orders` past `expiresAt` (set from `RESTAURANT_ACCEPT_TIMEOUT_SECONDS` app_setting, default 600 s); dispatches `TransitionOrderCommand` so T-03/T-05 run through the same CQRS path.
+- Device-token cleanup ([device-token-cleanup.task.ts](../../../src/module/notification/tasks/device-token-cleanup.task.ts)).
+- WebSocket connection metrics (`@Interval` in NotificationGateway) and client-driven heartbeat refresh of Redis presence TTL.
+- State-changing timeout/cleanup tasks are designed to be idempotent; WebSocket metrics are observational only.
 
 ---
 
@@ -793,7 +797,7 @@ Column definitions:
 |----|-----------------|------------------------|-------------|----------------------|
 | UC-1 (Sign Up / Sign In / Forgot / Reset / RBAC) | Authentication & Account Management | QA-S-02, QA-S-03, QA-A-01, QA-S-04, QA-S-05, QA-S-06, QA-T-02, QA-U-01 | Authentication is the session trust boundary; RBAC controls protected surfaces; dev identity middleware creates an open production risk until gated; public auth endpoints need validation, throttling, and usability latency targets | Identity, authorization, input safety, test safety |
 | UC-2 (Discover Restaurants & Food) | Foundation & Customer Ordering Core | QA-P-01, QA-SC-01, QA-S-05, QA-U-02 | Public search is the primary read-heavy catalog path; it must be fast, paginated, deterministic, scalable as stateless HTTP traffic, and input-safe | Search latency, throughput, predictable discovery |
-| UC-3 (View Restaurant Details) | Foundation & Customer Ordering Core | QA-P-01, QA-P-04, QA-MA-01 | Detail reads are Catalog-owned; menu/availability changes must also propagate to Ordering snapshots for checkout, so the UC depends on consistent Catalog/Ordering boundaries | Detail latency, catalog freshness, BC isolation |
+| UC-3 (View Restaurant Details) | Foundation & Customer Ordering Core | QA-P-01 | Detail reads are Catalog-owned and must meet the public detail latency target; checkout snapshot propagation is exercised by UC-7, UC-12, and UC-13 rather than by the read-only detail UC | Detail latency |
 | UC-4 (Add Item to Cart) | Foundation & Customer Ordering Core | QA-R-04, QA-SC-02, QA-S-02 | Cart writes enforce BR-2 before Redis persistence; cart data is scoped per authenticated customer and must remain O(1) per key | Cart invariant, Redis scaling, session scoping |
 | UC-5 (Manage Shopping Cart) | Foundation & Customer Ordering Core | QA-R-04, QA-SC-02, QA-S-02 | Cart mutation and checkout preparation share the same per-customer Redis key and authenticated ownership boundary | Cart consistency, concurrency, access control |
 | UC-7 (Manage Delivery Zones) | Foundation & Customer Ordering Core | QA-P-04, QA-MA-01, QA-S-03, QA-SUP-02, QA-CI-02 | Zone changes publish delivery-zone snapshot events that Ordering consumes at checkout; owner/admin authorization and event-handler observability are required | Data propagation, authorization, event consistency |
@@ -807,10 +811,10 @@ Column definitions:
 | UC-16 (Shipper Registration) | Restaurant & Delivery Operations | QA-S-03 | Current code has no shipper application workflow; planned onboarding pressure is admin-only role elevation without self-service escalation | Planned partner authorization gate |
 | UC-18 (Accept Delivery Assignment) | Restaurant & Delivery Operations | QA-R-03, QA-R-05, QA-P-02, QA-FL-02, QA-S-03, QA-SUP-01, QA-CI-01, QA-CI-02 | T-09 self-assigns `shipperId` through optimistic locking, preventing dual pickup; online/proximity dispatch remains partial/planned | Assignment atomicity, status integrity, authorization |
 | UC-19 (Deliver Order) | Restaurant & Delivery Operations | QA-R-03, QA-P-02, QA-FL-02, QA-S-03, QA-SUP-01, QA-CI-01, QA-CI-02 | T-10/T-11 require the assigned shipper, update status through the common transition handler, notify customers, and append audit logs | Delivery state integrity, notification, audit |
-| UC-20 (Track Order Status) | Customer Interaction, Promotion & Notification | QA-P-02, QA-A-02, QA-SC-01, QA-S-02, QA-I-02, QA-CI-01 | Tracking consumes committed status events through Notification; durable inbox provides fallback; WebSocket scale-out remains partial because room fan-out is process-local | Real-time visibility, durable fallback, scaling caveat |
+| UC-20 (Track Order Status) | Customer Interaction, Promotion & Notification | QA-P-02, QA-A-02, QA-S-02, QA-I-02, QA-CI-01 | Tracking consumes committed status events through Notification; durable inbox and mobile on-demand inbox fetch provide recovery paths, while automatic order-detail polling is not implemented across clients and the shared order-status vocabulary controls what customers can observe | Real-time visibility, durable fallback, authenticated status delivery |
 | UC-21 (Cancel Order) | Customer Interaction, Promotion & Notification | QA-R-03, QA-R-08, QA-FL-02, QA-S-02, QA-SUP-01, QA-CI-01, QA-CI-02 | Customer cancellation uses the same state machine and audit log; VNPay-paid cancellation emits the refund compensation event without rolling back the order commit | Cancellation integrity, compensation, audit |
 | UC-22 (Submit Rating & Review) | Customer Interaction, Promotion & Notification | QA-S-02, QA-S-05, QA-CI-01 | Review is planned; future implementation must authenticate the customer, validate text input, and gate eligibility on the shared `delivered` order status | Planned review security and status gate |
-| UC-23 (Manage Restaurant Promotions) | Customer Interaction, Promotion & Notification | QA-MA-01, QA-S-03 | Restaurant promotion management is owner-scoped and supplies the promotion port consumed by checkout; order outcome handling is covered by checkout/cancellation mappings | Promotion boundary, owner authorization |
+| UC-23 (Manage Restaurant Promotions) | Customer Interaction, Promotion & Notification | QA-R-08, QA-MA-01, QA-S-03 | Restaurant promotion management is owner-scoped and supplies the promotion port consumed by checkout; reservation confirmation and rollback are compensating reliability behavior when order placement fails or an order is cancelled | Promotion boundary, owner authorization, compensation rollback |
 | UC-24 (Manage Platform Promotions) | Customer Interaction, Promotion & Notification | QA-S-03 | Admin promotion management uses the same Promotion schema/state rules as restaurant promotions while enforcing admin-only access and global coupon uniqueness | Admin authorization, promotion consistency |
 | UC-25 (Process Payment Refund) | Customer Interaction, Promotion & Notification | QA-R-08, QA-I-01, QA-MA-01, QA-SUP-02, QA-CI-02 | Refund compensation is isolated in Payment BC; the real VNPay refund API is stubbed, but payment state transitions and customer refund notifications are implemented | Compensation isolation, gateway boundary, event handling |
 | UC-26 (Manage Real-Time Notifications) | Customer Interaction, Promotion & Notification | QA-I-02, QA-A-02, QA-A-03, QA-P-02, QA-FL-03, QA-S-02, QA-SUP-02, QA-SC-01, QA-CI-02 | Notification owns durable inbox, WebSocket fan-out, user preferences, provider fallbacks, delivery logs, and channel adapters | Multi-channel dispatch, degradation, observability, scale caveat |
@@ -830,9 +834,9 @@ Column definitions:
 |----|---------------|----------------------|-------------------|----------|--------|
 | QA-P-01 (Restaurant Search ≤ 2 s) | UC-2, UC-3 | AD-3 | Restaurant Catalog owns public search/detail reads; queries are paginated, filter approved/open restaurants, and use deterministic ordering | [search.repository.ts](../../../src/module/restaurant-catalog/search/search.repository.ts) | Implemented |
 | QA-P-02 (Order Status Push ≤ 5 s) | UC-14, UC-15, UC-18, UC-19, UC-20, UC-26 | AD-4 | `OrderStatusChangedEvent` after commit → Notification handler → durable notification rows → WebSocket `room:user:{userId}` / push dispatch | [order-status-changed.handler.ts](../../../src/module/notification/events/order-status-changed.handler.ts); [notification.gateway.ts](../../../src/module/notification/gateway/notification.gateway.ts) | Partial |
-| QA-P-03 (Checkout p95 ≤ 3 s) | UC-8 | AD-1 | Single command handler performs ACL reads, promotion reservation, delivery pricing, ACID order write, and post-commit event publish | [place-order.handler.ts](../../../src/module/ordering/order/commands/place-order.handler.ts) | Implemented |
-| QA-P-04 (Menu/Availability Propagation ≤ 60 s) | UC-7, UC-12, UC-13 | AD-3 | Catalog mutations publish in-process events; Ordering ACL projectors upsert local snapshots for checkout | [menu-item.projector.ts](../../../src/module/ordering/acl/projections/menu-item.projector.ts); [restaurant-snapshot.projector.ts](../../../src/module/ordering/acl/projections/restaurant-snapshot.projector.ts); [delivery-zone-snapshot.projector.ts](../../../src/module/ordering/acl/projections/delivery-zone-snapshot.projector.ts) | Partial |
-| QA-A-01 (Auth Endpoint Availability ≥ 99.5 %) | UC-1 | AD-3 | Better Auth sessions are persisted in PostgreSQL; app instances do not hold in-memory auth sessions | [lib/auth.ts](../../../src/lib/auth.ts); [auth.schema.ts](../../../src/module/auth/auth.schema.ts) | Partial |
+| QA-P-03 (Checkout p95 ≤ 3 s) | UC-8 | AD-1, AD-7 | Single command handler performs ACL reads, Haversine delivery-radius enforcement, promotion reservation, delivery pricing, ACID order write, and post-commit event publish | [place-order.handler.ts](../../../src/module/ordering/order/commands/place-order.handler.ts); [geo.service.ts](../../../src/lib/geo/geo.service.ts); [delivery-zone-snapshot.repository.ts](../../../src/module/ordering/acl/repositories/delivery-zone-snapshot.repository.ts) | Implemented |
+| QA-P-04 (Menu/Availability Propagation Target ≤ 10 s) | UC-7, UC-12, UC-13 | AD-3 | Catalog mutations publish in-process events; Ordering ACL projectors upsert local snapshots for checkout, and current same-process dispatch is expected to complete faster than the target even though formal latency measurement is pending | [menu-item.projector.ts](../../../src/module/ordering/acl/projections/menu-item.projector.ts); [restaurant-snapshot.projector.ts](../../../src/module/ordering/acl/projections/restaurant-snapshot.projector.ts); [delivery-zone-snapshot.projector.ts](../../../src/module/ordering/acl/projections/delivery-zone-snapshot.projector.ts) | Partial |
+| QA-A-01 (Auth Endpoint Availability Objective) | UC-1 | AD-3 | Better Auth sessions are persisted in PostgreSQL; app instances do not hold in-memory auth sessions, but the 99.5 percent figure is a deployment objective rather than a measured service level | [lib/auth.ts](../../../src/lib/auth.ts); [auth.schema.ts](../../../src/module/auth/auth.schema.ts) | Partial |
 | QA-A-02 (Real-Time Channel Graceful Degradation) | UC-20, UC-26 | AD-4 | Notifications are durable DB rows; WebSocket is a delivery channel, while REST inbox supports recovery after disconnect | [notification.schema.ts](../../../src/module/notification/domain/notification.schema.ts); [notification.controller.ts](../../../src/module/notification/controllers/notification.controller.ts); [notification.gateway.ts](../../../src/module/notification/gateway/notification.gateway.ts) | Partial |
 | QA-A-03 (Optional Notification-Channel Degradation) | UC-26 | AD-9 | SMTP and FCM providers bind to Noop/Stub implementations when credentials are absent; dispatch failures are logged per channel | [notification.module.ts](../../../src/module/notification/notification.module.ts); [channel-dispatcher.service.ts](../../../src/module/notification/services/channel-dispatcher.service.ts) | Implemented |
 | QA-R-01 (Order Placement Idempotency) | UC-8 | AD-1 | Redis idempotency key fast path plus DB `UNIQUE(cart_id)` backstop and Redis checkout lock | [place-order.handler.ts](../../../src/module/ordering/order/commands/place-order.handler.ts); [order.schema.ts](../../../src/module/ordering/order/order.schema.ts) | Implemented |
@@ -842,14 +846,14 @@ Column definitions:
 | QA-R-05 (Atomic Shipper Assignment) | UC-18 | AD-5 | T-09 self-assignment sets `shipperId` inside the optimistic-lock status update; concurrent losers receive conflict | [transition-order.handler.ts](../../../src/module/ordering/order-lifecycle/commands/transition-order.handler.ts); [order.schema.ts](../../../src/module/ordering/order/order.schema.ts) | Implemented |
 | QA-R-06 (Payment Timeout Recovery) | UC-9 | AD-2 | `PaymentTimeoutTask` expires stale pending/awaiting-IPN transactions and emits `PaymentFailedEvent` for Ordering cancellation | [payment-timeout.task.ts](../../../src/module/payment/tasks/payment-timeout.task.ts); [payment-failed.handler.ts](../../../src/module/ordering/order-lifecycle/events/payment-failed.handler.ts) | Implemented |
 | QA-R-07 (Restaurant Acceptance Timeout) | UC-14 | AD-5 | `OrderTimeoutTask` scans expired pending/paid orders and dispatches `TransitionOrderCommand` through the same state-machine path | [order-timeout.task.ts](../../../src/module/ordering/order-lifecycle/tasks/order-timeout.task.ts); [app-settings.schema.ts](../../../src/module/ordering/common/app-settings.schema.ts) | Implemented |
-| QA-R-08 (Refund Compensation Reliability) | UC-14, UC-21, UC-25, UC-32 | AD-5 | Paid cancellation publishes `OrderCancelledAfterPaymentEvent`; Payment BC transitions payment state independently and swallows handler errors; real VNPay refund call remains stubbed | [order-cancelled-after-payment.handler.ts](../../../src/module/payment/events/order-cancelled-after-payment.handler.ts) | Partial |
+| QA-R-08 (Refund and Promotion Compensation Reliability) | UC-8, UC-14, UC-21, UC-23, UC-25, UC-32 | AD-12 | Post-commit compensation events isolate refund and promotion rollback side effects from the committed order lifecycle; Payment BC advances refund state independently, while Promotion BC confirms or rolls back reservations idempotently through `PROMOTION_APPLICATION_PORT`; real VNPay refund call remains stubbed and operational retry is still planned | [order-cancelled-after-payment.handler.ts](../../../src/module/payment/events/order-cancelled-after-payment.handler.ts); [promotion-rollback-on-cancellation.handler.ts](../../../src/module/ordering/order-lifecycle/events/promotion-rollback-on-cancellation.handler.ts); [promotion.service.ts](../../../src/module/promotion/services/promotion.service.ts); [place-order.handler.ts](../../../src/module/ordering/order/commands/place-order.handler.ts) | Partial |
 | QA-S-01 (VNPay Callback Integrity) | UC-9 | AD-2 | HMAC-SHA512 canonicalization and constant-time signature comparison before any DB mutation | [vnpay.service.ts](../../../src/module/payment/services/vnpay.service.ts); [process-ipn.handler.ts](../../../src/module/payment/commands/process-ipn.handler.ts) | Implemented |
 | QA-S-02 (Authentication & Session Management) | UC-1, UC-4, UC-5, UC-8, UC-20, UC-21, UC-22 | AD-3 | Better Auth bearer sessions with PostgreSQL persistence; session extraction on HTTP and WebSocket paths | [lib/auth.ts](../../../src/lib/auth.ts); [notification.gateway.ts](../../../src/module/notification/gateway/notification.gateway.ts) | Implemented |
 | QA-S-03 (Role-Based Authorization) | UC-1, UC-7, UC-11, UC-12, UC-13, UC-14, UC-15, UC-16, UC-18, UC-19, UC-23, UC-24, UC-26, UC-27, UC-28, UC-29, UC-30, UC-32, UC-33, UC-35 | AD-8 | `hasRole()` OR-logic, Better Auth `@Roles`, service-level ownership checks, and transition-map `allowedRoles` enforce role-specific surfaces | [role.util.ts](../../../src/module/auth/role.util.ts); [transitions.ts](../../../src/module/ordering/order-lifecycle/constants/transitions.ts) | Implemented |
-| QA-S-04 (Dev Middleware Not in Production) | UC-1 | AD-8 | Required tactic is environment gating of `DevTestUserMiddleware`; current code registers it globally with no `NODE_ENV` guard | [dev-test-user.middleware.ts](../../../src/lib/dev-test-user.middleware.ts); [app.module.ts](../../../src/app.module.ts) | Not Implemented — Open Gap |
-| QA-S-05 (Input Validation & Stored-XSS Protection) | UC-1, UC-2, UC-8, UC-12, UC-22, UC-23, UC-24 | AD-3 | Global `ValidationPipe({ transform: true })`, DTO validators, and Drizzle parameterized queries protect implemented request surfaces; Review text validation is planned | [main.ts](../../../src/main.ts); DTO files under [module](../../../src/module) | Implemented / Planned for UC-22 |
-| QA-S-06 (Rate Limiting on Public Endpoints) | UC-1, UC-2 | AD-9 | Edge or `@nestjs/throttler` rate limiting is planned; no Nest throttler module is registered | [app.module.ts](../../../src/app.module.ts) | Planned |
-| QA-SC-01 (Horizontal Scaling of API Instances) | UC-2, UC-20, UC-26, UC-30 | AD-3 | HTTP state is externalized to PostgreSQL/Redis; WebSocket room membership remains process-local, so scale-out needs sticky sessions or a Socket.IO Redis adapter | [redis.module.ts](../../../src/lib/redis/redis.module.ts); [notification.gateway.ts](../../../src/module/notification/gateway/notification.gateway.ts) | Partial |
+| QA-S-04 (Dev Middleware Not in Production) | UC-1 | AD-13 | Required tactic is explicit non-production gating of `DevTestUserMiddleware`; current code registers it globally with no `NODE_ENV` guard | [dev-test-user.middleware.ts](../../../src/lib/dev-test-user.middleware.ts); [app.module.ts](../../../src/app.module.ts) | Not Implemented — Open Gap |
+| QA-S-05 (Input Validation & Injection Resistance) | UC-1, UC-2, UC-8, UC-12, UC-22, UC-23, UC-24 | AD-3 | Global `ValidationPipe({ transform: true })`, DTO validators, and Drizzle parameterized queries protect implemented request surfaces; Review text validation is planned | [main.ts](../../../src/main.ts); DTO files under [module](../../../src/module) | Implemented / Planned for UC-22 |
+| QA-S-06 (Rate Limiting on Public Endpoints) | UC-1, UC-2 | AD-11 | Edge or `@nestjs/throttler` rate limiting is planned; no Nest throttler module is registered | [app.module.ts](../../../src/app.module.ts) | Planned |
+| QA-SC-01 (Horizontal Scaling of API Instances) | UC-2, UC-26, UC-30 | AD-4 | HTTP state is externalized to PostgreSQL/Redis; real-time delivery is the limiting architecture pressure because WebSocket room membership remains process-local, so scale-out needs sticky sessions or a Socket.IO Redis adapter | [redis.module.ts](../../../src/lib/redis/redis.module.ts); [notification.gateway.ts](../../../src/module/notification/gateway/notification.gateway.ts) | Partial |
 | QA-SC-02 (Cart & Idempotency Storage Scaling) | UC-4, UC-5, UC-8 | AD-6 | Redis per-customer cart key, sliding TTL, idempotency TTL key, and checkout lock keep hot cart/order state out of app memory | [cart.redis-repository.ts](../../../src/module/ordering/cart/cart.redis-repository.ts); [redis.service.ts](../../../src/lib/redis/redis.service.ts) | Implemented |
 | QA-FL-01 (Generalizing Payment Provider Integration) | UC-8, UC-9 | AD-3 | Ordering depends on a Payment port token, but the port method is VNPay-specific and must be generalized before adding non-VNPay providers without Ordering changes | [payment-initiation.port.ts](../../../src/shared/ports/payment-initiation.port.ts); [payment.service.ts](../../../src/module/payment/services/payment.service.ts) | Partial |
 | QA-FL-02 (Adding a New Order Status) | UC-14, UC-15, UC-18, UC-19, UC-21, UC-32 | AD-5 | Add/update `orderStatusEnum`, `TRANSITIONS`, and notification mapping to preserve closed lifecycle semantics | [order.schema.ts](../../../src/module/ordering/order/order.schema.ts); [transitions.ts](../../../src/module/ordering/order-lifecycle/constants/transitions.ts); [order-status-changed.handler.ts](../../../src/module/notification/events/order-status-changed.handler.ts) | Implemented |
@@ -862,8 +866,8 @@ Column definitions:
 | QA-SUP-03 (Stuck-Order Diagnostics) | UC-30 | AD-10 | Planned diagnostic surface should flag long-running non-terminal orders; current `OrderTimeoutTask` auto-cancels expired pending/paid orders but does not surface diagnostics | [order-timeout.task.ts](../../../src/module/ordering/order-lifecycle/tasks/order-timeout.task.ts); [order-history.controller.ts](../../../src/module/ordering/order-history/controllers/order-history.controller.ts) | Planned |
 | QA-MA-01 (BC Boundary Enforcement) | UC-7, UC-8, UC-11, UC-12, UC-13, UC-23, UC-25, UC-26, UC-27 | AD-3 | Cross-BC reads use ACL snapshots; Ordering depends on Payment/Promotion through ports; Payment owns financial state; Notification owns delivery state | [ordering/acl](../../../src/module/ordering/acl); [promotion-application.port.ts](../../../src/shared/ports/promotion-application.port.ts); [payment-initiation.port.ts](../../../src/shared/ports/payment-initiation.port.ts) | Implemented |
 | QA-MA-02 (Schema Evolution via Drizzle Migrations) | UC-8, UC-9, UC-23, UC-26 | AD-3 | Drizzle schemas and migrations govern order, payment, promotion, notification, and ACL tables | [drizzle.config.ts](../../../drizzle.config.ts); [schema.ts](../../../src/drizzle/schema.ts) | Implemented |
-| QA-T-01 (Deterministic Order Placement Tests) | UC-8, UC-9 | AD-9 | Test suite uses injectable providers and payment e2e coverage; notification providers have Noop/Stub bindings for test safety | [payment.e2e-spec.ts](../../../test/payment.e2e-spec.ts); [notification.module.ts](../../../src/module/notification/notification.module.ts) | Implemented |
-| QA-T-02 (Test Auth Bypass for E2E) | UC-1 | AD-8 | `DevTestUserMiddleware` injects synthetic users for tests/dev; must be paired with QA-S-04 production guard | [dev-test-user.middleware.ts](../../../src/lib/dev-test-user.middleware.ts); [app.module.ts](../../../src/app.module.ts) | Implemented for test; Open Gap for production gating |
+| QA-T-01 (Deterministic Order Placement Tests) | UC-8, UC-9 | AD-1 | Order placement/payment regression tests run against controlled DB/Redis setup and injectable provider boundaries; notification provider stubs keep side effects deterministic | Representative evidence: [order.e2e-spec.ts](../../../test/e2e/order.e2e-spec.ts); [order-lifecycle.e2e-spec.ts](../../../test/e2e/order-lifecycle.e2e-spec.ts); [cart.e2e-spec.ts](../../../test/e2e/cart.e2e-spec.ts); [acl.e2e-spec.ts](../../../test/e2e/acl.e2e-spec.ts); [promotion-checkout.e2e-spec.ts](../../../test/e2e/promotion-checkout.e2e-spec.ts); [payment.e2e-spec.ts](../../../test/payment.e2e-spec.ts); [notification-inbox.e2e-spec.ts](../../../test/e2e/notification-inbox.e2e-spec.ts); [notification.module.ts](../../../src/module/notification/notification.module.ts) | Implemented |
+| QA-T-02 (Test Auth Bypass for E2E) | UC-1 | AD-13 | `DevTestUserMiddleware` injects synthetic users for explicit dev/test scenarios only and must be paired with QA-S-04 production exclusion | [dev-test-user.middleware.ts](../../../src/lib/dev-test-user.middleware.ts); [app.module.ts](../../../src/app.module.ts) | Partial |
 | QA-U-01 (Sub-2-Minute Registration Flow) | UC-1 | AD-3 | Better Auth email/password account creation and session issue provide the backend path; client UX metrics remain partial | [lib/auth.ts](../../../src/lib/auth.ts) | Partial |
 | QA-U-02 (Predictable Restaurant Discovery) | UC-2 | AD-3 | Search returns paginated sections with deterministic relevance/distance/date ordering | [search.repository.ts](../../../src/module/restaurant-catalog/search/search.repository.ts) | Implemented |
 | QA-CI-01 (Single Order-Status Vocabulary) | UC-8, UC-14, UC-15, UC-18, UC-19, UC-20, UC-21, UC-22, UC-32 | AD-5 | `orderStatusEnum` and `TRANSITIONS` are the source for lifecycle writes, reads, admin overrides, and future status-gated review eligibility | [order.schema.ts](../../../src/module/ordering/order/order.schema.ts); [transitions.ts](../../../src/module/ordering/order-lifecycle/constants/transitions.ts) | Implemented for order lifecycle; Planned for UC-22 |
@@ -873,14 +877,21 @@ Column definitions:
 
 ## Appendix A — ASR Confidence Summary
 
-The table below counts §4 functional rows by implementation status. Architecturally routine UCs (UC-6, UC-10, UC-17, UC-31, UC-34) are excluded from §4 — they involve standard CRUD with no architectural drivers; they are covered by the general constraints in §5 and cross-cutting concerns in §6. QA scenario statuses (§3) are unchanged.
+The table below counts only §4 functional rows by implementation status. Architecturally routine UCs (UC-6, UC-10, UC-17, UC-31, UC-34) are excluded from §4 — they involve standard CRUD with no architectural drivers; they are covered by the general constraints in §5 and cross-cutting concerns in §6. QA scenario gaps are listed separately and are not counted as UC rows.
 
 | Confidence | Count | §4 UC Rows |
 |------------|------:|------------|
 | **Implemented** | 20 | Sign Up (UC-1), Sign In (UC-1), RBAC, Discover Restaurants (UC-2), View Restaurant Details (UC-3), Add Item to Cart (UC-4), Manage Shopping Cart (UC-5), Manage Delivery Zones (UC-7), Place Order (UC-8), Make Online Payment — VNPay (UC-9), Manage Menu Catalog (UC-12), Toggle Availability (UC-13), Accept/Reject Order (UC-14), Prepare for Pickup (UC-15), Deliver Order (UC-19), Cancel Order (UC-21), Manage Restaurant Promotions (UC-23), Manage Platform Promotions (UC-24), Manage Real-Time Notifications (UC-26), Admin Order Cancellation & Refund (UC-32) |
 | **Partial** | 7 | Forgot / Reset Password (UC-1), Restaurant Registration & Profile (UC-11), Accept Delivery Assignment (UC-18), Track Order Status (UC-20), Process Payment Refund (UC-25), Approve Restaurant Applications (UC-27), Monitor Orders (UC-30) |
-| **Not Implemented — Open Gap** | 1 | QA-S-04: `DevTestUserMiddleware` registered unconditionally for `'*'` routes in `app.module.ts` — no `NODE_ENV` guard present; must add guard before any production deployment |
 | **Planned** | 6 | Shipper Registration (UC-16), Submit Rating & Review (UC-22), Approve Shipper Applications (UC-28), Suspend / Reactivate Partners (UC-29), View & Export Reports (UC-33), Manage Admin Roles & Permissions (UC-35) |
+
+Total architecturally significant functional rows in §4: **33**.
+
+Open QA scenario gaps not counted in §4 UC statistics:
+
+| Gap | Status | Evidence |
+|-----|--------|----------|
+| QA-S-04: `DevTestUserMiddleware` registered unconditionally for `'*'` routes in `app.module.ts`; no `NODE_ENV` guard present | Not Implemented — Open Gap | [dev-test-user.middleware.ts](../../../src/lib/dev-test-user.middleware.ts); [app.module.ts](../../../src/app.module.ts) |
 
 ---
 
@@ -890,6 +901,9 @@ The following are commonly listed in enterprise ASRs but are **deliberately excl
 
 - Microservices, service mesh, Kubernetes operators
 - Message brokers (Kafka, RabbitMQ, NATS, SQS)
+- Distributed transaction coordination
+- Cross-service eventual consistency infrastructure
+- Service discovery
 - Distributed tracing (OpenTelemetry / Jaeger / Zipkin / APM)
 - Multi-region active-active or active-passive failover
 - Saga orchestrator framework (Temporal, AWS Step Functions)
