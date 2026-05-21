@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { db } from '../db';
 import * as schema from '../schema';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, inArray, or } from 'drizzle-orm';
+import { inArray, or } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
 
 /**
@@ -201,7 +201,9 @@ async function main() {
         .delete(schema.restaurants)
         .where(inArray(schema.restaurants.id, restaurantIds));
     }
-    await db.delete(schema.account).where(inArray(schema.account.userId, ownerIds));
+    await db
+      .delete(schema.account)
+      .where(inArray(schema.account.userId, ownerIds));
     await db.delete(schema.user).where(inArray(schema.user.id, ownerIds));
     console.log('✅ Old seed data and snapshots cleared.');
     await db.delete(schema.images).where(
