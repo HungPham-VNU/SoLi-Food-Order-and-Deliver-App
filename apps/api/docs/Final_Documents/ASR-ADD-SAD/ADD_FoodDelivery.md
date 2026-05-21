@@ -718,68 +718,75 @@ actor "Restaurant Owner" as RestaurantOwner #FFF4D6
 actor Shipper #E7F0FF
 actor Admin #FCE7F3
 
-rectangle "NestJS API Boundary\nModular Monolith" as API #EEF6FF {
-  package "Auth BC" #DBEAFE {
-    component "Identity\nSessions\nRBAC" as Auth
+rectangle "SoLi Domain Boundary\nModular Monolith Today; Future-Extractable BCs" as Domain #EEF6FF {
+  package "Auth BC\n[Implemented]" #DBEAFE {
+    component "Identity & Credentials" as AuthIdentity
+    component "Sessions & Role Vocabulary" as AuthSessions
+    component "Authorization Policy" as AuthPolicy
   }
 
-  package "Restaurant Catalog BC" #ECFDF5 {
+  package "Restaurant Catalog BC\n[Implemented]" #ECFDF5 {
     component "Restaurant Management" as RestaurantMgmt
     component "Menu Catalog" as MenuCatalog
-    component "Search" as Search
+    component "Search & Discovery" as Search
     component "Delivery Zones" as DeliveryZones
   }
 
-  package "Image BC" #CCFBF1 {
+  package "Image BC\n[Implemented]" #CCFBF1 {
     component "Image Metadata" as ImageMetadata
-    component "Cloudinary Adapter" as CloudinaryAdapter
+    interface "Image Asset Port" as ImageAssetPort
   }
 
-  package "Ordering BC" #FFFBEB {
+  package "Ordering BC\n[Implemented]" #FFFBEB {
     component "Cart" as Cart
+    component "Cart Store" as CartStore
     component "Checkout / Place Order" as Checkout
+    component "Idempotency Store" as IdempotencyStore
     component "Order Lifecycle" as OrderLifecycle
+    component "Dispatch / Delivery Fulfillment" as DeliveryFulfillment
     component "Order History" as OrderHistory
     component "Ordering ACL Snapshots" as OrderingACL
   }
 
-  package "Payment BC" #F5F3FF {
+  package "Payment BC\n[Implemented]" #F5F3FF {
     component "Payment Transactions" as PaymentTransactions
-    component "VNPay Adapter" as VNPayAdapter
+    interface "Payment Provider Port" as PaymentProviderPort
     component "Refund Compensation" as RefundCompensation
   }
 
-  package "Promotion BC" #FAF5FF {
+  package "Promotion BC\n[Implemented]" #FAF5FF {
     component "Promotion Rules" as PromotionRules
     component "Coupon Codes" as CouponCodes
     component "Reservation / Confirm / Rollback" as PromotionReservation
   }
 
-  package "Notification BC" #F0FDFA {
+  package "Notification BC\n[Implemented]" #F0FDFA {
     component "Durable Inbox" as DurableInbox
-    component "Socket.IO Gateway" as SocketGateway
-    component "FCM / Email Channels" as NotificationChannels
+    component "Realtime Gateway Contract" as RealtimeGateway
+    component "Presence Store" as PresenceStore
+    component "Notification Channel Ports" as NotificationChannelPorts
     component "Notification ACL Snapshots" as NotificationACL
   }
 
-  package "Review & Rating BC" #E0F2FE {
+  package "Review & Rating BC\n[Planned]" #E0F2FE {
     component "Review Eligibility" as ReviewEligibility
     component "Rating / Comment Records" as ReviewRecords
     component "Moderation / Aggregation" as ReviewAggregation
   }
 
-  package "Admin / Governance BC" #FDF2F8 {
+  package "Admin / Governance BC\n[Partial / Planned]" #FDF2F8 {
     component "Partner Approval" as PartnerApproval
     component "Platform Oversight" as PlatformOversight
     component "Role Governance" as RoleGovernance
+    component "Operational Diagnostics" as OperationalDiagnostics
   }
 
-  queue "In-process EventBus" as EventBus #E0E7FF
+  queue "Domain Event Stream\n(in-process EventBus today)" as DomainEvents #E0E7FF
   interface "PAYMENT_INITIATION_PORT" as PaymentPort #DDD6FE
   interface "PROMOTION_APPLICATION_PORT" as PromotionPort #E9D5FF
 }
 
-Customer --> Auth
+Customer --> AuthIdentity
 Customer --> Search
 Customer --> MenuCatalog
 Customer --> Cart
@@ -788,7 +795,7 @@ Customer --> OrderHistory
 Customer --> DurableInbox
 Customer --> ReviewRecords
 
-RestaurantOwner --> Auth
+RestaurantOwner --> AuthIdentity
 RestaurantOwner --> RestaurantMgmt
 RestaurantOwner --> MenuCatalog
 RestaurantOwner --> DeliveryZones
@@ -796,70 +803,87 @@ RestaurantOwner --> ImageMetadata
 RestaurantOwner --> OrderLifecycle
 RestaurantOwner --> PromotionRules
 
-Shipper --> Auth
+Shipper --> AuthIdentity
 Shipper --> OrderLifecycle
+Shipper --> DeliveryFulfillment
 Shipper --> DurableInbox
 
-Admin --> Auth
+Admin --> AuthIdentity
 Admin --> PartnerApproval
 Admin --> PlatformOversight
 Admin --> RoleGovernance
+Admin --> OperationalDiagnostics
 Admin --> OrderLifecycle
 Admin --> PromotionRules
 
-RestaurantMgmt --> EventBus : restaurant events
-MenuCatalog --> EventBus : menu events
-DeliveryZones --> EventBus : zone events
-Checkout --> EventBus : order placed
-OrderLifecycle --> EventBus : status changed
-PaymentTransactions --> EventBus : payment events
-PromotionReservation --> EventBus : promotion usage events
+AuthSessions --> AuthPolicy
+Cart --> CartStore
+Checkout --> CartStore
+Checkout --> IdempotencyStore
+Checkout --> OrderingACL
+DeliveryFulfillment --> OrderLifecycle : assignment/status contract
+OrderLifecycle --> OrderHistory
+RealtimeGateway --> PresenceStore
+DurableInbox --> RealtimeGateway
+DurableInbox --> NotificationChannelPorts
+MenuCatalog --> ImageMetadata : image reference contract
+ImageMetadata --> ImageAssetPort
 
-EventBus --> OrderingACL
-EventBus --> NotificationACL
-EventBus --> DurableInbox
-EventBus --> RefundCompensation
+RestaurantMgmt --> DomainEvents : RestaurantUpdatedEvent
+MenuCatalog --> DomainEvents : MenuItemUpdatedEvent
+DeliveryZones --> DomainEvents : DeliveryZoneSnapshotUpdatedEvent
+Checkout --> DomainEvents : OrderPlacedEvent
+OrderLifecycle --> DomainEvents : OrderStatusChangedEvent / OrderReadyForPickupEvent
+PaymentTransactions --> DomainEvents : PaymentConfirmed / PaymentFailed
+PromotionReservation --> DomainEvents : promotion usage events
+
+DomainEvents --> OrderingACL
+DomainEvents --> NotificationACL
+DomainEvents --> DurableInbox
+DomainEvents --> RefundCompensation
+DomainEvents --> ReviewEligibility
+DomainEvents --> OperationalDiagnostics
 
 Checkout --> PaymentPort
 PaymentPort --> PaymentTransactions
+PaymentTransactions --> PaymentProviderPort
 Checkout --> PromotionPort
 PromotionPort --> PromotionReservation
+PromotionReservation --> PromotionRules
+PromotionReservation --> CouponCodes
 
-MenuCatalog --> ImageMetadata : image id/url reference
-ImageMetadata --> CloudinaryAdapter
-PaymentTransactions --> VNPayAdapter
-DurableInbox --> SocketGateway
-DurableInbox --> NotificationChannels
-ReviewEligibility ..> OrderHistory : delivered-order UUID reference
+PartnerApproval ..> RestaurantMgmt : approval state contract
+RoleGovernance ..> AuthPolicy : role vocabulary contract
+PlatformOversight ..> OrderHistory : cross-tenant read contract
+OperationalDiagnostics ..> DomainEvents : lifecycle/health signals
+ReviewEligibility ..> OrderHistory : delivered-order UUID/status contract
 ReviewAggregation ..> RestaurantMgmt : rating summary contract
 @enduml
 ```
 
-This view presents the system's bounded contexts as independent ownership units inside one modular monolith. The implemented backend modules are Auth, Restaurant Catalog, Ordering, Payment, Promotion, Notification, and Image. Review & Rating and the broader Admin/Governance capabilities are represented as architecture-owned target bounded contexts because the SRS and business drivers require them, while the current source tree does not expose a dedicated review module or full governance module.
+This view is intentionally domain-only. It shows bounded contexts, ports, ACLs, logical state responsibilities, and domain-event dependencies without placing concrete storage or provider infrastructure inside the logical model.
 
 Subsystems:
 
-ーAuthentication BC handles registration, login, bearer sessions, role vocabulary, Better Auth integration, and RBAC enforcement for HTTP and WebSocket entry points.
+ーImplemented bounded contexts are Auth, Restaurant Catalog, Image, Ordering, Payment, Promotion, and Notification. They are deployed together today but are drawn as extractable ownership units because table ownership, ports, ACL snapshots, and event contracts already point in that direction.
 
-ーRestaurant Catalog BC handles restaurant management, menu categories/items/modifiers, public search, approval/open-state filters, and delivery-zone configuration.
+ーRestaurant Catalog owns restaurant profiles, menu categories/items/modifiers, public search, approval/open-state visibility, and delivery-zone definitions. Search remains inside Catalog rather than becoming a separate infrastructure service.
 
-ーImage BC is separate from Restaurant Catalog. It owns Cloudinary signed upload integration and image metadata (`images.publicId`, `secureUrl`, dimensions), while Catalog stores only references such as `imageUrl`, `logoUrl`, or `coverImageUrl`.
+ーImage BC is independent from Restaurant Catalog. Catalog stores image references, while Image owns metadata and an image asset port; the concrete provider appears only in the Implementation and Deployment views.
 
-ーOrdering BC handles Redis cart state, checkout, delivery-radius validation, immutable order-item snapshots, order lifecycle, order history, ACL snapshots, idempotency, and audit logs.
+ーOrdering owns cart behavior, checkout, idempotency, delivery-radius validation, immutable order-item snapshots, lifecycle transitions, shipper assignment/delivery fulfillment, order history, and Ordering ACL snapshots. Cart Store and Idempotency Store are logical responsibilities; their current storage technology is documented later.
 
-ーPayment BC handles VNPay redirect URL creation, IPN verification, payment transaction state, timeout recovery, and refund compensation state.
+ーDelivery/dispatch is intentionally modeled inside Ordering for the current MVP because assignment, pickup, delivering, delivered, cancellation, and refund transitions are enforced through the order lifecycle. A separate Delivery/Dispatch BC remains a future extraction candidate when shipper availability, route planning, earnings, or fleet operations need independent ownership.
 
-ーPromotion BC handles restaurant/platform promotions, coupon codes, eligibility preview, checkout reservation, confirmation, rollback, and usage counters through the promotion port.
+ーNotification owns durable inbox behavior, realtime gateway contracts, user presence, channel dispatch policy, delivery preferences, and notification-specific ACL snapshots. It is not merged with Ordering or Review because delivery of messages is a distinct lifecycle and failure domain.
 
-ーNotification BC handles durable inbox rows, Socket.IO fan-out, FCM push, SMTP email, delivery preferences, device tokens, presence, delivery logs, and notification-specific restaurant snapshots.
+ーReview & Rating remains Planned because no dedicated backend module or tables exist yet, but it must remain an independent target BC due to BRD/SRS requirements for delivered-order eligibility, moderation, and rating aggregation.
 
-ーReview & Rating BC owns delivered-order review eligibility, one-review-per-order integrity, moderation, and rating aggregation. It is not merged with Notification because feedback persistence and notification delivery have different data ownership, lifecycle, and abuse-control requirements.
+ーAdmin/Governance is Partial/Planned: administrative order cancellation and restaurant approval are partially implemented through existing modules, while shipper approval, role-governance audit, reporting/export, and stuck-order diagnostics remain target architecture.
 
-ーAdmin/Governance BC owns partner approval, platform oversight, privileged role governance, administrative cancellation/refund authority, report/export responsibilities, and operational diagnostics surfaces.
+ーThe domain event stream is in-process today. It is still modeled as a logical event dependency so future extraction can replace the transport without changing the BC ownership story.
 
-ーEventBus handles synchronous in-process domain event publication between bounded contexts in the modular monolith.
-
-ーPorts isolate Ordering from concrete Payment and Promotion implementations through dependency-inversion contracts.
+ーOrdering uses `PAYMENT_INITIATION_PORT` and `PROMOTION_APPLICATION_PORT` to avoid concrete cross-BC imports into the checkout path.
 
 
 #### 3.2. Implementation View
@@ -872,203 +896,383 @@ skinparam componentStyle rectangle
 skinparam packageStyle rectangle
 skinparam defaultTextAlignment center
 skinparam ArrowColor #334155
-left to right direction
+skinparam linetype ortho
+top to bottom direction
 
-actor Customer
-actor "Restaurant Owner" as RestaurantOwner
-actor Shipper
-actor Admin
+actor Customer #DFF7E8
+actor "Restaurant Owner" as RestaurantOwner #FFF4D6
+actor Shipper #E7F0FF
+actor Admin #FCE7F3
+actor Developer #F3F4F6
 
-rectangle "Client Applications\n(actors only in this view)" as Clients #F8FAFC {
-  component "apps/web\nReact/Vite dashboard" as WebClient #FED7AA
-  component "apps/mobile\nExpo mobile app" as MobileClient #99F6E4
-}
+package "apps/api\nNestJS modular monolith" as Api #E0F2FE {
+  package "Runtime / composition" as Runtime #BAE6FD {
+    component "main.ts\nbootstrap, CORS,\nValidationPipe, /docs" as MainTs
+    component "app.module.ts\nmodule composition" as AppModule
+  }
 
-package "apps/api" #E0F2FE {
-  component "main.ts\nHTTP bootstrap\nValidationPipe" as MainTs #BAE6FD
-  component "app.module.ts\nmodule composition" as AppModule #BAE6FD
-
-  package "src/config" #DBEAFE {
-    component "env.schema.ts" as EnvSchema
+  package "Infrastructure modules" as Infra #DBEAFE {
+    component "env.schema.ts\nstartup validation" as EnvSchema
     component "vnpay.config.ts" as VnpayConfig
-  }
-
-  package "src/lib" #DBEAFE {
-    component "auth.ts" as AuthLib
-    component "redis" as RedisLib
-    component "geo" as GeoLib
-    component "dev-test-user.middleware.ts" as DevMiddleware
-  }
-
-  package "src/drizzle" #DCFCE7 {
-    database "schema.ts\nmodule schema barrel" as SchemaBarrel
+    component "auth.ts\nBetter Auth" as AuthLib
+    component "redis.module.ts\nioredis client" as RedisLib
+    component "geo.service.ts\nhaversine checks" as GeoLib
+    component "drizzle.module.ts\nDB_CONNECTION" as DrizzleModule
+    component "schema.ts\nschema barrel" as SchemaBarrel
     component "migrations / seeds" as Migrations
+    component "dev-test-user.middleware.ts\ndev/test only" as DevMiddleware
   }
 
-  package "src/module/auth" #DBEAFE {
-    component "auth.schema.ts" as AuthSchema
-    component "role.util.ts" as RoleUtil
+  package "Auth BC" as AuthBC #DBEAFE {
+    component "Auth schema\nuser/session/account/verification" as AuthSchema
+    component "role.util.ts\nhasRole()" as RoleUtil
   }
 
-  package "src/module/restaurant-catalog" #BBF7D0 {
-    component "restaurant" as ImplRestaurant
-    component "menu + modifiers" as ImplMenu
-    component "search" as ImplSearch
-    component "restaurant/zones" as ImplZones
+  package "Restaurant Catalog BC" as CatalogBC #BBF7D0 {
+    component "Restaurant Controller" as RestaurantController
+    component "Restaurant Service" as RestaurantService
+    component "Restaurant Repository" as RestaurantRepo
+    component "Menu / Modifier Controllers" as MenuControllers
+    component "Menu / Modifier Services" as MenuServices
+    component "Menu / Modifier Repositories" as MenuRepos
+    component "Search Controller" as SearchController
+    component "Search Service" as SearchService
+    component "Search Repository" as SearchRepo
+    component "Delivery Zone Controller" as ZoneController
+    component "Delivery Zone Service" as ZoneService
+    component "Delivery Zone Repository" as ZoneRepo
+    component "Catalog schemas" as CatalogSchemas
   }
 
-  package "src/module/ordering" #FEF3C7 {
-    component "cart" as ImplCart
-    component "order\nPlaceOrderCommand" as ImplOrder
-    component "order-lifecycle\nTransitionOrderCommand" as ImplLifecycle
-    component "order-history" as ImplHistory
-    component "acl\nrepositories + projectors" as ImplAcl
+  package "Image BC" as ImageBC #CCFBF1 {
+    component "Image / Cloudinary Controllers" as ImageControllers
+    component "Image Service" as ImageService
+    component "Image Repository" as ImageRepo
+    component "Image schema" as ImageSchema
+    component "Cloudinary Service" as CloudinaryService
+    component "Cloudinary Provider" as CloudinaryProvider
   }
 
-  package "src/module/payment" #DDD6FE {
-    component "controllers" as PaymentControllers
-    component "commands\nProcessIpnCommand" as PaymentCommands
-    component "domain schema" as PaymentDomain
-    component "repositories" as PaymentRepos
-    component "services\nVNPay" as PaymentServices
-    component "tasks/events" as PaymentTasksEvents
+  package "Ordering BC" as OrderingBC #FEF3C7 {
+    component "Cart Controller" as CartController
+    component "Cart Service" as CartService
+    component "Cart Redis Repository" as CartRedisRepo
+    component "PlaceOrderHandler" as PlaceOrderHandler
+    component "Order Lifecycle Controller" as LifecycleController
+    component "Order Lifecycle Service" as LifecycleService
+    component "TransitionOrderHandler\nshipper assignment + delivery transitions" as TransitionHandler
+    component "Order Repository" as OrderRepo
+    component "Order History Controller/Service" as OrderHistoryImpl
+    component "ACL Projectors" as OrderingProjectors
+    component "ACL Snapshot Repositories" as OrderingAclRepos
+    component "AppSettingsService" as AppSettingsService
+    component "OrderTimeoutTask" as OrderTimeoutTask
+    component "Ordering schemas" as OrderingSchemas
   }
 
-  package "src/module/promotion" #E9D5FF {
-    component "controllers" as PromotionControllers
-    component "domain schema" as PromotionDomain
-    component "engine" as PromotionEngine
-    component "repositories" as PromotionRepos
-    component "services" as PromotionServices
+  package "Payment BC" as PaymentBC #DDD6FE {
+    component "Payment Controller" as PaymentController
+    component "ProcessIpnHandler" as ProcessIpnHandler
+    component "Payment Service" as PaymentService
+    component "VNPay Service" as VNPayService
+    component "Payment Transaction Repository" as PaymentRepo
+    component "payment_transactions schema" as PaymentSchema
+    component "PaymentTimeoutTask" as PaymentTimeoutTask
+    component "Refund Event Handler" as RefundHandler
   }
 
-  package "src/module/notification" #99F6E4 {
-    component "controllers" as NotificationControllers
-    component "domain schemas" as NotificationDomain
-    component "gateway" as NotificationGateway
-    component "channels" as NotificationChannelsImpl
-    component "repositories" as NotificationRepos
-    component "services" as NotificationServices
-    component "tasks/events/acl" as NotificationTasksEventsAcl
+  package "Promotion BC" as PromotionBC #E9D5FF {
+    component "Admin / Restaurant / Public Controllers" as PromotionControllers
+    component "Promotion Services" as PromotionServices
+    component "Promotion Pricing Engine" as PromotionEngine
+    component "Promotion / Coupon / Usage Repositories" as PromotionRepos
+    component "Promotion schemas" as PromotionSchemas
   }
 
-  package "src/module/image" #CCFBF1 {
-    component "controllers/dto" as ImageControllers
-    component "service/repository" as ImageServiceRepo
-    component "schema" as ImageSchema
-    component "Cloudinary provider" as ImageCloudinary
+  package "Notification BC" as NotificationBC #99F6E4 {
+    component "Notification Controller" as NotificationController
+    component "Notification Service" as NotificationService
+    component "Notification Gateway" as NotificationGateway
+    component "Channel Dispatcher" as ChannelDispatcher
+    component "In-App / Email / Push Channels" as NotificationChannels
+    component "User Presence Service" as UserPresenceService
+    component "Notification Repositories" as NotificationRepos
+    component "Notification schemas" as NotificationSchemas
+    component "Notification ACL Projector" as NotificationAclProjector
+    component "DeviceTokenCleanupTask" as DeviceTokenCleanupTask
   }
 
-  package "src/shared" #F1F5F9 {
+  package "Review BC\n[Planned]" as ReviewBC #E0F2FE {
+    component "Review Controller\n[Planned]" as ReviewController
+    component "Review Service\n[Planned]" as ReviewService
+    component "Review Repository\n[Planned]" as ReviewRepo
+    component "Review schemas\n[Planned]" as ReviewSchema
+  }
+
+  package "Governance BC\n[Partial / Planned]" as GovernanceBC #FDF2F8 {
+    component "Partner approval surfaces\n[Partial]" as PartnerApprovalSurface
+    component "Admin order surfaces\n[Partial]" as AdminOrderSurface
+    component "Role governance\n[Planned]" as RoleGovernanceSurface
+    component "Operational diagnostics\n[Planned]" as DiagnosticsSurface
+    component "Governance audit schemas\n[Planned]" as GovernanceSchema
+  }
+
+  package "src/shared + tests" as SharedKernel #F1F5F9 {
     component "events" as SharedEvents #E0E7FF
     component "ports" as SharedPorts #E9D5FF
     component "validators" as SharedValidators #FDE68A
+    component "unit specs" as UnitSpecs
+    component "payment.e2e-spec.ts" as PaymentE2E
+    component "helpers / setup" as TestSetup
+    component "Rate limiting module\n[Planned]" as RateLimiting #FECACA
   }
 
-  package "test" #F3F4F6 {
-    component "e2e specs" as E2ETests
-    component "helpers/setup" as TestHelpers
-  }
+  Runtime -[hidden]down-> Infra
+  AuthBC -[hidden]right-> CatalogBC
+  ImageBC -[hidden]right-> OrderingBC
+  PaymentBC -[hidden]right-> PromotionBC
+  NotificationBC -[hidden]right-> ReviewBC
+  GovernanceBC -[hidden]right-> SharedKernel
 }
 
-package "Delivery Artifacts" #F3F4F6 {
-  component "apps/api/Dockerfile" as ApiDocker
-  component "apps/web/Dockerfile" as WebDocker
-  component ".github/workflows\nci / validate / publish" as Workflows
-  component "GHCR images" as GHCR
-  component "Render image-backed services" as RenderServices
+database "PostgreSQL\nDB_CONNECTION" as Postgres #DCFCE7 {
+  component "Auth tables" as PgAuth
+  component "Catalog tables" as PgCatalog
+  component "Image table" as PgImage
+  component "Ordering tables" as PgOrdering
+  component "Payment tables" as PgPayment
+  component "Promotion tables" as PgPromotion
+  component "Notification tables" as PgNotification
+  component "Review tables\n[Planned]" as PgReview
+  component "Governance audit tables\n[Planned]" as PgGovernance
 }
 
-Customer --> WebClient
-Customer --> MobileClient
-RestaurantOwner --> WebClient
-RestaurantOwner --> MobileClient
-Shipper --> MobileClient
-Admin --> WebClient
-WebClient --> MainTs : REST API
-MobileClient --> MainTs : REST + Socket.IO
+database "Redis / Valkey\nshared volatile state" as Redis #FDE68A {
+  component "cart:{customerId}" as RedisCart
+  component "cart:{customerId}:lock" as RedisLock
+  component "idempotency:order:{key}" as RedisIdempotency
+  component "ws:connections:{userId}" as RedisPresence
+  component "rate-limit buckets\n[Planned]" as RedisRateLimit
+}
+
+cloud "External providers" as External #F5F3FF {
+  component "VNPay" as ExtVNPay
+  component "Cloudinary" as ExtCloudinary
+  component "Firebase Cloud Messaging" as ExtFCM
+  component "SMTP provider" as ExtSMTP
+}
+
+package "Delivery and workflow artifacts" as DeliveryArtifacts #F3F4F6 {
+  component "GitHub repository" as GitHubRepo
+  component ".github/actions/setup-environment" as SetupEnvAction
+  component ".github/workflows/ci.yml" as CiWorkflow
+  component "validate.yml\nlint, typecheck, audit,\nunit, build, db push, e2e" as ValidateWorkflow
+  component "publish-docker.yml\nDocker Buildx matrix" as PublishDockerWorkflow
+  component "publish-mobile.yml\nEAS local Android build" as PublishMobileWorkflow
+  component "apps/api/Dockerfile\nNode 22 API image" as ApiDocker
+  component "apps/web/Dockerfile\nnginx static web image" as WebDocker
+  component "GHCR api/web images" as GHCR
+  component "Render deploy hooks\n[Documented target]" as RenderHooks
+  component "EAS APK artifact" as MobileArtifact
+}
+
+Api -[hidden]down-> Postgres
+Postgres -[hidden]right-> Redis
+Redis -[hidden]right-> External
+External -[hidden]down-> DeliveryArtifacts
+
+Customer --> MainTs : HTTPS REST / realtime client
+RestaurantOwner --> MainTs : HTTPS REST / realtime client
+Shipper --> MainTs : HTTPS REST / realtime client
+Admin --> MainTs : HTTPS REST
 
 MainTs --> AppModule
 AppModule --> EnvSchema
+AppModule --> VnpayConfig
 AppModule --> AuthLib
 AppModule --> RedisLib
 AppModule --> GeoLib
-AppModule --> SchemaBarrel
-AppModule --> AuthSchema
-AppModule --> RoleUtil
-AppModule --> ImplRestaurant
-AppModule --> ImplMenu
-AppModule --> ImplSearch
-AppModule --> ImplZones
-AppModule --> ImplCart
-AppModule --> ImplOrder
-AppModule --> ImplLifecycle
-AppModule --> ImplHistory
-AppModule --> ImplAcl
-AppModule --> PaymentControllers
-AppModule --> PromotionControllers
-AppModule --> NotificationControllers
-AppModule --> ImageControllers
+AppModule --> DrizzleModule
+AppModule --> DevMiddleware
+AppModule --> AuthBC : imports
+AppModule --> CatalogBC : imports
+AppModule --> ImageBC : imports
+AppModule --> OrderingBC : imports
+AppModule --> PaymentBC : imports
+AppModule --> PromotionBC : imports
+AppModule --> NotificationBC : imports
+AppModule ..> ReviewBC : target module
+AppModule ..> GovernanceBC : partial / target surfaces
 
-ImplOrder --> SharedPorts
-ImplOrder --> SharedEvents
-ImplLifecycle --> SharedEvents
-ImplAcl --> SharedEvents
-PaymentCommands --> SharedEvents
-PaymentServices --> SharedPorts
+DrizzleModule --> SchemaBarrel
+Migrations --> Postgres
+RedisLib --> Redis
+DevMiddleware ..> AuthLib
+
+SchemaBarrel --> AuthSchema
+SchemaBarrel --> CatalogSchemas
+SchemaBarrel --> ImageSchema
+SchemaBarrel --> OrderingSchemas
+SchemaBarrel --> PaymentSchema
+SchemaBarrel --> PromotionSchemas
+SchemaBarrel --> NotificationSchemas
+SchemaBarrel ..> ReviewSchema
+SchemaBarrel ..> GovernanceSchema
+
+AuthLib --> AuthSchema
+AuthSchema --> PgAuth
+RoleUtil --> AuthLib
+
+RestaurantController --> RestaurantService
+RestaurantService --> RestaurantRepo
+RestaurantRepo --> CatalogSchemas
+MenuControllers --> MenuServices
+MenuServices --> MenuRepos
+MenuRepos --> CatalogSchemas
+SearchController --> SearchService
+SearchService --> SearchRepo
+SearchRepo --> CatalogSchemas
+ZoneController --> ZoneService
+ZoneService --> ZoneRepo
+ZoneRepo --> CatalogSchemas
+CatalogSchemas --> PgCatalog
+RestaurantService --> SharedEvents
+MenuServices --> SharedEvents
+ZoneService --> SharedEvents
+
+ImageControllers --> ImageService
+ImageService --> ImageRepo
+ImageRepo --> ImageSchema
+ImageSchema --> PgImage
+ImageControllers --> CloudinaryService
+CloudinaryService --> CloudinaryProvider
+CloudinaryProvider --> ExtCloudinary
+
+CartController --> CartService
+CartService --> CartRedisRepo
+CartRedisRepo --> RedisCart
+CartRedisRepo --> RedisLock
+PlaceOrderHandler --> CartRedisRepo
+PlaceOrderHandler --> RedisIdempotency
+PlaceOrderHandler --> OrderingAclRepos
+PlaceOrderHandler --> AppSettingsService
+PlaceOrderHandler --> SharedPorts
+PlaceOrderHandler --> OrderRepo
+LifecycleController --> LifecycleService
+LifecycleService --> TransitionHandler
+TransitionHandler --> OrderRepo
+OrderHistoryImpl --> OrderRepo
+OrderRepo --> OrderingSchemas
+OrderingProjectors --> SharedEvents
+OrderingProjectors --> OrderingAclRepos
+OrderingAclRepos --> OrderingSchemas
+OrderingSchemas --> PgOrdering
+OrderTimeoutTask --> TransitionHandler
+
+PaymentController --> ProcessIpnHandler
+PaymentController --> PaymentService
+ProcessIpnHandler --> PaymentService
+ProcessIpnHandler --> SharedEvents
+PaymentService --> PaymentRepo
+PaymentService --> VNPayService
+PaymentService --> SharedPorts
+PaymentRepo --> PaymentSchema
+PaymentSchema --> PgPayment
+VNPayService --> ExtVNPay
+PaymentTimeoutTask --> PaymentRepo
+RefundHandler --> PaymentService
+
+PromotionControllers --> PromotionServices
+PromotionServices --> PromotionEngine
+PromotionServices --> PromotionRepos
 PromotionServices --> SharedPorts
-NotificationTasksEventsAcl --> SharedEvents
-ImageServiceRepo --> ImageCloudinary
+PromotionRepos --> PromotionSchemas
+PromotionSchemas --> PgPromotion
 
-Workflows --> ApiDocker
-Workflows --> WebDocker
+NotificationController --> NotificationService
+NotificationService --> NotificationRepos
+NotificationService --> NotificationGateway
+NotificationService --> ChannelDispatcher
+NotificationRepos --> NotificationSchemas
+NotificationSchemas --> PgNotification
+ChannelDispatcher --> NotificationChannels
+NotificationChannels --> NotificationGateway
+NotificationChannels --> ExtFCM
+NotificationChannels --> ExtSMTP
+NotificationGateway --> UserPresenceService
+UserPresenceService --> RedisPresence
+NotificationAclProjector --> SharedEvents
+NotificationAclProjector --> NotificationRepos
+DeviceTokenCleanupTask --> NotificationRepos
+
+ReviewController ..> ReviewService
+ReviewService ..> ReviewRepo
+ReviewRepo ..> ReviewSchema
+ReviewSchema ..> PgReview
+ReviewService ..> OrderHistoryImpl : delivered-order eligibility
+
+PartnerApprovalSurface ..> RestaurantController
+AdminOrderSurface ..> LifecycleController
+RoleGovernanceSurface ..> RoleUtil
+DiagnosticsSurface ..> SharedEvents
+GovernanceSchema ..> PgGovernance
+
+RateLimiting ..> RedisRateLimit
+SharedPorts --> PaymentService
+SharedPorts --> PromotionServices
+SharedValidators --> CartController
+SharedValidators --> PromotionControllers
+
+Developer --> GitHubRepo
+GitHubRepo --> CiWorkflow
+CiWorkflow --> ValidateWorkflow
+ValidateWorkflow --> SetupEnvAction
+CiWorkflow --> PublishDockerWorkflow
+CiWorkflow --> PublishMobileWorkflow
+PublishDockerWorkflow --> ApiDocker
+PublishDockerWorkflow --> WebDocker
 ApiDocker --> GHCR
 WebDocker --> GHCR
-GHCR --> RenderServices
+GHCR --> RenderHooks
+PublishMobileWorkflow --> MobileArtifact
 @enduml
 ```
 
-This view outlines the backend implementation structure and deployment artifacts. Web and mobile are intentionally shown only as actors/clients because detailed client feature internals are outside this ADD implementation view.
+This view outlines backend implementation structure and delivery artifacts. Web and mobile client internals are intentionally out of scope here; actors represent the clients that call the API.
 
 Structure:
 
-ーThe backend is a NestJS modular monolith under `apps/api`.
+ーThe backend implementation is a NestJS modular monolith under `apps/api`; `main.ts` owns bootstrap, CORS, global validation, Swagger/Scalar docs, and static public assets, while `app.module.ts` composes Config, Database, Redis, Geo, Schedule, Restaurant Catalog, Promotion, Ordering, Payment, Notification, Image, and Better Auth modules.
 
-ー`app.module.ts` composes Config, Database, Redis, Geo, Schedule, Restaurant Catalog, Promotion, Ordering, Payment, Notification, Image, and Better Auth modules.
+ーAuth uses Better Auth plus Drizzle-backed identity/session tables; role checks use the shared `hasRole()` utility and service/handler ownership checks.
 
-ーCritical write paths use selective CQRS command handlers: order placement, order lifecycle transition, and VNPay IPN processing.
+ーRestaurant Catalog uses controller/service/repository layering for restaurant profiles, menu/modifier maintenance, public search, and delivery-zone management. Catalog mutations publish shared domain events consumed by Ordering and Notification ACL projectors.
 
-ーStandard catalog, menu, image, notification, promotion, and order-history operations use controller/service/repository layering.
+ーImage implements `Controller -> Service -> Repository -> Schema` for image metadata and `Controller -> CloudinaryService -> CloudinaryProvider` for signed provider interaction.
 
-ーShared events define immutable domain-event contracts exported through the shared event barrel.
+ーOrdering combines service-style cart operations with CQRS command handlers for checkout and lifecycle transitions. It also contains the current delivery/dispatch implementation through shipper assignment and delivery-status transitions on orders. It owns Redis cart/lock/idempotency keys, Ordering tables, audit logs, app settings, and ACL snapshot repositories.
 
-ーShared ports define the dependency-inversion contracts for Ordering to call Payment and Promotion.
+ーPayment implements `PaymentController -> ProcessIpnHandler -> PaymentService -> PaymentTransactionRepository -> payment_transactions`, with `VNPayService` as the gateway adapter and scheduled timeout/refund handlers around the same repository.
 
-ーShared validators keep domain-specific validation such as VND amount rules outside individual controllers.
+ーPromotion implements controller/service/repository layering plus `PromotionPricingEngine`; Ordering consumes it only through `PROMOTION_APPLICATION_PORT`.
 
-ーSecurity uses Better Auth sessions, bearer extraction, role decorators, `hasRole()` OR-logic, service-layer ownership checks, and route-level DTO validation.
+ーNotification implements `NotificationController -> NotificationService -> NotificationRepository` for REST inbox state, `NotificationService -> NotificationGateway` for realtime fan-out, and `ChannelDispatcher -> channel providers` for in-app, push, and email dispatch. Presence is tracked through shared Redis state.
 
-ーLogging uses NestJS `Logger` instances at module, handler, service, gateway, and task boundaries.
+ーRate limiting is a planned implementation target. The architectural target is edge or Nest throttling backed by shared Redis-compatible buckets so multiple API instances enforce one quota policy.
 
-ーNo dedicated backend module currently exists for Review & Rating, full Admin/Governance, OpenTelemetry/Prometheus/Grafana monitoring, or Nest Throttler rate limiting; these remain architecture-owned target surfaces or deployment concerns rather than implemented `apps/api/src/module` packages.
+ーCI/CD ownership is repository-level: `ci.yml` calls `validate.yml`, `publish-docker.yml`, and `publish-mobile.yml`; Docker Buildx publishes API/web images to GHCR; Render deploy hooks are documented in `CD_GUIDE.md` but not yet wired into `ci.yml`.
 
 Technologies:
 
 ーBackend: NestJS, TypeScript, Better Auth, `@nestjs/cqrs`, `@nestjs/schedule`.
 
-ーORM: Drizzle ORM and Drizzle Kit.
+ーORM and schema: Drizzle ORM / Drizzle Kit with module-owned schema files exported through `src/drizzle/schema.ts`.
 
-ーDatabase: PostgreSQL.
+ーRuntime state: PostgreSQL for durable state; Redis-compatible storage through `ioredis` for volatile cart, checkout-lock, idempotency, and presence state.
 
-ーVolatile state: Redis through `ioredis`.
+ーRealtime and integrations: Socket.IO, VNPay, Cloudinary, Firebase Cloud Messaging provider adapter, Nodemailer SMTP provider adapter.
 
-ーRealtime: Socket.IO.
-
-ーExternal providers: VNPay, Cloudinary, Firebase Cloud Messaging, Nodemailer SMTP.
-
-ーClient stacks: React/Vite for web, Expo React Native for mobile.
-
-ーCI/CD: pnpm, Turbo, GitHub Actions, Docker Buildx, GitHub Container Registry, Render deploy hooks.
+ーDelivery: pnpm, Turbo, GitHub Actions, Docker Buildx, GHCR, Render image-backed services, and EAS local Android packaging.
 
 
 #### 3.3. Deployment View
@@ -1083,19 +1287,42 @@ skinparam defaultTextAlignment center
 skinparam ArrowColor #334155
 left to right direction
 
+actor Developer #F3F4F6
 cloud "Internet" as Internet #DBEAFE
 
 node "Client Devices" as ClientDevices #F8FAFC {
   component "Browser\nweb dashboard" as Browser #FED7AA
-  component "Mobile app\nExpo" as MobileRuntime #99F6E4
+  component "Mobile app\nExpo runtime" as MobileRuntime #99F6E4
 }
 
-node "Render Runtime" as Render #E0F2FE {
-  component "Web Service\nnginx + static React" as RenderWeb #FED7AA
-  component "API Web Service\nNestJS Docker image" as RenderApi #BAE6FD
-  database "Render Postgres\nDATABASE_URL" as RenderPostgres #BBF7D0
-  database "Render Key Value\nRedis-compatible" as RenderRedis #FDE68A
-  component "Render logs / health\nplatform diagnostics" as RenderOps #FECACA
+node "GitHub" as GitHub #F3F4F6 {
+  component "Repository\nmaster branch" as GitHubRepo
+  component "GitHub Actions\nci.yml" as Actions
+  component "validate.yml\nlint/typecheck/audit/tests/build/e2e" as ValidateJob #BAE6FD
+  component "publish-docker.yml\nDocker Buildx api+web" as DockerJob #FED7AA
+  component "publish-mobile.yml\nEAS Android artifact" as MobileJob #99F6E4
+  component "GHCR\napi:web images\nbranch + short-SHA tags" as GHCR #E0E7FF
+}
+
+cloud "Render Deploy Hooks\n[documented target]" as RenderHooks #DBEAFE
+
+node "Render / Production Runtime\nSingle region; HA target" as Render #E0F2FE {
+  component "Managed HTTPS Edge\nTLS termination" as Edge #DBEAFE
+  component "Load Balancer\n[Target]" as LoadBalancer #BAE6FD
+  component "Static Web Service\nnginx + React image" as WebService #FED7AA
+
+  rectangle "API Autoscaling Group\nscale FULL modular-monolith instances" as ApiGroup #E0F2FE {
+    node "API Instance 1\nNestJS Docker image\nall BCs loaded" as Api1 #BAE6FD
+    node "API Instance 2\nNestJS Docker image\nall BCs loaded" as Api2 #BAE6FD
+    node "API Instance N\nAutoscaling target" as ApiN #BAE6FD
+  }
+
+  component "Autoscaling Policy\nCPU / latency / connection pressure\n[Planned]" as Autoscaling #FDE68A
+  component "Sticky Sessions\nOR Socket.IO Redis Adapter\n[Required for multi-instance WS]" as WsScaling #FDE68A
+  database "Managed PostgreSQL\nprimary + backups\nread replica target" as ManagedPostgres #BBF7D0
+  database "Managed Redis / Valkey\nshared cart, lock, idempotency,\npresence, rate-limit buckets" as ManagedRedis #FDE68A
+  component "Monitoring Stack\nRender logs implemented;\nPrometheus/Grafana/APM planned" as Monitoring #FECACA
+  component "Rate Limiting\nedge or Nest throttler\n[Planned]" as RateLimiting #FECACA
 }
 
 cloud "VNPay" as VNPay #DDD6FE
@@ -1103,65 +1330,95 @@ cloud "Cloudinary" as Cloudinary #CCFBF1
 cloud "Firebase Cloud Messaging" as FCM #DCFCE7
 cloud "SMTP Provider" as SMTP #F5F5F4
 
-node "GitHub" as GitHub #F3F4F6 {
-  component "GitHub Actions\nvalidate + publish" as Actions
-  component "GHCR\napi/web images" as Registry #E0E7FF
-}
-
-cloud "Render Deploy Hooks" as Hooks #DBEAFE
+Developer --> GitHubRepo : push to master
+GitHubRepo --> Actions
+Actions --> ValidateJob
+ValidateJob --> DockerJob
+ValidateJob --> MobileJob
+DockerJob --> GHCR
+GHCR --> RenderHooks : immutable image tag / imgURL
+RenderHooks --> WebService : pull web image
+RenderHooks --> Api1 : pull api image
+RenderHooks --> Api2 : pull same api image
+RenderHooks --> ApiN : pull same api image
 
 Browser --> Internet
 MobileRuntime --> Internet
-Internet --> RenderWeb : HTTPS
-Internet --> RenderApi : HTTPS REST / Socket.IO
-RenderWeb --> RenderApi : API calls
-RenderApi --> RenderPostgres
-RenderApi --> RenderRedis
-RenderApi --> VNPay : HTTPS redirect/IPN integration
-RenderApi --> Cloudinary : signed upload / metadata
-RenderApi --> FCM : push delivery
-RenderApi --> SMTP : email delivery
-RenderApi --> RenderOps : logs / health checks
-Actions --> Registry
-Registry --> Hooks
-Hooks --> RenderApi
-Hooks --> RenderWeb
+Internet --> Edge : HTTPS
+Edge --> WebService : static assets
+Edge --> LoadBalancer : API REST / realtime
+WebService --> LoadBalancer : browser API calls
+LoadBalancer --> Api1
+LoadBalancer --> Api2
+LoadBalancer --> ApiN
+Autoscaling ..> ApiGroup
+
+Api1 --> ManagedPostgres
+Api2 --> ManagedPostgres
+ApiN --> ManagedPostgres
+Api1 --> ManagedRedis
+Api2 --> ManagedRedis
+ApiN --> ManagedRedis
+RateLimiting --> ManagedRedis
+WsScaling ..> LoadBalancer
+WsScaling ..> ManagedRedis
+WsScaling ..> ApiGroup
+
+Api1 --> VNPay : HTTPS payment redirect/IPN
+Api2 --> VNPay
+ApiN --> VNPay
+Api1 --> Cloudinary : signed upload / metadata
+Api2 --> Cloudinary
+ApiN --> Cloudinary
+Api1 --> FCM : push delivery
+Api2 --> FCM
+ApiN --> FCM
+Api1 --> SMTP : email delivery
+Api2 --> SMTP
+ApiN --> SMTP
+
+Api1 --> Monitoring
+Api2 --> Monitoring
+ApiN --> Monitoring
+LoadBalancer --> Monitoring
+ManagedPostgres --> Monitoring
+ManagedRedis --> Monitoring
 @enduml
 ```
 
-Describes the deployment baseline used by the repository and CD guide.
+This view describes the deployment target required by QA-SC-01 and the availability scenarios, while preserving the current modular-monolith constraint. Scaling means adding complete API instances that each load every bounded context; it does not split the system into microservices.
 
 Environment:
 
-ーCloud deployment is documented for Render using image-backed services.
+ーCurrent repository delivery is image-based: GitHub Actions validates the monorepo, builds API/web Docker images with Docker Buildx, publishes them to GHCR, and packages the mobile APK through EAS. Render deploy hooks are documented in `CD_GUIDE.md` as the next deployment automation step and are marked as a target because they are not present in `ci.yml` yet.
 
-ーContainers: API and web are packaged as Docker images built from `apps/api/Dockerfile` and `apps/web/Dockerfile`.
+ーThe production topology introduces a managed HTTPS edge and load balancer in front of the web service and an API autoscaling group. The minimum HA target is API Instance 1 and API Instance 2; API Instance N represents autoscaling under load.
 
-ーRuntime: Render pulls prebuilt images from GHCR and runs API and web services.
+ーEach API instance runs the same NestJS Docker image and contains Auth, Restaurant Catalog, Image, Ordering, Payment, Promotion, Notification, and all implemented modules. Cross-BC events remain in-process inside each instance.
 
-ーDatabase: Render Postgres provides the PostgreSQL primary database through `DATABASE_URL`.
+ーPostgreSQL remains the durable source of truth. The target deployment adds managed backups and a read-replica option for reporting/monitoring load, but write ownership remains a single-primary model.
 
-ーCache: Render Key Value provides a Redis-compatible store for carts, locks, idempotency keys, and WebSocket presence.
+ーRedis/Valkey is shared across API instances for cart keys, checkout locks, idempotency keys, WebSocket presence, and future rate-limit buckets.
 
-ーExternal integrations: VNPay, Cloudinary, SMTP, and FCM are accessed from the API service through provider boundaries.
+ーWebSocket scale requires one of two explicit strategies before multi-instance correctness can be claimed: load-balancer sticky sessions so a user's socket stays on the instance that owns its room, or a Socket.IO Redis adapter so room membership and emits are coordinated across instances. The current gateway has process-local rooms, so this is a target topology item.
 
-ーRealtime scaling note: a single API service instance supports the current Socket.IO room model. Multi-instance API scaling must add sticky sessions or a Socket.IO Redis adapter so room membership remains correct.
+ーRate limiting is a planned deployment control, implemented either at the edge/reverse proxy or inside NestJS with Redis-backed counters so quotas are consistent across all API instances.
 
-ーMonitoring baseline: repository evidence supports application logs, health/startup validation, and Render platform diagnostics. Prometheus, Grafana, OpenTelemetry, and distributed tracing are excluded from the current deployment baseline.
+ーMonitoring is layered: Render logs and health/startup diagnostics exist as the current baseline, while Prometheus/Grafana/APM, alerting, and stuck-order dashboards are planned production additions needed for supportability claims.
 
 Deployment Example:
 
 ーDeveloper pushes to `master`.
 
-ーGitHub Actions runs validation and publish workflows.
+ー`ci.yml` runs `validate.yml`, then `publish-docker.yml` and `publish-mobile.yml` after validation succeeds.
 
-ーDocker images for API and web are published to GHCR with branch and short-SHA tags.
+ー`publish-docker.yml` builds the API image from `apps/api/Dockerfile` and the web image from `apps/web/Dockerfile`, tags them with branch and short-SHA metadata, and pushes them to GHCR.
 
-ーRender deploy hooks pull the GHCR API and web images.
+ーRender deploy hooks pull the immutable GHCR image tags and roll the web service plus every API instance in the autoscaling group.
 
-ーAPI connects to Render Postgres and Render Key Value.
+ーThe load balancer routes REST traffic across full API instances; realtime traffic uses sticky sessions or the Socket.IO Redis adapter target.
 
-ーWeb dashboard calls the API through the configured `VITE_API_BASE_URL`.
+ーAll API instances share PostgreSQL and Redis/Valkey and call VNPay, Cloudinary, FCM, and SMTP only through implementation-layer provider adapters.
 
 
 #### 3.4. Data View
@@ -1170,125 +1427,491 @@ Deployment Example:
 @startuml SoLi_Data_View
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
-skinparam componentStyle rectangle
 skinparam packageStyle rectangle
-skinparam defaultTextAlignment center
+skinparam defaultTextAlignment left
 skinparam ArrowColor #334155
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+hide circle
+hide methods
 left to right direction
 
-rectangle "Logical Owners\n(database-per-service ready)" as Owners #E0F2FE {
-  component "AUTH" as DAuth
-  component "RESTAURANT_CATALOG" as DCatalog
-  component "IMAGE" as DImage
-  component "ORDERING" as DOrdering
-  component "PAYMENT" as DPayment
-  component "PROMOTION" as DPromotion
-  component "NOTIFICATION" as DNotification
-  component "REVIEW_RATING" as DReview
+package "PostgreSQL\nsingle physical database\nlogical schemas grouped by BC ownership" as PG #DCFCE7 {
+  package "AUTH" as DAuth #DBEAFE {
+    entity "user" as users {
+      *id : uuid
+      --
+      email : text
+      name : text
+      role : text
+      banned : boolean
+      createdAt : timestamp
+    }
+
+    entity "session" as sessions {
+      *id : uuid
+      --
+      userId : uuid
+      token : text
+      expiresAt : timestamp
+      ipAddress : text
+    }
+
+    entity "account" as accounts {
+      *id : uuid
+      --
+      userId : uuid
+      providerId : text
+      accountId : text
+      password : text
+    }
+
+    entity "verification" as verifications {
+      *id : uuid
+      --
+      identifier : text
+      value : text
+      expiresAt : timestamp
+    }
+  }
+
+  package "RESTAURANT_CATALOG" as DCatalog #BBF7D0 {
+    entity "restaurants" as restaurants {
+      *id : uuid
+      --
+      ownerId : uuid
+      name : text
+      isOpen : boolean
+      isApproved : boolean
+      latitude : double
+      longitude : double
+    }
+
+    entity "delivery_zones" as delivery_zones {
+      *id : uuid
+      --
+      restaurantId : uuid
+      radiusKm : double
+      baseFee : integer
+      perKmRate : integer
+      isActive : boolean
+    }
+
+    entity "menu_categories" as menu_categories {
+      *id : uuid
+      --
+      restaurantId : uuid
+      name : text
+      displayOrder : integer
+    }
+
+    entity "menu_items" as menu_items {
+      *id : uuid
+      --
+      restaurantId : uuid
+      categoryId : uuid
+      name : text
+      price : integer
+      status : enum
+      imageUrl : text
+    }
+
+    entity "modifier_groups" as modifier_groups {
+      *id : uuid
+      --
+      menuItemId : uuid
+      name : text
+      minSelections : integer
+      maxSelections : integer
+    }
+
+    entity "modifier_options" as modifier_options {
+      *id : uuid
+      --
+      groupId : uuid
+      name : text
+      price : integer
+      isAvailable : boolean
+    }
+  }
+
+  package "IMAGE" as DImage #CCFBF1 {
+    entity "images" as images {
+      *id : uuid
+      --
+      publicId : text
+      secureUrl : text
+      width : integer
+      height : integer
+      createdAt : timestamp
+    }
+  }
+
+  package "ORDERING" as DOrdering #FEF3C7 {
+    entity "orders" as orders {
+      *id : uuid
+      --
+      customerId : uuid
+      restaurantId : uuid
+      cartId : uuid
+      status : enum
+      totalAmount : integer
+      paymentMethod : enum
+      shipperId : uuid
+      version : integer
+    }
+
+    entity "order_items" as order_items {
+      *id : uuid
+      --
+      orderId : uuid
+      menuItemId : uuid
+      itemName : text
+      unitPrice : integer
+      quantity : integer
+      subtotal : integer
+    }
+
+    entity "order_status_logs" as order_status_logs {
+      *id : uuid
+      --
+      orderId : uuid
+      fromStatus : enum
+      toStatus : enum
+      triggeredByRole : enum
+      createdAt : timestamp
+    }
+
+    entity "app_settings" as app_settings {
+      *key : text
+      --
+      value : text
+      description : text
+      updatedAt : timestamp
+    }
+
+    entity "ordering_restaurant_snapshots" as ordering_restaurant_snapshots {
+      *restaurantId : uuid
+      --
+      ownerId : uuid
+      name : text
+      isOpen : boolean
+      isApproved : boolean
+      lastSyncedAt : timestamp
+    }
+
+    entity "ordering_menu_item_snapshots" as ordering_menu_item_snapshots {
+      *menuItemId : uuid
+      --
+      restaurantId : uuid
+      name : text
+      price : integer
+      status : enum
+      lastSyncedAt : timestamp
+    }
+
+    entity "ordering_delivery_zone_snapshots" as ordering_delivery_zone_snapshots {
+      *zoneId : uuid
+      --
+      restaurantId : uuid
+      radiusKm : double
+      baseFee : integer
+      perKmRate : integer
+      isActive : boolean
+    }
+  }
+
+  package "PAYMENT" as DPayment #DDD6FE {
+    entity "payment_transactions" as payment_transactions {
+      *id : uuid
+      --
+      orderId : uuid
+      customerId : uuid
+      amount : integer
+      status : enum
+      providerTxnId : text
+      expiresAt : timestamp
+      version : integer
+    }
+  }
+
+  package "PROMOTION" as DPromotion #E9D5FF {
+    entity "promotions" as promotions {
+      *id : uuid
+      --
+      restaurantId : uuid
+      scope : enum
+      status : enum
+      trigger : enum
+      discountValue : integer
+      currentTotalUses : integer
+      version : integer
+    }
+
+    entity "coupon_codes" as coupon_codes {
+      *id : uuid
+      --
+      promotionId : uuid
+      code : text
+      status : enum
+      maxUses : integer
+      currentUses : integer
+    }
+
+    entity "promotion_usages" as promotion_usages {
+      *id : uuid
+      --
+      promotionId : uuid
+      couponCodeId : uuid
+      orderId : uuid
+      customerId : uuid
+      discountAmount : integer
+      status : enum
+    }
+  }
+
+  package "NOTIFICATION" as DNotification #99F6E4 {
+    entity "notifications" as notifications {
+      *id : uuid
+      --
+      recipientId : uuid
+      type : enum
+      channel : enum
+      status : enum
+      orderId : uuid
+      idempotencyKey : text
+    }
+
+    entity "notification_preferences" as notification_preferences {
+      *id : uuid
+      --
+      userId : uuid
+      pushEnabled : boolean
+      inAppEnabled : boolean
+      emailEnabled : boolean
+      mutedTypes : jsonb
+    }
+
+    entity "device_tokens" as device_tokens {
+      *id : uuid
+      --
+      userId : uuid
+      token : text
+      platform : enum
+      isActive : boolean
+      lastSeenAt : timestamp
+    }
+
+    entity "notification_delivery_logs" as notification_delivery_logs {
+      *id : uuid
+      --
+      notificationId : uuid
+      channel : enum
+      status : enum
+      attemptNumber : integer
+      errorCode : text
+    }
+
+    entity "notification_restaurant_snapshots" as notification_restaurant_snapshots {
+      *restaurantId : uuid
+      --
+      ownerId : uuid
+      name : text
+      lastSyncedAt : timestamp
+    }
+  }
+
+  package "REVIEW_RATING\n[Target logical schema]" as DReview #E0F2FE {
+    entity "reviews\n[Planned]" as reviews <<planned>> {
+      *id : uuid
+      --
+      orderId : uuid
+      customerId : uuid
+      targetType : text
+      targetId : uuid
+      rating : integer
+      moderationStatus : text
+    }
+
+    entity "ratings\n[Planned]" as ratings <<planned>> {
+      *targetType : text
+      *targetId : uuid
+      --
+      avgRating : decimal
+      reviewCount : integer
+      updatedAt : timestamp
+    }
+  }
+
+  package "ADMIN_GOVERNANCE\n[Target logical schema]" as DAdmin #FDF2F8 {
+    entity "partner_applications\n[Planned]" as partner_applications <<planned>> {
+      *id : uuid
+      --
+      applicantUserId : uuid
+      partnerType : text
+      status : text
+      reviewedBy : uuid
+      decidedAt : timestamp
+    }
+
+    entity "governance_audit_logs\n[Planned]" as governance_audit_logs <<planned>> {
+      *id : uuid
+      --
+      actorId : uuid
+      action : text
+      targetType : text
+      targetId : uuid
+      createdAt : timestamp
+    }
+  }
 }
 
-database "PostgreSQL\nsingle physical DB" as PG #DCFCE7 {
-  package "AUTH" #DBEAFE {
-    component "users\nid, email, name, role, banned\nsessions\nid, userId, token, expiresAt\naccounts / verification" as TAuth
+package "SHARED_STATE\nRedis / Valkey" as DShared #FDE68A {
+  entity "cart:{customerId}" as cart_state <<redis>> {
+    *customerId : uuid
+    --
+    restaurantId : uuid
+    items : json
+    totals : json
+    ttlSeconds : integer
   }
 
-  package "RESTAURANT_CATALOG" #BBF7D0 {
-    component "restaurants\nid, ownerId, name, address\nisOpen, isApproved, lat/lng\ncuisineType, logoUrl, coverImageUrl" as TRestaurants
-    component "delivery_zones\nid, restaurantId, radiusKm\nbaseFee, perKmRate\nprepTimeMinutes, isActive" as TZones
-    component "menu_categories\nid, restaurantId, name\ndisplayOrder" as TCategories
-    component "menu_items\nid, restaurantId, name, price\ncategoryId, status, imageUrl, tags" as TMenuItems
-    component "modifier_groups / modifier_options\nselection bounds, option price\navailability, displayOrder" as TModifiers
+  entity "cart:{customerId}:lock" as checkout_locks <<redis>> {
+    *customerId : uuid
+    --
+    lockToken : text
+    ttlSeconds : integer
   }
 
-  package "IMAGE" #CCFBF1 {
-    component "images\nid, publicId, secureUrl\nwidth, height, createdAt" as TImages
+  entity "idempotency:order:{key}" as order_idempotency_keys <<redis>> {
+    *key : text
+    --
+    orderId : uuid
+    responseBody : json
+    ttlSeconds : integer
   }
 
-  package "ORDERING" #FEF3C7 {
-    component "orders\nid, customerId, restaurantId\nstatus, totalAmount, version\nshipperId, expiresAt" as TOrders
-    component "order_items\nid, orderId, menuItemId\nitemName, unitPrice\nquantity, modifiers, subtotal" as TOrderItems
-    component "order_status_logs\nid, orderId, fromStatus\ntoStatus, triggeredByRole\nnote, createdAt" as TStatusLogs
-    component "app_settings\nkey, value, timestamps" as TAppSettings
-    component "ordering_restaurant_snapshots\nrestaurantId, ownerId, name\nisOpen, isApproved" as TORestSnapshots
-    component "ordering_menu_item_snapshots\nmenuItemId, restaurantId\nname, price, status" as TOMenuSnapshots
-    component "ordering_delivery_zone_snapshots\nzoneId, restaurantId, radiusKm\nfees, prep/buffer minutes" as TOZoneSnapshots
+  entity "ws:connections:{userId}" as ws_presence <<redis>> {
+    *userId : uuid
+    --
+    connectionCount : integer
+    heartbeatTtl : integer
   }
 
-  package "PAYMENT" #DDD6FE {
-    component "payment_transactions\nid, orderId, customerId\namount, status, providerTxnId\nrawIpnPayload, expiresAt, version" as TPayments
-  }
-
-  package "PROMOTION" #E9D5FF {
-    component "promotions\nid, scope, status, trigger\ndiscountValue, usage caps, version" as TPromotions
-    component "coupon_codes\nid, promotionId, code\nstatus, maxUses, currentUses" as TCoupons
-    component "promotion_usages\nid, promotionId, orderId\ncustomerId, discountAmount, status" as TPromotionUsages
-  }
-
-  package "NOTIFICATION" #99F6E4 {
-    component "notifications\nid, recipientId, type, channel\nstatus, isRead, idempotencyKey\norderId, expiresAt" as TNotifications
-    component "notification_preferences\nuserId, channel, enabled\nquiet hours" as TPreferences
-    component "device_tokens\nuserId, token, platform\nlastSeenAt" as TDeviceTokens
-    component "notification_delivery_logs\nid, notificationId, channel\nstatus, attemptNumber, error" as TDeliveryLogs
-    component "notification_restaurant_snapshots\nrestaurantId, ownerId, name" as TNRestSnapshots
-  }
-
-  package "REVIEW_RATING target" #E0F2FE {
-    component "reviews\nid, orderId, customerId\ntargetType, targetId, rating\ncomment, moderationStatus" as TReviews
-    component "ratings\ntargetType, targetId\navgRating, reviewCount" as TRatings
+  entity "rate-limit buckets\n[Planned]" as rate_limit_buckets <<planned>> {
+    *bucketKey : text
+    --
+    windowStart : timestamp
+    count : integer
+    ttlSeconds : integer
   }
 }
 
-database "Redis" as RedisData #FDE68A {
-  component "cart:{customerId}\nitems, restaurantId, totals" as RCart
-  component "cart:{customerId}:lock\ncheckout lock" as RLocks
-  component "idempotency:order:{key}\norder response cache" as RIdempotency
-  component "ws:connections:{userId}\npresence ref-count" as RPresence
-  component "rate-limit buckets\nedge/module target" as RRateLimit
+package "EXTERNAL_DATA_OWNERS" as DExternal #F5F3FF {
+  entity "VNPay gateway" as vnpay_gateway <<external>> {
+    *providerTxnId : text
+    --
+    amount : integer
+    responseCode : text
+    ipnPayload : json
+  }
+
+  entity "Cloudinary assets" as cloudinary_assets <<external>> {
+    *publicId : text
+    --
+    secureUrl : text
+    width : integer
+    height : integer
+  }
+
+  entity "FCM delivery" as fcm_delivery <<external>> {
+    *registrationToken : text
+    --
+    platform : text
+    deliveryStatus : text
+  }
+
+  entity "SMTP delivery" as smtp_delivery <<external>> {
+    *messageId : text
+    --
+    recipientEmail : text
+    deliveryStatus : text
+  }
 }
 
-cloud "External Data Owners" as External #F5F3FF {
-  component "VNPay\ngateway transaction refs" as EVNPay
-  component "Cloudinary\nimage bytes" as ECloudinary
-  component "FCM\ndevice delivery" as EFCM
-  component "SMTP\nemail delivery" as ESMTP
-}
+DAuth -[hidden]right-> DCatalog
+DImage -[hidden]right-> DOrdering
+DPayment -[hidden]right-> DPromotion
+DNotification -[hidden]right-> DReview
+DAdmin -[hidden]right-> DShared
+DShared -[hidden]right-> DExternal
+DAuth -[hidden]down-> DImage
+DCatalog -[hidden]down-> DOrdering
+DImage -[hidden]down-> DPayment
+DOrdering -[hidden]down-> DPromotion
+DPayment -[hidden]down-> DNotification
+DPromotion -[hidden]down-> DReview
+DNotification -[hidden]down-> DAdmin
 
-DAuth --> TAuth
-DCatalog --> TRestaurants
-DCatalog --> TZones
-DCatalog --> TCategories
-DCatalog --> TMenuItems
-DCatalog --> TModifiers
-DImage --> TImages
-DImage --> ECloudinary
-DOrdering --> TOrders
-DOrdering --> TOrderItems
-DOrdering --> TStatusLogs
-DOrdering --> TAppSettings
-DOrdering --> TORestSnapshots
-DOrdering --> TOMenuSnapshots
-DOrdering --> TOZoneSnapshots
-DOrdering --> RCart
-DOrdering --> RLocks
-DOrdering --> RIdempotency
-DPayment --> TPayments
-DPayment --> EVNPay
-DPromotion --> TPromotions
-DPromotion --> TCoupons
-DPromotion --> TPromotionUsages
-DNotification --> TNotifications
-DNotification --> TPreferences
-DNotification --> TDeviceTokens
-DNotification --> TDeliveryLogs
-DNotification --> TNRestSnapshots
-DNotification --> RPresence
-DNotification --> EFCM
-DNotification --> ESMTP
-DReview ..> TReviews
-DReview ..> TRatings
-DReview ..> TOrders : orderId UUID reference
-RRateLimit ..> DAuth
-RRateLimit ..> DCatalog
+users ||--o{ sessions : userId
+users ||--o{ accounts : userId
+verifications }o..|| users : identifier / email
+
+users ||..o{ restaurants : ownerId
+restaurants ||--o{ delivery_zones : restaurantId
+restaurants ||--o{ menu_categories : restaurantId
+restaurants ||--o{ menu_items : restaurantId
+menu_categories ||--o{ menu_items : categoryId
+menu_items ||--o{ modifier_groups : menuItemId
+modifier_groups ||--o{ modifier_options : groupId
+
+users ||..o{ orders : customerId
+users ||..o{ orders : shipperId
+restaurants ||..o{ orders : restaurantId
+orders ||--o{ order_items : orderId
+orders ||--o{ order_status_logs : orderId
+menu_items ||..o{ order_items : menuItemId snapshot
+
+restaurants ||..o{ ordering_restaurant_snapshots : event projection
+menu_items ||..o{ ordering_menu_item_snapshots : event projection
+delivery_zones ||..o{ ordering_delivery_zone_snapshots : event projection
+restaurants ||..o{ notification_restaurant_snapshots : event projection
+
+orders ||..o{ payment_transactions : logical orderId
+users ||..o{ payment_transactions : logical customerId
+payment_transactions }o..|| vnpay_gateway : providerTxnId / IPN
+
+promotions ||..o{ coupon_codes : logical promotionId
+promotions ||..o{ promotion_usages : logical promotionId
+coupon_codes ||..o{ promotion_usages : logical couponCodeId
+orders ||..o{ promotion_usages : logical orderId
+users ||..o{ promotion_usages : logical customerId
+restaurants ||..o{ promotions : restaurantId scope
+
+users ||..o{ notifications : recipientId
+orders ||..o{ notifications : logical orderId
+notifications ||..o{ notification_delivery_logs : logical notificationId
+users ||..o{ notification_preferences : logical userId
+users ||..o{ device_tokens : logical userId
+device_tokens }o..|| fcm_delivery : registration token
+notifications }o..|| smtp_delivery : email metadata
+
+images }o..|| cloudinary_assets : publicId / secureUrl
+orders ||..o{ reviews : eligibility orderId
+users ||..o{ reviews : customerId
+reviews }o..|| ratings : aggregation
+ratings }o..|| restaurants : restaurant rating summary
+
+users ||..o{ partner_applications : applicantUserId
+users ||..o{ governance_audit_logs : actorId
+restaurants ||..o{ governance_audit_logs : targetId
+
+users ||..o{ cart_state : customerId key
+cart_state }o..|| restaurants : restaurantId
+orders ||..o{ order_idempotency_keys : cached create response
+users ||..o{ checkout_locks : checkout lock
+users ||..o{ ws_presence : presence key
+users ||..o{ rate_limit_buckets : quota key
 @enduml
 ```
 
@@ -1296,43 +1919,45 @@ Focuses on data ownership and storage strategy.
 
 Primary Storage:
 
-ーPostgreSQL is one physical database for the modular monolith, but table groups are owned as if each bounded context could later be extracted into an independent service database.
+ーPostgreSQL remains one physical database for the modular monolith, but tables are grouped by bounded-context ownership and avoid unnecessary cross-BC foreign keys to preserve future database-per-service extractability.
 
-ーAuth owns Better Auth identity/session tables.
+ーAuth owns Better Auth identity/session tables. `session.userId` and `account.userId` are real FKs to `user.id` because they are inside the same Auth ownership boundary.
 
-ーRestaurant Catalog owns restaurants, delivery zones, menu categories, menu items, modifier groups, and modifier options.
+ーRestaurant Catalog owns restaurants, delivery zones, menu categories, menu items, modifier groups, and modifier options. These use real internal FKs because they are one BC aggregate family.
 
-ーImage owns the `images` table and Cloudinary public identifiers. Cloudinary owns image bytes.
+ーImage owns the `images` table and only stores metadata/provider identifiers. Image bytes remain with the external image provider; Catalog references image URLs but does not own image storage.
 
-ーOrdering owns orders, order items, order status logs, runtime app settings, and Ordering ACL snapshot tables for restaurant/menu/delivery-zone reads.
+ーOrdering owns `orders`, `order_items`, `order_status_logs`, `app_settings`, and Ordering ACL snapshot tables. `order_items` and `order_status_logs` have real FKs to `orders`; cross-context IDs such as `customerId`, `restaurantId`, `menuItemId`, and `shipperId` are logical UUID references. Delivery fulfillment is currently represented by order status plus `shipperId`; a separate Delivery/Dispatch schema is not implemented today.
 
-ーPayment owns payment transactions and stores gateway references, raw IPN payloads, status, expiry, and optimistic-lock version data.
+ーPayment owns `payment_transactions`. `orderId` and `customerId` are logical references, not PostgreSQL FKs, so Payment can be extracted independently later.
 
-ーPromotion owns promotions, coupon codes, and promotion usage/reservation rows.
+ーPromotion owns promotions, coupon codes, and promotion usage rows. Promotion references `orderId`, `customerId`, and restaurant scope through logical UUIDs to keep checkout compensation independent from Ordering table structure.
 
-ーNotification owns notifications, preferences, device tokens, delivery logs, and notification-specific restaurant snapshots.
+ーNotification owns notifications, preferences, device tokens, delivery logs, and notification restaurant snapshots. Delivery logs reference notifications logically; inbox rows are durable recovery state for realtime degradation.
 
-ーReview & Rating owns review/rating records as a target data contract derived from the SRS/BRD. The current Drizzle schema does not export review tables, so this group is documented as a separate future extractable ownership boundary rather than as implemented storage.
+ーReview & Rating is a target logical schema, not an implemented Drizzle schema today. It is included because SRS UC-22 and BRD review/rating requirements require a separate future BC with delivered-order eligibility and rating aggregation.
 
-ーRedis stores short-lived and high-churn state: carts, checkout locks, idempotency keys, WebSocket presence, and future rate-limit buckets.
+ーAdmin/Governance is a target logical schema for partner application decisions and governance audit logs. Current admin behavior remains implemented through Auth, Restaurant Catalog, Ordering, Payment, and Promotion surfaces; dedicated governance tables are not implemented today.
 
-ーExternal providers own data outside the platform database: VNPay payment authority, Cloudinary image bytes, FCM push delivery, and SMTP delivery.
+ーRedis/Valkey stores volatile and high-churn state: carts, checkout locks, idempotency response caches, WebSocket presence reference counts, and planned rate-limit counters.
+
+ーExternal data owners remain outside the platform database: VNPay owns gateway authority, Cloudinary owns image bytes, FCM owns push delivery, and SMTP owns email delivery.
 
 Security Measures:
 
-ーAll client-server and provider traffic is encrypted using HTTPS/TLS.
+ーAll client-server and provider traffic is encrypted using HTTPS/TLS in production.
 
 ーSecrets are injected through environment variables validated at startup by Zod.
 
-ーPasswords are handled by Better Auth with scrypt hashing.
+ーPasswords and sessions are handled by Better Auth; the backend does not implement custom credential cryptography.
 
-ーRBAC uses `admin`, `restaurant`, `shipper`, and `user` roles with service-level ownership checks.
+ーRBAC uses `admin`, `restaurant`, `shipper`, and `user` roles with route guards plus service/handler ownership checks.
 
 ーCross-context identifiers are stored as UUID references to preserve bounded-context autonomy and database-per-service readiness.
 
 ーDrizzle parameterized queries protect database access from SQL injection.
 
-ーNotification rooms are server-assigned from validated sessions and scoped as `room:user:{userId}`.
+ーNotification rooms are server-assigned from validated sessions and scoped as `room:user:{userId}`; Redis presence keys do not authorize access by themselves.
 
 ーPayment signatures are verified before database lookup or mutation.
 
