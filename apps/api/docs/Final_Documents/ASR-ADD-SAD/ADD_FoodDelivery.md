@@ -712,178 +712,180 @@ skinparam packageStyle rectangle
 skinparam defaultTextAlignment center
 skinparam ArrowColor #334155
 left to right direction
+skinparam linetype ortho
 
 actor Customer #DFF7E8
 actor "Restaurant Owner" as RestaurantOwner #FFF4D6
 actor Shipper #E7F0FF
 actor Admin #FCE7F3
 
-rectangle "SoLi Domain Boundary\nModular Monolith Today; Future-Extractable BCs" as Domain #EEF6FF {
-  package "Auth BC\n[Implemented]" #DBEAFE {
-    component "Identity & Credentials" as AuthIdentity
-    component "Sessions & Role Vocabulary" as AuthSessions
-    component "Authorization Policy" as AuthPolicy
+rectangle "NestJS API Boundary\nModular Monolith · Future-Extractable BCs" as Domain #EEF6FF {
+
+  package "Auth BC" as AuthBC #DBEAFE {
+    component "Identity" as AuthIdentity
+    component "Sessions" as AuthSessions
+    component "RBAC" as AuthRBAC
+    component "User Profile" as AuthProfile
   }
 
-  package "Restaurant Catalog BC\n[Implemented]" #ECFDF5 {
-    component "Restaurant Management" as RestaurantMgmt
-    component "Menu Catalog" as MenuCatalog
-    component "Search & Discovery" as Search
-    component "Delivery Zones" as DeliveryZones
+  package "Restaurant Catalog BC" as CatalogBC #ECFDF5 {
+    component "Restaurant Management" as CatalogRestaurant
+    component "Menu Catalog" as CatalogMenu
+    component "Search" as CatalogSearch
+    component "Delivery Zones" as CatalogDeliveryZones
+    component "Availability" as CatalogAvailability
   }
 
-  package "Image BC\n[Implemented]" #CCFBF1 {
-    component "Image Metadata" as ImageMetadata
-    interface "Image Asset Port" as ImageAssetPort
+  package "Image BC" as ImageBC #CCFBF1 {
+    component "Image Metadata" as ImageMeta
   }
 
-  package "Ordering BC\n[Implemented]" #FFFBEB {
-    component "Cart" as Cart
-    component "Cart Store" as CartStore
-    component "Checkout / Place Order" as Checkout
-    component "Idempotency Store" as IdempotencyStore
-    component "Order Lifecycle" as OrderLifecycle
-    component "Dispatch / Delivery Fulfillment" as DeliveryFulfillment
-    component "Order History" as OrderHistory
-    component "Ordering ACL Snapshots" as OrderingACL
+  package "Ordering BC" as OrderingBC #FFFBEB {
+    component "Cart" as OrderingCart
+    component "Checkout" as OrderingCheckout
+    component "Order Lifecycle" as OrderingLifecycle
+    component "Delivery" as OrderingDelivery
+    component "Order History" as OrderingHistory
+    component "ACL Snapshots" as OrderingACL
+    interface "PAYMENT_INITIATION_PORT" as PaymentPort #DDD6FE
+    interface "PROMOTION_APPLICATION_PORT" as PromotionPort #E9D5FF
   }
 
-  package "Payment BC\n[Implemented]" #F5F3FF {
-    component "Payment Transactions" as PaymentTransactions
-    interface "Payment Provider Port" as PaymentProviderPort
-    component "Refund Compensation" as RefundCompensation
+  package "Payment BC" as PaymentBC #F5F3FF {
+    component "Payment Processing" as PaymentProcessing
+    component "Payment Lifecycle" as PaymentLifecycle
+    component "Refund Handling" as PaymentRefunds
   }
 
-  package "Promotion BC\n[Implemented]" #FAF5FF {
+  package "Promotion BC" as PromotionBC #FAF5FF {
     component "Promotion Rules" as PromotionRules
-    component "Coupon Codes" as CouponCodes
-    component "Reservation / Confirm / Rollback" as PromotionReservation
+    component "Coupons" as PromotionCoupons
+    component "Reservation" as PromotionReservation
   }
 
-  package "Notification BC\n[Implemented]" #F0FDFA {
-    component "Durable Inbox" as DurableInbox
-    component "Realtime Gateway Contract" as RealtimeGateway
-    component "Presence Store" as PresenceStore
-    component "Notification Channel Ports" as NotificationChannelPorts
-    component "Notification ACL Snapshots" as NotificationACL
+  package "Notification BC" as NotificationBC #F0FDFA {
+    component "Notifications" as NotificationNotifications
+    component "Inbox" as NotificationInbox
+    component "User Preferences" as NotificationPrefs
+    component "ACL Snapshots" as NotificationACL
   }
 
-  package "Review & Rating BC\n[Planned]" #E0F2FE {
-    component "Review Eligibility" as ReviewEligibility
-    component "Rating / Comment Records" as ReviewRecords
-    component "Moderation / Aggregation" as ReviewAggregation
+  package "Review & Rating BC" as ReviewBC #E0F2FE {
+    component "Eligibility" as ReviewEligibility
+    component "Reviews" as ReviewReviews
+    component "Ratings" as ReviewRatings
+    component "Aggregation" as ReviewAggregation
   }
 
-  package "Admin / Governance BC\n[Partial / Planned]" #FDF2F8 {
-    component "Partner Approval" as PartnerApproval
-    component "Platform Oversight" as PlatformOversight
-    component "Role Governance" as RoleGovernance
-    component "Operational Diagnostics" as OperationalDiagnostics
+  package "Admin / Governance BC" as GovernanceBC #FDF2F8 {
+    component "Partner Approval" as GovernanceApproval
+    component "Platform Oversight" as GovernanceOversight
+    component "Role Governance" as GovernanceRole
+    component "Audit" as GovernanceAudit
   }
 
-  queue "Domain Event Stream\n(in-process EventBus today)" as DomainEvents #E0E7FF
-  interface "PAYMENT_INITIATION_PORT" as PaymentPort #DDD6FE
-  interface "PROMOTION_APPLICATION_PORT" as PromotionPort #E9D5FF
+  queue "Domain Events Hub" as DomainEvents #E0E7FF
+
+  ' ── 2-column grid alignment (hidden links) ──────────────────────
+  AuthBC         -[hidden]right-> CatalogBC
+  ImageBC        -[hidden]right-> OrderingBC
+  PaymentBC      -[hidden]right-> PromotionBC
+  NotificationBC -[hidden]right-> ReviewBC
+
+  AuthBC         -[hidden]down-> ImageBC
+  CatalogBC      -[hidden]down-> OrderingBC
+  ImageBC        -[hidden]down-> PaymentBC
+  OrderingBC     -[hidden]down-> PromotionBC
+  PaymentBC      -[hidden]down-> NotificationBC
+  PromotionBC    -[hidden]down-> ReviewBC
+  NotificationBC -[hidden]down-> GovernanceBC
+  GovernanceBC   -[hidden]down-> DomainEvents
+  OrderingHistory -[hidden]down-> PaymentPort
+  PaymentPort    -[hidden]down-> PromotionPort
+
+  ' ── Key intra-BC flow ───────────────────────────────────────────
+  OrderingCart     --> OrderingCheckout
+  OrderingCheckout --> OrderingLifecycle
+  OrderingLifecycle --> OrderingDelivery
+  OrderingLifecycle --> OrderingHistory
+
+  ' ── Port usage (Ordering defines) · implementation (Payment / Promotion)
+  OrderingCheckout --> PaymentPort
+  OrderingCheckout --> PromotionPort
+  PaymentBC        ..|> PaymentPort
+  PromotionBC      ..|> PromotionPort
+
+  ' ── Cross-BC contracts (dotted) ─────────────────────────────────
+  CatalogMenu       ..> ImageMeta         : image reference
+  ReviewEligibility ..> OrderingLifecycle  : delivered-order verification
+  ReviewAggregation ..> CatalogRestaurant  : rating summary
+  GovernanceBC      ..> AuthBC            : role vocabulary
+  CatalogBC         ..> GovernanceBC      : partner approval contract
+
+  ' ── Domain Events Hub (publishers → hub → consumers) ────────────
+  CatalogBC   --> DomainEvents : Catalog Events
+  OrderingBC  --> DomainEvents : Ordering Events
+  PaymentBC   --> DomainEvents : Payment Events
+  PromotionBC --> DomainEvents : Promotion Events
+  DomainEvents --> NotificationBC
+  DomainEvents --> ReviewBC
+  DomainEvents --> GovernanceBC
 }
 
-Customer --> AuthIdentity
-Customer --> Search
-Customer --> MenuCatalog
-Customer --> Cart
-Customer --> Checkout
-Customer --> OrderHistory
-Customer --> DurableInbox
-Customer --> ReviewRecords
+' ── Actor → BC connections (BC level only) ───────────────────────
+' ── Authentication (all authenticated actors) ────────────────────
+Customer        --> AuthBC
+RestaurantOwner --> AuthBC
+Shipper         --> AuthBC
+Admin           --> AuthBC
 
-RestaurantOwner --> AuthIdentity
-RestaurantOwner --> RestaurantMgmt
-RestaurantOwner --> MenuCatalog
-RestaurantOwner --> DeliveryZones
-RestaurantOwner --> ImageMetadata
-RestaurantOwner --> OrderLifecycle
-RestaurantOwner --> PromotionRules
+' ── Customer capabilities ────────────────────────────────────────
+Customer        --> CatalogBC
+Customer        --> OrderingBC
+Customer        --> NotificationBC
+Customer        --> ReviewBC
 
-Shipper --> AuthIdentity
-Shipper --> OrderLifecycle
-Shipper --> DeliveryFulfillment
-Shipper --> DurableInbox
+' ── Restaurant Owner capabilities ───────────────────────────────
+RestaurantOwner --> CatalogBC
+RestaurantOwner --> ImageBC
+RestaurantOwner --> OrderingBC
+RestaurantOwner --> PromotionBC
+RestaurantOwner --> NotificationBC
 
-Admin --> AuthIdentity
-Admin --> PartnerApproval
-Admin --> PlatformOversight
-Admin --> RoleGovernance
-Admin --> OperationalDiagnostics
-Admin --> OrderLifecycle
-Admin --> PromotionRules
+' ── Shipper capabilities ─────────────────────────────────────────
+Shipper --> OrderingBC
+Shipper --> NotificationBC
 
-AuthSessions --> AuthPolicy
-Cart --> CartStore
-Checkout --> CartStore
-Checkout --> IdempotencyStore
-Checkout --> OrderingACL
-DeliveryFulfillment --> OrderLifecycle : assignment/status contract
-OrderLifecycle --> OrderHistory
-RealtimeGateway --> PresenceStore
-DurableInbox --> RealtimeGateway
-DurableInbox --> NotificationChannelPorts
-MenuCatalog --> ImageMetadata : image reference contract
-ImageMetadata --> ImageAssetPort
-
-RestaurantMgmt --> DomainEvents : RestaurantUpdatedEvent
-MenuCatalog --> DomainEvents : MenuItemUpdatedEvent
-DeliveryZones --> DomainEvents : DeliveryZoneSnapshotUpdatedEvent
-Checkout --> DomainEvents : OrderPlacedEvent
-OrderLifecycle --> DomainEvents : OrderStatusChangedEvent / OrderReadyForPickupEvent
-PaymentTransactions --> DomainEvents : PaymentConfirmed / PaymentFailed
-PromotionReservation --> DomainEvents : promotion usage events
-
-DomainEvents --> OrderingACL
-DomainEvents --> NotificationACL
-DomainEvents --> DurableInbox
-DomainEvents --> RefundCompensation
-DomainEvents --> ReviewEligibility
-DomainEvents --> OperationalDiagnostics
-
-Checkout --> PaymentPort
-PaymentPort --> PaymentTransactions
-PaymentTransactions --> PaymentProviderPort
-Checkout --> PromotionPort
-PromotionPort --> PromotionReservation
-PromotionReservation --> PromotionRules
-PromotionReservation --> CouponCodes
-
-PartnerApproval ..> RestaurantMgmt : approval state contract
-RoleGovernance ..> AuthPolicy : role vocabulary contract
-PlatformOversight ..> OrderHistory : cross-tenant read contract
-OperationalDiagnostics ..> DomainEvents : lifecycle/health signals
-ReviewEligibility ..> OrderHistory : delivered-order UUID/status contract
-ReviewAggregation ..> RestaurantMgmt : rating summary contract
+' ── Admin capabilities ───────────────────────────────────────────
+Admin --> GovernanceBC
+Admin --> OrderingBC
+Admin --> PromotionBC
 @enduml
 ```
 
-This view is intentionally domain-only. It shows bounded contexts, ports, ACLs, logical state responsibilities, and domain-event dependencies without placing concrete storage or provider infrastructure inside the logical model.
+This view is intentionally domain-only. It shows bounded contexts, business capabilities, ports, and domain-event dependencies without implementation, persistence, or external integration detail.
 
 Subsystems:
 
-ーImplemented bounded contexts are Auth, Restaurant Catalog, Image, Ordering, Payment, Promotion, and Notification. They are deployed together today but are drawn as extractable ownership units because table ownership, ports, ACL snapshots, and event contracts already point in that direction.
+ーAuth BC owns identity, sessions, role-based access control, and user profile data. All actors authenticate through Auth BC; role vocabulary is shared with Governance.
 
-ーRestaurant Catalog owns restaurant profiles, menu categories/items/modifiers, public search, approval/open-state visibility, and delivery-zone definitions. Search remains inside Catalog rather than becoming a separate infrastructure service.
+ーRestaurant Catalog BC owns restaurant identity, menu catalog, public search, delivery-zone definitions, and item availability. Search remains inside Catalog rather than becoming a separate subsystem.
 
-ーImage BC is independent from Restaurant Catalog. Catalog stores image references, while Image owns metadata and an image asset port; the concrete provider appears only in the Implementation and Deployment views.
+ーImage BC is independent from Restaurant Catalog. Catalog references image metadata, while Image BC owns image-related business responsibilities; storage and CDN integration detail appears only in later views.
 
-ーOrdering owns cart behavior, checkout, idempotency, delivery-radius validation, immutable order-item snapshots, lifecycle transitions, shipper assignment/delivery fulfillment, order history, and Ordering ACL snapshots. Cart Store and Idempotency Store are logical responsibilities; their current storage technology is documented later.
+ーOrdering BC owns cart, checkout, order lifecycle, delivery progress, order history, and ACL snapshots for catalog and delivery-zone data. It defines `PAYMENT_INITIATION_PORT` and `PROMOTION_APPLICATION_PORT` as outbound ports; Payment BC and Promotion BC implement these ports respectively, keeping Ordering decoupled from payment and promotion specifics.
 
-ーDelivery/dispatch is intentionally modeled inside Ordering for the current MVP because assignment, pickup, delivering, delivered, cancellation, and refund transitions are enforced through the order lifecycle. A separate Delivery/Dispatch BC remains a future extraction candidate when shipper availability, route planning, earnings, or fleet operations need independent ownership.
+ーPayment BC owns payment processing, payment lifecycle, and refund handling. It implements the `PAYMENT_INITIATION_PORT` port defined by Ordering. Provider and gateway integration detail appears only in the Implementation View.
 
-ーNotification owns durable inbox behavior, realtime gateway contracts, user presence, channel dispatch policy, delivery preferences, and notification-specific ACL snapshots. It is not merged with Ordering or Review because delivery of messages is a distinct lifecycle and failure domain.
+ーPromotion BC owns promotion rules, coupons, and a reservation lifecycle for atomic coupon application. It implements the `PROMOTION_APPLICATION_PORT` port defined by Ordering.
 
-ーReview & Rating remains Planned because no dedicated backend module or tables exist yet, but it must remain an independent target BC due to BRD/SRS requirements for delivered-order eligibility, moderation, and rating aggregation.
+ーNotification BC owns notifications, inbox behavior, user preferences, and ACL snapshots for restaurant data. It is not merged with Ordering or Review because user communication is its own business concern.
 
-ーAdmin/Governance is Partial/Planned: administrative order cancellation and restaurant approval are partially implemented through existing modules, while shipper approval, role-governance audit, reporting/export, and stuck-order diagnostics remain target architecture.
+ーReview & Rating BC owns eligibility (verified via an Order Lifecycle contract rather than direct history access, avoiding UI-level coupling), reviews, ratings, and aggregation that feeds rating summaries back to Restaurant Catalog.
 
-ーThe domain event stream is in-process today. It is still modeled as a logical event dependency so future extraction can replace the transport without changing the BC ownership story.
+ーAdmin/Governance BC owns partner approval, platform oversight of orders and promotions, role governance, and audit. Catalog reads approval status from Governance through a partner approval contract. Role vocabulary is sourced from Auth.
 
-ーOrdering uses `PAYMENT_INITIATION_PORT` and `PROMOTION_APPLICATION_PORT` to avoid concrete cross-BC imports into the checkout path.
+ーThe Domain Events Hub shown here represents business event flow between bounded contexts. Catalog, Ordering, Payment, and Promotion publish domain events to the Hub; Notification, Review, and Governance subscribe. Transport and subscription routing detail appears in the Implementation View.
 
 
 #### 3.2. Implementation View
