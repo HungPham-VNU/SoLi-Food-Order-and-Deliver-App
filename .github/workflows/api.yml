@@ -119,3 +119,14 @@ jobs:
       gh_actor: ${{ github.actor }}
       gh_repository: ${{ github.repository }}
     secrets: inherit
+
+  deploy-render:
+    name: Deploy API to Render
+    needs: publish
+    if: github.ref == 'refs/heads/master'
+    uses: ./.github/workflows/deploy-render.yml
+    with:
+      app: api
+      gh_repository: ${{ github.repository }}
+    secrets:
+      deploy_hook: ${{ secrets.RENDER_API_DEPLOY_HOOK }}

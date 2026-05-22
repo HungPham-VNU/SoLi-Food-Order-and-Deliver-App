@@ -60,4 +60,16 @@ jobs:
       app: web
       gh_actor: ${{ github.actor }}
       gh_repository: ${{ github.repository }}
+      vite_api_base_url: ${{ vars.VITE_API_BASE_URL }}
     secrets: inherit
+
+  deploy-render:
+    name: Deploy Web to Render
+    needs: publish
+    if: github.ref == 'refs/heads/master'
+    uses: ./.github/workflows/deploy-render.yml
+    with:
+      app: web
+      gh_repository: ${{ github.repository }}
+    secrets:
+      deploy_hook: ${{ secrets.RENDER_WEB_DEPLOY_HOOK }}

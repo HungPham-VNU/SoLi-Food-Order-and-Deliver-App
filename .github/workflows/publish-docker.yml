@@ -12,6 +12,10 @@ on:
       gh_repository:
         required: true
         type: string
+      vite_api_base_url:
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -45,6 +49,7 @@ jobs:
             type=sha,format=short
 
       - name: Build & Push
+        if: inputs.app != 'web'
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
@@ -52,5 +57,19 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ inputs.app }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.app }}
+
+      - name: Build & Push Web
+        if: inputs.app == 'web'
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: apps/${{ inputs.app }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_API_BASE_URL=${{ inputs.vite_api_base_url }}
           cache-from: type=gha,scope=${{ inputs.app }}
           cache-to: type=gha,mode=max,scope=${{ inputs.app }}

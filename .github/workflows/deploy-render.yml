@@ -1,0 +1,50 @@
+name: Deploy Render
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        required: true
+        type: string
+      gh_repository:
+        required: true
+        type: string
+    secrets:
+      deploy_hook:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.app }} image to Render
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy hook
+        shell: bash
+        env:
+          APP: ${{ inputs.app }}
+          DEPLOY_HOOK: ${{ secrets.deploy_hook }}
+          GH_REPOSITORY: ${{ inputs.gh_repository }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DEPLOY_HOOK}" ]; then
+            echo "Render deploy hook secret is empty." >&2
+            exit 1
+          fi
+
+          repo="${GH_REPOSITORY,,}"
+          short_sha="${GIT_SHA:0:7}"
+          image="ghcr.io/${repo}-${APP}:sha-${short_sha}"
+          encoded_image="$(node -e "process.stdout.write(encodeURIComponent(process.argv[1]))" "$image")"
+
+          separator="?"
+          if [[ "${DEPLOY_HOOK}" == *\?* ]]; then
+            separator="&"
+          fi
+
+          curl --fail --show-error --silent "${DEPLOY_HOOK}${separator}imgURL=${encoded_image}"
+          echo "Requested Render deploy for ${image}"
