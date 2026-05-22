@@ -4,10 +4,12 @@ import type { Order } from "@/features/orders/types/order.types";
 import { Badge } from "@/components/ui/badge";
 import type { VariantProps } from "class-variance-authority";
 import { badgeVariants } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Draggable } from "@hello-pangea/dnd";
 import { canDragFromColumn } from "@/features/orders/utils/dragTransitions";
 import { getColumnForStatus } from "@/features/orders/utils/statusMapping";
+import { useOrderCardDetail } from "@/features/orders/hooks/useOrderCardDetail";
+import { OrderCardItems } from "@/features/orders/components/OrderCardItems";
+import { formatElapsedTime, formatVND } from "@/features/orders/utils/timeFormat";
 
 // ── Tag badge variant mapping ────────────────────────────────────────────────
 type BadgeVariant = VariantProps<typeof badgeVariants>["variant"];
@@ -63,6 +65,8 @@ export function OrderCard({ order, index = 0, isOverlay }: OrderCardProps) {
   const column = getColumnForStatus(order.status);
   const isDragDisabled = !canDragFromColumn(column);
 
+  const { data: detail, isLoading } = useOrderCardDetail(order.id);
+
   return (
     <Draggable draggableId={order.id} index={index} isDragDisabled={isDragDisabled}>
       {(provided, snapshot) => {
@@ -82,7 +86,6 @@ export function OrderCard({ order, index = 0, isOverlay }: OrderCardProps) {
               }
             }}
             className={cn(
-              // Base card: white surface with subtle bottom separator (no 1px border per design system)
               "bg-surface-container-lowest p-4 rounded-lg",
               "shadow-[0_1px_4px_rgba(0,0,0,0.06)]",
               "transition-all duration-200",
@@ -101,21 +104,9 @@ export function OrderCard({ order, index = 0, isOverlay }: OrderCardProps) {
                 : {}),
             }}
           >
-            {/* ── Title row ──────────────────────────────────────────────────── */}
-            <div className="flex justify-between items-start mb-2 gap-2">
-              <h4 className="text-sm font-medium text-on-surface font-headline leading-snug">
-                {order.title}
-              </h4>
-            </div>
-
-            {/* ── Status badge ────────────────────────────────────────────────── */}
-            <div className="flex flex-wrap gap-1 mb-4">
-              <Badge variant={badgeVariant}>{order.tag.label}</Badge>
-            </div>
-
-            {/* ── Footer: status icon + order number + timestamp / avatar ──────── */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            {/* ── Header: order number + status badge ─────────────────────── */}
+            <div className="flex justify-between items-center mb-3 gap-2">
+              <div className="flex items-center gap-1.5">
                 <span
                   className={cn(
                     "material-symbols-outlined text-sm",
@@ -125,30 +116,50 @@ export function OrderCard({ order, index = 0, isOverlay }: OrderCardProps) {
                 >
                   {statusConfig.icon}
                 </span>
-                <span className="text-xs font-bold text-outline uppercase font-body">
+                <span className="text-xs font-bold text-on-surface uppercase font-body">
                   {order.orderNumber}
                 </span>
               </div>
+              <Badge variant={badgeVariant}>{order.tag.label}</Badge>
+            </div>
 
-              {/* Right slot: action label | chef avatar | timestamp */}
-              {order.statusAction ? (
-                <span className="text-[10px] font-bold text-primary uppercase tracking-wide font-body">
-                  {order.statusAction}
-                </span>
-              ) : order.assignedTo ? (
-                <Avatar size="sm">
-                  <AvatarImage src={order.assignedTo} alt="Assigned chef" />
-                  <AvatarFallback>
-                    <span className="material-symbols-outlined text-xs">
-                      person
-                    </span>
-                  </AvatarFallback>
-                </Avatar>
+            {/* ── Items list ─────────────────────────────────────────────────── */}
+            <div className="mb-3 pb-3 border-b border-outline-variant/30">
+              {isLoading ? (
+                <div className="space-y-1.5 animate-pulse">
+                  <div className="h-3 bg-muted rounded w-3/4" />
+                  <div className="h-2 bg-muted rounded w-1/2 ml-2" />
+                </div>
+              ) : detail?.items && detail.items.length > 0 ? (
+                <OrderCardItems items={detail.items} maxVisible={3} />
               ) : (
-                <span className="text-[10px] font-bold text-outline italic font-body">
-                  {order.timestamp}
-                </span>
+                <p className="text-xs text-muted-foreground italic">
+                  {order.title}
+                </p>
               )}
+            </div>
+
+            {/* ── Customer note (if exists) ───────────────────────────────────── */}
+            {detail?.note && (
+              <div className="mb-3 px-2 py-1.5 bg-amber-50 border border-amber-200 rounded text-[10px] text-amber-900">
+                <span className="font-bold">📝 Note:</span> {detail.note}
+              </div>
+            )}
+
+            {/* ── Footer: total + elapsed time ─────────────────────────────── */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-on-surface">
+                {detail ? formatVND(detail.totalAmount) : ''}
+              </span>
+              <span className="text-[10px] font-medium text-muted-foreground italic flex items-center gap-1">
+                <span
+                  className="material-symbols-outlined text-[10px]"
+                  aria-hidden="true"
+                >
+                  schedule
+                </span>
+                {formatElapsedTime(detail?.createdAt || new Date())}
+              </span>
             </div>
           </div>
         );

@@ -17,6 +17,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { useLogout } from '@/features/auth/hooks/useLogout';
 
 const mainNavItems = [
   {
@@ -36,22 +37,15 @@ const mainNavItems = [
   },
 ];
 
-const footerNavItems = [
-  {
-    title: 'Help',
-    url: '/help',
-    icon: CircleHelp,
-  },
-  {
-    title: 'Logout',
-    url: '/logout',
-    icon: LogOut,
-    className: 'text-error',
-  },
-];
+const helpItem = {
+  title: 'Help',
+  url: '/help',
+  icon: CircleHelp,
+};
 
 export function AppSidebar() {
   const location = useLocation();
+  const { logout, isLoggingOut } = useLogout();
 
   return (
     <Sidebar className="bg-card">
@@ -103,23 +97,30 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 gap-4">
         <SidebarMenu className="gap-1">
-          {footerNavItems.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-                asChild
-                className="text-on-surface-variant hover:bg-surface-container"
-              >
-                <Link to={item.url} className="flex items-center gap-3">
-                  <item.icon
-                    className={item.className || 'text-on-surface-variant'}
-                  />
-                  <span className={item.className || 'font-medium'}>
-                    {item.title}
-                  </span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              className="text-on-surface-variant hover:bg-surface-container"
+            >
+              <Link to={helpItem.url} className="flex items-center gap-3">
+                <helpItem.icon className="text-on-surface-variant" />
+                <span className="font-medium">{helpItem.title}</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={logout}
+              disabled={isLoggingOut}
+              className="text-error hover:bg-error/10 hover:text-error focus-visible:text-error active:text-error disabled:opacity-50"
+            >
+              <LogOut className="text-error" />
+              <span className="font-medium text-error">
+                {isLoggingOut ? 'Logging out…' : 'Logout'}
+              </span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
