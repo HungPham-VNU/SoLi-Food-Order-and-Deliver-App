@@ -1,4 +1,4 @@
-name: Publish Mobile
+name: CD Package Mobile
 
 on:
   workflow_call:

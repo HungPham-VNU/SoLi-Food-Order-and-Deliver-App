@@ -5,3 +5,8 @@ dist
 .gemini
 .vscode
 .agents
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example

@@ -1,22 +1,19 @@
-name: API CI/CD
+name: CI Validate
 
 on:
-  push:
-    branches: [master]
-    paths:
-      - 'apps/api/**'
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_call:
+    secrets:
+      TURBO_TOKEN:
+        required: true
+      TURBO_TEAM:
+        required: true
 
 permissions:
   contents: read
 
 jobs:
   validate:
-    name: Validate API
+    name: Validate (Check, Scan, Test, Build)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -44,34 +41,38 @@ jobs:
     steps:
       - name: Code (Checkout)
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Environment
         uses: ./.github/actions/setup-environment
 
       - name: Turbo Cache
+        id: turbo-cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: .turbo
-          key: ${{ runner.os }}-turbo-api-${{ github.sha }}
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-turbo-api-
             ${{ runner.os }}-turbo-
 
-      - name: Check (Lint)
-        run: pnpm --filter=api run lint
-
-      - name: Check (Typecheck)
-        run: pnpm --filter=api run typecheck
+      - name: Check (Lint & Typecheck)
+        run: pnpm turbo run lint typecheck --affected --cache-dir=".turbo"
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
       - name: Security Scan (Audit)
         run: pnpm audit --audit-level high
 
       - name: Unit Test
-        run: pnpm --filter=api run test
+        run: pnpm turbo run test --affected --cache-dir=".turbo"
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
           REDIS_URL: redis://localhost:6379
           NODE_ENV: test
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
           VNPAY_TMN_CODE: ${{ secrets.VNPAY_TMN_CODE }}
@@ -83,7 +84,10 @@ jobs:
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
 
       - name: Build
-        run: pnpm --filter=api run build
+        run: pnpm turbo run build --affected --cache-dir=".turbo"
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
       - name: Setup Database (Migrate)
         run: pnpm --filter=api run db:push
@@ -92,11 +96,13 @@ jobs:
           NODE_ENV: test
 
       - name: Test (E2E)
-        run: pnpm --filter=api run test:e2e -- --detectOpenHandles
+        run: pnpm turbo run test:e2e --filter=api --cache-dir=".turbo" -- --detectOpenHandles --forceExit
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
           REDIS_URL: redis://localhost:6379
           NODE_ENV: test
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
           VNPAY_TMN_CODE: ${{ secrets.VNPAY_TMN_CODE }}
@@ -106,27 +112,3 @@ jobs:
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
-
-  publish:
-    name: Publish API Docker Image
-    needs: validate
-    permissions:
-      contents: read
-      packages: write
-    uses: ./.github/workflows/publish-docker.yml
-    with:
-      app: api
-      gh_actor: ${{ github.actor }}
-      gh_repository: ${{ github.repository }}
-    secrets: inherit
-
-  deploy-render:
-    name: Deploy API to Render
-    needs: publish
-    if: github.ref == 'refs/heads/master'
-    uses: ./.github/workflows/deploy-render.yml
-    with:
-      app: api
-      gh_repository: ${{ github.repository }}
-    secrets:
-      deploy_hook: ${{ secrets.RENDER_API_DEPLOY_HOOK }}

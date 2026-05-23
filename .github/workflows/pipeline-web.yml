@@ -1,4 +1,4 @@
-name: Web CI/CD
+name: Web CI/CD Pipeline
 
 on:
   push:
@@ -55,7 +55,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: ./.github/workflows/publish-docker.yml
+    uses: ./.github/workflows/cd-package-docker.yml
     with:
       app: web
       gh_actor: ${{ github.actor }}
@@ -67,7 +67,7 @@ jobs:
     name: Deploy Web to Render
     needs: publish
     if: github.ref == 'refs/heads/master'
-    uses: ./.github/workflows/deploy-render.yml
+    uses: ./.github/workflows/cd-deploy-render.yml
     with:
       app: web
       gh_repository: ${{ github.repository }}

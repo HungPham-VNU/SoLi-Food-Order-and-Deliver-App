@@ -1,4 +1,4 @@
-name: Publish Docker
+name: CD Package Docker
 
 on:
   workflow_call:

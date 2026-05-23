@@ -1,4 +1,4 @@
-name: Mobile CI/CD
+name: Mobile CI/CD Pipeline
 
 on:
   push:
@@ -52,6 +52,6 @@ jobs:
   publish:
     name: Publish Mobile Build
     needs: validate
-    uses: ./.github/workflows/publish-mobile.yml
+    uses: ./.github/workflows/cd-package-mobile.yml
     secrets:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

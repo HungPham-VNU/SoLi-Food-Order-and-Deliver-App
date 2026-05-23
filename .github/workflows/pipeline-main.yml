@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Main CI/CD Pipeline
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   validate:
-    uses: ./.github/workflows/validate.yml
+    uses: ./.github/workflows/ci-validate.yml
     secrets: inherit
 
   publish-api-docker:
@@ -21,7 +21,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: ./.github/workflows/publish-docker.yml
+    uses: ./.github/workflows/cd-package-docker.yml
     with:
       app: api
       gh_actor: ${{ github.actor }}
@@ -34,7 +34,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: ./.github/workflows/publish-docker.yml
+    uses: ./.github/workflows/cd-package-docker.yml
     with:
       app: web
       gh_actor: ${{ github.actor }}
@@ -42,11 +42,25 @@ jobs:
       vite_api_base_url: ${{ vars.VITE_API_BASE_URL }}
     secrets: inherit
 
+  apply-render-infra:
+    name: Apply Render Infra
+    needs:
+      - publish-api-docker
+      - publish-web-docker
+    if: github.ref == 'refs/heads/master'
+    uses: ./.github/workflows/cd-render-iac.yml
+    with:
+      apply: true
+      use_github_sha_tag: true
+    secrets: inherit
+
   deploy-api-render:
     name: Deploy API to Render
-    needs: publish-api-docker
+    needs:
+      - publish-api-docker
+      - apply-render-infra
     if: github.ref == 'refs/heads/master'
-    uses: ./.github/workflows/deploy-render.yml
+    uses: ./.github/workflows/cd-deploy-render.yml
     with:
       app: api
       gh_repository: ${{ github.repository }}
@@ -55,9 +69,11 @@ jobs:
 
   deploy-web-render:
     name: Deploy Web to Render
-    needs: publish-web-docker
+    needs:
+      - publish-web-docker
+      - apply-render-infra
     if: github.ref == 'refs/heads/master'
-    uses: ./.github/workflows/deploy-render.yml
+    uses: ./.github/workflows/cd-deploy-render.yml
     with:
       app: web
       gh_repository: ${{ github.repository }}
@@ -66,6 +82,6 @@ jobs:
 
   publish-mobile:
     needs: validate
-    uses: ./.github/workflows/publish-mobile.yml
+    uses: ./.github/workflows/cd-package-mobile.yml
     secrets:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

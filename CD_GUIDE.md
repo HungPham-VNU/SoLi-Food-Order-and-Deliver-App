@@ -2,7 +2,7 @@
 
 This document outlines the improvements made to the CI/CD pipeline and the steps required to finalize the CD setup.
 
-## 1. Improved CI Pipeline (`.github/workflows/ci.yml`)
+## 1. Improved CI/CD Pipeline (`.github/workflows/pipeline-main.yml`)
 
 The following enhancements have been implemented:
 
