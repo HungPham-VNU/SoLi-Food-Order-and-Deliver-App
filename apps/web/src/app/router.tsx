@@ -9,6 +9,7 @@ import CreateMenuItemPage from '@/app/pages/menu/CreateMenuItemPage';
 import EditMenuItemPage from '@/app/pages/menu/EditMenuItemPage';
 import { OrdersPage } from '@/app/pages/orders/OrdersPage';
 import { OrderDetailPage } from '@/app/pages/orders/OrderDetailPage';
+import { DeliveryZonesPage } from '@/app/pages/delivery-zones/DeliveryZonesPage';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 
@@ -73,6 +74,11 @@ export const router = createBrowserRouter([
                 handle: { breadcrumb: 'Edit Item' },
               },
             ],
+          },
+          {
+            path: 'delivery-zones',
+            element: <DeliveryZonesPage />,
+            handle: { breadcrumb: 'Delivery Zones' },
           },
         ],
       },
