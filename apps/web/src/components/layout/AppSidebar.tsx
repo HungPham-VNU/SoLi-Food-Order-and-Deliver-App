@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Utensils,
   Map,
+  Settings,
   CircleHelp,
   LogOut,
 } from 'lucide-react';
@@ -40,6 +41,11 @@ const mainNavItems = [
     title: 'Delivery Zones',
     url: '/delivery-zones',
     icon: Map,
+  },
+  {
+    title: 'Settings',
+    url: '/settings',
+    icon: Settings,
   },
 ];
 

@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Bell, Settings, LogOut, User } from 'lucide-react';
 import { useSession } from '@/lib/auth-client';
 import { useLogout } from '@/features/auth/hooks/useLogout';
@@ -13,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export function TopNavActions() {
+  const navigate = useNavigate();
   const { data: session } = useSession();
   const { logout, isLoggingOut } = useLogout();
   const user = session?.user;
@@ -41,6 +43,7 @@ export function TopNavActions() {
       <button
         type="button"
         aria-label="Settings"
+        onClick={() => navigate('/settings')}
         className="inline-flex h-9 w-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
       >
         <Settings className="h-5 w-5" />
@@ -86,11 +89,11 @@ export function TopNavActions() {
           <DropdownMenuSeparator />
 
           <DropdownMenuGroup>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/settings')}>
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/settings')}>
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
             </DropdownMenuItem>
