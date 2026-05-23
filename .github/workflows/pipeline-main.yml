@@ -54,32 +54,6 @@ jobs:
       use_github_sha_tag: true
     secrets: inherit
 
-  deploy-api-render:
-    name: Deploy API to Render
-    needs:
-      - publish-api-docker
-      - apply-render-infra
-    if: github.ref == 'refs/heads/master'
-    uses: ./.github/workflows/cd-deploy-render.yml
-    with:
-      app: api
-      gh_repository: ${{ github.repository }}
-    secrets:
-      deploy_hook: ${{ secrets.RENDER_API_DEPLOY_HOOK }}
-
-  deploy-web-render:
-    name: Deploy Web to Render
-    needs:
-      - publish-web-docker
-      - apply-render-infra
-    if: github.ref == 'refs/heads/master'
-    uses: ./.github/workflows/cd-deploy-render.yml
-    with:
-      app: web
-      gh_repository: ${{ github.repository }}
-    secrets:
-      deploy_hook: ${{ secrets.RENDER_WEB_DEPLOY_HOOK }}
-
   publish-mobile:
     needs: validate
     uses: ./.github/workflows/cd-package-mobile.yml

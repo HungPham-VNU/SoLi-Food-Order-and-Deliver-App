@@ -37,29 +37,48 @@ settings (**Settings > Secrets and variables > Actions > Variables**):
 
 - `TF_CLOUD_ORGANIZATION`: Your HCP Terraform organization name.
 - `TF_WORKSPACE`: HCP Terraform workspace for Render infrastructure state.
-- `RENDER_API_IMAGE_TAG`: Optional API Docker image tag for infra-only applies.
-  Defaults to `master`.
-- `RENDER_WEB_IMAGE_TAG`: Optional Web Docker image tag for infra-only applies.
-  Defaults to `master`.
+- `RENDER_API_IMAGE_TAG`: Optional API Docker image tag override for
+  infra-only applies.
+- `RENDER_WEB_IMAGE_TAG`: Optional Web Docker image tag override for
+  infra-only applies.
 
-### C. Render Infrastructure Automation
+### C. HCP Terraform Variables
+
+Set these in the HCP Terraform workspace:
+
+- `project_environment_id`: Render project environment ID.
+- `api_image_tag`: Current API image tag. This is used when an infra-only run
+  has no newer API image to apply.
+- `web_image_tag`: Current Web image tag. This is used when an infra-only run
+  has no newer Web image to apply.
+
+Set these as HCP Terraform environment variables:
+
+- `RENDER_API_KEY`
+- `RENDER_OWNER_ID`
+
+### D. Render Infrastructure And Release Automation
 
 Render infrastructure is managed by Terraform in `infra/render`.
 
 - Pushes to `master` that change `infra/render/**` automatically run
   `.github/workflows/pipeline-render-iac.yml` and apply the Terraform plan.
-- The full manual pipeline still calls the reusable
+- API and Web releases publish Docker images to GHCR with `sha-<short-sha>`
+  tags, then run Terraform to update the Render service image tag.
+- The full pipeline calls the reusable
   `.github/workflows/cd-render-iac.yml` after publishing fresh Docker images,
   using the current commit's `sha-<short-sha>` image tag.
 - HCP Terraform is configured with `cloud {}` in `infra/render/versions.tf` so
   GitHub Actions uses persistent remote state instead of ephemeral runner-local
   state.
+- Render deploy hooks are not used for API/Web releases; Terraform is the
+  source of truth for Render service image tags.
 
 Before the first automated apply, create or choose the HCP Terraform workspace,
 set the variables above, and migrate/import any existing Render resources into
 that workspace state.
 
-### D. Deployment to Railway/Render/VPS
+### E. Deployment to Railway/Render/VPS
 
 Since you chose a Docker-based deployment, you can connect your GHCR images to your hosting provider:
 
@@ -79,7 +98,7 @@ Since you chose a Docker-based deployment, you can connect your GHCR images to y
 
 Add a job to `ci.yml` that SSHs into your server and runs `docker compose pull && docker compose up -d`.
 
-### C. Database Migrations
+### F. Database Migrations
 
 To automate migrations on deployment, add this command to your deployment script or as a post-deployment hook:
 

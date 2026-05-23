@@ -11,6 +11,14 @@ on:
         required: false
         type: boolean
         default: false
+      api_use_github_sha_tag:
+        required: false
+        type: boolean
+        default: false
+      web_use_github_sha_tag:
+        required: false
+        type: boolean
+        default: false
       api_image_tag:
         required: false
         type: string
@@ -62,13 +70,21 @@ jobs:
           terraform_version: ${{ inputs.terraform_version }}
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+      - name: Init
+        run: terraform init -input=false
+
       - name: Resolve image tags
         env:
           API_IMAGE_TAG_INPUT: ${{ inputs.api_image_tag }}
           API_IMAGE_TAG_VAR: ${{ vars.RENDER_API_IMAGE_TAG }}
+          API_USE_GITHUB_SHA_TAG: ${{ inputs.api_use_github_sha_tag }}
           USE_GITHUB_SHA_TAG: ${{ inputs.use_github_sha_tag }}
           WEB_IMAGE_TAG_INPUT: ${{ inputs.web_image_tag }}
           WEB_IMAGE_TAG_VAR: ${{ vars.RENDER_WEB_IMAGE_TAG }}
+          WEB_USE_GITHUB_SHA_TAG: ${{ inputs.web_use_github_sha_tag }}
         run: |
           set -euo pipefail
 
@@ -82,23 +98,39 @@ jobs:
             exit 1
           fi
 
-          if [ "${USE_GITHUB_SHA_TAG}" = "true" ]; then
-            short_sha="${GITHUB_SHA:0:7}"
+          short_sha="${GITHUB_SHA:0:7}"
+
+          read_current_tag() {
+            local service_name="$1"
+
+            terraform state pull | python3 -c 'import json, sys; service = sys.argv[1]; state = json.load(sys.stdin); print(next(((((instance.get("attributes", {}).get("runtime_source") or {}).get("image") or {}).get("tag")) for resource in state.get("resources", []) if resource.get("type") == "render_web_service" and resource.get("name") == service for instance in (resource.get("instances") or []) if (((instance.get("attributes", {}).get("runtime_source") or {}).get("image") or {}).get("tag"))), ""))' "${service_name}"
+          }
+
+          if [ "${USE_GITHUB_SHA_TAG}" = "true" ] || [ "${API_USE_GITHUB_SHA_TAG}" = "true" ]; then
             api_image_tag="sha-${short_sha}"
-            web_image_tag="sha-${short_sha}"
           else
-            api_image_tag="${API_IMAGE_TAG_INPUT:-${API_IMAGE_TAG_VAR:-master}}"
-            web_image_tag="${WEB_IMAGE_TAG_INPUT:-${WEB_IMAGE_TAG_VAR:-master}}"
+            api_image_tag="${API_IMAGE_TAG_INPUT:-${API_IMAGE_TAG_VAR:-}}"
+            if [ -z "${api_image_tag}" ]; then
+              api_image_tag="$(read_current_tag api)"
+            fi
           fi
 
-          echo "TF_VAR_api_image_tag=${api_image_tag}" >> "${GITHUB_ENV}"
-          echo "TF_VAR_web_image_tag=${web_image_tag}" >> "${GITHUB_ENV}"
+          if [ "${USE_GITHUB_SHA_TAG}" = "true" ] || [ "${WEB_USE_GITHUB_SHA_TAG}" = "true" ]; then
+            web_image_tag="sha-${short_sha}"
+          else
+            web_image_tag="${WEB_IMAGE_TAG_INPUT:-${WEB_IMAGE_TAG_VAR:-}}"
+            if [ -z "${web_image_tag}" ]; then
+              web_image_tag="$(read_current_tag web)"
+            fi
+          fi
 
-      - name: Check formatting
-        run: terraform fmt -check -recursive
+          if [ -n "${api_image_tag}" ]; then
+            echo "TF_VAR_api_image_tag=${api_image_tag}" >> "${GITHUB_ENV}"
+          fi
 
-      - name: Init
-        run: terraform init -input=false
+          if [ -n "${web_image_tag}" ]; then
+            echo "TF_VAR_web_image_tag=${web_image_tag}" >> "${GITHUB_ENV}"
+          fi
 
       - name: Validate
         run: terraform validate -no-color

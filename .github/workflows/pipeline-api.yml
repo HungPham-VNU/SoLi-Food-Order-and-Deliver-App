@@ -120,13 +120,12 @@ jobs:
       gh_repository: ${{ github.repository }}
     secrets: inherit
 
-  deploy-render:
-    name: Deploy API to Render
+  apply-render-infra:
+    name: Apply API Image to Render
     needs: publish
     if: github.ref == 'refs/heads/master'
-    uses: ./.github/workflows/cd-deploy-render.yml
+    uses: ./.github/workflows/cd-render-iac.yml
     with:
-      app: api
-      gh_repository: ${{ github.repository }}
-    secrets:
-      deploy_hook: ${{ secrets.RENDER_API_DEPLOY_HOOK }}
+      apply: true
+      api_use_github_sha_tag: true
+    secrets: inherit

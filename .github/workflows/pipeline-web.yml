@@ -63,13 +63,12 @@ jobs:
       vite_api_base_url: ${{ vars.VITE_API_BASE_URL }}
     secrets: inherit
 
-  deploy-render:
-    name: Deploy Web to Render
+  apply-render-infra:
+    name: Apply Web Image to Render
     needs: publish
     if: github.ref == 'refs/heads/master'
-    uses: ./.github/workflows/cd-deploy-render.yml
+    uses: ./.github/workflows/cd-render-iac.yml
     with:
-      app: web
-      gh_repository: ${{ github.repository }}
-    secrets:
-      deploy_hook: ${{ secrets.RENDER_WEB_DEPLOY_HOOK }}
+      apply: true
+      web_use_github_sha_tag: true
+    secrets: inherit

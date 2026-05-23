@@ -18,6 +18,13 @@ $env:TF_CLOUD_ORGANIZATION = "your-hcp-terraform-org"
 $env:TF_WORKSPACE = "uitfood-render-production"
 ```
 
+The selected HCP Terraform workspace must have these tags, which are used by
+the `cloud` block to map this configuration to remote state:
+
+- `uitfood`
+- `render`
+- `production`
+
 Set Render credentials before running Terraform locally:
 
 ```powershell
@@ -101,9 +108,13 @@ terraform apply -var-file=production.tfvars
 ```
 
 GitHub Actions automatically applies Render infrastructure changes on pushes to
-`master` that touch `infra/render/**`. App image deploys can still use Render
-deploy hooks; the main pipeline also runs Terraform after publishing new images
-so the services can point at the current `sha-<short-sha>` image tag.
+`master` that touch `infra/render/**`. App image deploys also run through
+Terraform: the pipeline publishes Docker images to GHCR with `sha-<short-sha>`
+tags, then updates the Render service image tag through Terraform.
+
+Do not use Render deploy hooks for API/Web releases while Terraform manages
+`runtime_source.image.tag`; using both would create two release mechanisms for
+the same Render field.
 
 ## After Terraform Owns Render
 

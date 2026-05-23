@@ -22,4 +22,3 @@ this directory is organized by filename prefix instead of nested folders.
 - `cd-package-docker.yml`: reusable Docker build and GHCR push workflow.
 - `cd-package-mobile.yml`: reusable mobile build package workflow.
 - `cd-render-iac.yml`: reusable Render Terraform init, plan, and apply workflow.
-- `cd-deploy-render.yml`: reusable Render deploy hook workflow.

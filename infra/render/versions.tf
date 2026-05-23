@@ -1,5 +1,9 @@
 terraform {
-  cloud {}
+  cloud {
+    workspaces {
+      tags = ["uitfood", "render", "production"]
+    }
+  }
 
   required_version = ">= 1.6.0"
 
