@@ -1,0 +1,58 @@
+name: Render IaC Pipeline
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'infra/render/**'
+      - '.github/workflows/cd-render-iac.yml'
+      - '.github/workflows/pipeline-render-iac.yml'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Apply the Terraform plan to Render
+        required: false
+        type: boolean
+        default: true
+      api_image_tag:
+        description: API image tag to keep on the Render service
+        required: false
+        type: string
+        default: ''
+      web_image_tag:
+        description: Web image tag to keep on the Render service
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  apply-render-infra-on-push:
+    name: Apply Render Infra
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/cd-render-iac.yml
+    with:
+      apply: true
+    secrets:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_OWNER_ID: ${{ secrets.RENDER_OWNER_ID }}
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+
+  apply-render-infra-manual:
+    name: Apply Render Infra
+    if: github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/cd-render-iac.yml
+    with:
+      apply: ${{ inputs.apply }}
+      api_image_tag: ${{ inputs.api_image_tag || '' }}
+      web_image_tag: ${{ inputs.web_image_tag || '' }}
+    secrets:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_OWNER_ID: ${{ secrets.RENDER_OWNER_ID }}
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}

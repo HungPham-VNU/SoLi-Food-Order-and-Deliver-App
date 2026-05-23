@@ -9,6 +9,8 @@ this directory is organized by filename prefix instead of nested folders.
 - `pipeline-api.yml`: API-specific CI/CD pipeline.
 - `pipeline-web.yml`: Web-specific CI/CD pipeline.
 - `pipeline-mobile.yml`: Mobile-specific CI/CD pipeline.
+- `pipeline-render-iac.yml`: Render Terraform pipeline that applies
+  `infra/render/**` changes on `master`.
 
 ## CI
 

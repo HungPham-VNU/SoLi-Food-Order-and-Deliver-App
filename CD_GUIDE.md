@@ -22,9 +22,44 @@ Ensure the following secrets are added to your GitHub repository settings (**Set
 
 - `EXPO_TOKEN`: Your Expo access token for EAS builds.
 - `TURBO_TOKEN` & `TURBO_TEAM`: (Optional) If you use Turbo Remote Caching.
-- `RAILWAY_TOKEN`: Your Railway API token for deployment.
+- `RENDER_API_KEY`: Render API key used by the Terraform provider. If the HCP
+  Terraform workspace uses remote execution, also set this as a sensitive
+  environment variable in that HCP workspace.
+- `RENDER_OWNER_ID`: Render owner ID used by the Terraform provider. If the HCP
+  Terraform workspace uses remote execution, also set this as an environment
+  variable in that HCP workspace.
+- `TF_API_TOKEN`: HCP Terraform API token used for remote Terraform state and runs.
 
-### B. Deployment to Railway/Render/VPS
+### B. GitHub Variables
+
+Ensure the following repository variables are added to your GitHub repository
+settings (**Settings > Secrets and variables > Actions > Variables**):
+
+- `TF_CLOUD_ORGANIZATION`: Your HCP Terraform organization name.
+- `TF_WORKSPACE`: HCP Terraform workspace for Render infrastructure state.
+- `RENDER_API_IMAGE_TAG`: Optional API Docker image tag for infra-only applies.
+  Defaults to `master`.
+- `RENDER_WEB_IMAGE_TAG`: Optional Web Docker image tag for infra-only applies.
+  Defaults to `master`.
+
+### C. Render Infrastructure Automation
+
+Render infrastructure is managed by Terraform in `infra/render`.
+
+- Pushes to `master` that change `infra/render/**` automatically run
+  `.github/workflows/pipeline-render-iac.yml` and apply the Terraform plan.
+- The full manual pipeline still calls the reusable
+  `.github/workflows/cd-render-iac.yml` after publishing fresh Docker images,
+  using the current commit's `sha-<short-sha>` image tag.
+- HCP Terraform is configured with `cloud {}` in `infra/render/versions.tf` so
+  GitHub Actions uses persistent remote state instead of ephemeral runner-local
+  state.
+
+Before the first automated apply, create or choose the HCP Terraform workspace,
+set the variables above, and migrate/import any existing Render resources into
+that workspace state.
+
+### D. Deployment to Railway/Render/VPS
 
 Since you chose a Docker-based deployment, you can connect your GHCR images to your hosting provider:
 

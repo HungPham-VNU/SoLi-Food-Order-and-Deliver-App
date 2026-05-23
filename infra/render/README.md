@@ -10,14 +10,28 @@ Terraform should own infrastructure shape: service names, plans, region, image r
 
 ## Required Credentials
 
-Set these before running Terraform:
+This configuration uses HCP Terraform via `cloud {}` so CI/CD has persistent
+remote state. Set the HCP workspace connection before running Terraform locally:
+
+```powershell
+$env:TF_CLOUD_ORGANIZATION = "your-hcp-terraform-org"
+$env:TF_WORKSPACE = "uitfood-render-production"
+```
+
+Set Render credentials before running Terraform locally:
 
 ```powershell
 $env:RENDER_API_KEY = "rnd_xxx"
 $env:RENDER_OWNER_ID = "usr_xxx-or-tea_xxx"
 ```
 
-For GitHub Actions, store the same values as repository or environment secrets.
+For GitHub Actions, store `RENDER_API_KEY`, `RENDER_OWNER_ID`, and
+`TF_API_TOKEN` as repository or environment secrets. Store
+`TF_CLOUD_ORGANIZATION` and `TF_WORKSPACE` as repository variables.
+
+If the HCP Terraform workspace uses remote execution, also set
+`RENDER_API_KEY` and `RENDER_OWNER_ID` as environment variables in the HCP
+Terraform workspace because the provider runs inside HCP Terraform.
 
 ## Runtime Secrets Policy
 
@@ -46,6 +60,10 @@ Copy-Item .\production.tfvars.example .\production.tfvars
 ```
 
 Edit `production.tfvars` and set the current image tags.
+
+For GitHub Actions, put any values from `production.tfvars` that are needed in
+CI into the HCP Terraform workspace variables instead. The workflow supplies
+`api_image_tag` and `web_image_tag` through `TF_VAR_*` environment variables.
 
 If you want Terraform-created resources to land inside the existing `UITFood` / `Production` Render Project environment, set `project_environment_id`. You can find it in the Render dashboard URL when viewing the project environment. Existing imported resources already carry their environment in state, but setting the variable makes the desired target explicit.
 
@@ -82,7 +100,10 @@ terraform plan -var-file=production.tfvars
 terraform apply -var-file=production.tfvars
 ```
 
-Your CI/CD workflow can keep using Render deploy hooks for image deploys. Terraform does not need to run on every app release unless you want image tags to be infrastructure-managed.
+GitHub Actions automatically applies Render infrastructure changes on pushes to
+`master` that touch `infra/render/**`. App image deploys can still use Render
+deploy hooks; the main pipeline also runs Terraform after publishing new images
+so the services can point at the current `sha-<short-sha>` image tag.
 
 ## After Terraform Owns Render
 

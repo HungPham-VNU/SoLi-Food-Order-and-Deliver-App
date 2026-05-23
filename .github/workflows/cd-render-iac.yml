@@ -1,0 +1,112 @@
+name: CD Render IaC
+
+on:
+  workflow_call:
+    inputs:
+      apply:
+        required: false
+        type: boolean
+        default: false
+      use_github_sha_tag:
+        required: false
+        type: boolean
+        default: false
+      api_image_tag:
+        required: false
+        type: string
+        default: ''
+      web_image_tag:
+        required: false
+        type: string
+        default: ''
+      working_directory:
+        required: false
+        type: string
+        default: infra/render
+      terraform_version:
+        required: false
+        type: string
+        default: 1.14.5
+    secrets:
+      RENDER_API_KEY:
+        required: true
+      RENDER_OWNER_ID:
+        required: true
+      TF_API_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    name: Terraform Render IaC
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working_directory }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_OWNER_ID: ${{ secrets.RENDER_OWNER_ID }}
+      TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
+      TF_WORKSPACE: ${{ vars.TF_WORKSPACE }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Resolve image tags
+        env:
+          API_IMAGE_TAG_INPUT: ${{ inputs.api_image_tag }}
+          API_IMAGE_TAG_VAR: ${{ vars.RENDER_API_IMAGE_TAG }}
+          USE_GITHUB_SHA_TAG: ${{ inputs.use_github_sha_tag }}
+          WEB_IMAGE_TAG_INPUT: ${{ inputs.web_image_tag }}
+          WEB_IMAGE_TAG_VAR: ${{ vars.RENDER_WEB_IMAGE_TAG }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${TF_CLOUD_ORGANIZATION}" ]; then
+            echo "Repository variable TF_CLOUD_ORGANIZATION is required." >&2
+            exit 1
+          fi
+
+          if [ -z "${TF_WORKSPACE}" ]; then
+            echo "Repository variable TF_WORKSPACE is required." >&2
+            exit 1
+          fi
+
+          if [ "${USE_GITHUB_SHA_TAG}" = "true" ]; then
+            short_sha="${GITHUB_SHA:0:7}"
+            api_image_tag="sha-${short_sha}"
+            web_image_tag="sha-${short_sha}"
+          else
+            api_image_tag="${API_IMAGE_TAG_INPUT:-${API_IMAGE_TAG_VAR:-master}}"
+            web_image_tag="${WEB_IMAGE_TAG_INPUT:-${WEB_IMAGE_TAG_VAR:-master}}"
+          fi
+
+          echo "TF_VAR_api_image_tag=${api_image_tag}" >> "${GITHUB_ENV}"
+          echo "TF_VAR_web_image_tag=${web_image_tag}" >> "${GITHUB_ENV}"
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+      - name: Init
+        run: terraform init -input=false
+
+      - name: Validate
+        run: terraform validate -no-color
+
+      - name: Plan
+        if: ${{ !inputs.apply }}
+        run: terraform plan -input=false -no-color
+
+      - name: Apply
+        if: inputs.apply
+        run: terraform apply -input=false -auto-approve
