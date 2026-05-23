@@ -92,7 +92,7 @@ jobs:
           NODE_ENV: test
 
       - name: Test (E2E)
-        run: pnpm --filter=api run test:e2e -- --detectOpenHandles
+        run: pnpm --filter=api run test:e2e --detectOpenHandles
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
           REDIS_URL: redis://localhost:6379
