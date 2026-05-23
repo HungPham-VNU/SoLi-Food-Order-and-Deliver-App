@@ -1,0 +1,24 @@
+environment = "production"
+region      = "singapore"
+
+# Existing UITFood / Production Render Project environment.
+project_environment_id = "evm-d87thff7f7vs73dr07eg"
+
+service_plan  = "free"
+postgres_plan = "free"
+
+api_image_tag = "sha-05beb43"
+web_image_tag = "sha-05beb43"
+
+# Optional custom domains:
+# api_custom_domains = [
+#   { name = "api.example.com" }
+# ]
+#
+# web_custom_domains = [
+#   { name = "example.com" },
+#   { name = "www.example.com" }
+# ]
+
+# Optional if you move API runtime secrets into a Render Environment Group:
+# api_env_group_id = "evg-xxxxxxxxxxxxxxxxxxxx"
