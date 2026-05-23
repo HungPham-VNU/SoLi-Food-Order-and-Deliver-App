@@ -900,381 +900,231 @@ skinparam defaultTextAlignment center
 skinparam ArrowColor #334155
 skinparam linetype ortho
 top to bottom direction
+skinparam ranksep 135
+skinparam nodesep 20
+skinparam dpi 180
+rectangle "apps/api\nModular Monolith Implementation" as Api #E0F2FE {
+  together {
+    package "Auth BC" as AuthBC #DBEAFE {
+      component "Auth\nController" as AuthController
+      component "Auth\nService" as AuthService
+      component "Auth\nRepository" as AuthRepository
+      database "Auth\nSchema" as AuthSchema
 
-actor Customer #DFF7E8
-actor "Restaurant Owner" as RestaurantOwner #FFF4D6
-actor Shipper #E7F0FF
-actor Admin #FCE7F3
-actor Developer #F3F4F6
+      AuthController -[hidden]down-> AuthService
+      AuthService -[hidden]down-> AuthRepository
+      AuthRepository -[hidden]down-> AuthSchema
+    }
 
-package "apps/api\nNestJS modular monolith" as Api #E0F2FE {
-  package "Runtime / composition" as Runtime #BAE6FD {
-    component "main.ts\nbootstrap, CORS,\nValidationPipe, /docs" as MainTs
-    component "app.module.ts\nmodule composition" as AppModule
+    package "Restaurant Catalog BC" as CatalogBC #BBF7D0 {
+      component "Restaurant\nController" as RestaurantController
+      component "Menu\nController" as MenuController
+      component "Search\nController" as SearchController
+      component "Catalog\nService" as CatalogService
+      component "Catalog\nRepository" as CatalogRepository
+      database "Catalog\nSchema" as CatalogSchema
+
+      RestaurantController -[hidden]down-> MenuController
+      MenuController -[hidden]down-> SearchController
+      SearchController -[hidden]down-> CatalogService
+      CatalogService -[hidden]down-> CatalogRepository
+      CatalogRepository -[hidden]down-> CatalogSchema
+    }
+
+    package "Image BC" as ImageBC #CCFBF1 {
+      component "Image\nController" as ImageController
+      component "Image\nService" as ImageService
+      component "Image\nRepository" as ImageRepository
+      database "Image\nSchema" as ImageSchema
+      component "Cloudinary\nAdapter" as CloudinaryAdapter
+
+      ImageController -[hidden]down-> ImageService
+      ImageService -[hidden]down-> ImageRepository
+      ImageRepository -[hidden]down-> ImageSchema
+      ImageService -[hidden]right-> CloudinaryAdapter
+    }
+
+    AuthBC -[hidden]right-> CatalogBC
+    CatalogBC -[hidden]right-> ImageBC
   }
 
-  package "Infrastructure modules" as Infra #DBEAFE {
-    component "env.schema.ts\nstartup validation" as EnvSchema
-    component "vnpay.config.ts" as VnpayConfig
-    component "auth.ts\nBetter Auth" as AuthLib
-    component "redis.module.ts\nioredis client" as RedisLib
-    component "geo.service.ts\nhaversine checks" as GeoLib
-    component "drizzle.module.ts\nDB_CONNECTION" as DrizzleModule
-    component "schema.ts\nschema barrel" as SchemaBarrel
-    component "migrations / seeds" as Migrations
-    component "dev-test-user.middleware.ts\ndev/test only" as DevMiddleware
+  together {
+    package "Ordering BC" as OrderingBC #FEF3C7 {
+      component "Cart\nController" as CartController
+      component "Order\nController" as OrderController
+      component "Lifecycle\nController" as LifecycleController
+      component "Ordering\nService" as OrderingService
+      component "Ordering\nRepository" as OrderingRepository
+      database "Ordering\nSchema" as OrderingSchema
+
+      CartController -[hidden]down-> OrderController
+      OrderController -[hidden]down-> LifecycleController
+      LifecycleController -[hidden]down-> OrderingService
+      OrderingService -[hidden]down-> OrderingRepository
+      OrderingRepository -[hidden]down-> OrderingSchema
+    }
+
+    package "Payment BC" as PaymentBC #DDD6FE {
+      component "Payment\nController" as PaymentController
+      component "Payment\nService" as PaymentService
+      component "Payment\nRepository" as PaymentRepository
+      database "Payment\nSchema" as PaymentSchema
+      component "VNPay\nAdapter" as VNPayAdapter
+
+      PaymentController -[hidden]down-> PaymentService
+      PaymentService -[hidden]down-> PaymentRepository
+      PaymentRepository -[hidden]down-> PaymentSchema
+      PaymentService -[hidden]right-> VNPayAdapter
+    }
+
+    package "Promotion BC" as PromotionBC #E9D5FF {
+      component "Promotion\nController" as PromotionController
+      component "Promotion\nService" as PromotionService
+      component "Promotion\nRepository" as PromotionRepository
+      database "Promotion\nSchema" as PromotionSchema
+
+      PromotionController -[hidden]down-> PromotionService
+      PromotionService -[hidden]down-> PromotionRepository
+      PromotionRepository -[hidden]down-> PromotionSchema
+    }
+
+    OrderingBC -[hidden]right-> PaymentBC
+    PaymentBC -[hidden]right-> PromotionBC
   }
 
-  package "Auth BC" as AuthBC #DBEAFE {
-    component "Auth schema\nuser/session/account/verification" as AuthSchema
-    component "role.util.ts\nhasRole()" as RoleUtil
+  together {
+    package "Notification BC" as NotificationBC #99F6E4 {
+      component "Notification\nController" as NotificationController
+      component "Notification\nService" as NotificationService
+      component "Notification\nRepository" as NotificationRepository
+      database "Notification\nSchema" as NotificationSchema
+      component "FCM\nAdapter" as FCMAdapter
+      component "SMTP\nAdapter" as SMTPAdapter
+
+      NotificationController -[hidden]down-> NotificationService
+      NotificationService -[hidden]down-> NotificationRepository
+      NotificationRepository -[hidden]down-> NotificationSchema
+      NotificationService -[hidden]right-> FCMAdapter
+      FCMAdapter -[hidden]down-> SMTPAdapter
+    }
+
+    package "Shared Kernel" as SharedKernel #F1F5F9 {
+      component "validators" as SharedValidators #FDE68A
+      component "ports" as SharedPorts #E9D5FF
+      queue "events\nDomain Events Hub" as DomainEventsHub #E0E7FF
+
+      SharedValidators -[hidden]down-> SharedPorts
+      SharedPorts -[hidden]down-> DomainEventsHub
+    }
+
+    frame "Infrastructure" as Infrastructure #F8FAFC {
+      database "PostgreSQL" as Postgres #DCFCE7
+      database "Redis" as Redis #FDE68A
+      cloud "Cloudinary" as ExtCloudinary #CCFBF1
+      cloud "VNPay" as ExtVNPay #DDD6FE
+      cloud "FCM" as ExtFCM #DCFCE7
+      cloud "SMTP" as ExtSMTP #F5F5F4
+
+      Postgres -[hidden]down-> Redis
+      Redis -[hidden]down-> ExtCloudinary
+      ExtCloudinary -[hidden]down-> ExtVNPay
+      ExtVNPay -[hidden]down-> ExtFCM
+      ExtFCM -[hidden]down-> ExtSMTP
+    }
+
+    NotificationBC -[hidden]right-> SharedKernel
+    SharedKernel -[hidden]right-> Infrastructure
   }
 
-  package "Restaurant Catalog BC" as CatalogBC #BBF7D0 {
-    component "Restaurant Controller" as RestaurantController
-    component "Restaurant Service" as RestaurantService
-    component "Restaurant Repository" as RestaurantRepo
-    component "Menu / Modifier Controllers" as MenuControllers
-    component "Menu / Modifier Services" as MenuServices
-    component "Menu / Modifier Repositories" as MenuRepos
-    component "Search Controller" as SearchController
-    component "Search Service" as SearchService
-    component "Search Repository" as SearchRepo
-    component "Delivery Zone Controller" as ZoneController
-    component "Delivery Zone Service" as ZoneService
-    component "Delivery Zone Repository" as ZoneRepo
-    component "Catalog schemas" as CatalogSchemas
-  }
-
-  package "Image BC" as ImageBC #CCFBF1 {
-    component "Image / Cloudinary Controllers" as ImageControllers
-    component "Image Service" as ImageService
-    component "Image Repository" as ImageRepo
-    component "Image schema" as ImageSchema
-    component "Cloudinary Service" as CloudinaryService
-    component "Cloudinary Provider" as CloudinaryProvider
-  }
-
-  package "Ordering BC" as OrderingBC #FEF3C7 {
-    component "Cart Controller" as CartController
-    component "Cart Service" as CartService
-    component "Cart Redis Repository" as CartRedisRepo
-    component "PlaceOrderHandler" as PlaceOrderHandler
-    component "Order Lifecycle Controller" as LifecycleController
-    component "Order Lifecycle Service" as LifecycleService
-    component "TransitionOrderHandler\nshipper assignment + delivery transitions" as TransitionHandler
-    component "Order Repository" as OrderRepo
-    component "Order History Controller/Service" as OrderHistoryImpl
-    component "ACL Projectors" as OrderingProjectors
-    component "ACL Snapshot Repositories" as OrderingAclRepos
-    component "AppSettingsService" as AppSettingsService
-    component "OrderTimeoutTask" as OrderTimeoutTask
-    component "Ordering schemas" as OrderingSchemas
-  }
-
-  package "Payment BC" as PaymentBC #DDD6FE {
-    component "Payment Controller" as PaymentController
-    component "ProcessIpnHandler" as ProcessIpnHandler
-    component "Payment Service" as PaymentService
-    component "VNPay Service" as VNPayService
-    component "Payment Transaction Repository" as PaymentRepo
-    component "payment_transactions schema" as PaymentSchema
-    component "PaymentTimeoutTask" as PaymentTimeoutTask
-    component "Refund Event Handler" as RefundHandler
-  }
-
-  package "Promotion BC" as PromotionBC #E9D5FF {
-    component "Admin / Restaurant / Public Controllers" as PromotionControllers
-    component "Promotion Services" as PromotionServices
-    component "Promotion Pricing Engine" as PromotionEngine
-    component "Promotion / Coupon / Usage Repositories" as PromotionRepos
-    component "Promotion schemas" as PromotionSchemas
-  }
-
-  package "Notification BC" as NotificationBC #99F6E4 {
-    component "Notification Controller" as NotificationController
-    component "Notification Service" as NotificationService
-    component "Notification Gateway" as NotificationGateway
-    component "Channel Dispatcher" as ChannelDispatcher
-    component "In-App / Email / Push Channels" as NotificationChannels
-    component "User Presence Service" as UserPresenceService
-    component "Notification Repositories" as NotificationRepos
-    component "Notification schemas" as NotificationSchemas
-    component "Notification ACL Projector" as NotificationAclProjector
-    component "DeviceTokenCleanupTask" as DeviceTokenCleanupTask
-  }
-
-  package "Review BC\n[Planned]" as ReviewBC #E0F2FE {
-    component "Review Controller\n[Planned]" as ReviewController
-    component "Review Service\n[Planned]" as ReviewService
-    component "Review Repository\n[Planned]" as ReviewRepo
-    component "Review schemas\n[Planned]" as ReviewSchema
-  }
-
-  package "Governance BC\n[Partial / Planned]" as GovernanceBC #FDF2F8 {
-    component "Partner approval surfaces\n[Partial]" as PartnerApprovalSurface
-    component "Admin order surfaces\n[Partial]" as AdminOrderSurface
-    component "Role governance\n[Planned]" as RoleGovernanceSurface
-    component "Operational diagnostics\n[Planned]" as DiagnosticsSurface
-    component "Governance audit schemas\n[Planned]" as GovernanceSchema
-  }
-
-  package "src/shared + tests" as SharedKernel #F1F5F9 {
-    component "events" as SharedEvents #E0E7FF
-    component "ports" as SharedPorts #E9D5FF
-    component "validators" as SharedValidators #FDE68A
-    component "unit specs" as UnitSpecs
-    component "payment.e2e-spec.ts" as PaymentE2E
-    component "helpers / setup" as TestSetup
-    component "Rate limiting module\n[Planned]" as RateLimiting #FECACA
-  }
-
-  Runtime -[hidden]down-> Infra
-  AuthBC -[hidden]right-> CatalogBC
-  ImageBC -[hidden]right-> OrderingBC
-  PaymentBC -[hidden]right-> PromotionBC
-  NotificationBC -[hidden]right-> ReviewBC
-  GovernanceBC -[hidden]right-> SharedKernel
+  AuthBC -[hidden]down-> OrderingBC
+  CatalogBC -[hidden]down-> PaymentBC
+  ImageBC -[hidden]down-> PromotionBC
+  OrderingBC -[hidden]down-> NotificationBC
+  PaymentBC -[hidden]down-> SharedKernel
+  PromotionBC -[hidden]down-> Infrastructure
 }
 
-database "PostgreSQL\nDB_CONNECTION" as Postgres #DCFCE7 {
-  component "Auth tables" as PgAuth
-  component "Catalog tables" as PgCatalog
-  component "Image table" as PgImage
-  component "Ordering tables" as PgOrdering
-  component "Payment tables" as PgPayment
-  component "Promotion tables" as PgPromotion
-  component "Notification tables" as PgNotification
-  component "Review tables\n[Planned]" as PgReview
-  component "Governance audit tables\n[Planned]" as PgGovernance
-}
+AuthController --> AuthService
+AuthController ..> SharedValidators
+AuthService --> AuthRepository
+AuthRepository --> AuthSchema
+AuthSchema -down-> Postgres
 
-database "Redis / Valkey\nshared volatile state" as Redis #FDE68A {
-  component "cart:{customerId}" as RedisCart
-  component "cart:{customerId}:lock" as RedisLock
-  component "idempotency:order:{key}" as RedisIdempotency
-  component "ws:connections:{userId}" as RedisPresence
-  component "rate-limit buckets\n[Planned]" as RedisRateLimit
-}
+RestaurantController --> CatalogService
+MenuController --> CatalogService
+SearchController --> CatalogService
+RestaurantController ..> SharedValidators
+CatalogService --> CatalogRepository
+CatalogRepository --> CatalogSchema
+CatalogSchema -down-> Postgres
+CatalogService -right-> ImageService
+CatalogService -down-> DomainEventsHub
 
-cloud "External providers" as External #F5F3FF {
-  component "VNPay" as ExtVNPay
-  component "Cloudinary" as ExtCloudinary
-  component "Firebase Cloud Messaging" as ExtFCM
-  component "SMTP provider" as ExtSMTP
-}
+ImageController --> ImageService
+ImageService --> ImageRepository
+ImageRepository --> ImageSchema
+ImageSchema -down-> Postgres
+ImageService --> CloudinaryAdapter
+CloudinaryAdapter -down-> ExtCloudinary
 
-package "Delivery and workflow artifacts" as DeliveryArtifacts #F3F4F6 {
-  component "GitHub repository" as GitHubRepo
-  component ".github/actions/setup-environment" as SetupEnvAction
-  component ".github/workflows/ci.yml" as CiWorkflow
-  component "validate.yml\nlint, typecheck, audit,\nunit, build, db push, e2e" as ValidateWorkflow
-  component "publish-docker.yml\nDocker Buildx matrix" as PublishDockerWorkflow
-  component "publish-mobile.yml\nEAS local Android build" as PublishMobileWorkflow
-  component "apps/api/Dockerfile\nNode 22 API image" as ApiDocker
-  component "apps/web/Dockerfile\nnginx static web image" as WebDocker
-  component "GHCR api/web images" as GHCR
-  component "Render deploy hooks\n[Documented target]" as RenderHooks
-  component "EAS APK artifact" as MobileArtifact
-}
+CartController --> OrderingService
+OrderController --> OrderingService
+LifecycleController --> OrderingService
+OrderController ..> SharedValidators
+OrderingService --> OrderingRepository
+OrderingRepository --> OrderingSchema
+OrderingSchema -down-> Postgres
+OrderingService -right-> SharedPorts
+OrderingService -down-> Redis
+OrderingService -down-> DomainEventsHub
 
-Api -[hidden]down-> Postgres
-Postgres -[hidden]right-> Redis
-Redis -[hidden]right-> External
-External -[hidden]down-> DeliveryArtifacts
-
-Customer --> MainTs : HTTPS REST / realtime client
-RestaurantOwner --> MainTs : HTTPS REST / realtime client
-Shipper --> MainTs : HTTPS REST / realtime client
-Admin --> MainTs : HTTPS REST
-
-MainTs --> AppModule
-AppModule --> EnvSchema
-AppModule --> VnpayConfig
-AppModule --> AuthLib
-AppModule --> RedisLib
-AppModule --> GeoLib
-AppModule --> DrizzleModule
-AppModule --> DevMiddleware
-AppModule --> AuthBC : imports
-AppModule --> CatalogBC : imports
-AppModule --> ImageBC : imports
-AppModule --> OrderingBC : imports
-AppModule --> PaymentBC : imports
-AppModule --> PromotionBC : imports
-AppModule --> NotificationBC : imports
-AppModule ..> ReviewBC : target module
-AppModule ..> GovernanceBC : partial / target surfaces
-
-DrizzleModule --> SchemaBarrel
-Migrations --> Postgres
-RedisLib --> Redis
-DevMiddleware ..> AuthLib
-
-SchemaBarrel --> AuthSchema
-SchemaBarrel --> CatalogSchemas
-SchemaBarrel --> ImageSchema
-SchemaBarrel --> OrderingSchemas
-SchemaBarrel --> PaymentSchema
-SchemaBarrel --> PromotionSchemas
-SchemaBarrel --> NotificationSchemas
-SchemaBarrel ..> ReviewSchema
-SchemaBarrel ..> GovernanceSchema
-
-AuthLib --> AuthSchema
-AuthSchema --> PgAuth
-RoleUtil --> AuthLib
-
-RestaurantController --> RestaurantService
-RestaurantService --> RestaurantRepo
-RestaurantRepo --> CatalogSchemas
-MenuControllers --> MenuServices
-MenuServices --> MenuRepos
-MenuRepos --> CatalogSchemas
-SearchController --> SearchService
-SearchService --> SearchRepo
-SearchRepo --> CatalogSchemas
-ZoneController --> ZoneService
-ZoneService --> ZoneRepo
-ZoneRepo --> CatalogSchemas
-CatalogSchemas --> PgCatalog
-RestaurantService --> SharedEvents
-MenuServices --> SharedEvents
-ZoneService --> SharedEvents
-
-ImageControllers --> ImageService
-ImageService --> ImageRepo
-ImageRepo --> ImageSchema
-ImageSchema --> PgImage
-ImageControllers --> CloudinaryService
-CloudinaryService --> CloudinaryProvider
-CloudinaryProvider --> ExtCloudinary
-
-CartController --> CartService
-CartService --> CartRedisRepo
-CartRedisRepo --> RedisCart
-CartRedisRepo --> RedisLock
-PlaceOrderHandler --> CartRedisRepo
-PlaceOrderHandler --> RedisIdempotency
-PlaceOrderHandler --> OrderingAclRepos
-PlaceOrderHandler --> AppSettingsService
-PlaceOrderHandler --> SharedPorts
-PlaceOrderHandler --> OrderRepo
-LifecycleController --> LifecycleService
-LifecycleService --> TransitionHandler
-TransitionHandler --> OrderRepo
-OrderHistoryImpl --> OrderRepo
-OrderRepo --> OrderingSchemas
-OrderingProjectors --> SharedEvents
-OrderingProjectors --> OrderingAclRepos
-OrderingAclRepos --> OrderingSchemas
-OrderingSchemas --> PgOrdering
-OrderTimeoutTask --> TransitionHandler
-
-PaymentController --> ProcessIpnHandler
 PaymentController --> PaymentService
-ProcessIpnHandler --> PaymentService
-ProcessIpnHandler --> SharedEvents
-PaymentService --> PaymentRepo
-PaymentService --> VNPayService
-PaymentService --> SharedPorts
-PaymentRepo --> PaymentSchema
-PaymentSchema --> PgPayment
-VNPayService --> ExtVNPay
-PaymentTimeoutTask --> PaymentRepo
-RefundHandler --> PaymentService
+PaymentService --> PaymentRepository
+PaymentRepository --> PaymentSchema
+PaymentSchema -down-> Postgres
+PaymentService --> VNPayAdapter
+VNPayAdapter -down-> ExtVNPay
+PaymentService -down-> DomainEventsHub
 
-PromotionControllers --> PromotionServices
-PromotionServices --> PromotionEngine
-PromotionServices --> PromotionRepos
-PromotionServices --> SharedPorts
-PromotionRepos --> PromotionSchemas
-PromotionSchemas --> PgPromotion
+PromotionController --> PromotionService
+PromotionController ..> SharedValidators
+PromotionService --> PromotionRepository
+PromotionRepository --> PromotionSchema
+PromotionSchema -down-> Postgres
+PromotionService -down-> DomainEventsHub
 
 NotificationController --> NotificationService
-NotificationService --> NotificationRepos
-NotificationService --> NotificationGateway
-NotificationService --> ChannelDispatcher
-NotificationRepos --> NotificationSchemas
-NotificationSchemas --> PgNotification
-ChannelDispatcher --> NotificationChannels
-NotificationChannels --> NotificationGateway
-NotificationChannels --> ExtFCM
-NotificationChannels --> ExtSMTP
-NotificationGateway --> UserPresenceService
-UserPresenceService --> RedisPresence
-NotificationAclProjector --> SharedEvents
-NotificationAclProjector --> NotificationRepos
-DeviceTokenCleanupTask --> NotificationRepos
+NotificationController ..> SharedValidators
+NotificationService --> NotificationRepository
+NotificationRepository --> NotificationSchema
+NotificationSchema -down-> Postgres
+NotificationService -down-> Redis
+NotificationService --> FCMAdapter
+NotificationService --> SMTPAdapter
+FCMAdapter -down-> ExtFCM
+SMTPAdapter -down-> ExtSMTP
 
-ReviewController ..> ReviewService
-ReviewService ..> ReviewRepo
-ReviewRepo ..> ReviewSchema
-ReviewSchema ..> PgReview
-ReviewService ..> OrderHistoryImpl : delivered-order eligibility
+SharedPorts -up-> PaymentService
+SharedPorts -up-> PromotionService
 
-PartnerApprovalSurface ..> RestaurantController
-AdminOrderSurface ..> LifecycleController
-RoleGovernanceSurface ..> RoleUtil
-DiagnosticsSurface ..> SharedEvents
-GovernanceSchema ..> PgGovernance
-
-RateLimiting ..> RedisRateLimit
-SharedPorts --> PaymentService
-SharedPorts --> PromotionServices
-SharedValidators --> CartController
-SharedValidators --> PromotionControllers
-
-Developer --> GitHubRepo
-GitHubRepo --> CiWorkflow
-CiWorkflow --> ValidateWorkflow
-ValidateWorkflow --> SetupEnvAction
-CiWorkflow --> PublishDockerWorkflow
-CiWorkflow --> PublishMobileWorkflow
-PublishDockerWorkflow --> ApiDocker
-PublishDockerWorkflow --> WebDocker
-ApiDocker --> GHCR
-WebDocker --> GHCR
-GHCR --> RenderHooks
-PublishMobileWorkflow --> MobileArtifact
+DomainEventsHub -left-> NotificationService
+DomainEventsHub -left-> OrderingService : ACL updates
 @enduml
 ```
 
-This view outlines backend implementation structure and delivery artifacts. Web and mobile client internals are intentionally out of scope here; actors represent the clients that call the API.
+This view shows the implementation architecture at module level inside the modular monolith. Each bounded context is reduced to the implementation chain that is actually important at this level: controller, service, repository, schema, shared-kernel contracts, and explicit integration adapters.
 
-Structure:
+Architecture Summary:
 
-ーThe backend implementation is a NestJS modular monolith under `apps/api`; `main.ts` owns bootstrap, CORS, global validation, Swagger/Scalar docs, and static public assets, while `app.module.ts` composes Config, Database, Redis, Geo, Schedule, Restaurant Catalog, Promotion, Ordering, Payment, Notification, Image, and Better Auth modules.
+ーEach implemented bounded context keeps an explicit controller → service → repository → schema path, and each schema connects directly to PostgreSQL so persistence ownership is visible at the correct abstraction level.
 
-ーAuth uses Better Auth plus Drizzle-backed identity/session tables; role checks use the shared `hasRole()` utility and service/handler ownership checks.
+ーCross-context dependencies now originate from internal components only: `CatalogService` depends on `ImageService`, while `OrderingService` reaches Payment and Promotion through shared ports rather than through BC-to-BC links.
 
-ーRestaurant Catalog uses controller/service/repository layering for restaurant profiles, menu/modifier maintenance, public search, and delivery-zone management. Catalog mutations publish shared domain events consumed by Ordering and Notification ACL projectors.
+ーThe Shared Kernel is no longer decorative: the Domain Events Hub receives publications from Catalog, Ordering, Payment, and Promotion services, and dispatches them to Notification plus Ordering ACL consumers; validators are also used directly by selected controllers.
 
-ーImage implements `Controller -> Service -> Repository -> Schema` for image metadata and `Controller -> CloudinaryService -> CloudinaryProvider` for signed provider interaction.
+ーPostgreSQL backs every bounded-context schema; Redis is used only by `OrderingService` and `NotificationService`.
 
-ーOrdering combines service-style cart operations with CQRS command handlers for checkout and lifecycle transitions. It also contains the current delivery/dispatch implementation through shipper assignment and delivery-status transitions on orders. It owns Redis cart/lock/idempotency keys, Ordering tables, audit logs, app settings, and ACL snapshot repositories.
-
-ーPayment implements `PaymentController -> ProcessIpnHandler -> PaymentService -> PaymentTransactionRepository -> payment_transactions`, with `VNPayService` as the gateway adapter and scheduled timeout/refund handlers around the same repository.
-
-ーPromotion implements controller/service/repository layering plus `PromotionPricingEngine`; Ordering consumes it only through `PROMOTION_APPLICATION_PORT`.
-
-ーNotification implements `NotificationController -> NotificationService -> NotificationRepository` for REST inbox state, `NotificationService -> NotificationGateway` for realtime fan-out, and `ChannelDispatcher -> channel providers` for in-app, push, and email dispatch. Presence is tracked through shared Redis state.
-
-ーRate limiting is a planned implementation target. The architectural target is edge or Nest throttling backed by shared Redis-compatible buckets so multiple API instances enforce one quota policy.
-
-ーCI/CD ownership is repository-level: `ci.yml` calls `validate.yml`, `publish-docker.yml`, and `publish-mobile.yml`; Docker Buildx publishes API/web images to GHCR; Render deploy hooks are documented in `CD_GUIDE.md` but not yet wired into `ci.yml`.
-
-Technologies:
-
-ーBackend: NestJS, TypeScript, Better Auth, `@nestjs/cqrs`, `@nestjs/schedule`.
-
-ーORM and schema: Drizzle ORM / Drizzle Kit with module-owned schema files exported through `src/drizzle/schema.ts`.
-
-ーRuntime state: PostgreSQL for durable state; Redis-compatible storage through `ioredis` for volatile cart, checkout-lock, idempotency, and presence state.
-
-ーRealtime and integrations: Socket.IO, VNPay, Cloudinary, Firebase Cloud Messaging provider adapter, Nodemailer SMTP provider adapter.
-
-ーDelivery: pnpm, Turbo, GitHub Actions, Docker Buildx, GHCR, Render image-backed services, and EAS local Android packaging.
+ーExternal integrations terminate at explicit adapters and service-level callers only: Image uses `CloudinaryAdapter`, Payment uses `VNPayAdapter`, and Notification uses `FCMAdapter` plus `SMTPAdapter`.
 
 
 #### 3.3. Deployment View
