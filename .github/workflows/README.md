@@ -6,6 +6,8 @@ this directory is organized by filename prefix instead of nested folders.
 ## Pipelines
 
 - `pipeline-main.yml`: full manually triggered CI/CD pipeline.
+- `pr-master-validate.yml`: validates pull requests targeting `master` and
+  notifies the PR author when validation fails.
 - `pipeline-api.yml`: API-specific CI/CD pipeline.
 - `pipeline-web.yml`: Web-specific CI/CD pipeline.
 - `pipeline-mobile.yml`: Mobile-specific CI/CD pipeline.

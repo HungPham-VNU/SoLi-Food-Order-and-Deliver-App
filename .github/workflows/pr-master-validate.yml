@@ -1,0 +1,43 @@
+name: Pull Request Validate
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  validate:
+    name: Validate PR
+    uses: ./.github/workflows/ci-validate.yml
+    secrets: inherit
+
+  notify-author:
+    name: Notify PR Author
+    needs: validate
+    if: ${{ always() && needs.validate.result == 'failure' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Comment on failed validation
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh pr comment "$PR_URL" --body "Hi @$PR_AUTHOR, PR validation failed before this can be merged into \`master\`.
+
+          Please review the failed workflow run and update the PR:
+          $RUN_URL"
