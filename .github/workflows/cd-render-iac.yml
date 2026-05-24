@@ -81,11 +81,9 @@ jobs:
       - name: Resolve image tags
         env:
           API_IMAGE_TAG_INPUT: ${{ inputs.api_image_tag }}
-          API_IMAGE_TAG_VAR: ${{ vars.RENDER_API_IMAGE_TAG }}
           API_USE_GITHUB_SHA_TAG: ${{ inputs.api_use_github_sha_tag }}
           USE_GITHUB_SHA_TAG: ${{ inputs.use_github_sha_tag }}
           WEB_IMAGE_TAG_INPUT: ${{ inputs.web_image_tag }}
-          WEB_IMAGE_TAG_VAR: ${{ vars.RENDER_WEB_IMAGE_TAG }}
           WEB_USE_GITHUB_SHA_TAG: ${{ inputs.web_use_github_sha_tag }}
         run: |
           set -euo pipefail
@@ -111,7 +109,7 @@ jobs:
           if [ "${USE_GITHUB_SHA_TAG}" = "true" ] || [ "${API_USE_GITHUB_SHA_TAG}" = "true" ]; then
             api_image_tag="sha-${short_sha}"
           else
-            api_image_tag="${API_IMAGE_TAG_INPUT:-${API_IMAGE_TAG_VAR:-}}"
+            api_image_tag="${API_IMAGE_TAG_INPUT:-}"
             if [ -z "${api_image_tag}" ]; then
               api_image_tag="$(read_current_tag api)"
             fi
@@ -120,7 +118,7 @@ jobs:
           if [ "${USE_GITHUB_SHA_TAG}" = "true" ] || [ "${WEB_USE_GITHUB_SHA_TAG}" = "true" ]; then
             web_image_tag="sha-${short_sha}"
           else
-            web_image_tag="${WEB_IMAGE_TAG_INPUT:-${WEB_IMAGE_TAG_VAR:-}}"
+            web_image_tag="${WEB_IMAGE_TAG_INPUT:-}"
             if [ -z "${web_image_tag}" ]; then
               web_image_tag="$(read_current_tag web)"
             fi
