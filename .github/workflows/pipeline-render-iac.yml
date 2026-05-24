@@ -36,6 +36,8 @@ jobs:
   apply-render-infra-on-push:
     name: Apply Render Infra
     if: github.event_name == 'push'
+    permissions:
+      contents: read
     uses: ./.github/workflows/cd-render-iac.yml
     with:
       apply: true
@@ -47,6 +49,8 @@ jobs:
   apply-render-infra-manual:
     name: Apply Render Infra
     if: github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
     uses: ./.github/workflows/cd-render-iac.yml
     with:
       apply: ${{ inputs.apply }}

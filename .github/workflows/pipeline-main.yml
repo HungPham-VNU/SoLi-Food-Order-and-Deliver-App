@@ -48,6 +48,8 @@ jobs:
       - publish-api-docker
       - publish-web-docker
     if: github.ref == 'refs/heads/master'
+    permissions:
+      contents: read
     uses: ./.github/workflows/cd-render-iac.yml
     with:
       apply: true
