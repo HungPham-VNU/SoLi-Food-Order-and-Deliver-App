@@ -2,12 +2,22 @@ variable "environment" {
   description = "Logical environment name used for tagging/naming conventions."
   type        = string
   default     = "production"
+
+  validation {
+    condition     = contains(["production", "staging", "development"], var.environment)
+    error_message = "The environment variable must be one of: production, staging, development."
+  }
 }
 
 variable "region" {
   description = "Render region for all production resources."
   type        = string
   default     = "singapore"
+
+  validation {
+    condition     = contains(["singapore", "oregon", "frankfurt", "ohio"], var.region)
+    error_message = "Render region must be one of: singapore, oregon, frankfurt, ohio."
+  }
 }
 
 variable "project_environment_id" {
@@ -38,12 +48,22 @@ variable "service_plan" {
   description = "Render web service plan."
   type        = string
   default     = "free"
+
+  validation {
+    condition     = contains(["free", "starter", "standard", "pro", "plus"], var.service_plan)
+    error_message = "The service_plan must be a valid Render plan: free, starter, standard, pro, or plus."
+  }
 }
 
 variable "postgres_plan" {
   description = "Render Postgres plan."
   type        = string
   default     = "free"
+
+  validation {
+    condition     = contains(["free", "starter", "standard", "pro", "plus"], var.postgres_plan)
+    error_message = "The postgres_plan must be a valid Render plan: free, starter, standard, pro, or plus."
+  }
 }
 
 variable "postgres_version" {
@@ -70,24 +90,19 @@ variable "postgres_ip_allow_list" {
     cidr_block  = string
     description = string
   }))
-  default = [
-    {
-      cidr_block  = "0.0.0.0/0"
-      description = "everywhere"
-    }
-  ]
+  default = []
 }
 
 variable "api_image_url" {
   description = "Container image repository for the API, without a tag."
   type        = string
-  default     = "ghcr.io/ndtruongdanh/soli-food-order-and-deliver-app-api"
+  default     = "ghcr.io/ndtruongdanh/uitfood-api"
 }
 
 variable "web_image_url" {
   description = "Container image repository for the web frontend, without a tag."
   type        = string
-  default     = "ghcr.io/ndtruongdanh/soli-food-order-and-deliver-app-web"
+  default     = "ghcr.io/ndtruongdanh/uitfood-web"
 }
 
 variable "api_image_tag" {

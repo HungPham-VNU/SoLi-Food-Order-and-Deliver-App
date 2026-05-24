@@ -41,6 +41,11 @@ resource "render_web_service" "api" {
     }
   }
 
+  # NOTE: Ignoring env_vars/secret_files allows you to safely manage runtime
+  # secrets/config in the Render dashboard without Terraform overwriting them.
+  # CAVEAT: Any subsequent updates to env_vars in this file (e.g., DATABASE_URL)
+  # will NOT be applied to existing services by Terraform; they must be updated
+  # manually in the Render console.
   lifecycle {
     ignore_changes = [
       env_vars,
@@ -64,6 +69,10 @@ resource "render_web_service" "web" {
     }
   }
 
+  # NOTE: Ignoring env_vars/secret_files allows you to safely manage runtime
+  # secrets/config in the Render dashboard without Terraform overwriting them.
+  # CAVEAT: Any subsequent updates to env_vars in this file will NOT be applied
+  # to existing services by Terraform; they must be updated manually in the Render console.
   lifecycle {
     ignore_changes = [
       env_vars,

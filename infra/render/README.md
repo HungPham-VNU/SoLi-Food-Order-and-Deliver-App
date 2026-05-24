@@ -11,19 +11,13 @@ Terraform should own infrastructure shape: service names, plans, region, image r
 ## Required Credentials
 
 This configuration uses HCP Terraform via `cloud {}` so CI/CD has persistent
-remote state. Set the HCP workspace connection before running Terraform locally:
+remote state. The organization (`UITFood`) and workspace (`uitfood-render-production`) are pre-configured directly inside `versions.tf`.
+
+To authenticate your local machine to HCP Terraform, run:
 
 ```powershell
-$env:TF_CLOUD_ORGANIZATION = "your-hcp-terraform-org"
-$env:TF_WORKSPACE = "uitfood-render-production"
+terraform login
 ```
-
-The selected HCP Terraform workspace must have these tags, which are used by
-the `cloud` block to map this configuration to remote state:
-
-- `uitfood`
-- `render`
-- `production`
 
 Set Render credentials before running Terraform locally:
 
@@ -33,8 +27,7 @@ $env:RENDER_OWNER_ID = "usr_xxx-or-tea_xxx"
 ```
 
 For GitHub Actions, store `RENDER_API_KEY`, `RENDER_OWNER_ID`, and
-`TF_API_TOKEN` as repository or environment secrets. Store
-`TF_CLOUD_ORGANIZATION` and `TF_WORKSPACE` as repository variables.
+`TF_API_TOKEN` as repository or environment secrets.
 
 If the HCP Terraform workspace uses remote execution, also set
 `RENDER_API_KEY` and `RENDER_OWNER_ID` as environment variables in the HCP

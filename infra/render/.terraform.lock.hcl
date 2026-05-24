@@ -5,6 +5,10 @@ provider "registry.terraform.io/render-oss/render" {
   version     = "1.8.0"
   constraints = "~> 1.8"
   hashes = [
+    "h1:9U57wNaYZ5I+TvZ6KAeks8XsxdenOImvjDpGeRABe4w=",
+    "h1:WHavHrkRpWQJk+qDd21DzrvuJuRbkj7wyjp+OJqt5Zo=",
+    "h1:qHV9ZvuLo85biW8kI+UExI51jEAxzoc0uwLyjjTBKc0=",
+    "h1:v+yPl5pwl3V+TTnnhgYRs57JyrCyq4D84GqBCe/iAyQ=",
     "h1:vV62DEjF5+I/VMO85is1aCZamScF7CDwy7ApxFrRta0=",
     "zh:0598fddeedf1e4217ffcb3b44f45018b1378d6007643af5ceaa37887d89f9851",
     "zh:1a80d175bfc4a12b6d130ea2ca93dfa590978d6f20e1ab9484f2a690ab73e33b",

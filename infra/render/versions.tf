@@ -1,11 +1,13 @@
 terraform {
   cloud {
+    organization = "UITFood"
+
     workspaces {
-      tags = ["uitfood", "render", "production"]
+      name = "uitfood-render-production"
     }
   }
 
-  required_version = ">= 1.6.0"
+  required_version = "~> 1.15.0"
 
   required_providers {
     render = {
