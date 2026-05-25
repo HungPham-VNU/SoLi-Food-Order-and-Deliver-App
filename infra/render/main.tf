@@ -21,7 +21,7 @@ resource "render_web_service" "api" {
   custom_domains    = var.api_custom_domains
   environment_id    = var.project_environment_id
   health_check_path = var.api_health_check_path
-
+  maintenance_mode = false
   runtime_source = {
     image = {
       image_url = var.api_image_url
@@ -61,7 +61,7 @@ resource "render_web_service" "web" {
   custom_domains    = var.web_custom_domains
   environment_id    = var.project_environment_id
   health_check_path = var.web_health_check_path
-
+  maintenance_mode = false
   runtime_source = {
     image = {
       image_url = var.web_image_url
