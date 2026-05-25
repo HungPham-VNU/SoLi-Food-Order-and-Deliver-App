@@ -65,6 +65,7 @@ export function OrderReviewScreen({ onBack, onPlaceOrder }: ReviewScreenProps) {
             key={item.cartItemId} 
             item={{
               id: item.cartItemId,
+              menuItemId: item.menuItemId,
               name: item.itemName,
               price: item.unitPrice,
               quantity: item.quantity,

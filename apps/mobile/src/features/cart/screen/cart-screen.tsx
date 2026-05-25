@@ -76,10 +76,10 @@ export function CartScreen({
   );
 
   const isMutating = isUpdating || isRemoving;
-  const lineItemCount = cart?.items.length ?? 0;
 
   const cartItems: CartItem[] = (cart?.items || []).map((item) => ({
     id: item.cartItemId,
+    menuItemId: item.menuItemId,
     name: item.itemName,
     price: item.unitPrice,
     quantity: item.quantity,
@@ -156,6 +156,13 @@ export function CartScreen({
     [removeItem, isMutating],
   );
 
+  const handleItemPress = useCallback((menuItemId: string) => {
+    router.push({
+      pathname: '/restaurant/menu-item/[id]',
+      params: { id: menuItemId },
+    });
+  }, []);
+
   const handleBack = () => {
     if (onBack) {
       onBack();
@@ -217,7 +224,6 @@ export function CartScreen({
         insetsTop={insets.top}
         onBack={handleBack}
         restaurantName={cart?.restaurantName}
-        itemCount={lineItemCount}
         distanceKm={estimate?.distanceKm}
         estimatedMinutes={estimate?.estimatedMinutes}
       />
@@ -250,6 +256,7 @@ export function CartScreen({
               <CartItemCard
                 key={item.id}
                 item={item}
+                onPress={handleItemPress}
                 onIncrement={handleIncrement}
                 onDecrement={handleDecrement}
                 onRemove={handleRemove}
