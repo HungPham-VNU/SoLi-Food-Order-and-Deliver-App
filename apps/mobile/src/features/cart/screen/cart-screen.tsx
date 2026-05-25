@@ -76,6 +76,7 @@ export function CartScreen({
   );
 
   const isMutating = isUpdating || isRemoving;
+  const lineItemCount = cart?.items.length ?? 0;
 
   const cartItems: CartItem[] = (cart?.items || []).map((item) => ({
     id: item.cartItemId,
@@ -212,7 +213,14 @@ export function CartScreen({
       />
 
       {/* ── Floating Header ──────────────────────────────────────────────────── */}
-      <CartHeader insetsTop={insets.top} onBack={handleBack} />
+      <CartHeader
+        insetsTop={insets.top}
+        onBack={handleBack}
+        restaurantName={cart?.restaurantName}
+        itemCount={lineItemCount}
+        distanceKm={estimate?.distanceKm}
+        estimatedMinutes={estimate?.estimatedMinutes}
+      />
 
       {/* ── Body ─────────────────────────────────────────────────────────────── */}
       {!cart || cart.items.length === 0 ? (
