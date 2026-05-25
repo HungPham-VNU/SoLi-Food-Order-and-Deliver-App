@@ -226,12 +226,11 @@ function syncCartFromServer(
   queryClient: QueryClient,
   cart: CartResponse | null | undefined,
 ) {
-  if (!isCurrentCartMutationSettling(queryClient) || cart === undefined) return;
+  if (cart === undefined) return;
   queryClient.setQueryData<CartResponse | null>(cartKeys.myCart(), cart);
 }
 
 function invalidateCartWhenSettled(queryClient: QueryClient) {
-  if (!isCurrentCartMutationSettling(queryClient)) return;
   return queryClient.invalidateQueries({ queryKey: cartKeys.all });
 }
 
