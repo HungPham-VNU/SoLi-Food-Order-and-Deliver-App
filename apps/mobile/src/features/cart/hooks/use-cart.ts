@@ -211,15 +211,11 @@ async function snapshotCart(queryClient: QueryClient) {
   };
 }
 
-function isCurrentCartMutationSettling(queryClient: QueryClient) {
-  return queryClient.isMutating({ mutationKey: cartKeys.mutation() }) > 0;
-}
-
 function rollbackCart(
   queryClient: QueryClient,
   context: CartMutationContext | undefined,
 ) {
-  if (!context || !isCurrentCartMutationSettling(queryClient)) return;
+  if (!context) return;
   queryClient.setQueryData<CartResponse | null>(
     cartKeys.myCart(),
     context.previousCart ?? null,
