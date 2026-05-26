@@ -15,6 +15,7 @@ import {
   WS_NOTIFICATION_CREATED,
   WS_NOTIFICATION_PING,
 } from './notification-payload.dto';
+import { runObserved } from '@/observability/trace';
 
 // ---------------------------------------------------------------------------
 // NotificationGateway
@@ -104,111 +105,119 @@ export class NotificationGateway
   // ---------------------------------------------------------------------------
 
   async handleConnection(client: Socket): Promise<void> {
-    // Extract token from handshake:
-    //   Mobile SDK: socket = io(url, { auth: { token } })
-    //   Web SDK:    socket = io(url, { extraHeaders: { authorization: 'Bearer …' } })
-    const token =
-      (client.handshake.auth?.token as string | undefined) ??
-      client.handshake.headers.authorization?.replace('Bearer ', '');
+    return runObserved(
+      'ws.notifications.connection',
+      { 'socket.id': client.id, 'messaging.system': 'socket.io' },
+      async () => {
+        // Extract token from handshake:
+        //   Mobile SDK: socket = io(url, { auth: { token } })
+        //   Web SDK:    socket = io(url, { extraHeaders: { authorization: 'Bearer …' } })
+        const token =
+          (client.handshake.auth?.token as string | undefined) ??
+          client.handshake.headers.authorization?.replace('Bearer ', '');
 
-    if (!token) {
-      this.logger.warn(
-        `[Gateway] Connection rejected — no token (socketId=${client.id})`,
-      );
-      client.disconnect(true);
-      return;
-    }
-
-    // Single auth.api.getSession() call — extracts both userId and session
-    // expiry in one round-trip. Two separate helpers would double the latency.
-    let session: Awaited<ReturnType<typeof auth.api.getSession>>;
-    try {
-      session = await auth.api.getSession({
-        headers: new Headers({ authorization: `Bearer ${token}` }),
-      });
-    } catch (err) {
-      this.logger.warn(
-        `[Gateway] Connection rejected — getSession threw (socketId=${client.id}): ${(err as Error).message}`,
-      );
-      client.disconnect(true);
-      return;
-    }
-
-    const userId = session?.user?.id;
-    if (!userId) {
-      this.logger.warn(
-        `[Gateway] Connection rejected — invalid or expired session (socketId=${client.id})`,
-      );
-      client.disconnect(true);
-      return;
-    }
-
-    // Store userId on the socket so handleDisconnect can access it without
-    // a separate Redis lookup.
-    (client.data as { userId?: string }).userId = userId;
-
-    // Join the per-user room — all devices/tabs for this user share one room.
-    // Room naming convention: 'room:user:{userId}'
-    // BOTH the join here AND sendToUser() must use the SAME room string.
-    const room = `room:user:${userId}`;
-    await client.join(room);
-    this.logger.log(`[Gateway] Socket joined ${room} socketId=${client.id}`);
-
-    // Presence: INCR reference count so multi-tab users stay online until
-    // ALL tabs disconnect. markOnline absorbs Redis errors internally.
-    await this.presenceService.markOnline(userId);
-
-    // Session expiry enforcement: emit 'auth:expired' and disconnect when the
-    // Better Auth session TTL elapses. Without this, stale sessions remain
-    // connected indefinitely and receive notifications they shouldn't.
-    const sessionExpiresAt = session?.session?.expiresAt;
-    if (sessionExpiresAt) {
-      const ttlMs = new Date(sessionExpiresAt).getTime() - Date.now();
-      if (ttlMs > 0) {
-        // Cap at Node.js setTimeout limit (~24.8 days). Values above 2^31-1 ms
-        // overflow to a 32-bit signed integer internally and fire immediately,
-        // causing instant disconnect for users with long-lived sessions.
-        const safeTtlMs = Math.min(ttlMs, 2_147_483_647);
-        const timer = setTimeout(() => {
-          // Timer has fired — remove from map before disconnect so
-          // handleDisconnect's clearTimeout is a no-op (already cleaned up).
-          this.sessionTimers.delete(client.id);
-          client.emit('auth:expired');
+        if (!token) {
+          this.logger.warn(
+            `[Gateway] Connection rejected — no token (socketId=${client.id})`,
+          );
           client.disconnect(true);
-        }, safeTtlMs);
-        this.sessionTimers.set(client.id, timer);
-      }
-      // ttlMs <= 0 means the session is already expired — client was rejected
-      // above (session?.user?.id would be null for expired sessions), so this
-      // branch is only a safety net for clocks that drift by a few milliseconds.
-    }
+          return;
+        }
 
-    this.logger.log(
-      `[Gateway] Socket connected: userId=${userId} socketId=${client.id}`,
-    );
+        // Single auth.api.getSession() call — extracts both userId and session
+        // expiry in one round-trip. Two separate helpers would double the latency.
+        let session: Awaited<ReturnType<typeof auth.api.getSession>>;
+        try {
+          session = await auth.api.getSession({
+            headers: new Headers({ authorization: `Bearer ${token}` }),
+          });
+        } catch (err) {
+          this.logger.warn(
+            `[Gateway] Connection rejected — getSession threw (socketId=${client.id}): ${(err as Error).message}`,
+          );
+          client.disconnect(true);
+          return;
+        }
 
-    // Diagnostic emit #1: 'connection:established' — confirms room join + emit path.
-    // Client receives this immediately after connect to confirm the full pipeline works.
-    this.server.to(room).emit(WS_CONNECTION_ESTABLISHED, {
-      userId,
-      room,
-      connectedAt: new Date().toISOString(),
-    });
+        const userId = session?.user?.id;
+        if (!userId) {
+          this.logger.warn(
+            `[Gateway] Connection rejected — invalid or expired session (socketId=${client.id})`,
+          );
+          client.disconnect(true);
+          return;
+        }
 
-    // Diagnostic emit #2: 'notification.created' — fires immediately after connect.
-    // This allows the client to verify it receives realtime notifications WITHOUT
-    // needing to trigger a full payment flow. Remove in production if not desired.
-    this.server.to(room).emit(WS_NOTIFICATION_CREATED, {
-      id: 'diagnostic',
-      type: 'system_announcement',
-      title: 'Kết nối realtime thành công',
-      body: `WebSocket kết nối đến room ${room} thành công. Thông báo realtime đã sẵn sàng.`,
-      data: { diagnostic: 'true', room, socketId: client.id },
-      createdAt: new Date().toISOString(),
-      isRead: false,
-    });
-    this.logger.log(
-      `[Gateway] Diagnostic notification.created emitted to ${room} (socketId=${client.id})`,
+        // Store userId on the socket so handleDisconnect can access it without
+        // a separate Redis lookup.
+        (client.data as { userId?: string }).userId = userId;
+
+        // Join the per-user room — all devices/tabs for this user share one room.
+        // Room naming convention: 'room:user:{userId}'
+        // BOTH the join here AND sendToUser() must use the SAME room string.
+        const room = `room:user:${userId}`;
+        await client.join(room);
+        this.logger.log(
+          `[Gateway] Socket joined ${room} socketId=${client.id}`,
+        );
+
+        // Presence: INCR reference count so multi-tab users stay online until
+        // ALL tabs disconnect. markOnline absorbs Redis errors internally.
+        await this.presenceService.markOnline(userId);
+
+        // Session expiry enforcement: emit 'auth:expired' and disconnect when the
+        // Better Auth session TTL elapses. Without this, stale sessions remain
+        // connected indefinitely and receive notifications they shouldn't.
+        const sessionExpiresAt = session?.session?.expiresAt;
+        if (sessionExpiresAt) {
+          const ttlMs = new Date(sessionExpiresAt).getTime() - Date.now();
+          if (ttlMs > 0) {
+            // Cap at Node.js setTimeout limit (~24.8 days). Values above 2^31-1 ms
+            // overflow to a 32-bit signed integer internally and fire immediately,
+            // causing instant disconnect for users with long-lived sessions.
+            const safeTtlMs = Math.min(ttlMs, 2_147_483_647);
+            const timer = setTimeout(() => {
+              // Timer has fired — remove from map before disconnect so
+              // handleDisconnect's clearTimeout is a no-op (already cleaned up).
+              this.sessionTimers.delete(client.id);
+              client.emit('auth:expired');
+              client.disconnect(true);
+            }, safeTtlMs);
+            this.sessionTimers.set(client.id, timer);
+          }
+          // ttlMs <= 0 means the session is already expired — client was rejected
+          // above (session?.user?.id would be null for expired sessions), so this
+          // branch is only a safety net for clocks that drift by a few milliseconds.
+        }
+
+        this.logger.log(
+          `[Gateway] Socket connected: userId=${userId} socketId=${client.id}`,
+        );
+
+        // Diagnostic emit #1: 'connection:established' — confirms room join + emit path.
+        // Client receives this immediately after connect to confirm the full pipeline works.
+        this.server.to(room).emit(WS_CONNECTION_ESTABLISHED, {
+          userId,
+          room,
+          connectedAt: new Date().toISOString(),
+        });
+
+        // Diagnostic emit #2: 'notification.created' — fires immediately after connect.
+        // This allows the client to verify it receives realtime notifications WITHOUT
+        // needing to trigger a full payment flow. Remove in production if not desired.
+        this.server.to(room).emit(WS_NOTIFICATION_CREATED, {
+          id: 'diagnostic',
+          type: 'system_announcement',
+          title: 'Kết nối realtime thành công',
+          body: `WebSocket kết nối đến room ${room} thành công. Thông báo realtime đã sẵn sàng.`,
+          data: { diagnostic: 'true', room, socketId: client.id },
+          createdAt: new Date().toISOString(),
+          isRead: false,
+        });
+        this.logger.log(
+          `[Gateway] Diagnostic notification.created emitted to ${room} (socketId=${client.id})`,
+        );
+      },
     );
   }
 

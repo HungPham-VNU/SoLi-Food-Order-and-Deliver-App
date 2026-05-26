@@ -16,6 +16,18 @@ on:
         required: false
         type: string
         default: ''
+      vite_sentry_dsn:
+        required: false
+        type: string
+        default: ''
+      vite_sentry_environment:
+        required: false
+        type: string
+        default: 'production'
+      vite_sentry_traces_sample_rate:
+        required: false
+        type: string
+        default: '0.1'
 
 permissions:
   contents: read
@@ -82,5 +94,9 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VITE_API_BASE_URL=${{ inputs.vite_api_base_url }}
+            VITE_SENTRY_DSN=${{ inputs.vite_sentry_dsn }}
+            VITE_SENTRY_ENVIRONMENT=${{ inputs.vite_sentry_environment }}
+            VITE_SENTRY_RELEASE=sha-${{ github.sha }}
+            VITE_SENTRY_TRACES_SAMPLE_RATE=${{ inputs.vite_sentry_traces_sample_rate }}
           cache-from: type=gha,scope=${{ inputs.app }}
           cache-to: type=gha,mode=max,scope=${{ inputs.app }}

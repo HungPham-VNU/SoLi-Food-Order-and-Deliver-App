@@ -5,6 +5,9 @@
 api_image_tag = "sha-replace-me"
 web_image_tag = "sha-replace-me"
 
+api_health_check_path = "/api/ready"
+web_health_check_path = "/healthz"
+
 api_env_vars = {
   BETTER_AUTH_SECRET = "replace-me"
   BETTER_AUTH_URL    = "https://api.example.com"
@@ -28,8 +31,21 @@ api_env_vars = {
   VNPAY_HASH_SECRET = "replace-me"
   VNPAY_URL         = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
   VNPAY_RETURN_URL  = "https://api.example.com/payments/vnpay/return"
+
+  SENTRY_DSN                = "https://public-key@o000000.ingest.sentry.io/000000"
+  SENTRY_ENVIRONMENT        = "production"
+  SENTRY_RELEASE            = "sha-replace-me"
+  SENTRY_TRACES_SAMPLE_RATE = "0.1"
+  OTEL_SERVICE_NAME         = "uitfood-api"
+  OTEL_EXPORTER_OTLP_ENDPOINT = "https://otel-collector.example.com"
+  OTEL_TRACES_SAMPLER_ARG   = "0.1"
+  LOG_LEVEL                 = "info"
 }
 
 web_env_vars = {
-  VITE_PUBLIC_API_URL = "https://api.example.com"
+  VITE_API_BASE_URL                 = "https://api.example.com"
+  VITE_SENTRY_DSN                   = "https://public-key@o000000.ingest.sentry.io/000000"
+  VITE_SENTRY_ENVIRONMENT           = "production"
+  VITE_SENTRY_RELEASE               = "sha-replace-me"
+  VITE_SENTRY_TRACES_SAMPLE_RATE    = "0.1"
 }

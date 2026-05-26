@@ -141,6 +141,30 @@ export const envSchema = z.object({
   //   FIREBASE_SERVICE_ACCOUNT_PATH=soli-food-delivery-FCM-key.json
   // ---------------------------------------------------------------------------
   FIREBASE_SERVICE_ACCOUNT_PATH: z.string().optional(),
+
+  // ---------------------------------------------------------------------------
+  // Observability - optional. When absent, Sentry and OpenTelemetry exporters
+  // stay disabled and the app continues to run with local structured logs.
+  // ---------------------------------------------------------------------------
+  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_ENVIRONMENT: z.string().optional(),
+  SENTRY_RELEASE: z.string().optional(),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
+  OTEL_SERVICE_NAME: z.string().default('uitfood-api'),
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
+  OTEL_TRACES_SAMPLER_ARG: z.coerce.number().min(0).max(1).default(0.1),
+  LOG_LEVEL: z
+    .enum([
+      'fatal',
+      'error',
+      'warn',
+      'warning',
+      'info',
+      'log',
+      'debug',
+      'verbose',
+    ])
+    .default('log'),
 });
 
 export type Env = z.infer<typeof envSchema>;

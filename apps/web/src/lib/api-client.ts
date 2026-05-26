@@ -1,4 +1,9 @@
 import axios, { type AxiosError } from 'axios';
+import {
+  addApiErrorBreadcrumb,
+  captureApiError,
+  createRequestId,
+} from './observability';
 
 export class ApiError extends Error {
   constructor(
@@ -17,9 +22,17 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+apiClient.interceptors.request.use((config) => {
+  config.headers.set('x-request-id', createRequestId());
+  return config;
+});
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<{ message?: string; code?: string }>) => {
+    addApiErrorBreadcrumb(error);
+    captureApiError(error);
+
     const status = error.response?.status ?? 0;
 
     if (status === 401) {

@@ -1,6 +1,30 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": ["NODE_ENV", "DATABASE_URL", "REDIS_URL"],
+  "globalEnv": [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "REDIS_URL",
+    "SENTRY_DSN",
+    "SENTRY_ENVIRONMENT",
+    "SENTRY_RELEASE",
+    "SENTRY_TRACES_SAMPLE_RATE",
+    "SENTRY_AUTH_TOKEN",
+    "SENTRY_ORG",
+    "SENTRY_PROJECT",
+    "OTEL_SERVICE_NAME",
+    "OTEL_EXPORTER_OTLP_ENDPOINT",
+    "OTEL_TRACES_SAMPLER_ARG",
+    "LOG_LEVEL",
+    "VITE_API_BASE_URL",
+    "VITE_SENTRY_DSN",
+    "VITE_SENTRY_ENVIRONMENT",
+    "VITE_SENTRY_RELEASE",
+    "VITE_SENTRY_TRACES_SAMPLE_RATE",
+    "EXPO_PUBLIC_SENTRY_DSN",
+    "EXPO_PUBLIC_SENTRY_ENVIRONMENT",
+    "EXPO_PUBLIC_SENTRY_RELEASE",
+    "EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE"
+  ],
   "tasks": {
     "transit": {
       "dependsOn": ["^transit"]

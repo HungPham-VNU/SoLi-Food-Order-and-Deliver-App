@@ -5,6 +5,7 @@ import { useNotificationStore } from '@/src/store/notification-store';
 import { NotificationPayload } from '../types';
 import { BASE_URL } from '@/src/lib/api-client';
 import Toast from 'react-native-toast-message';
+import { captureMobileException, Sentry } from '@/src/lib/observability';
 
 const getWsUrl = (baseUrl: string) => {
   try {
@@ -14,6 +15,7 @@ const getWsUrl = (baseUrl: string) => {
     }
     return url.toString().replace(/\/$/, '');
   } catch (err) {
+    captureMobileException(err, { source: 'notification_socket_url' });
     console.error('[NotifSocket] Error occurred while parsing WS URL:', err);
     return baseUrl.replace('/api', '');
   }
@@ -56,6 +58,11 @@ export function useNotificationSocket() {
     });
 
     socket.on('connect', () => {
+      Sentry.addBreadcrumb({
+        category: 'websocket',
+        level: 'info',
+        message: 'notifications connected',
+      });
       console.log('[NotifSocket] Connected');
     });
 
@@ -100,10 +107,20 @@ export function useNotificationSocket() {
     });
 
     socket.on('disconnect', (reason) => {
+      Sentry.addBreadcrumb({
+        category: 'websocket',
+        level: 'info',
+        message: 'notifications disconnected',
+        data: { reason },
+      });
       console.log('[NotifSocket] Disconnected:', reason);
     });
 
     socket.on('connect_error', (err) => {
+      captureMobileException(err, {
+        source: 'notification_socket',
+        reason: err.message,
+      });
       console.error('[NotifSocket] Connect error:', err.message);
     });
 

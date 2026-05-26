@@ -48,6 +48,25 @@ jobs:
 
       - name: Build
         run: pnpm --filter=mobile run build
+        env:
+          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
+          EXPO_PUBLIC_SENTRY_ENVIRONMENT: production
+          EXPO_PUBLIC_SENTRY_RELEASE: sha-${{ github.sha }}
+          EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE || '0.1' }}
+
+      - name: Upload Sentry Source Maps
+        working-directory: apps/mobile
+        shell: bash
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_MOBILE_PROJECT }}
+        run: |
+          if [[ -z "${SENTRY_AUTH_TOKEN}" || -z "${SENTRY_ORG}" || -z "${SENTRY_PROJECT}" ]]; then
+            echo "Sentry mobile sourcemap upload skipped: missing Sentry CI configuration."
+            exit 0
+          fi
+          pnpm exec sentry-expo-upload-sourcemaps dist
 
   publish:
     name: Publish Mobile Build

@@ -10,6 +10,8 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module';
+import { createCorsOptions } from '../../src/observability/cors';
+import { requestContextMiddleware } from '../../src/observability/request-context';
 
 // ─── App factory ──────────────────────────────────────────────────────────────
 
@@ -28,8 +30,10 @@ export async function createTestApp(): Promise<INestApplication> {
 
   const app = moduleRef.createNestApplication();
 
+  app.use(requestContextMiddleware);
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.setGlobalPrefix('api');
+  app.enableCors(createCorsOptions());
 
   await app.init();
   return app;

@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { CommandBus } from '@nestjs/cqrs';
 import { OrderRepository } from '../repositories/order.repository';
 import { TransitionOrderCommand } from '../commands/transition-order.command';
+import { runObserved } from '@/observability/trace';
 
 /**
  * OrderTimeoutTask
@@ -36,47 +37,53 @@ export class OrderTimeoutTask {
 
   @Cron(CronExpression.EVERY_MINUTE)
   async handleExpiredOrders(): Promise<void> {
-    let expired: Awaited<
-      ReturnType<typeof this.orderRepo.findExpiredPendingOrPaid>
-    >;
+    return runObserved(
+      'cron.order_timeout',
+      { 'job.name': 'OrderTimeoutTask.handleExpiredOrders' },
+      async () => {
+        let expired: Awaited<
+          ReturnType<typeof this.orderRepo.findExpiredPendingOrPaid>
+        >;
 
-    try {
-      expired = await this.orderRepo.findExpiredPendingOrPaid();
-    } catch (err) {
-      this.logger.error(
-        `OrderTimeoutTask failed to query expired orders: ${(err as Error).message}`,
-        (err as Error).stack,
-      );
-      return;
-    }
+        try {
+          expired = await this.orderRepo.findExpiredPendingOrPaid();
+        } catch (err) {
+          this.logger.error(
+            `OrderTimeoutTask failed to query expired orders: ${(err as Error).message}`,
+            (err as Error).stack,
+          );
+          return;
+        }
 
-    if (expired.length === 0) return;
+        if (expired.length === 0) return;
 
-    this.logger.log(
-      `OrderTimeoutTask: found ${expired.length} expired order(s) to cancel.`,
-    );
-
-    for (const order of expired) {
-      try {
-        await this.commandBus.execute(
-          new TransitionOrderCommand(
-            order.id,
-            'cancelled',
-            null, // system actor — no user ID
-            'system',
-            'Order expired — no restaurant confirmation within timeout',
-          ),
-        );
         this.logger.log(
-          `Auto-cancelled expired order ${order.id} (was ${order.status}).`,
+          `OrderTimeoutTask: found ${expired.length} expired order(s) to cancel.`,
         );
-      } catch (err) {
-        // Log per-order failures without aborting the rest of the batch.
-        this.logger.error(
-          `Failed to auto-cancel expired order ${order.id}: ${(err as Error).message}`,
-          (err as Error).stack,
-        );
-      }
-    }
+
+        for (const order of expired) {
+          try {
+            await this.commandBus.execute(
+              new TransitionOrderCommand(
+                order.id,
+                'cancelled',
+                null, // system actor — no user ID
+                'system',
+                'Order expired — no restaurant confirmation within timeout',
+              ),
+            );
+            this.logger.log(
+              `Auto-cancelled expired order ${order.id} (was ${order.status}).`,
+            );
+          } catch (err) {
+            // Log per-order failures without aborting the rest of the batch.
+            this.logger.error(
+              `Failed to auto-cancel expired order ${order.id}: ${(err as Error).message}`,
+              (err as Error).stack,
+            );
+          }
+        }
+      },
+    );
   }
 }

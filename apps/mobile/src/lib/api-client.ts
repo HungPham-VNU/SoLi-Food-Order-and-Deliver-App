@@ -1,6 +1,11 @@
 import Constants from 'expo-constants';
 
 import { authClient } from '@/src/lib/auth-client';
+import {
+  captureMobileException,
+  createRequestId,
+  Sentry,
+} from '@/src/lib/observability';
 
 const getBaseUrl = () => {
   if (process.env.EXPO_PUBLIC_API_URL) {
@@ -30,6 +35,8 @@ export async function apiFetch<T>(
   const skipJsonHeader = ['GET', 'HEAD'].includes(method) || isFormOrBlob;
 
   const headers = { ...options.headers } as Record<string, string>;
+  const requestId = createRequestId();
+  headers['x-request-id'] = requestId;
 
   // Better Auth stores the session cookie in SecureStore on native.
   // Requests to the API need that cookie forwarded explicitly.
@@ -47,12 +54,23 @@ export async function apiFetch<T>(
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(url, {
-    ...options,
-    method,
-    headers,
-    credentials: 'omit',
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      method,
+      headers,
+      credentials: 'omit',
+    });
+  } catch (error) {
+    captureMobileException(error, {
+      source: 'api_fetch',
+      endpoint: normalizedEndpoint,
+      method,
+      requestId,
+    });
+    throw error;
+  }
 
   const contentType = response.headers.get('content-type');
   const isJson = contentType?.includes('application/json');
@@ -71,9 +89,31 @@ export async function apiFetch<T>(
       errorMessage = `${errorMessage} (Failed to parse error body)`;
     }
 
-    throw new Error(
+    const apiError = new Error(
       `${errorMessage}\nStatus: ${response.status}\nBody: ${bodyText}`,
     );
+
+    Sentry.addBreadcrumb({
+      category: 'api',
+      level: 'error',
+      message: `${method} ${normalizedEndpoint}`,
+      data: {
+        status: response.status,
+        requestId,
+      },
+    });
+
+    if (response.status >= 500) {
+      captureMobileException(apiError, {
+        source: 'api_fetch',
+        endpoint: normalizedEndpoint,
+        method,
+        status: response.status,
+        requestId,
+      });
+    }
+
+    throw apiError;
   }
 
   if (isJson) {

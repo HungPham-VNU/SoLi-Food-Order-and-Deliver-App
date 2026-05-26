@@ -1,4 +1,5 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
@@ -17,6 +18,7 @@ import { ImageModule } from './module/image/image.module';
 import { PromotionModule } from './module/promotion/promotion.module';
 import { validate } from './config/env.schema';
 import { vnpayConfig } from './config/vnpay.config';
+import { ObservabilityInterceptor } from './observability/observability.interceptor';
 
 @Module({
   imports: [
@@ -46,7 +48,13 @@ import { vnpayConfig } from './config/vnpay.config';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ObservabilityInterceptor,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

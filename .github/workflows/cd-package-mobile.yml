@@ -36,6 +36,11 @@ jobs:
       - name: Package (Local Android Build)
         working-directory: apps/mobile
         run: eas build --platform android --profile preview --local --non-interactive --output build.apk
+        env:
+          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
+          EXPO_PUBLIC_SENTRY_ENVIRONMENT: production
+          EXPO_PUBLIC_SENTRY_RELEASE: sha-${{ github.sha }}
+          EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE || '0.1' }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

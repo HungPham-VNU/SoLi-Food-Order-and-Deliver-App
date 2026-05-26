@@ -48,6 +48,15 @@ jobs:
 
       - name: Build
         run: pnpm --filter=web run build
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
+          VITE_SENTRY_ENVIRONMENT: production
+          VITE_SENTRY_RELEASE: sha-${{ github.sha }}
+          VITE_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE || '0.1' }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_WEB_PROJECT }}
 
   publish:
     name: Publish Web Docker Image
@@ -61,6 +70,9 @@ jobs:
       gh_actor: ${{ github.actor }}
       gh_repository: ${{ github.repository }}
       vite_api_base_url: ${{ vars.VITE_API_BASE_URL }}
+      vite_sentry_dsn: ${{ vars.VITE_SENTRY_DSN }}
+      vite_sentry_environment: production
+      vite_sentry_traces_sample_rate: ${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE || '0.1' }}
     secrets: inherit
 
   apply-render-infra:

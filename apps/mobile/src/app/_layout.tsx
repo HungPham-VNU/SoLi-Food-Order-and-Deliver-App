@@ -25,6 +25,13 @@ import {
   useNotificationHandler,
 } from '@/src/features/notification';
 import Toast from 'react-native-toast-message';
+import {
+  captureMobileException,
+  initMobileObservability,
+  Sentry,
+} from '@/src/lib/observability';
+
+initMobileObservability();
 
 // Register background handler
 if (Platform.OS !== 'web') {
@@ -34,7 +41,8 @@ if (Platform.OS !== 'web') {
     // If the app is in background or closed, we may need to manually trigger a notification
     // for data-only messages. For messages with a 'notification' block, Android handles them automatically.
     // But for reliability across different Android versions/distributions, we check here.
-    const title = remoteMessage.notification?.title || remoteMessage.data?.title;
+    const title =
+      remoteMessage.notification?.title || remoteMessage.data?.title;
     const body = remoteMessage.notification?.body || remoteMessage.data?.body;
 
     if (title || body) {
@@ -51,6 +59,9 @@ if (Platform.OS !== 'web') {
           trigger: null,
         });
       } catch (error) {
+        captureMobileException(error, {
+          source: 'firebase_background_message',
+        });
         console.error(
           '[BackgroundMessage] Failed to schedule notification:',
           error,
@@ -101,7 +112,7 @@ function RootNavigation() {
   );
 }
 
-export default function AppLayout() {
+function AppLayout() {
   // 1. Create the client (stable across renders)
   const [queryClient] = useState(
     () =>
@@ -141,3 +152,5 @@ export default function AppLayout() {
     </QueryClientProvider>
   );
 }
+
+export default Sentry.wrap(AppLayout);

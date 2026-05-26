@@ -1,3 +1,4 @@
+import './observability/instrumentation';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder, OpenAPIObject } from '@nestjs/swagger';
 import { auth } from './lib/auth';
@@ -7,18 +8,23 @@ import type { Request, Response } from 'express';
 import { ValidationPipe } from '@nestjs/common';
 import { join } from 'path';
 import * as expressStatic from 'express';
+import { createCorsOptions } from './observability/cors';
+import { JsonLogger } from './observability/json-logger';
+import { requestContextMiddleware } from './observability/request-context';
+import { setupSentryExpressErrorHandler } from './observability/sentry';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  const logger = new JsonLogger();
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: false,
+    bufferLogs: true,
+  });
+  app.useLogger(logger);
+  app.use(requestContextMiddleware);
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.setGlobalPrefix('api');
 
-  app.enableCors({
-    origin: (process.env.CORS_ORIGIN || 'http://localhost:5173')
-      .split(',')
-      .map((o) => o.trim()),
-    credentials: true,
-  });
+  app.enableCors(createCorsOptions());
 
   // Serve static development assets (FCM test page, service worker, etc.)
   // from the apps/api/public/ directory.
@@ -83,6 +89,9 @@ async function bootstrap() {
       layout: 'modern',
     }),
   );
+
+  setupSentryExpressErrorHandler(app.getHttpAdapter().getInstance());
+  app.enableShutdownHooks();
 
   await app.listen(process.env.PORT ?? 3000);
 }

@@ -6,6 +6,7 @@ import { PaymentTransactionRepository } from '../repositories/payment-transactio
 import { PaymentConfirmedEvent } from '@/shared/events/payment-confirmed.event';
 import { PaymentFailedEvent } from '@/shared/events/payment-failed.event';
 import type { PaymentTransaction } from '../domain/payment-transaction.schema';
+import { runObserved } from '@/observability/trace';
 
 // ---------------------------------------------------------------------------
 // VNPay IPN response codes (defined in VNPay merchant documentation).
@@ -75,124 +76,138 @@ export class ProcessIpnHandler implements ICommandHandler<ProcessIpnCommand> {
   ) {}
 
   async execute(command: ProcessIpnCommand): Promise<IpnResponse> {
-    // -------------------------------------------------------------------------
-    // Step 1: Verify HMAC SHA512 signature.
-    //
-    // This MUST be the very first operation — we must not trust any parameter
-    // value before the signature is confirmed valid. A spoofed IPN with a valid-
-    // looking txnRef would otherwise let an attacker acknowledge fake payments.
-    // -------------------------------------------------------------------------
-    const verification = this.vnpayService.verifyIpn(command.query);
+    return runObserved(
+      'command.payment.process_ipn',
+      { 'payment.provider': 'vnpay' },
+      async () => {
+        // -------------------------------------------------------------------------
+        // Step 1: Verify HMAC SHA512 signature.
+        //
+        // This MUST be the very first operation — we must not trust any parameter
+        // value before the signature is confirmed valid. A spoofed IPN with a valid-
+        // looking txnRef would otherwise let an attacker acknowledge fake payments.
+        // -------------------------------------------------------------------------
+        const verification = this.vnpayService.verifyIpn(command.query);
 
-    if (!verification.valid) {
-      this.logger.warn(
-        `IPN rejected — invalid signature. ` +
-          `Raw query keys: [${Object.keys(command.query).join(', ')}]`,
-      );
-      return {
-        RspCode: IPN_RSP_INVALID_SIGNATURE,
-        Message: 'Invalid signature',
-      };
-    }
+        if (!verification.valid) {
+          this.logger.warn(
+            `IPN rejected — invalid signature. ` +
+              `Raw query keys: [${Object.keys(command.query).join(', ')}]`,
+          );
+          return {
+            RspCode: IPN_RSP_INVALID_SIGNATURE,
+            Message: 'Invalid signature',
+          };
+        }
 
-    const {
-      txnRef,
-      providerTxnId,
-      amount: ipnAmount,
-      responsePaid,
-    } = verification;
+        const {
+          txnRef,
+          providerTxnId,
+          amount: ipnAmount,
+          responsePaid,
+        } = verification;
 
-    this.logger.log(
-      `IPN received — txnRef=${txnRef} providerTxnId=${providerTxnId} ` +
-        `responsePaid=${responsePaid} amount=${ipnAmount}`,
-    );
-
-    // -------------------------------------------------------------------------
-    // Step 2: Look up the PaymentTransaction by primary key.
-    //
-    // vnp_TxnRef = PaymentTransaction.id (we set this when building the URL).
-    // Using findById() (PK lookup) is the most efficient and precise approach.
-    // -------------------------------------------------------------------------
-    const txn = await this.txnRepo.findById(txnRef);
-
-    if (!txn) {
-      this.logger.warn(
-        `IPN references unknown txnRef=${txnRef} — no PaymentTransaction found.`,
-      );
-      return {
-        RspCode: IPN_RSP_ORDER_NOT_FOUND,
-        Message: 'Transaction not found',
-      };
-    }
-
-    // -------------------------------------------------------------------------
-    // Step 3: Idempotency — terminal state check.
-    //
-    // If the transaction is already in a terminal state, the IPN is a retry
-    // from VNPay (they retry until they receive RspCode='00'). Acknowledge
-    // immediately without re-processing to prevent double event publishing.
-    //
-    // Terminal states: completed, failed, refund_pending, refunded.
-    // Non-terminal (still processable): pending, awaiting_ipn.
-    // -------------------------------------------------------------------------
-    if (this.isTerminalStatus(txn.status)) {
-      this.logger.log(
-        `IPN for txnRef=${txnRef} already in terminal status=${txn.status} — ` +
-          `acknowledging without re-processing (idempotent response).`,
-      );
-      return {
-        RspCode: IPN_RSP_SUCCESS,
-        Message: 'Transaction already processed',
-      };
-    }
-
-    // -------------------------------------------------------------------------
-    // Step 4: Amount validation (BR-P4).
-    //
-    // Both ipnAmount and txn.amount are integer VND — exact equality is correct.
-    // Any mismatch indicates a VNPay bug or a tampering attempt.
-    // -------------------------------------------------------------------------
-    if (ipnAmount !== txn.amount) {
-      this.logger.error(
-        `IPN amount mismatch for txnRef=${txnRef}: ` +
-          `expected=${txn.amount} received=${ipnAmount} (delta=${Math.abs(ipnAmount - txn.amount)})`,
-      );
-
-      // Only publish if this handler won the optimistic lock — prevents duplicate events
-      // when VNPay retries concurrently and two handlers race on the same transaction.
-      const mismatchFailed = await this.markFailed(
-        txn,
-        command.query,
-        providerTxnId,
-      );
-      if (mismatchFailed) {
-        this.publishPaymentFailed(
-          txn,
-          `IPN amount mismatch: expected ${txn.amount}, got ${ipnAmount}`,
+        this.logger.log(
+          `IPN received — txnRef=${txnRef} providerTxnId=${providerTxnId} ` +
+            `responsePaid=${responsePaid} amount=${ipnAmount}`,
         );
-      }
 
-      return { RspCode: IPN_RSP_AMOUNT_MISMATCH, Message: 'Amount mismatch' };
-    }
+        // -------------------------------------------------------------------------
+        // Step 2: Look up the PaymentTransaction by primary key.
+        //
+        // vnp_TxnRef = PaymentTransaction.id (we set this when building the URL).
+        // Using findById() (PK lookup) is the most efficient and precise approach.
+        // -------------------------------------------------------------------------
+        const txn = await this.txnRepo.findById(txnRef);
 
-    // -------------------------------------------------------------------------
-    // Step 5: Process the IPN result.
-    //
-    // responsePaid = true  → vnp_ResponseCode=00 AND vnp_TransactionStatus=00
-    //                        Bank approved the charge.
-    // responsePaid = false → Any other code (bank declined, user cancelled, etc.)
-    // -------------------------------------------------------------------------
-    if (responsePaid) {
-      return this.handleSuccess(txn, command.query, providerTxnId, ipnAmount);
-    } else {
-      const responseCode = command.query['vnp_ResponseCode'] ?? 'unknown';
-      return this.handleFailure(
-        txn,
-        command.query,
-        providerTxnId,
-        responseCode,
-      );
-    }
+        if (!txn) {
+          this.logger.warn(
+            `IPN references unknown txnRef=${txnRef} — no PaymentTransaction found.`,
+          );
+          return {
+            RspCode: IPN_RSP_ORDER_NOT_FOUND,
+            Message: 'Transaction not found',
+          };
+        }
+
+        // -------------------------------------------------------------------------
+        // Step 3: Idempotency — terminal state check.
+        //
+        // If the transaction is already in a terminal state, the IPN is a retry
+        // from VNPay (they retry until they receive RspCode='00'). Acknowledge
+        // immediately without re-processing to prevent double event publishing.
+        //
+        // Terminal states: completed, failed, refund_pending, refunded.
+        // Non-terminal (still processable): pending, awaiting_ipn.
+        // -------------------------------------------------------------------------
+        if (this.isTerminalStatus(txn.status)) {
+          this.logger.log(
+            `IPN for txnRef=${txnRef} already in terminal status=${txn.status} — ` +
+              `acknowledging without re-processing (idempotent response).`,
+          );
+          return {
+            RspCode: IPN_RSP_SUCCESS,
+            Message: 'Transaction already processed',
+          };
+        }
+
+        // -------------------------------------------------------------------------
+        // Step 4: Amount validation (BR-P4).
+        //
+        // Both ipnAmount and txn.amount are integer VND — exact equality is correct.
+        // Any mismatch indicates a VNPay bug or a tampering attempt.
+        // -------------------------------------------------------------------------
+        if (ipnAmount !== txn.amount) {
+          this.logger.error(
+            `IPN amount mismatch for txnRef=${txnRef}: ` +
+              `expected=${txn.amount} received=${ipnAmount} (delta=${Math.abs(ipnAmount - txn.amount)})`,
+          );
+
+          // Only publish if this handler won the optimistic lock — prevents duplicate events
+          // when VNPay retries concurrently and two handlers race on the same transaction.
+          const mismatchFailed = await this.markFailed(
+            txn,
+            command.query,
+            providerTxnId,
+          );
+          if (mismatchFailed) {
+            this.publishPaymentFailed(
+              txn,
+              `IPN amount mismatch: expected ${txn.amount}, got ${ipnAmount}`,
+            );
+          }
+
+          return {
+            RspCode: IPN_RSP_AMOUNT_MISMATCH,
+            Message: 'Amount mismatch',
+          };
+        }
+
+        // -------------------------------------------------------------------------
+        // Step 5: Process the IPN result.
+        //
+        // responsePaid = true  → vnp_ResponseCode=00 AND vnp_TransactionStatus=00
+        //                        Bank approved the charge.
+        // responsePaid = false → Any other code (bank declined, user cancelled, etc.)
+        // -------------------------------------------------------------------------
+        if (responsePaid) {
+          return this.handleSuccess(
+            txn,
+            command.query,
+            providerTxnId,
+            ipnAmount,
+          );
+        } else {
+          const responseCode = command.query['vnp_ResponseCode'] ?? 'unknown';
+          return this.handleFailure(
+            txn,
+            command.query,
+            providerTxnId,
+            responseCode,
+          );
+        }
+      },
+    );
   }
 
   // ---------------------------------------------------------------------------

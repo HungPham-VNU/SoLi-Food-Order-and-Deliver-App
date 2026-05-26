@@ -40,6 +40,9 @@ jobs:
       gh_actor: ${{ github.actor }}
       gh_repository: ${{ github.repository }}
       vite_api_base_url: ${{ vars.VITE_API_BASE_URL }}
+      vite_sentry_dsn: ${{ vars.VITE_SENTRY_DSN }}
+      vite_sentry_environment: production
+      vite_sentry_traces_sample_rate: ${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE || '0.1' }}
     secrets: inherit
 
   apply-render-infra:

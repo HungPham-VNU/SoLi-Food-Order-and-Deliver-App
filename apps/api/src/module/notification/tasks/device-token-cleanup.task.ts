@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { DeviceTokenRepository } from '../repositories/device-token.repository';
+import { runObserved } from '@/observability/trace';
 
 /**
  * DeviceTokenCleanupTask
@@ -56,58 +57,64 @@ export class DeviceTokenCleanupTask {
     deletedInactive: number;
     deletedStaleActive: number;
   }> {
-    this.logger.log('[DeviceTokenCleanup] Starting scheduled cleanup run…');
+    return runObserved(
+      'cron.device_token_cleanup',
+      { 'job.name': 'DeviceTokenCleanupTask.cleanupStaleTokens' },
+      async () => {
+        this.logger.log('[DeviceTokenCleanup] Starting scheduled cleanup run…');
 
-    const now = new Date();
+        const now = new Date();
 
-    const inactiveCutoff = new Date(
-      now.getTime() -
-        DeviceTokenCleanupTask.INACTIVE_TTL_DAYS * 24 * 60 * 60 * 1000,
+        const inactiveCutoff = new Date(
+          now.getTime() -
+            DeviceTokenCleanupTask.INACTIVE_TTL_DAYS * 24 * 60 * 60 * 1000,
+        );
+
+        const activeCutoff = new Date(
+          now.getTime() -
+            DeviceTokenCleanupTask.ACTIVE_TTL_DAYS * 24 * 60 * 60 * 1000,
+        );
+
+        let deletedInactive = 0;
+        let deletedStaleActive = 0;
+
+        // Pass 1 — stale inactive tokens
+        try {
+          deletedInactive =
+            await this.deviceTokenRepo.deleteStaleInactive(inactiveCutoff);
+
+          this.logger.log(
+            `[DeviceTokenCleanup] Pass 1 (inactive >${DeviceTokenCleanupTask.INACTIVE_TTL_DAYS}d): deleted ${deletedInactive} token(s)`,
+          );
+        } catch (err) {
+          this.logger.error(
+            `[DeviceTokenCleanup] Pass 1 failed: ${(err as Error).message}`,
+            (err as Error).stack,
+          );
+        }
+
+        // Pass 2 — stale active tokens (possible uninstalls)
+        try {
+          deletedStaleActive =
+            await this.deviceTokenRepo.deleteStaleActive(activeCutoff);
+
+          this.logger.log(
+            `[DeviceTokenCleanup] Pass 2 (active >${DeviceTokenCleanupTask.ACTIVE_TTL_DAYS}d): deleted ${deletedStaleActive} token(s)`,
+          );
+        } catch (err) {
+          this.logger.error(
+            `[DeviceTokenCleanup] Pass 2 failed: ${(err as Error).message}`,
+            (err as Error).stack,
+          );
+        }
+
+        const totalDeleted = deletedInactive + deletedStaleActive;
+        this.logger.log(
+          `[DeviceTokenCleanup] Run complete. Total deleted: ${totalDeleted} token(s).`,
+        );
+
+        return { deletedInactive, deletedStaleActive };
+      },
     );
-
-    const activeCutoff = new Date(
-      now.getTime() -
-        DeviceTokenCleanupTask.ACTIVE_TTL_DAYS * 24 * 60 * 60 * 1000,
-    );
-
-    let deletedInactive = 0;
-    let deletedStaleActive = 0;
-
-    // Pass 1 — stale inactive tokens
-    try {
-      deletedInactive =
-        await this.deviceTokenRepo.deleteStaleInactive(inactiveCutoff);
-
-      this.logger.log(
-        `[DeviceTokenCleanup] Pass 1 (inactive >${DeviceTokenCleanupTask.INACTIVE_TTL_DAYS}d): deleted ${deletedInactive} token(s)`,
-      );
-    } catch (err) {
-      this.logger.error(
-        `[DeviceTokenCleanup] Pass 1 failed: ${(err as Error).message}`,
-        (err as Error).stack,
-      );
-    }
-
-    // Pass 2 — stale active tokens (possible uninstalls)
-    try {
-      deletedStaleActive =
-        await this.deviceTokenRepo.deleteStaleActive(activeCutoff);
-
-      this.logger.log(
-        `[DeviceTokenCleanup] Pass 2 (active >${DeviceTokenCleanupTask.ACTIVE_TTL_DAYS}d): deleted ${deletedStaleActive} token(s)`,
-      );
-    } catch (err) {
-      this.logger.error(
-        `[DeviceTokenCleanup] Pass 2 failed: ${(err as Error).message}`,
-        (err as Error).stack,
-      );
-    }
-
-    const totalDeleted = deletedInactive + deletedStaleActive;
-    this.logger.log(
-      `[DeviceTokenCleanup] Run complete. Total deleted: ${totalDeleted} token(s).`,
-    );
-
-    return { deletedInactive, deletedStaleActive };
   }
 }
