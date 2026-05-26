@@ -1,0 +1,35 @@
+# Copy this file to production.auto.tfvars, then replace the placeholder values.
+# production.auto.tfvars is ignored by git and is loaded automatically by Terraform
+# when you run terraform plan/apply from this directory.
+
+api_image_tag = "sha-replace-me"
+web_image_tag = "sha-replace-me"
+
+api_env_vars = {
+  BETTER_AUTH_SECRET = "replace-me"
+  BETTER_AUTH_URL    = "https://api.example.com"
+  CORS_ORIGIN        = "https://app.example.com"
+
+  REDIS_HOST = "replace-me"
+  REDIS_PORT = "6379"
+
+  FIREBASE_SERVICE_ACCOUNT_PATH = "/etc/secrets/firebase-service-account.json"
+
+  CLOUDINARY_CLOUD_NAME = "replace-me"
+  CLOUDINARY_API_KEY    = "replace-me"
+  CLOUDINARY_API_SECRET = "replace-me"
+
+  SMTP_HOST = "replace-me"
+  SMTP_PORT = "587"
+  SMTP_USER = "replace-me"
+  SMTP_PASS = "replace-me"
+
+  VNPAY_TMN_CODE    = "replace-me"
+  VNPAY_HASH_SECRET = "replace-me"
+  VNPAY_URL         = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+  VNPAY_RETURN_URL  = "https://api.example.com/payments/vnpay/return"
+}
+
+web_env_vars = {
+  VITE_PUBLIC_API_URL = "https://api.example.com"
+}

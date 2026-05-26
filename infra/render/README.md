@@ -6,7 +6,7 @@ This directory manages the Render infrastructure for UITFood:
 - `UITFood API`
 - `UITFood Postgres`
 
-Terraform should own infrastructure shape: service names, plans, region, image references, custom domains, Postgres, and service links. Runtime application secrets should stay in Render by default.
+Terraform should own infrastructure shape: service names, plans, region, image references, custom domains, Postgres, service links, and any environment variables declared in your local `.tfvars` file.
 
 ## Required Credentials
 
@@ -33,35 +33,44 @@ If the HCP Terraform workspace uses remote execution, also set
 `RENDER_API_KEY` and `RENDER_OWNER_ID` as environment variables in the HCP
 Terraform workspace because the provider runs inside HCP Terraform.
 
-## Runtime Secrets Policy
+## Runtime Environment Variables
 
-Keep these in Render, not Terraform:
+Copy the example variable file:
 
-- `BETTER_AUTH_SECRET`
-- `BETTER_AUTH_URL`
-- `CORS_ORIGIN`
-- `REDIS_HOST`
-- `REDIS_PORT`
-- `FIREBASE_SERVICE_ACCOUNT_PATH`
-- `CLOUDINARY_*`
-- `SMTP_*`
-- `VNPAY_*`
+```powershell
+Copy-Item .\production.auto.tfvars.example .\production.auto.tfvars
+```
 
-Terraform config sets `DATABASE_URL` and `NODE_ENV` for API service creation, but ignores later `env_vars` and `secret_files` changes. This is intentional because Terraform state can contain sensitive values.
+Then edit `production.auto.tfvars` and set:
 
-If you want a cleaner Render UI, move the runtime secrets into a Render Environment Group and set `api_env_group_id` in your real `.tfvars` file.
+- `api_image_tag`
+- `web_image_tag`
+- `api_env_vars`
+- `web_env_vars`
+
+Terraform automatically loads `*.auto.tfvars` files when you run `terraform plan` or `terraform apply` from this directory. Values from `api_env_vars` are sent to the Render API service, and values from `web_env_vars` are sent to the Render web service.
+
+`DATABASE_URL` and `NODE_ENV` are managed automatically for the API service. Do not duplicate those keys unless you intentionally want the value from `api_env_vars` to override the default.
+
+Any Render service environment variable that should keep existing after this change must be present in Terraform. Once `env_vars` is Terraform-managed, variables that exist only in the Render dashboard can be removed by the next apply.
+
+These values are marked sensitive in Terraform output, but Terraform state can still contain sensitive values. Keep using the configured HCP Terraform remote state and restrict workspace access.
+
+Secret files are still ignored by Terraform. Manage files such as `/etc/secrets/firebase-service-account.json` directly in Render unless you intentionally add `secret_files` management.
+
+`api_env_group_id` remains available if you want to link an existing Render Environment Group to the API service. If a key exists both on the API service and in a linked group, Render service-level environment variables take precedence.
 
 ## First-Time Migration From Existing Render Resources
 
 Copy the example variables:
 
 ```powershell
-Copy-Item .\production.tfvars.example .\production.tfvars
+Copy-Item .\production.auto.tfvars.example .\production.auto.tfvars
 ```
 
-Edit `production.tfvars` and set the current image tags.
+Edit `production.auto.tfvars` and set the current image tags and environment variables.
 
-For GitHub Actions, put any values from `production.tfvars` that are needed in
+For GitHub Actions, do not commit `production.auto.tfvars`. Put values needed in
 CI into the HCP Terraform workspace variables instead. The workflow supplies
 `api_image_tag` and `web_image_tag` through `TF_VAR_*` environment variables.
 
@@ -76,15 +85,15 @@ terraform init
 Import existing resources before applying. Replace the IDs with the IDs from your Render dashboard URLs.
 
 ```powershell
-terraform import -var-file=production.tfvars render_web_service.api srv_xxxxxxxxxxxxxxxxxxxx
-terraform import -var-file=production.tfvars render_web_service.web srv_xxxxxxxxxxxxxxxxxxxx
-terraform import -var-file=production.tfvars render_postgres.main dpg_xxxxxxxxxxxxxxxxxxxx
+terraform import render_web_service.api srv_xxxxxxxxxxxxxxxxxxxx
+terraform import render_web_service.web srv_xxxxxxxxxxxxxxxxxxxx
+terraform import render_postgres.main dpg_xxxxxxxxxxxxxxxxxxxx
 ```
 
 Then inspect the plan:
 
 ```powershell
-terraform plan -var-file=production.tfvars
+terraform plan
 ```
 
 Do not run `terraform apply` until the plan shows no unexpected replacement or deletion. Pay special attention to `env_vars`, `secret_files`, image tags, and Postgres settings.
@@ -96,8 +105,8 @@ Without these imports, Terraform treats the configuration as new infrastructure 
 After migration:
 
 ```powershell
-terraform plan -var-file=production.tfvars
-terraform apply -var-file=production.tfvars
+terraform plan
+terraform apply
 ```
 
 GitHub Actions automatically applies Render infrastructure changes on pushes to

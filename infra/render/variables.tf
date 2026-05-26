@@ -143,6 +143,20 @@ variable "web_health_check_path" {
   default     = null
 }
 
+variable "api_env_vars" {
+  description = "API service environment variables managed by Terraform. Values are sent to Render on plan/apply and stored in Terraform state."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
+}
+
+variable "web_env_vars" {
+  description = "Web service environment variables managed by Terraform. Values are sent to Render on plan/apply and stored in Terraform state."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
+}
+
 variable "api_env_group_id" {
   description = "Optional existing Render environment group ID that contains API runtime secrets."
   type        = string

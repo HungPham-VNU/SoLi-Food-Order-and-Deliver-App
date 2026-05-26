@@ -1,5 +1,25 @@
 locals {
   has_api_env_group = trimspace(var.api_env_group_id) != ""
+  api_env_vars = merge(
+    {
+      DATABASE_URL = {
+        value = render_postgres.main.connection_info.internal_connection_string
+      }
+      NODE_ENV = {
+        value = "production"
+      }
+    },
+    {
+      for key, value in var.api_env_vars : key => {
+        value = value
+      }
+    }
+  )
+  web_env_vars = {
+    for key, value in var.web_env_vars : key => {
+      value = value
+    }
+  }
 }
 
 resource "render_postgres" "main" {
@@ -29,26 +49,11 @@ resource "render_web_service" "api" {
     }
   }
 
-  # Runtime secrets such as BETTER_AUTH_SECRET, CLOUDINARY_*, SMTP_*,
-  # VNPAY_*, Firebase, and Redis stay in Render by default. This prevents
-  # Terraform state from becoming the application's secret store.
-  env_vars = {
-    DATABASE_URL = {
-      value = render_postgres.main.connection_info.internal_connection_string
-    }
-    NODE_ENV = {
-      value = "production"
-    }
-  }
+  env_vars = local.api_env_vars
 
-  # NOTE: Ignoring env_vars/secret_files allows you to safely manage runtime
-  # secrets/config in the Render dashboard without Terraform overwriting them.
-  # CAVEAT: Any subsequent updates to env_vars in this file (e.g., DATABASE_URL)
-  # will NOT be applied to existing services by Terraform; they must be updated
-  # manually in the Render console.
+  # Keep secret files in Render unless Terraform should own their full contents.
   lifecycle {
     ignore_changes = [
-      env_vars,
       secret_files,
     ]
   }
@@ -69,18 +74,15 @@ resource "render_web_service" "web" {
     }
   }
 
-  # NOTE: Ignoring env_vars/secret_files allows you to safely manage runtime
-  # secrets/config in the Render dashboard without Terraform overwriting them.
-  # CAVEAT: Any subsequent updates to env_vars in this file will NOT be applied
-  # to existing services by Terraform; they must be updated manually in the Render console.
+  env_vars = local.web_env_vars
+
+  # Keep secret files in Render unless Terraform should own their full contents.
   lifecycle {
     ignore_changes = [
-      env_vars,
       secret_files,
     ]
   }
 }
-
 
 resource "render_env_group_link" "api_runtime_secrets" {
   count = local.has_api_env_group ? 1 : 0
