@@ -17,8 +17,23 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  // Social providers. Each entry is enabled iff both env vars are set —
+  // otherwise the plugin throws on boot. Set up in Google Cloud Console:
+  //   Authorised redirect URI: http://localhost:3000/api/auth/callback/google
+  socialProviders: {
+    ...(process.env.GOOGLE_CLIENT_ID &&
+    process.env.GOOGLE_CLIENT_SECRET
+      ? {
+          google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          },
+        }
+      : {}),
+  },
   trustedOrigins: [
     'http://localhost:5173',
+    'http://localhost:5174',
     'uitfood://',
     'exp://**',
     'https://uitfood-web.onrender.com',

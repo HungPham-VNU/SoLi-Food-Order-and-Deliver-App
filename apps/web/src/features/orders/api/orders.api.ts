@@ -28,11 +28,44 @@ export const ordersApi = {
   // Order detail (lifecycle controller — any authenticated user)
   // -------------------------------------------------------------------------
 
-  /** GET /orders/:id — order state + items (timeline excluded, fetch separately) */
+  /**
+   * GET /orders/:id — order state + items (timeline excluded, fetch separately)
+   *
+   * Backend returns nested `{ order, items }` — we flatten to OrderDetail shape
+   * so consumers can access fields uniformly (matches /orders/my/:id contract).
+   */
   getOrderDetail: (id: string) =>
     apiClient
-      .get<Omit<OrderDetail, 'timeline'>>(`/api/orders/${id}`)
-      .then((r) => r.data),
+      .get<{ order: any; items: any[] }>(`/api/orders/${id}`)
+      .then((r): Omit<OrderDetail, 'timeline'> => {
+        const { order, items } = r.data;
+        return {
+          orderId: order.id,
+          status: order.status,
+          restaurantId: order.restaurantId,
+          restaurantName: order.restaurantName,
+          paymentMethod: order.paymentMethod,
+          totalAmount: Number(order.totalAmount),
+          shippingFee: Number(order.shippingFee),
+          estimatedDeliveryMinutes: order.estimatedDeliveryMinutes ?? null,
+          note: order.note ?? null,
+          paymentUrl: order.paymentUrl ?? null,
+          deliveryAddress: order.deliveryAddress,
+          shipperId: order.shipperId ?? null,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+          items: items.map((item) => ({
+            orderItemId: item.id,
+            menuItemId: item.menuItemId,
+            itemName: item.itemName,
+            unitPrice: Number(item.unitPrice),
+            modifiersPrice: Number(item.modifiersPrice),
+            quantity: item.quantity,
+            subtotal: Number(item.subtotal),
+            modifiers: item.modifiers || [],
+          })),
+        };
+      }),
 
   /** GET /orders/:id/timeline — full audit trail of status transitions */
   getOrderTimeline: (id: string) =>

@@ -13,6 +13,11 @@ export const restaurantApi = {
   getOne: (id: string) =>
     apiClient.get<Restaurant>(`/api/restaurants/${id}`),
 
+  // Returns the caller's restaurant regardless of approval status, or null
+  // when they haven't submitted one yet.
+  getMine: () =>
+    apiClient.get<Restaurant | null>('/api/restaurants/my'),
+
   create: (data: RestaurantFormValues) =>
     apiClient.post<Restaurant>('/api/restaurants', data),
 

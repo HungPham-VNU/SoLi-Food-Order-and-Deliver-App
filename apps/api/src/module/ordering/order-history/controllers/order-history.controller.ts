@@ -155,7 +155,7 @@ export class OrderHistoryRestaurantController {
 
   /**
    * GET /restaurant/orders/active — kitchen operational view.
-   * Returns all confirmed/preparing/ready_for_pickup orders, oldest-first.
+   * Returns all pending/paid/confirmed/preparing/ready_for_pickup orders, oldest-first.
    * No pagination — this is a live operational screen.
    */
   @Get('orders/active')

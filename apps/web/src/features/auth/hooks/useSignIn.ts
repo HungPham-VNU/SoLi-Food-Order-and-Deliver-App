@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { signIn } from '@/lib/auth-client';
+import { signIn, signOut } from '@/lib/auth-client';
 import { ApiError } from '@/lib/api-client';
 
 export interface SignInInput {
@@ -24,10 +24,20 @@ export function useSignIn() {
           result.error.message ?? 'Invalid credentials',
         );
       }
+      const role = (result.data?.user as any)?.role;
+      // Admin accounts belong on the admin portal — refuse and sign out.
+      if (role === 'admin') {
+        await signOut();
+        throw new ApiError(
+          403,
+          'ADMIN_USE_ADMIN_PORTAL',
+          'Admin accounts must sign in via the admin portal.',
+        );
+      }
       return result.data;
     },
     onSuccess: () => {
-      navigate('/dashboard');
+      navigate('/', { replace: true });
     },
   });
 }

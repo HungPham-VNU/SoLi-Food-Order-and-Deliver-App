@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, eq } from 'drizzle-orm';
+import { and, asc, count, eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import {
   restaurants,
@@ -43,7 +43,7 @@ export class RestaurantRepository {
         .select()
         .from(restaurants)
         .where(whereClause)
-        .orderBy(restaurants.createdAt)
+        .orderBy(asc(restaurants.isApproved), asc(restaurants.createdAt))
         .offset(offset ?? 0)
         // limit is always supplied by RestaurantService (DEFAULT_PAGE_SIZE / MAX_PAGE_SIZE),
         // but we fall back to 20 here so the repository remains usable in isolation.
@@ -61,6 +61,21 @@ export class RestaurantRepository {
       .select()
       .from(restaurants)
       .where(eq(restaurants.id, id))
+      .limit(1);
+    return result[0] ?? null;
+  }
+
+  /**
+   * Returns the first restaurant owned by the given user, or null. The
+   * data model permits one owner → many restaurants, but the current UX
+   * assumes one. If that changes, callers should switch to a list endpoint.
+   */
+  async findByOwner(ownerId: string): Promise<Restaurant | null> {
+    const result = await this.db
+      .select()
+      .from(restaurants)
+      .where(eq(restaurants.ownerId, ownerId))
+      .orderBy(asc(restaurants.createdAt))
       .limit(1);
     return result[0] ?? null;
   }

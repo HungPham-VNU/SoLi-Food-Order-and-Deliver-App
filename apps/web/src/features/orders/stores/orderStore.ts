@@ -1,5 +1,43 @@
 import { create } from "zustand";
 import type { Order, OrderStatus } from "@/features/orders/types/order.types";
+import type { OrderListItem } from "@/features/orders/types";
+
+function mapOrderListItemToOrder(item: OrderListItem): Order {
+  const statusMap: Record<string, OrderStatus> = {
+    'pending': 'requesting',
+    'paid': 'requesting',
+    'confirmed': 'todo',
+    'preparing': 'in_progress',
+    'ready_for_pickup': 'done',
+    'picked_up': 'done',
+    'delivering': 'done',
+    'delivered': 'done',
+    'cancelled': 'done',
+    'refunded': 'done',
+  };
+
+  const tagVariantMap: Record<string, string> = {
+    'pending': 'unaccepted',
+    'paid': 'unaccepted',
+    'confirmed': 'high_priority',
+    'preparing': 'preparing',
+    'ready_for_pickup': 'ready',
+  };
+
+  const mappedStatus = (statusMap[item.status] || 'requesting') as OrderStatus;
+
+  return {
+    id: item.orderId,
+    orderNumber: `#${item.orderId.slice(0, 6).toUpperCase()}`,
+    title: item.firstItemName || 'Order',
+    status: mappedStatus,
+    tag: {
+      label: item.status.charAt(0).toUpperCase() + item.status.slice(1).replace(/_/g, ' '),
+      variant: (tagVariantMap[item.status] || 'order-neutral') as any,
+    },
+    timestamp: new Date(item.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+  };
+}
 
 const initialOrders: Order[] = [
   // Requesting
@@ -245,6 +283,7 @@ type OrderStore = {
   /** True while the store is fetching orders asynchronously. Always false for the current synchronous mock data. */
   isLoading: boolean;
   setSearchQuery: (q: string) => void;
+  setOrders: (items: OrderListItem[]) => void;
   reorderOrder: (
     orderId: string,
     sourceStatus: OrderStatus,
@@ -264,6 +303,11 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   newOrderToast: null,
 
   setSearchQuery: (q) => set({ searchQuery: q }),
+
+  setOrders: (items) =>
+    set({
+      orders: items.map(mapOrderListItemToOrder),
+    }),
 
   reorderOrder: (orderId, sourceStatus, destinationStatus, sourceIndex, destinationIndex) =>
     set((state) => {

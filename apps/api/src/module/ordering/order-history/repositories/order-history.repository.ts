@@ -127,6 +127,8 @@ export class OrderHistoryRepository {
     restaurantId: string,
   ): Promise<OrderListRow[]> {
     const activeStatuses = [
+      'pending',
+      'paid',
       'confirmed',
       'preparing',
       'ready_for_pickup',
@@ -313,15 +315,18 @@ export class OrderHistoryRepository {
         updatedAt: orders.updatedAt,
         // Correlated aggregate subqueries — 1 extra SQL expr per list row resolved
         // in a single query plan, not N separate round-trips.
+        // Note: use fully-qualified "orders"."id" to disambiguate from
+        // potential outer-scope ambiguity (Drizzle's ${orders.id} only emits
+        // the unqualified column name inside sql templates).
         itemCount: sql<number>`(
           SELECT COUNT(*)::int
           FROM order_items oi
-          WHERE oi.order_id = ${orders.id}
+          WHERE oi.order_id = "orders"."id"
         )`,
         firstItemName: sql<string>`(
           SELECT MIN(oi.item_name)
           FROM order_items oi
-          WHERE oi.order_id = ${orders.id}
+          WHERE oi.order_id = "orders"."id"
         )`,
       })
       .from(orders)
