@@ -19,6 +19,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 
 OTEL_SERVICE_NAME=uitfood-api
 OTEL_EXPORTER_OTLP_ENDPOINT=
+OTEL_TRACES_SAMPLER=parentbased_traceidratio
 OTEL_TRACES_SAMPLER_ARG=0.1
 LOG_LEVEL=info
 ```
@@ -75,7 +76,7 @@ API logs are JSON written to stdout/stderr for Render log collection. Each reque
 - `cfRay` when Render/Cloudflare forwards it
 - user ID when already available on the request
 
-The redaction layer removes sensitive headers and common secret fields, including auth cookies, bearer tokens, FCM tokens, payment hashes/signatures, SMTP credentials, Cloudinary secrets, and raw IP-like strings. Do not log request bodies, payment payloads, raw addresses, or provider credentials.
+The redaction layer removes sensitive headers and common secret fields, including auth cookies, bearer tokens, FCM tokens, payment hashes/signatures, SMTP credentials, Cloudinary secrets, and explicitly labelled IP fields. Do not log request bodies, payment payloads, raw addresses, or provider credentials.
 
 ## Dashboards and Alerts
 

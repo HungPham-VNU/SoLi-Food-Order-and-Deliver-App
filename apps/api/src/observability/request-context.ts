@@ -9,9 +9,12 @@ export interface RequestContext {
   method: string;
   path: string;
   startedAt: number;
+  traceId?: string;
+  spanId?: string;
 }
 
 const storage = new AsyncLocalStorage<RequestContext>();
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9._~:-]{1,128}$/;
 
 function firstHeader(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -20,7 +23,7 @@ function firstHeader(value: string | string[] | undefined): string | undefined {
 
 function safeRequestId(req: Request): string {
   const incoming = firstHeader(req.headers['x-request-id']);
-  if (incoming && incoming.length <= 128) return incoming;
+  if (incoming && REQUEST_ID_PATTERN.test(incoming)) return incoming;
   return randomUUID();
 }
 
@@ -43,11 +46,14 @@ export function requestContextMiddleware(
   res: Response,
   next: NextFunction,
 ): void {
+  const span = trace.getActiveSpan()?.spanContext();
   const context: RequestContext = {
     requestId: safeRequestId(req),
     method: req.method,
     path: requestPath(req),
     startedAt: performance.now(),
+    traceId: span?.traceId,
+    spanId: span?.spanId,
   };
 
   res.setHeader('x-request-id', context.requestId);
@@ -56,7 +62,6 @@ export function requestContextMiddleware(
     res.on('finish', () => {
       if (isHealthPath(context.path)) return;
 
-      const span = trace.getActiveSpan()?.spanContext();
       const user = (req as Request & { user?: { id?: string } }).user;
       const durationMs = Math.round(performance.now() - context.startedAt);
 
@@ -66,8 +71,8 @@ export function requestContextMiddleware(
           timestamp: new Date().toISOString(),
           event: 'http.request',
           requestId: context.requestId,
-          traceId: span?.traceId,
-          spanId: span?.spanId,
+          traceId: context.traceId,
+          spanId: context.spanId,
           method: context.method,
           path: context.path,
           statusCode: res.statusCode,

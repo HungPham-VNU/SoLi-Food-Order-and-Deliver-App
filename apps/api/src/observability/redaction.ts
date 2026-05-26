@@ -1,23 +1,85 @@
 const REDACTED = '[REDACTED]';
 
 const SENSITIVE_KEY_PATTERN =
-  /authorization|cookie|token|secret|password|pass|hash|signature|api[_-]?key|fcm|smtp|cloudinary|vnpay/i;
+  /authorization|cookie|token|secret|password|pass|hash|signature|api[_-]?key|fcm|smtp|cloudinary|vnpay|ipaddr|ipaddress|clientip|remoteip|remoteaddress|x-forwarded-for|x-real-ip|cf-connecting-ip|(^|[-_])ip($|[-_])/i;
 
-const STRING_REDACTIONS: Array<[RegExp, string]> = [
-  [/(authorization=|authorization:|bearer\s+)[^\s,;"]+/gi, `$1${REDACTED}`],
-  [/(cookie=|cookie:)[^\n"]+/gi, `$1${REDACTED}`],
-  [/(token=)[^\s,;"]+/gi, `$1${REDACTED}`],
-  [/(secret=)[^\s,;"]+/gi, `$1${REDACTED}`],
-  [/(hash=)[^\s,;"]+/gi, `$1${REDACTED}`],
-  [/(ipAddr=)[^\s,;"]+/gi, `$1${REDACTED}`],
-  [/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, REDACTED],
+type RedactionRule = {
+  pattern: RegExp;
+  replacement: (match: RegExpExecArray) => string;
+};
+
+type RedactionMatch = {
+  start: number;
+  end: number;
+  replacement: string;
+};
+
+const prefixRedaction = (match: RegExpExecArray) =>
+  `${match[1] ?? ''}${REDACTED}`;
+
+const STRING_REDACTIONS: RedactionRule[] = [
+  {
+    pattern: /\b(authorization\s*[:=]\s*)(?:bearer\s+)?[^\s,;"]+/gi,
+    replacement: prefixRedaction,
+  },
+  {
+    pattern: /\b(bearer\s+)[^\s,;"]+/gi,
+    replacement: prefixRedaction,
+  },
+  {
+    pattern: /\b(cookie\s*[:=]\s*)[^\n"]+/gi,
+    replacement: prefixRedaction,
+  },
+  {
+    pattern:
+      /\b((?:token|secret|hash|signature|api[_-]?key|password|pass|fcm|smtp|cloudinary|vnpay)\s*[:=]\s*)[^\s,;"]+/gi,
+    replacement: prefixRedaction,
+  },
+  {
+    pattern:
+      /\b((?:ipaddr|ip|clientip|remoteip|remoteaddress|x-forwarded-for|x-real-ip|cf-connecting-ip)\s*[:=]\s*)[^\s,;"]+/gi,
+    replacement: prefixRedaction,
+  },
 ];
 
 export function redactString(value: string): string {
-  return STRING_REDACTIONS.reduce(
-    (current, [pattern, replacement]) => current.replace(pattern, replacement),
-    value,
-  );
+  const matches = STRING_REDACTIONS.flatMap(({ pattern, replacement }) => {
+    pattern.lastIndex = 0;
+    const ruleMatches: RedactionMatch[] = [];
+    let match: RegExpExecArray | null;
+
+    while ((match = pattern.exec(value))) {
+      if (match[0].length === 0) {
+        pattern.lastIndex += 1;
+        continue;
+      }
+
+      ruleMatches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        replacement: replacement(match),
+      });
+    }
+
+    return ruleMatches;
+  });
+
+  matches.sort((left, right) => {
+    if (left.start !== right.start) return left.start - right.start;
+    return right.end - left.end;
+  });
+
+  let redacted = '';
+  let cursor = 0;
+
+  for (const match of matches) {
+    if (match.start < cursor) continue;
+    redacted += value.slice(cursor, match.start);
+    redacted += match.replacement;
+    cursor = match.end;
+  }
+
+  return redacted + value.slice(cursor);
 }
 
 export function redactValue(value: unknown): unknown {

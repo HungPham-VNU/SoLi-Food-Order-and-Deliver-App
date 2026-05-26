@@ -1,7 +1,12 @@
 import { EventEmitter } from 'node:events';
+import { trace } from '@opentelemetry/api';
 import { requestContextMiddleware, getRequestContext } from './request-context';
 
 describe('requestContextMiddleware', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('sets and stores x-request-id', () => {
     const response = new EventEmitter() as EventEmitter & {
       statusCode: number;
@@ -26,5 +31,71 @@ describe('requestContextMiddleware', () => {
 
     expect(response.setHeader).toHaveBeenCalledWith('x-request-id', 'req-123');
     expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects unsafe x-request-id values', () => {
+    const response = new EventEmitter() as EventEmitter & {
+      statusCode: number;
+      setHeader: jest.Mock;
+    };
+    response.statusCode = 200;
+    response.setHeader = jest.fn();
+
+    const request = {
+      method: 'GET',
+      path: '/api/test',
+      originalUrl: '/api/test',
+      url: '/api/test',
+      headers: { 'x-request-id': 'req-123\r\nx-bad: injected' },
+    };
+
+    requestContextMiddleware(request as never, response as never, jest.fn());
+
+    const requestId = response.setHeader.mock.calls[0]?.[1] as string;
+    expect(requestId).not.toBe('req-123\r\nx-bad: injected');
+    expect(requestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+  });
+
+  it('uses the span active during middleware execution for finish logs', () => {
+    const spanContext = {
+      traceId: '0'.repeat(32),
+      spanId: '1'.repeat(16),
+      traceFlags: 1,
+    };
+    const getActiveSpanSpy = jest
+      .spyOn(trace, 'getActiveSpan')
+      .mockReturnValue({ spanContext: () => spanContext } as never);
+    const logSpy = jest
+      .spyOn(console, 'log')
+      .mockImplementation(() => undefined);
+    const response = new EventEmitter() as EventEmitter & {
+      statusCode: number;
+      setHeader: jest.Mock;
+    };
+    response.statusCode = 200;
+    response.setHeader = jest.fn();
+
+    const request = {
+      method: 'GET',
+      path: '/api/test',
+      originalUrl: '/api/test',
+      url: '/api/test',
+      headers: {},
+    };
+    const next = jest.fn(() => {
+      getActiveSpanSpy.mockReturnValue(undefined);
+      response.emit('finish');
+    });
+
+    requestContextMiddleware(request as never, response as never, next);
+
+    const record = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+      traceId?: string;
+      spanId?: string;
+    };
+    expect(record.traceId).toBe(spanContext.traceId);
+    expect(record.spanId).toBe(spanContext.spanId);
   });
 });

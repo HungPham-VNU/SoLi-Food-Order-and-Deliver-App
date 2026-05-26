@@ -76,5 +76,9 @@ export function setupSentryExpressErrorHandler(app: unknown): void {
 
 export async function closeSentry(timeoutMs = 2000): Promise<void> {
   if (!initialized) return;
-  await Sentry.close(timeoutMs);
+  try {
+    await Sentry.close(timeoutMs);
+  } finally {
+    initialized = false;
+  }
 }

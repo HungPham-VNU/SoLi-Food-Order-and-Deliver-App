@@ -16,8 +16,26 @@ describe('observability redaction', () => {
   });
 
   it('redacts sensitive strings', () => {
-    expect(redactString('ipAddr=127.0.0.1 token=abc')).toBe(
-      'ipAddr=[REDACTED] token=[REDACTED]',
+    expect(redactString('ipAddr=127.0.0.1 token=abc secret: def')).toBe(
+      'ipAddr=[REDACTED] token=[REDACTED] secret: [REDACTED]',
+    );
+  });
+
+  it('does not redact version-shaped strings as IP addresses', () => {
+    expect(redactString('release=1.2.3.4 version 10.20.30.40')).toBe(
+      'release=1.2.3.4 version 10.20.30.40',
+    );
+  });
+
+  it('redacts bearer credentials without leaking the token suffix', () => {
+    expect(redactString('authorization=Bearer abc123')).toBe(
+      'authorization=[REDACTED]',
+    );
+  });
+
+  it('does not partially re-redact overlapping sensitive strings', () => {
+    expect(redactString('authorization=Bearer token=abc')).toBe(
+      'authorization=[REDACTED]',
     );
   });
 
@@ -26,5 +44,14 @@ describe('observability redaction', () => {
       status: 'ok',
       count: 2,
     });
+  });
+
+  it('redacts explicit IP fields while preserving app versions', () => {
+    expect(redactValue({ ipAddr: '127.0.0.1', appVersion: '1.2.3.4' })).toEqual(
+      {
+        ipAddr: '[REDACTED]',
+        appVersion: '1.2.3.4',
+      },
+    );
   });
 });

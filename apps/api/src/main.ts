@@ -1,17 +1,48 @@
-import './observability/instrumentation';
+import { shutdownTelemetry } from './observability/instrumentation';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder, OpenAPIObject } from '@nestjs/swagger';
 import { auth } from './lib/auth';
 import { AppModule } from './app.module';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import type { Request, Response } from 'express';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { join } from 'path';
 import * as expressStatic from 'express';
 import { createCorsOptions } from './observability/cors';
 import { JsonLogger } from './observability/json-logger';
 import { requestContextMiddleware } from './observability/request-context';
 import { setupSentryExpressErrorHandler } from './observability/sentry';
+
+function installShutdownHandler(app: INestApplication): void {
+  let shutdownStarted = false;
+
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.once(signal, () => {
+      if (shutdownStarted) return;
+      shutdownStarted = true;
+
+      void (async () => {
+        try {
+          await app.close();
+          await shutdownTelemetry(signal);
+          process.exit(0);
+        } catch (error) {
+          console.error(
+            JSON.stringify({
+              level: 'error',
+              timestamp: new Date().toISOString(),
+              event: 'app.shutdown_failed',
+              signal,
+              message: error instanceof Error ? error.message : String(error),
+            }),
+          );
+          await shutdownTelemetry(`${signal}:failed`);
+          process.exit(1);
+        }
+      })();
+    });
+  }
+}
 
 async function bootstrap() {
   const logger = new JsonLogger();
@@ -91,7 +122,7 @@ async function bootstrap() {
   );
 
   setupSentryExpressErrorHandler(app.getHttpAdapter().getInstance());
-  app.enableShutdownHooks();
+  installShutdownHandler(app);
 
   await app.listen(process.env.PORT ?? 3000);
 }

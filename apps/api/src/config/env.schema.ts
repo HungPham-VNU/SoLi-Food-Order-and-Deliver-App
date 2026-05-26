@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+const emptyStringToUndefined = (value: unknown) =>
+  value === '' ? undefined : value;
+
 /**
  * Zod schema for all required environment variables.
  *
@@ -146,12 +149,28 @@ export const envSchema = z.object({
   // Observability - optional. When absent, Sentry and OpenTelemetry exporters
   // stay disabled and the app continues to run with local structured logs.
   // ---------------------------------------------------------------------------
-  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_DSN: z.preprocess(emptyStringToUndefined, z.string().url().optional()),
   SENTRY_ENVIRONMENT: z.string().optional(),
   SENTRY_RELEASE: z.string().optional(),
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
   OTEL_SERVICE_NAME: z.string().default('uitfood-api'),
-  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.preprocess(
+    emptyStringToUndefined,
+    z.string().url().optional(),
+  ),
+  OTEL_TRACES_SAMPLER: z
+    .enum([
+      'always_on',
+      'always_off',
+      'traceidratio',
+      'parentbased_always_on',
+      'parentbased_always_off',
+      'parentbased_traceidratio',
+      'parentbased_jaeger_remote',
+      'jaeger_remote',
+      'xray',
+    ])
+    .default('parentbased_traceidratio'),
   OTEL_TRACES_SAMPLER_ARG: z.coerce.number().min(0).max(1).default(0.1),
   LOG_LEVEL: z
     .enum([

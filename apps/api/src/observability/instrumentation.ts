@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
@@ -8,7 +9,10 @@ import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
 } from '@opentelemetry/semantic-conventions';
+import { validate } from '../config/env.schema';
 import { closeSentry, initSentry } from './sentry';
+
+const env = validate(process.env);
 
 initSentry();
 
@@ -37,15 +41,18 @@ function isHealthRequest(url?: string | null): boolean {
   );
 }
 
-const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT?.trim();
+const otlpEndpoint = env.OTEL_EXPORTER_OTLP_ENDPOINT?.trim();
 
 if (otlpEndpoint) {
+  process.env.OTEL_TRACES_SAMPLER = env.OTEL_TRACES_SAMPLER;
+  process.env.OTEL_TRACES_SAMPLER_ARG = String(env.OTEL_TRACES_SAMPLER_ARG);
+
   sdk = new NodeSDK({
     resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME ?? 'uitfood-api',
-      [ATTR_SERVICE_VERSION]: process.env.SENTRY_RELEASE ?? 'local',
+      [ATTR_SERVICE_NAME]: env.OTEL_SERVICE_NAME,
+      [ATTR_SERVICE_VERSION]: env.SENTRY_RELEASE ?? 'local',
       'deployment.environment':
-        process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? 'development',
+        env.SENTRY_ENVIRONMENT ?? env.NODE_ENV ?? 'development',
     }),
     traceExporter: new OTLPTraceExporter({
       url: otlpUrl(otlpEndpoint, '/v1/traces'),
@@ -89,12 +96,18 @@ export async function shutdownTelemetry(signal = 'manual'): Promise<void> {
       }),
     );
   } finally {
-    await closeSentry();
+    try {
+      await closeSentry();
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          level: 'error',
+          timestamp: new Date().toISOString(),
+          event: 'sentry.shutdown_failed',
+          signal,
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
   }
-}
-
-for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-  process.once(signal, () => {
-    void shutdownTelemetry(signal).finally(() => process.exit(0));
-  });
 }

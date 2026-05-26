@@ -38,6 +38,7 @@ api_env_vars = {
   SENTRY_TRACES_SAMPLE_RATE = "0.1"
   OTEL_SERVICE_NAME         = "uitfood-api"
   OTEL_EXPORTER_OTLP_ENDPOINT = "https://otel-collector.example.com"
+  OTEL_TRACES_SAMPLER       = "parentbased_traceidratio"
   OTEL_TRACES_SAMPLER_ARG   = "0.1"
   LOG_LEVEL                 = "info"
 }
