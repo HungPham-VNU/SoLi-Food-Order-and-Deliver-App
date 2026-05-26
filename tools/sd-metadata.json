@@ -1,0 +1,352 @@
+[
+  {
+    "id": 1, "uc": "UC-1", "title": "User Authentication",
+    "module": "Customer Module",
+    "actors": "Guest / Authenticated User",
+    "primaryService": "Authentication Service",
+    "relatedServices": "OTP Service",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-1 Activity Diagram steps 1-20",
+    "description": "End-to-end authentication flow covering sign-in with session creation, new account registration with email uniqueness validation, and password reset via email-delivered OTP. All interaction step numbers correspond directly to numbered activity steps in SRS UC-1."
+  },
+  {
+    "id": 2, "uc": "UC-2", "title": "Discover Restaurants & Food",
+    "module": "Customer Module",
+    "actors": "User / Guest",
+    "primaryService": "Search Service",
+    "relatedServices": "Restaurant & Menu Catalog",
+    "complexity": "Low",
+    "traceSource": "SRS_FoodDelivery.md UC-2 Activity Diagram steps 1-6",
+    "description": "Search and discovery flow for browsing restaurants and menu items with keyword, category, cuisine, and geolocation-based filters. Returns paginated results from the restaurant and menu catalog with availability and approval status applied."
+  },
+  {
+    "id": 3, "uc": "UC-3", "title": "View Restaurant Details",
+    "module": "Customer Module",
+    "actors": "User / Guest",
+    "primaryService": "Restaurant Service",
+    "relatedServices": "Menu Catalog, Promotion Service",
+    "complexity": "Low",
+    "traceSource": "SRS_FoodDelivery.md UC-3 Activity Diagram steps 1-6",
+    "description": "Retrieval of a single restaurant's full profile, menu catalog, and active promotions. Returns combined restaurant detail including operating hours, zone coverage, and item availability snapshot."
+  },
+  {
+    "id": 4, "uc": "UC-4", "title": "Add Item to Cart",
+    "module": "Customer Module",
+    "actors": "Customer (Authenticated)",
+    "primaryService": "Cart Service",
+    "relatedServices": "Menu Catalog",
+    "complexity": "Low-Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-4 Activity Diagram steps 1-11",
+    "description": "Validates item and modifier availability, applies a server-side pricing snapshot, and appends the line item to the customer's active cart. Enforces single-restaurant-per-cart constraint with conflict resolution options."
+  },
+  {
+    "id": 5, "uc": "UC-5", "title": "Manage Shopping Cart",
+    "module": "Customer Module",
+    "actors": "Customer",
+    "primaryService": "Cart Service",
+    "relatedServices": "Menu Catalog, Restaurant Catalog",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-5 Activity Diagram steps 1-20",
+    "description": "Full cart lifecycle management including view, quantity update, item removal, cart clear, and coupon code application with discount preview. All mutations revalidate item availability and pricing before persisting."
+  },
+  {
+    "id": 6, "uc": "UC-6", "title": "Save & Manage Delivery Addresses",
+    "module": "Customer Module",
+    "actors": "Customer",
+    "primaryService": "Address Service",
+    "relatedServices": "Authentication Service",
+    "complexity": "Low",
+    "traceSource": "SRS_FoodDelivery.md UC-6 Activity Diagram steps 1-10",
+    "description": "CRUD operations for the customer address book with default-address management and coordinate validation. Enforces address immutability for orders that have already snapshotted the address at checkout."
+  },
+  {
+    "id": 7, "uc": "UC-7", "title": "Manage Delivery Zones",
+    "module": "Customer Module",
+    "actors": "Restaurant Owner, Administrator",
+    "primaryService": "Delivery Zone Service",
+    "relatedServices": "Restaurant Catalog",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-7 Activity Diagram steps 1-16",
+    "description": "Creation, modification, and deletion of restaurant-specific delivery zones including coordinate polygon validation, minimum-order threshold, and zone overlap detection. Requires approved restaurant ownership for self-service operations."
+  },
+  {
+    "id": 8, "uc": "UC-8", "title": "Place Order",
+    "module": "Customer Module",
+    "actors": "Customer",
+    "primaryService": "Order Service",
+    "relatedServices": "Promotion Service, Payment Service, Event Bus",
+    "complexity": "High",
+    "traceSource": "SRS_FoodDelivery.md UC-8 Activity Diagram steps 1-15",
+    "description": "End-to-end checkout flow covering idempotency key control, Redis cart-lock acquisition, server-side price recomputation from the ACL snapshot, promotion reservation, order row persistence, payment initiation, and domain event publication. Client-supplied prices are never trusted."
+  },
+  {
+    "id": 9, "uc": "UC-9", "title": "Make Online Payment (VNPay)",
+    "module": "Customer Module",
+    "actors": "Customer",
+    "primaryService": "Payment Service (VNPay)",
+    "relatedServices": "Order Service, VNPay Gateway, Event Bus",
+    "complexity": "High",
+    "traceSource": "SRS_FoodDelivery.md UC-9 Activity Diagram steps 1-18",
+    "description": "VNPay payment lifecycle including payment URL generation for browser redirect, IPN webhook verification with HMAC signature validation, order status promotion on confirmed payment, and return-URL processing for user-facing outcome display."
+  },
+  {
+    "id": 10, "uc": "UC-10", "title": "View Order History",
+    "module": "Customer Module",
+    "actors": "Customer, Restaurant Owner, Shipper, Administrator",
+    "primaryService": "Order History Service",
+    "relatedServices": "Order Repository",
+    "complexity": "Low",
+    "traceSource": "SRS_FoodDelivery.md UC-10 Activity Diagram steps 1-8",
+    "description": "Role-scoped retrieval of paginated order history and full order detail including timeline events and line items. Each role sees only the orders within its own operational scope."
+  },
+  {
+    "id": 11, "uc": "UC-11", "title": "Restaurant Registration & Profile Management",
+    "module": "Restaurant Module",
+    "actors": "Restaurant Owner, Administrator",
+    "primaryService": "Restaurant Service",
+    "relatedServices": "Image Service, Event Bus",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-11 Activity Diagram steps 1-18",
+    "description": "Restaurant application submission with document upload, admin review and approval/rejection workflow, and self-service profile update for approved restaurants. Approval publishes a domain event that activates the restaurant for ordering."
+  },
+  {
+    "id": 12, "uc": "UC-12", "title": "Manage Menu Catalog",
+    "module": "Restaurant Module",
+    "actors": "Restaurant Owner",
+    "primaryService": "Menu Service",
+    "relatedServices": "Restaurant Catalog, Image Service",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-12 Activity Diagram steps 1-14",
+    "description": "Full menu catalog management including category CRUD, menu item CRUD with image upload, and modifier group and option CRUD. All mutations are scoped to the authenticated restaurant owner."
+  },
+  {
+    "id": 13, "uc": "UC-13", "title": "Toggle Item & Restaurant Availability",
+    "module": "Restaurant Module",
+    "actors": "Restaurant Owner",
+    "primaryService": "Availability Service",
+    "relatedServices": "Restaurant Catalog, Event Bus",
+    "complexity": "Low",
+    "traceSource": "SRS_FoodDelivery.md UC-13 Activity Diagram steps 1-8",
+    "description": "Real-time toggling of individual menu item availability and restaurant open/closed status with cache invalidation and downstream event publication so ordering flows immediately reflect the updated availability."
+  },
+  {
+    "id": 14, "uc": "UC-14", "title": "Accept or Reject Order",
+    "module": "Restaurant Module",
+    "actors": "Restaurant Owner",
+    "primaryService": "Order Lifecycle Service",
+    "relatedServices": "Order Repository, Event Bus, Notification Service",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-14 Activity Diagram steps 1-12",
+    "description": "Restaurant-side order acceptance or rejection with optimistic locking to prevent duplicate state transitions, order status update, and downstream notification dispatch to the customer and delivery dispatch system."
+  },
+  {
+    "id": 15, "uc": "UC-15", "title": "Prepare Order for Pickup",
+    "module": "Restaurant Module",
+    "actors": "Restaurant Owner",
+    "primaryService": "Order Lifecycle Service",
+    "relatedServices": "Order Repository, Event Bus, Notification Service, Dispatch Service",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-15 Activity Diagram steps 1-10",
+    "description": "Order preparation lifecycle from confirmed state through marking ready-for-pickup. Triggers shipper dispatch pipeline and notifies the customer that the order is awaiting collection."
+  },
+  {
+    "id": 16, "uc": "UC-16", "title": "Shipper Registration",
+    "module": "Shipper Module",
+    "actors": "Delivery Personnel, Administrator",
+    "primaryService": "Shipper Application Service",
+    "relatedServices": "Image Service, Authentication Service, Event Bus",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-16 Activity Diagram steps 1-17",
+    "description": "Shipper onboarding flow including application submission with government-issued document upload, admin review queue management, approval or rejection decision, and automatic account role elevation to shipper on approval."
+  },
+  {
+    "id": 17, "uc": "UC-17", "title": "Manage Shipper Availability",
+    "module": "Shipper Module",
+    "actors": "Shipper",
+    "primaryService": "Shipper Availability Service",
+    "relatedServices": "Order Repository, Event Bus",
+    "complexity": "Low-Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-17 Activity Diagram steps 1-11",
+    "description": "Online/offline availability toggle for shippers. Going offline is guarded by an active-delivery check that prevents the shipper from dropping off the dispatch pool while a delivery is in progress."
+  },
+  {
+    "id": 18, "uc": "UC-18", "title": "Accept Delivery Assignment",
+    "module": "Shipper Module",
+    "actors": "Shipper",
+    "primaryService": "Delivery Dispatch Service",
+    "relatedServices": "Order Repository, Event Bus, Notification Service",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-18 Activity Diagram steps 1-12",
+    "description": "Delivery assignment acceptance with optimistic lock acquisition to prevent double-assignment, shipper binding to the order row, and notification to all stakeholders that pickup is in progress."
+  },
+  {
+    "id": 19, "uc": "UC-19", "title": "Deliver Order",
+    "module": "Shipper Module",
+    "actors": "Shipper",
+    "primaryService": "Order Lifecycle Service",
+    "relatedServices": "Order Repository, Event Bus, Notification Service",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-19 Activity Diagram steps 1-9",
+    "description": "Complete delivery execution lifecycle from en-route status update through successful delivery confirmation with GPS proof-of-delivery. Publishes a delivery completion event that finalises the order and notifies the customer."
+  },
+  {
+    "id": 20, "uc": "UC-20", "title": "Track Order Status",
+    "module": "Shared Platform Services",
+    "actors": "Customer, Restaurant Owner, Shipper",
+    "primaryService": "Order Tracking Service",
+    "relatedServices": "WebSocket Gateway, Order Repository",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-20 Activity Diagram steps 1-10",
+    "description": "Real-time order status tracking using WebSocket push notifications, delivering live status updates to all stakeholder roles throughout the order lifecycle from placement through delivery."
+  },
+  {
+    "id": 21, "uc": "UC-21", "title": "Cancel Order",
+    "module": "Shared Platform Services",
+    "actors": "Customer, Restaurant Owner, Administrator",
+    "primaryService": "Order Lifecycle Service",
+    "relatedServices": "Order Repository, Refund Service, Event Bus",
+    "complexity": "Medium-High",
+    "traceSource": "SRS_FoodDelivery.md UC-21 Activity Diagram steps 1-15",
+    "description": "Multi-role order cancellation with policy enforcement per actor and current order state, refund initiation for paid orders, and optimistic locking to prevent concurrent cancellation race conditions."
+  },
+  {
+    "id": 22, "uc": "UC-22", "title": "Submit Rating & Review",
+    "module": "Shared Platform Services",
+    "actors": "Customer",
+    "primaryService": "Review Service",
+    "relatedServices": "Order Repository, Restaurant Catalog, Notification Service",
+    "complexity": "Low",
+    "traceSource": "SRS_FoodDelivery.md UC-22 Activity Diagram steps 1-10",
+    "description": "Post-delivery review submission with one-per-order uniqueness enforced by a database constraint, atomic rating projection update on the restaurant record, and notification to the restaurant owner."
+  },
+  {
+    "id": 23, "uc": "UC-23", "title": "Manage Restaurant Promotions",
+    "module": "Shared Platform Services",
+    "actors": "Restaurant Owner",
+    "primaryService": "Promotion Service (Restaurant)",
+    "relatedServices": "Restaurant Catalog",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-23 Activity Diagram steps 1-14",
+    "description": "Restaurant self-service promotion management including creation, editing, scheduling, activation, and deactivation of item-level and order-level discount promotions within admin-approved bounds."
+  },
+  {
+    "id": 24, "uc": "UC-24", "title": "Manage Platform Promotions",
+    "module": "Shared Platform Services",
+    "actors": "Administrator",
+    "primaryService": "Promotion Service (Admin)",
+    "relatedServices": "Coupon Repository",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-24 Activity Diagram steps 1-16",
+    "description": "Platform-wide promotion and coupon management by administrators, including bulk coupon batch generation, usage tracking, redemption limits, and full promotion lifecycle control across all restaurant tenants."
+  },
+  {
+    "id": 25, "uc": "UC-25", "title": "Process Payment Refund",
+    "module": "Shared Platform Services",
+    "actors": "Customer, Administrator",
+    "primaryService": "Refund Service",
+    "relatedServices": "Payment Gateway (VNPay), Order Repository, Event Bus",
+    "complexity": "Medium-High",
+    "traceSource": "SRS_FoodDelivery.md UC-25 Activity Diagram steps 1-14",
+    "description": "End-to-end refund processing triggered by order cancellation or direct admin action. Covers VNPay refund API invocation, payment transaction state management with optimistic locking, and event-driven retry on failure."
+  },
+  {
+    "id": 26, "uc": "UC-26", "title": "Manage Real-Time Notifications",
+    "module": "Shared Platform Services",
+    "actors": "Customer, Restaurant Owner, Shipper, Administrator",
+    "primaryService": "Notification Service",
+    "relatedServices": "FCM (Firebase Cloud Messaging), WebSocket Gateway, Device Token Repository",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-26 Activity Diagram steps 1-16",
+    "description": "Multi-channel notification delivery pipeline supporting FCM push and WebSocket in-app channels with quiet-hours enforcement, device token lifecycle management, and idempotent persistence to prevent duplicate notifications."
+  },
+  {
+    "id": 27, "uc": "UC-27", "title": "Approve or Reject Restaurant Applications",
+    "module": "Administration & Governance",
+    "actors": "Administrator",
+    "primaryService": "Restaurant Approval Service",
+    "relatedServices": "Restaurant Catalog, Event Bus, Notification Service",
+    "complexity": "Low-Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-27 Activity Diagram steps 1-14",
+    "description": "Admin-side restaurant application review and decision workflow with audit log recording, downstream event publication on approval, and applicant notification for both outcomes."
+  },
+  {
+    "id": 28, "uc": "UC-28", "title": "Approve or Reject Shipper Applications",
+    "module": "Administration & Governance",
+    "actors": "Administrator",
+    "primaryService": "Shipper Approval Service",
+    "relatedServices": "Authentication Service, Event Bus",
+    "complexity": "Low-Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-28 Activity Diagram steps 1-16",
+    "description": "Admin-side shipper application approval or rejection with atomic role elevation to shipper on approval, full audit trail recording, and domain event dispatch to notify downstream delivery and notification contexts."
+  },
+  {
+    "id": 29, "uc": "UC-29", "title": "Suspend or Reactivate Partner Accounts",
+    "module": "Administration & Governance",
+    "actors": "Administrator",
+    "primaryService": "Partner Management Service",
+    "relatedServices": "Authentication Service, Event Bus, Notification Service",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-29 Activity Diagram steps 1-13",
+    "description": "Suspension and reactivation of customer, restaurant owner, and shipper accounts. Suspension immediately invalidates all active sessions, optionally sets an expiry timestamp for automatic reactivation, and records a mandatory audit entry."
+  },
+  {
+    "id": 30, "uc": "UC-30", "title": "Monitor Orders and Platform Health",
+    "module": "Administration & Governance",
+    "actors": "Administrator",
+    "primaryService": "Admin Order Service",
+    "relatedServices": "Order Repository, Metrics Service",
+    "complexity": "Low",
+    "traceSource": "SRS_FoodDelivery.md UC-30 Activity Diagram steps 1-9",
+    "description": "Administrative real-time order monitoring with multi-attribute filter search across all orders, live status breakdown KPIs, and individual order detail drill-down for operational oversight."
+  },
+  {
+    "id": 31, "uc": "UC-31", "title": "Search and Manage User Accounts",
+    "module": "Administration & Governance",
+    "actors": "Administrator",
+    "primaryService": "User Management Service",
+    "relatedServices": "Authentication Service, Order Repository",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-31 Activity Diagram steps 1-16",
+    "description": "Admin user search with conjunctive multi-attribute filtering, full profile detail view, and inline account management actions. Role changes, suspensions, and order operations are delegated to their respective dedicated endpoints (UC-29, UC-30, UC-32, UC-35)."
+  },
+  {
+    "id": 32, "uc": "UC-32", "title": "Administrative Order Cancellation & Refund",
+    "module": "Administration & Governance",
+    "actors": "Administrator",
+    "primaryService": "Admin Order Lifecycle Service",
+    "relatedServices": "Refund Service, Event Bus, Notification Service",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-32 Activity Diagram steps 1-12",
+    "description": "Admin-initiated order cancellation and forced refund with eligibility validation, admin override privileges beyond customer cancellation windows, and downstream notification to all affected stakeholders."
+  },
+  {
+    "id": 33, "uc": "UC-33", "title": "View and Export Operational Reports",
+    "module": "Administration & Governance",
+    "actors": "Administrator",
+    "primaryService": "Reporting Service",
+    "relatedServices": "Order Repository, Payment Repository, Analytics Engine",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-33 Activity Diagram steps 1-12",
+    "description": "On-demand generation and CSV or XLSX export of operational reports covering orders, financials, user registrations, and promotion analytics within configurable date ranges up to 366 days."
+  },
+  {
+    "id": 34, "uc": "UC-34", "title": "View Dashboard & Platform Overview",
+    "module": "Administration & Governance",
+    "actors": "Administrator",
+    "primaryService": "Dashboard Service",
+    "relatedServices": "Metrics Service, Order Repository, Analytics Engine",
+    "complexity": "Low-Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-34 Activity Diagram steps 1-9",
+    "description": "Real-time admin KPI dashboard presenting today's order and revenue metrics, 7-day trend summaries, live in-flight order pipeline, onboarding approval queue counts, and a recent platform activity stream."
+  },
+  {
+    "id": 35, "uc": "UC-35", "title": "Manage Admin Roles & Permissions",
+    "module": "Administration & Governance",
+    "actors": "Administrator",
+    "primaryService": "Role Management Service",
+    "relatedServices": "Authentication Service, Event Bus, Audit Service",
+    "complexity": "Medium",
+    "traceSource": "SRS_FoodDelivery.md UC-35 Activity Diagram steps 1-12",
+    "description": "Admin-to-admin role assignment and permission management with last-administrator safeguard preventing platform lockout, atomic role persistence, session refresh for affected users, and comprehensive audit trail recording."
+  }
+]

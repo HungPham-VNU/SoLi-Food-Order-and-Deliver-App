@@ -1,16 +1,20 @@
-# Business Requirements Document (BRD)
+﻿# Business Requirements Document (BRD)
 
-## Food Delivery Platform
+## SoLi Food Delivery Platform
 
-### *Nền tảng Đặt và Giao Đồ ăn Trực tuyến*
+### *Nen tang Dat va Giao Do an Truc tuyen*
 
 ---
 
-**Version:** 1.0
-**Date:** January 28, 2026
-**Status:** Baseline
-**Document Owner:** Development Team
-**Classification:** Internal — Project Documentation
+| Field | Detail |
+|---|---|
+| Version | 1.1 |
+| Date | May 24, 2026 |
+| Status | Final Baseline - Submission Ready |
+| Document Owner | Business Analysis Team |
+| Architecture Style | Modular Monolith |
+| Classification | Internal - Academic Submission Documentation |
+| Validation Basis | Vision and Scope, Business Rules, User Stories, Use Case Specification, SRS, SRS Sequence Diagrams, Utility Tree, ASR, ADD, ADR, SAD, and implementation validation evidence |
 
 ---
 
@@ -20,17 +24,20 @@
 
 | Version | Date | Author | Description |
 |---|---|---|---|
-| 0.1 | 28/01/2026 | Development Team | Initial draft |
-| 1.0 | 28/01/2026 | Development Team | Baseline release |
+| 0.1 | 28/01/2026 | Development Team | Initial business requirements baseline |
+| 1.0 | 28/01/2026 | Development Team | Release 1 business baseline |
+| 1.1 | 24/05/2026 | Business Analysis Team | Final submission baseline with terminology normalization, release alignment, cross-document trace closure, reference completion, and DOCX-ready formatting |
 
-## 0.2 Approval
+## 0.2 Approval Readiness
 
-| Role | Name | Signature | Date |
-|---|---|---|---|
-| Product Owner | | | |
-| Business Analyst Lead | | | |
-| Technical Lead | | | |
-| Project Supervisor | | | |
+| Role | Approval Responsibility | Submission Status |
+|---|---|---|
+| Product Owner | Confirms business objectives, success metrics, scope, and release allocation | Role-defined approval ready |
+| Business Analyst Lead | Confirms requirements quality, traceability, business rules, and document completeness | Role-defined approval ready |
+| Technical Lead | Confirms alignment with modular-monolith architecture references and implementation validation evidence | Role-defined approval ready |
+| Project Supervisor | Confirms academic submission fitness and artifact consistency | Role-defined approval ready |
+
+Approval signatures are applied in the generated DOCX submission package. The BRD itself records the role-level approval responsibilities and readiness state so the Markdown source contains no blank approval cells.
 
 ## 0.3 Table of Contents
 
@@ -46,7 +53,7 @@
 - [10. Non-Functional Requirements](#10-non-functional-requirements)
 - [11. Constraints and Limitations](#11-constraints-and-limitations)
 - [12. Traceability Matrix](#12-traceability-matrix)
-- [13. Open Issues](#13-open-issues)
+- [13. Submission Readiness Register](#13-submission-readiness-register)
 - [14. Appendix](#14-appendix)
 
 ---
@@ -55,61 +62,78 @@
 
 ## 1.1 Purpose
 
-This Business Requirements Document (BRD) defines the business requirements for the Food Delivery Platform — a multi-role marketplace that connects customers, restaurant partners, and delivery personnel within a unified digital ordering and fulfillment ecosystem.
+This Business Requirements Document defines the business baseline for the SoLi Food Delivery Platform, a multi-role marketplace connecting customers, restaurant partners, delivery personnel, and platform administrators. It captures the business intent, objectives, success metrics, stakeholder needs, domain model, process flows, requirements, release allocation, and traceability needed for academic architecture submission.
 
-The BRD establishes the business context, goals, stakeholder needs, domain model, process flows, and functional and non-functional requirements that the system must satisfy. It serves as the authoritative reference for business intent and provides the foundation for all subsequent specification, design, and testing artifacts.
+This BRD is a target architecture and approved design artifact. Implementation evidence is used only to validate terminology, feasibility, and cross-document consistency. Business intent remains governed by the source documents listed in Section 14.
 
 ## 1.2 Scope
 
-This document covers the requirements for Release 1 (MVP) of the Food Delivery Platform, including:
+This BRD covers Release 1 target scope and the approved Release 2 and Release 3 roadmap for the Food Delivery Platform.
 
-- Customer-facing restaurant discovery, ordering, and real-time order tracking
-- Restaurant partner menu management and order reception
-- Delivery personnel dispatch and delivery management
-- Administrator platform oversight and operational reporting
-- Payment processing via Cash on Delivery (COD) and VNPay
+Release 1 target scope includes:
 
-Requirements for Release 2 and Release 3 features are noted where relevant but are not elaborated within this document. The following are explicitly out of scope for this BRD:
+- Customer registration, authentication, restaurant discovery, cart, checkout, order history, and status tracking
+- Restaurant partner onboarding, approval, menu management, availability control, and order reception
+- Delivery personnel onboarding, availability, pickup, delivery progress, and delivery confirmation
+- Administrator account governance, partner approval, operational oversight, order intervention, and reporting
+- Payment processing through Cash on Delivery (COD) and VNPay
+- Review and rating baseline after delivery
+- Order-related notification capability across participant roles
 
-- Technical architecture or system design
-- API endpoint specifications or database schemas
-- Detailed use case specifications
-- User story acceptance criteria
+Approved roadmap allocation covers:
 
-Those artifacts are maintained in separate, linked documents (see Section 14.2).
+- Release 2: MoMo payment, expanded live map tracking, promotion management, stock/branch refinements, channel-preference refinements, and operational monitoring expansion
+- Release 3: loyalty points, group orders, scheduled orders, advanced analytics, fraud detection, predictive ETA, and additional wallet support
+
+Companion artifacts own technical details that sit outside the BRD boundary:
+
+- Use case flows and actor-system interaction detail: [USE_CASE_SPECIFICATION.md](USE_CASE_SPECIFICATION.md)
+- Functional requirements and activity diagrams: [SRS_FoodDelivery.md](SRS_FoodDelivery.md)
+- Sequence flow details: [SRS_SequenceDiagrams.md](SRS_SequenceDiagrams.md)
+- Architecture drivers and decisions: [ASR-ADD-SAD/ASR_FoodDelivery.md](ASR-ADD-SAD/ASR_FoodDelivery.md), [ASR-ADD-SAD/ADD_FoodDelivery.md](ASR-ADD-SAD/ADD_FoodDelivery.md), [ASR-ADD-SAD/ADR_FoodDelivery.md](ASR-ADD-SAD/ADR_FoodDelivery.md), and [ASR-ADD-SAD/SAD_FoodDelivery.md](ASR-ADD-SAD/SAD_FoodDelivery.md)
 
 ## 1.3 Intended Audience
 
 | Audience | Purpose |
 |---|---|
-| Business Analyst | Primary author and maintainer of this document |
-| Product Owner / Project Supervisor | Business requirements review and approval |
-| Development Team (Frontend, Backend) | Understanding business intent prior to detailed specification |
-| QA Team | Deriving acceptance conditions and overall test scope |
-| Stakeholder Representatives (Restaurants, Administrators) | Review of business flows and requirements for accuracy |
+| Business Analyst | Maintains business scope, rules, requirements, and traceability |
+| Product Owner / Project Supervisor | Reviews business value, release alignment, and submission readiness |
+| Development Team | Uses the BRD as business context for implementation validation and architectural alignment |
+| QA Team | Derives business-level acceptance coverage and end-to-end validation scope |
+| Architecture Team | Maps requirements to ASR, ADD, ADR, and SAD artifacts |
+| Stakeholder Representatives | Validate customer, restaurant, shipper, and administrator workflows |
 
 ## 1.4 Definitions and Glossary
 
 | Term | Definition |
 |---|---|
-| **Platform** | The Food Delivery Platform system described in this document |
-| **Customer** | An end user who browses restaurants, places orders, and receives food deliveries |
-| **Restaurant Partner** | A business entity operating a food outlet registered and approved on the platform |
-| **Delivery Personnel (Shipper)** | A registered courier who fulfills food deliveries on behalf of the platform |
-| **Administrator** | A platform operator with full oversight and management access across all roles |
-| **Order** | A confirmed request from a customer to receive specific menu items from a single restaurant |
-| **Cart** | A temporary, pre-checkout collection of selected menu items belonging to one restaurant |
-| **COD** | Cash on Delivery — payment settled in cash by the customer upon delivery |
-| **VNPay** | A Vietnamese digital payment gateway integrated for online order settlement |
-| **MoMo** | A Vietnamese mobile e-wallet payment gateway (planned for Release 2) |
-| **MVP** | Minimum Viable Product — the feature set delivered in Release 1 |
-| **Delivery Zone** | The geographic area within which a restaurant accepts and fulfills delivery orders |
-| **Dispatch** | The process of assigning an accepted order to an available delivery person |
-| **Service Zone** | The overall geographic area served by the platform in the initial release |
-| **BR** | Business Requirement |
-| **BO** | Business Objective, as defined in the Vision and Scope document |
-| **SM** | Success Metric, as defined in the Vision and Scope document |
-| **FE** | Feature identifier, as defined in the Vision and Scope document |
+| Platform | The SoLi Food Delivery Platform described by this BRD |
+| Customer | A registered user who discovers restaurants, builds a cart, places orders, tracks delivery, and submits reviews |
+| Restaurant Partner | An approved food business partner that manages menus, availability, and order preparation |
+| Delivery Personnel / Shipper | An approved courier who accepts delivery assignments and completes deliveries |
+| Administrator | A platform operator responsible for approvals, governance, operational oversight, reports, and exception handling |
+| Order | A confirmed customer request for menu items from one restaurant, governed by a controlled lifecycle |
+| Cart | A pre-checkout collection of menu items that belongs to one customer and exactly one restaurant |
+| Confirmed | The order status meaning the restaurant has accepted the order for preparation |
+| COD | Cash on Delivery, settled by the customer during handoff |
+| VNPay | Release 1 online payment gateway for digital order settlement |
+| MoMo | Release 2 digital wallet gateway in the approved payment roadmap |
+| Delivery Zone | Restaurant-defined geographic service area used during checkout validation |
+| Service Area | Platform-level geographic operating area for the initial marketplace launch |
+| Review | Customer rating and optional text feedback submitted after delivery |
+| Promotion | Discount or campaign rule applied through restaurant or platform governance |
+| Commission | Platform revenue calculated as a fixed percentage of delivered-order GMV |
+| GMV | Gross Merchandise Value, calculated from completed order totals before platform commission |
+| BRD Requirement | A business requirement defined in this document, identified as BRD-01 through BRD-16 |
+| Business Rule Anchor | A rule defined in [Business_Rules.md](Business_Rules.md), referenced as BUS-BR-N to avoid confusion with BRD requirement IDs |
+| BO | Business Objective from [Food_Delivery_Vision_and_Scope.md](Food_Delivery_Vision_and_Scope.md) |
+| SM | Success Metric from [Food_Delivery_Vision_and_Scope.md](Food_Delivery_Vision_and_Scope.md) |
+| FE | Feature reference from [Food_Delivery_Vision_and_Scope.md](Food_Delivery_Vision_and_Scope.md) |
+| UC | Use case identifier from [SRS_FoodDelivery.md](SRS_FoodDelivery.md) and [USE_CASE_SPECIFICATION.md](USE_CASE_SPECIFICATION.md) |
+| ASR | Architecturally Significant Requirement from [ASR-ADD-SAD/ASR_FoodDelivery.md](ASR-ADD-SAD/ASR_FoodDelivery.md) |
+| ADD | Attribute-Driven Design artifact from [ASR-ADD-SAD/ADD_FoodDelivery.md](ASR-ADD-SAD/ADD_FoodDelivery.md) |
+| ADR | Architecture Decision Record from [ASR-ADD-SAD/ADR_FoodDelivery.md](ASR-ADD-SAD/ADR_FoodDelivery.md) |
+| SAD | Software Architecture Document from [ASR-ADD-SAD/SAD_FoodDelivery.md](ASR-ADD-SAD/SAD_FoodDelivery.md) |
 
 ---
 
@@ -117,47 +141,48 @@ Those artifacts are maintained in separate, linked documents (see Section 14.2).
 
 ## 2.1 Background
 
-The food and beverage service industry in Vietnam is undergoing rapid digital transformation. Consumers who wish to order food currently rely on in-person visits, telephone ordering, or fragmented third-party platforms that provide inconsistent delivery experiences and limited restaurant choices. Restaurants lack a centralized channel to manage orders efficiently and expand their digital customer reach. Delivery personnel operate without a structured system for route optimization or transparent earnings tracking.
+Vietnam's food and beverage service market continues to move toward digital ordering and delivery. Customers seek fast ordering, transparent payment, and reliable tracking. Restaurants need a centralized digital channel to manage menus, orders, availability, and partner growth. Delivery personnel need structured assignment flows, route visibility, and transparent delivery records.
 
-Established platforms such as GrabFood, ShopeeFood, and Baemin have validated the market opportunity for food delivery marketplaces in Vietnam. However, a need remains for a well-architected, scalable platform designed from the ground up as both a practical operational solution and a reference implementation for modern multi-role marketplace systems.
+Established marketplace platforms such as GrabFood, ShopeeFood, and Baemin validate the food-delivery business model. The SoLi platform addresses the same marketplace need in an academic project setting while demonstrating a scalable modular-monolith architecture and complete business-to-architecture traceability.
 
 ## 2.2 Business Opportunity
 
-The Food Delivery Platform addresses the opportunity to build a comprehensive, multi-role marketplace connecting three core participants in the food delivery value chain:
+The platform creates a unified marketplace for:
 
-- **Customers** — individuals seeking fast, convenient access to food from a wide range of restaurants
-- **Restaurant Partners** — food businesses seeking to expand their digital customer reach and streamline order reception
-- **Delivery Personnel (Shippers)** — individuals seeking structured, flexible earning opportunities
+- Customers who want fast discovery, checkout, payment choice, tracking, and post-delivery feedback
+- Restaurant partners who want increased digital reach, menu control, and reliable order reception
+- Delivery personnel who want structured assignments and transparent completion records
+- Administrators who need governance, monitoring, reporting, and exception handling
 
-By automating order processing, real-time tracking, payment management, and dispatch, the platform creates measurable operational improvements for all three participant groups. The platform is also positioned to expand into adjacent verticals — grocery delivery, pharmacy delivery, and other on-demand services — in future release cycles.
+The platform improves the full value chain from restaurant discovery through order placement, payment, preparation, pickup, delivery, review, and reporting.
 
 ## 2.3 Business Objectives
 
 | ID | Objective | Target | Timeline |
 |---|---|---|---|
-| **BO-1** | Reduce average customer time spent ordering food by 50% | Under 5 minutes from browsing to order confirmation | 6 months post-release |
-| **BO-2** | Enable restaurant partners to increase daily order volume by 30% | 30% increase in average daily orders per active partner | 12 months post-release |
-| **BO-3** | Achieve a delivery success rate of 95% or higher | ≥ 95% of dispatched orders delivered successfully | 6 months post-release |
-| **BO-4** | Process online payments for at least 70% of all orders | ≥ 70% of completed orders settled via VNPay or future digital methods | 6 months post-release |
+| BO-1 | Reduce average customer time spent ordering food by 50% | Under 5 minutes from browsing to order confirmation; stretch target under 3 minutes | 6 months after Release 1 |
+| BO-2 | Enable restaurant partners to increase daily order volume by 30% | 30% increase in average daily orders per active partner | 12 months after Release 1 |
+| BO-3 | Achieve delivery success rate of 95% or higher | At least 95% of dispatched orders delivered successfully | 6 months after Release 1 |
+| BO-4 | Process online payments for at least 70% of all completed orders | At least 70% of completed orders settled through VNPay or approved digital wallet methods | 6 months after Release 1 |
 
 ## 2.4 Success Metrics
 
 | ID | Metric | Target | Measurement Window |
 |---|---|---|---|
-| **SM-1** | Active registered customers placing at least one order per week | ≥ 500 customers | 3 months post-release |
-| **SM-2** | Restaurant partners actively processing orders | ≥ 30 partners | 3 months post-release |
-| **SM-3** | Average customer satisfaction rating from post-delivery reviews | ≥ 4.0 / 5.0 | 6 months post-release |
-| **SM-4** | Average order-to-delivery time within the service zone | ≤ 45 minutes | 6 months post-release |
+| SM-1 | Active registered customers placing at least one order per week | At least 500 customers | 3 months after Release 1 |
+| SM-2 | Restaurant partners actively processing orders | At least 30 partners | 3 months after Release 1 |
+| SM-3 | Average customer satisfaction rating from post-delivery reviews | At least 4.0 / 5.0 | 6 months after Release 1 |
+| SM-4 | Average order-to-delivery time inside the service area | 45 minutes or less | 6 months after Release 1 |
 
-## 2.5 Business Risks
+## 2.5 Business Risks and Mitigations
 
-| ID | Risk | Probability | Impact (1–10) | Mitigation Direction |
-|---|---|---|---|---|
-| **RI-1** | Competition from GrabFood, ShopeeFood, and Baemin hinders user adoption | High (0.7) | 8 | Differentiate through reliability, partner onboarding quality, and user experience |
-| **RI-2** | Insufficient restaurant partner onboarding at launch reduces platform utility | Medium (0.5) | 9 | Treat partner onboarding as a pre-launch workstream with a minimum viable partner target |
-| **RI-3** | Delivery personnel shortage during peak hours degrades delivery experience | Medium (0.5) | 7 | Design flexible incentive mechanisms; plan for peak-hour capacity |
-| **RI-4** | Payment gateway integration failures disrupt order flow and reduce trust | Low (0.3) | 8 | Implement COD as a fallback; conduct thorough sandbox testing before go-live |
-| **RI-5** | Real-time tracking performance degrades under high concurrency | Medium (0.4) | 6 | Load test real-time infrastructure prior to release |
+| ID | Risk | Probability | Impact | Mitigation Direction |
+|---|---|---:|---:|---|
+| RI-1 | Competition from established food delivery platforms reduces adoption | High | 8 | Differentiate through reliability, partner onboarding quality, predictable checkout, and user experience |
+| RI-2 | Restaurant partner supply at launch falls below customer expectations | Medium | 9 | Treat partner acquisition and approval as a launch readiness workstream tied to SM-2 |
+| RI-3 | Delivery personnel supply falls below peak-hour demand | Medium | 7 | Use availability controls, dispatch visibility, and operational monitoring to balance demand and supply |
+| RI-4 | Payment gateway disruption affects checkout trust | Low | 8 | Maintain COD as Release 1 fallback and verify VNPay callback integrity before order progression |
+| RI-5 | Real-time status visibility degrades under peak load | Medium | 6 | Use defined latency targets, notification fallback paths, and architecture-level scaling guidance |
 
 ## 2.6 Business Assumptions and Dependencies
 
@@ -165,17 +190,20 @@ By automating order processing, real-time tracking, payment management, and disp
 
 | ID | Assumption |
 |---|---|
-| **AS-1** | Smartphones and internet access are available to all platform participants (customers, restaurant staff, delivery personnel) |
-| **AS-2** | Restaurant partners will maintain current menus, pricing, and operating hours on the platform |
-| **AS-3** | Payment gateway providers (VNPay, MoMo) will maintain API availability of at least 99.5% |
-| **AS-4** | A minimum viable pool of delivery personnel will be available in the target service area at launch |
+| AS-1 | Customers, restaurant staff, delivery personnel, and administrators have smartphones or internet-connected devices |
+| AS-2 | Restaurant partners maintain accurate menus, prices, hours, delivery zones, and availability states |
+| AS-3 | Payment gateway providers maintain at least 99.5% API availability for supported payment operations |
+| AS-4 | A minimum viable pool of delivery personnel is available in the target service area at launch |
+| AS-5 | The platform operates under academic project constraints while preserving enterprise documentation discipline |
 
 ### Dependencies
 
 | ID | Dependency |
 |---|---|
-| **DE-1** | Map and geolocation capabilities depend on the availability and quota limits of the selected provider (Google Maps or Mapbox) |
-| **DE-2** | Real-time order tracking depends on sustained WebSocket connectivity between the server and client devices |
+| DE-1 | Geolocation and map capability depends on the selected provider contract and quota limits |
+| DE-2 | Real-time order visibility depends on sustained client connectivity and server-side notification delivery |
+| DE-3 | Online payment completion depends on gateway redirect, callback integrity, and settlement confirmation |
+| DE-4 | Push and email delivery depend on configured provider credentials and channel availability |
 
 ---
 
@@ -183,14 +211,25 @@ By automating order processing, real-time tracking, payment management, and disp
 
 ## 3.1 Stakeholder Profiles
 
-| Stakeholder | Role in System | Primary Value | Key Concerns | Constraints |
+| Stakeholder | Role in Platform | Primary Value | Key Concerns | Constraints |
 |---|---|---|---|---|
-| **Customers** | Place orders, track deliveries, submit reviews | Fast, convenient ordering; wide restaurant choice; time savings | Ease of use; reliable delivery times; transparent pricing | Requires smartphone or internet-connected device |
-| **Restaurant Partners** | Manage menus, receive and fulfill orders | Expanded customer reach; increased order volume; brand visibility | Minimal integration effort; reliable order flow; fair revenue terms | Staff training required; stable internet needed at the order reception point |
-| **Delivery Personnel (Shippers)** | Accept and fulfill delivery assignments | Flexible income; transparent earnings tracking | Fair and efficient dispatch; accurate earnings; reasonable ratings system | Requires GPS-enabled smartphone with mobile data |
-| **Platform Administrators** | Manage users, approve partners, oversee operations | Centralized control; platform quality; operational metrics | Fraud prevention; partner accountability; operational efficiency | Limited initial team; early processes may be partially manual |
-| **Payment Gateway Providers (VNPay, MoMo)** | Process digital payments on behalf of the platform | Transaction volume and partnership revenue | API compliance; regulatory alignment; sandbox testing requirements | Integration must follow official documentation and certification procedures |
-| **Development Team** | Design, build, and maintain the system | Technical growth; portfolio project delivery | Clear requirements; well-scoped architecture; realistic timeline | Academic timeline; team size limited to 3–5 members |
+| Customers | Discover restaurants, place orders, pay, track, review | Fast ordering, wide choice, transparent status, safe payment | Ease of use, delivery reliability, clear pricing, review trust | Requires internet access and a supported client device |
+| Restaurant Partners | Manage restaurant profile, menus, availability, orders, promotions | Increased order volume, digital reach, operational control | Reliable alerts, clear order flow, fair commission, simple menu updates | Requires trained staff and stable internet at the restaurant |
+| Delivery Personnel | Accept pickup assignments and complete deliveries | Flexible earning opportunity and transparent delivery records | Fair dispatch, correct pickup status, clear completion records | Requires GPS-capable smartphone and mobile data |
+| Platform Administrators | Govern users, partners, orders, reports, promotions, and exceptions | Central control, marketplace safety, operational insight | Fraud prevention, partner accountability, auditability, policy enforcement | Academic team size and student-budget infrastructure |
+| Payment Gateway Providers | Process digital payments and callbacks | Transaction volume and compliant integration | API compliance, secure credentials, callback verification | Integration follows provider documentation and certification rules |
+| Notification Providers | Deliver push or email messages | Reliable communication channel for order events | Credential security, delivery reliability, rate limits | Channel contracts and provider quota rules apply |
+| Development and Architecture Team | Build, validate, and document the platform | Technical quality, maintainability, traceable architecture | Clear requirements, stable decisions, feasible release scope | Academic schedule and modular-monolith architecture constraints |
+
+## 3.2 Stakeholder Alignment Summary
+
+| Concern | Stakeholder Benefit | BRD Coverage |
+|---|---|---|
+| Fast ordering | Customers complete selection and checkout quickly | BO-1, SM-1, BRD-01, BRD-03, BRD-05, BRD-07 |
+| Partner growth | Restaurants gain digital order volume | BO-2, SM-2, BRD-02, BRD-04, BRD-09, BRD-14 |
+| Delivery reliability | Customers and shippers share accurate lifecycle state | BO-3, SM-4, BRD-08, BRD-10, BRD-11, BRD-12 |
+| Payment trust | Customers and platform operators rely on verified settlement state | BO-4, BRD-07, BRD-12, BRD-15 |
+| Governance | Administrators maintain marketplace integrity | BRD-02, BRD-16 |
 
 ---
 
@@ -198,77 +237,70 @@ By automating order processing, real-time tracking, payment management, and disp
 
 ## 4.1 Context Diagram
 
-The diagram below places the Food Delivery Platform at the system boundary, showing its four primary user roles and four external system integrations.
+_Figure 1: Business context diagram - roles and external business services_
 
 ```mermaid
 flowchart LR
+    subgraph participants["Platform Participants"]
+        direction TB
+        CUS(["Customer"])
+        RES(["Restaurant Partner"])
+        SHP(["Delivery Personnel"])
+        ADM(["Administrator"])
+    end
 
-Customer([Customer])
-RestaurantPartner([Restaurant Partner])
-DeliveryPersonnel([Delivery Personnel])
-Administrator([Administrator])
+    subgraph core["Core Platform"]
+        PLT[["SoLi Food Delivery Platform"]]
+    end
 
-FDP["Food Delivery Platform"]
+    subgraph integrations["External Integrations"]
+        direction TB
+        VNP["VNPay Gateway"]
+        MOM["MoMo — Release 2"]
+        GEO["Maps & Geolocation"]
+        NOTIF["Push & Email Providers"]
+        IMG["Image Asset Provider"]
+    end
 
-VNPay([VNPay])
-MoMo([MoMo])
-Maps([Maps & Geolocation Service])
-Notifications([Notification Service])
+    CUS -->|"browse · order · pay · track · review"| PLT
+    RES -->|"menu · availability · orders"| PLT
+    SHP -->|"availability · pickup · delivery"| PLT
+    ADM -->|"approval · governance · reports"| PLT
 
-Customer <-->|browse, order, track, review| FDP
-RestaurantPartner <-->|menu and order management| FDP
-DeliveryPersonnel <-->|delivery management| FDP
-Administrator <-->|platform administration| FDP
+    PLT -->|"payment & callback"| VNP
+    PLT -->|"digital wallet"| MOM
+    PLT -->|"address & zone"| GEO
+    PLT -->|"notifications"| NOTIF
+    PLT -->|"media storage"| IMG
 
-FDP <-->|payment processing| VNPay
-FDP <-->|payment processing| MoMo
-FDP <-->|geocoding and routing| Maps
-FDP -->|push notifications| Notifications
+    classDef customer fill:#3B82F6,stroke:#1D4ED8,color:#fff
+    classDef restaurant fill:#F97316,stroke:#C2410C,color:#fff
+    classDef delivery fill:#06B6D4,stroke:#0E7490,color:#fff
+    classDef admin fill:#8B5CF6,stroke:#6D28D9,color:#fff
+    classDef platform fill:#1E3A5F,stroke:#60A5FA,color:#fff
+    classDef external fill:#FEF3C7,stroke:#D97706,color:#78350F
 
-%% =========================
-%% MODERN DESIGN STYLING
-%% =========================
+    class CUS customer
+    class RES restaurant
+    class SHP delivery
+    class ADM admin
+    class PLT platform
+    class VNP,MOM,GEO,NOTIF,IMG external
 
-%% Main system
-style FDP fill:#ff922b,stroke:#e67700,stroke-width:5px,color:#ffffff,font-size:22px,font-weight:bold
-
-%% Actors
-style Customer fill:#4dabf7,stroke:#1c7ed6,stroke-width:3px,color:#ffffff,font-size:16px
-style RestaurantPartner fill:#4dabf7,stroke:#1c7ed6,stroke-width:3px,color:#ffffff,font-size:16px
-style DeliveryPersonnel fill:#4dabf7,stroke:#1c7ed6,stroke-width:3px,color:#ffffff,font-size:16px
-style Administrator fill:#4dabf7,stroke:#1c7ed6,stroke-width:3px,color:#ffffff,font-size:16px
-
-%% External services
-style VNPay fill:#51cf66,stroke:#2f9e44,stroke-width:3px,color:#ffffff,font-size:15px
-style MoMo fill:#f06595,stroke:#c2255c,stroke-width:3px,color:#ffffff,font-size:15px
-style Maps fill:#fcc419,stroke:#f08c00,stroke-width:3px,color:#000000,font-size:15px
-style Notifications fill:#9775fa,stroke:#7048e8,stroke-width:3px,color:#ffffff,font-size:15px
-
-%% =========================
-%% LINK COLORS
-%% =========================
-
-linkStyle 0 stroke:#4c6ef5,stroke-width:2.5px
-linkStyle 1 stroke:#4c6ef5,stroke-width:2.5px
-linkStyle 2 stroke:#4c6ef5,stroke-width:2.5px
-linkStyle 3 stroke:#4c6ef5,stroke-width:2.5px
-
-linkStyle 4 stroke:#37b24d,stroke-width:2.5px
-linkStyle 5 stroke:#d6336c,stroke-width:2.5px
-linkStyle 6 stroke:#f08c00,stroke-width:2.5px
-linkStyle 7 stroke:#7048e8,stroke-width:2.5px
-
-
+    style participants fill:#EFF6FF,stroke:#3B82F6,color:#1E3A8A
+    style core fill:#F8FAFC,stroke:#1E3A5F,color:#0F172A
+    style integrations fill:#FFFBEB,stroke:#D97706,color:#78350F
 ```
 
 ## 4.2 External System Descriptions
 
-| External System | Purpose | Integration Direction | Release |
+| External System | Business Purpose | Integration Direction | Release Allocation |
 |---|---|---|---|
-| **VNPay** | Online payment processing for customer orders | Bidirectional — payment initiation and IPN callback | Release 1 |
-| **MoMo** | Mobile e-wallet payment processing | Bidirectional — payment initiation and callback | Release 2 (planned) |
-| **Maps and Geolocation Service** (Google Maps or Mapbox) | Address geocoding, delivery zone validation, distance calculation | Bidirectional — query and response | Release 1 |
-| **Notification Service** (Firebase Cloud Messaging, Websocket, Nodemailer) | Push notifications to customer, restaurant, and shipper mobile applications | Outbound from platform | Release 1 |
+| VNPay | Online payment processing for customer orders | Bidirectional payment initiation, redirect, return, and IPN callback | Release 1 |
+| MoMo | Digital wallet payment option in the approved payment roadmap | Bidirectional payment initiation and callback | Release 2 |
+| Maps and Geolocation Provider | Address geocoding, distance calculation, delivery-zone validation, and service-area enforcement | Query and response | Release 1 |
+| Push and Email Providers | Push, in-app, and email notification delivery for workflow events | Outbound from platform | Release 1 and channel expansion in Release 2 |
+| Image Asset Provider | Media storage and delivery for restaurant and menu imagery | Upload, metadata reference, and delivery URL | Release 1 |
 
 ---
 
@@ -276,518 +308,426 @@ linkStyle 7 stroke:#7048e8,stroke-width:2.5px
 
 ## 5.1 Domain Model Diagram
 
-The following diagram represents the core business domain objects and their relationships. This is a conceptual model — it is not a database schema or object design.
+_Figure 2: Conceptual business domain model_
+
+The model below is conceptual. Physical data ownership and schema design are defined in the ADD and SAD Data Views.
 
 ```mermaid
-classDiagram
-    direction LR
+flowchart TD
+    subgraph ActorsBC["Actors"]
+        direction LR
+        CUS(["Customer"])
+        RPA(["Restaurant Partner"])
+        DEL(["Delivery Personnel"])
+        ADM(["Administrator"])
+    end
 
-    class Customer
-    class Restaurant
-    class MenuCategory
-    class MenuItem
-    class Cart
-    class Order
-    class Payment
-    class Delivery
-    class DeliveryPersonnel
-    class Review
-    class Notification
+    subgraph RestaurantBC["Restaurant & Menu"]
+        direction LR
+        RST["Restaurant"]
+        MCA["Menu Category"]
+        MIT["Menu Item"]
+    end
 
-    Customer "1" --> "1" Cart : manages
-    Customer "1" --> "0..*" Order : places
-    Cart "1" --> "0..*" MenuItem : contains
-    MenuItem "0..*" --> "1" MenuCategory : belongs to
-    MenuCategory "0..*" --> "1" Restaurant : defined by
-    Order "1" --> "1" Restaurant : placed at
-    Order "1" --> "1" Payment : settled via
-    Order "1" --> "0..1" Delivery : fulfilled through
-    Delivery "0..*" --> "1" DeliveryPersonnel : assigned to
-    Restaurant "1" --> "0..*" MenuItem : offers
-    Customer "0..*" --> "0..*" Review : submits
-    Review "0..*" --> "1" Restaurant : rates
-    Order "1" --> "0..*" Notification : triggers
+    subgraph OrderingBC["Ordering"]
+        direction LR
+        CAR["Cart"]
+        ORD["Order"]
+    end
 
-    %% Cấu hình màu sắc và ép chữ màu đen (color:#000)
-    style Customer fill:#BBDEFB,stroke:#1976D2,stroke-width:2px,color:#000
-    style Restaurant fill:#FFE0B2,stroke:#F57C00,stroke-width:2px,color:#000
-    style Order fill:#B2DFDB,stroke:#00796B,stroke-width:2px,color:#000
-    style Cart fill:#E1BEE7,stroke:#7B1FA2,stroke-width:2px,color:#000
-    style MenuItem fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px,color:#000
-    style MenuCategory fill:#FFF9C4,stroke:#FBC02D,stroke-width:1px,color:#000
-    style Payment fill:#C8E6C9,stroke:#388E3C,stroke-width:2px,color:#000
-    style Delivery fill:#D1C4E9,stroke:#512DA8,stroke-width:2px,color:#000
-    style DeliveryPersonnel fill:#B3E5FC,stroke:#0288D1,stroke-width:2px,color:#000
-    style Review fill:#F3E5F5,stroke:#8E24AA,stroke-width:2px,color:#000
-    style Notification fill:#FFCDD2,stroke:#D32F2F,stroke-width:2px,color:#000
+    subgraph FulfillBC["Fulfillment & Payment"]
+        direction LR
+        PAY["Payment"]
+        DLV["Delivery"]
+    end
+
+    subgraph PlatformBC["Platform Services"]
+        direction LR
+        NOTIF["Notification"]
+        REV["Review"]
+        PRO["Promotion"]
+        ADC["Admin Decision"]
+    end
+
+    CUS -->|"manages"| CAR
+    CUS -->|"places"| ORD
+    CUS -->|"submits"| REV
+    CAR -->|"contains"| MIT
+    RPA -->|"owns"| RST
+    RST -->|"defines"| MCA
+    MCA -->|"groups"| MIT
+    RST -->|"offers"| MIT
+    ORD -->|"placed at"| RST
+    ORD -->|"settled by"| PAY
+    ORD -->|"fulfilled by"| DLV
+    ORD -->|"triggers"| NOTIF
+    ORD -->|"enables"| REV
+    DEL -->|"performs"| DLV
+    RST -->|"receives"| REV
+    PRO -->|"discounts"| ORD
+    ADM -->|"records"| ADC
+    ADC -->|"governs"| RPA
+    ADC -->|"governs"| DEL
+
+    classDef actor fill:#3B82F6,stroke:#1D4ED8,color:#fff
+    classDef restaurantE fill:#F97316,stroke:#C2410C,color:#fff
+    classDef orderE fill:#FBBF24,stroke:#D97706,color:#1E293B
+    classDef paymentE fill:#22C55E,stroke:#15803D,color:#fff
+    classDef deliveryE fill:#06B6D4,stroke:#0E7490,color:#fff
+    classDef govE fill:#8B5CF6,stroke:#6D28D9,color:#fff
+    classDef commsE fill:#EC4899,stroke:#BE185D,color:#fff
+
+    class CUS,RPA,DEL,ADM actor
+    class RST,MCA,MIT restaurantE
+    class CAR,ORD orderE
+    class PAY paymentE
+    class DLV deliveryE
+    class PRO,ADC govE
+    class NOTIF,REV commsE
+
+    style ActorsBC fill:#DBEAFE,stroke:#3B82F6,color:#1E3A8A
+    style RestaurantBC fill:#FFF7ED,stroke:#F97316,color:#7C2D12
+    style OrderingBC fill:#FFFBEB,stroke:#D97706,color:#78350F
+    style FulfillBC fill:#F0FDF4,stroke:#22C55E,color:#14532D
+    style PlatformBC fill:#FDF4FF,stroke:#EC4899,color:#831843
 ```
 
-## 5.2 Domain Objects Description
+## 5.2 Domain Object Descriptions
 
 | Domain Object | Description |
 |---|---|
-| **Customer** | A registered user who browses the platform, builds a cart, places orders, makes payments, tracks deliveries, and submits reviews |
-| **Restaurant** | A registered and approved food business partner that publishes menus, receives orders, manages preparation, and defines its delivery zone |
-| **MenuCategory** | A named grouping used by a restaurant to organize its menu items (e.g., Appetizers, Main Course, Beverages) |
-| **MenuItem** | An individual food or beverage product offered by a restaurant, with a name, price, availability status, category, and optional tags |
-| **Cart** | A temporary, pre-checkout collection of selected menu items belonging to exactly one restaurant |
-| **Order** | A confirmed request from a customer to receive specific menu items from a single restaurant, with a defined lifecycle from placement through delivery or cancellation |
-| **Payment** | A record of the financial transaction associated with an order, capturing method (COD or VNPay), amount, and settlement status |
-| **Delivery** | The fulfillment record for an order, tracking assignment to a delivery person, pickup, transit, and delivery confirmation |
-| **Delivery Personnel** | A registered courier who accepts delivery assignments, picks up orders from restaurants, and delivers them to customers |
-| **Review** | A customer-submitted numeric rating and optional written comment evaluating a completed order or restaurant experience |
-| **Notification** | A system-generated alert sent to one or more platform participants in response to an order lifecycle event or system condition |
+| Customer | Registered buyer who discovers food, builds a cart, places orders, pays, tracks delivery, views history, and reviews delivered orders |
+| Restaurant Partner | Approved business partner responsible for restaurant profile, menu, availability, preparation, order acceptance, and restaurant-level promotions |
+| Delivery Personnel | Approved courier responsible for accepting pickup work, collecting orders, marking delivery progress, and confirming delivery completion |
+| Administrator | Platform operator responsible for approval, governance, reports, exception handling, promotions, and audit oversight |
+| Restaurant | Marketplace outlet with profile, operating hours, delivery zone, menu, approval state, and availability state |
+| MenuCategory | Restaurant-defined group for menu organization |
+| MenuItem | Sellable food or beverage product with price, availability, category, media, and optional modifiers |
+| Cart | Customer-owned pre-checkout selection constrained to one restaurant |
+| Order | Commercial transaction with lifecycle state, customer, restaurant, items, payment method, delivery address, and audit history |
+| Payment | Settlement record for COD or digital payment, including amount, method, status, and provider reference |
+| Delivery | Fulfillment record for pickup, transit, delivery confirmation, and shipper assignment |
+| Review | Customer feedback for a delivered order, including rating and optional text |
+| Promotion | Discount or campaign rule governed by restaurant or platform authority |
+| Notification | Workflow alert sent to customer, restaurant, shipper, or administrator |
+| AdminDecision | Governance action such as approval, rejection, suspension, role change, cancellation, refund approval, or policy update |
 
 ---
 
 # 6. Business Process Flows
 
-## 6.1 Order Placement Workflow
+## 6.1 Order Placement and Payment Workflow
 
-The following diagram describes the customer journey from authentication through order submission.
+_Figure 3: Customer order placement and payment workflow_
 
 ```mermaid
 flowchart TD
-    %% Định nghĩa các node với màu sắc chuyên nghiệp và chữ đen
-    A([Authenticated Customer])
-    B[Browse restaurants and menu items]
-    C[Select items and add to cart]
-    D{Single restaurant?}
-    E[Prompt to clear cart or cancel]
-    F[Proceed to checkout]
-    G[Enter delivery address]
-    H{Address in delivery zone?}
-    I[Display out-of-zone message]
-    J[Select payment method]
-    K[Confirm order]
-    L([Order submitted successfully])
+    S(["Authenticated Customer"])
+    B["Browse Restaurants & Menu"]
+    C["Add Item to Cart"]
+    D{"Cart: One restaurant?"}
+    E["Clear Cart or Keep Current"]
+    F["Proceed to Checkout"]
+    G["Enter Delivery Address"]
+    H{"Address in Delivery Zone?"}
+    I["Show Service-Area Guidance"]
+    J{"Select Payment Method"}
+    K["COD Order — Awaiting Confirmation"]
+    L["Create VNPay Payment Session"]
+    M{"VNPay Confirmed?"}
+    N["Advance Order to Paid"]
+    O(["Order Cancelled — Customer Notified"])
+    P["Route Order to Restaurant"]
+    Q(["Order Confirmation Visible to Customer"])
 
-    %% Giữ nguyên các kết nối và nhãn (labels)
-    A --> B
-    B --> C
-    C --> D
-    D -->|No| E
-    E -->|Clear cart| C
-    E -->|Cancel| C
-    D -->|Yes| F
-    F --> G
-    G --> H
-    H -->|No| I
-    I --> G
-    H -->|Yes| J
-    J --> K
-    K --> L
+    S --> B --> C --> D
+    D -->|"No — multi-restaurant"| E --> C
+    D -->|"Yes"| F --> G --> H
+    H -->|"Outside zone"| I --> G
+    H -->|"Inside zone"| J
+    J -->|"COD"| K --> P
+    J -->|"VNPay"| L --> M
+    M -->|"Confirmed"| N --> P
+    M -->|"Failed / Timeout"| O
+    P --> Q
 
-    %% Styling: Đổ màu và ép chữ đen (#000)
-    style A fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000
-    style B fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#000
-    style C fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#000
-    style D fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px,color:#000
-    style E fill:#FFEB3B,stroke:#FBC02D,stroke-width:2px,color:#000
-    style F fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000
-    style G fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000
-    style H fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px,color:#000
-    style I fill:#FFEBEE,stroke:#C62828,stroke-width:2px,color:#000
-    style J fill:#E0F2F1,stroke:#00695C,stroke-width:2px,color:#000
-    style K fill:#E0F2F1,stroke:#00695C,stroke-width:2px,color:#000
-    style L fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000
+    classDef startNode fill:#1D4ED8,stroke:#1E3A8A,color:#fff
+    classDef process fill:#EFF6FF,stroke:#3B82F6,color:#1E3A8A
+    classDef decision fill:#FEF9C3,stroke:#CA8A04,color:#78350F
+    classDef payment fill:#F0FDF4,stroke:#22C55E,color:#14532D
+    classDef warn fill:#FFF7ED,stroke:#F97316,color:#7C2D12
+    classDef fail fill:#FEF2F2,stroke:#EF4444,color:#7F1D1D
+    classDef success fill:#16A34A,stroke:#166534,color:#fff
+
+    class S startNode
+    class B,C,E,F,G,I,P process
+    class D,H,J decision
+    class K,L,M,N payment
+    class I warn
+    class O fail
+    class Q success
 ```
 
-## 6.2 Payment Workflow
+## 6.2 Order Status Lifecycle
+
+_Figure 4: Business order lifecycle_
 
 ```mermaid
 flowchart TD
-    %% Định nghĩa các node
-    A([Order submitted])
-    B{Payment method?}
-    C[Status set to Pending]
-    D[Customer redirected to VNPay gateway]
-    E{Gateway result?}
-    F[Status set to Paid]
-    G[Order cancelled]
-    H[Restaurant notified]
-    I([Customer notified of payment failure])
-    J([Order proceeds to fulfillment])
+    S(["Order Created"])
+    AW["Awaiting Confirmation"]
+    PA["Paid"]
+    CO["Confirmed"]
+    PR["Preparing"]
+    RD["Ready for Pickup"]
+    PK["Picked Up"]
+    DL["Delivering"]
+    DV(["Delivered"])
+    CA(["Cancelled"])
+    RF(["Refunded"])
 
-    %% Giữ nguyên các kết nối và nhãn (labels)
-    A --> B
-    B -->|COD| C
-    B -->|VNPay| D
-    D --> E
-    E -->|Payment confirmed| F
-    E -->|Failed or cancelled| G
-    C --> H
-    F --> H
-    G --> I
-    H --> J
+    S --> AW
+    AW -->|"VNPay confirmed"| PA
+    AW -->|"COD accepted by restaurant or admin"| CO
+    AW -->|"cancelled by permitted actor or system timeout"| CA
+    PA -->|"accepted by restaurant or admin"| CO
+    PA -->|"cancelled by permitted actor or system timeout"| CA
+    CO -->|"preparation starts"| PR
+    CO -->|"cancelled by restaurant or admin"| CA
+    PR -->|"food ready"| RD
+    RD -->|"shipper collects order"| PK
+    PK -->|"shipper starts delivery"| DL
+    DL -->|"handoff confirmed"| DV
+    DV -->|"admin dispute refund approved"| RF
 
-    %% Styling: Đổ màu chuyên nghiệp và ép chữ đen
-    style A fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000
-    style B fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px,color:#000
-    style C fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000
-    style D fill:#E1F5FE,stroke:#0288D1,stroke-width:2px,color:#000
-    style E fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px,color:#000
-    style F fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000
-    style G fill:#FFEBEE,stroke:#C62828,stroke-width:2px,color:#000
-    style H fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#000
-    style I fill:#FFEBEE,stroke:#C62828,stroke-width:2px,color:#000
-    style J fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000
-```
+    classDef initial fill:#1D4ED8,stroke:#1E3A8A,color:#fff
+    classDef awaiting fill:#FEF9C3,stroke:#CA8A04,color:#78350F
+    classDef paid fill:#D1FAE5,stroke:#22C55E,color:#14532D
+    classDef restaurantState fill:#FED7AA,stroke:#F97316,color:#7C2D12
+    classDef deliveryState fill:#CFFAFE,stroke:#06B6D4,color:#164E63
+    classDef success fill:#16A34A,stroke:#166534,color:#fff
+    classDef failure fill:#EF4444,stroke:#B91C1C,color:#fff
+    classDef refund fill:#F59E0B,stroke:#D97706,color:#fff
 
-## 6.3 Order Status Lifecycle
-
-Every order progresses through a well-defined lifecycle from placement through delivery, cancellation, or refund. Two parallel entry paths exist depending on payment method: COD orders enter the lifecycle at **Pending**, while VNPay orders must clear a payment confirmation step before the restaurant can act. The system enforces which actor may trigger each transition; no actor may skip a state or act outside their permitted role.
-
-System-initiated transitions (payment timeout, order acceptance timeout) run automatically on a scheduled basis without requiring any manual intervention.
-
-```mermaid
-flowchart TD
-    %% Định nghĩa các Node với chữ đen rõ nét
-    START([Order placed])
-    PM{Payment method?}
-    Pending[Pending]
-    Paid[Paid]
-    Cancelled([Cancelled])
-    Confirmed[Confirmed]
-    Preparing[Preparing]
-    ReadyForPickup[Ready for Pickup]
-    PickedUp[Picked Up]
-    Delivering[Delivering]
-    Delivered[Delivered]
-    Refunded([Refunded])
-
-    %% Giữ nguyên các kết nối và nội dung text trên line
-    START --> PM
-    PM -->|COD| Pending
-    PM -->|VNPay| Pending
-
-    Pending -->|VNPay payment confirmed\nby gateway - system| Paid
-    Pending -->|Payment failed or\ntimed out - system| Cancelled
-    Pending -->|Restaurant or admin\naccepts COD order| Confirmed
-    Pending -->|Customer, restaurant,\nadmin or system| Cancelled
-
-    Paid -->|Restaurant or admin\naccepts order| Confirmed
-    Paid -->|Customer, restaurant,\nadmin or system| Cancelled
-
-    Confirmed -->|Restaurant or admin\nstarts preparation| Preparing
-    Confirmed -->|Restaurant or admin\ncancels order| Cancelled
-
-    Preparing -->|Restaurant or admin\nmarks food ready| ReadyForPickup
-
-    ReadyForPickup -->|Shipper or admin\naccepts and collects| PickedUp
-
-    PickedUp -->|Shipper or admin\nbegins delivery| Delivering
-
-    Delivering -->|Shipper or admin\nconfirms handoff| Delivered
-
-    Delivered -->|Admin approves\ndispute refund| Refunded
-
-    %% Styling: Phân nhóm màu sắc và ép chữ đen (#000)
-    style START fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000
-    style PM fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px,color:#000
-    style Pending fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px,color:#000
-    style Paid fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000
-    style Confirmed fill:#E0F2F1,stroke:#00695C,stroke-width:2px,color:#000
-    style Preparing fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#000
-    style ReadyForPickup fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#000
-    style PickedUp fill:#E1F5FE,stroke:#0288D1,stroke-width:2px,color:#000
-    style Delivering fill:#E1F5FE,stroke:#0288D1,stroke-width:2px,color:#000
-    style Delivered fill:#C8E6C9,stroke:#2E7D32,stroke-width:3px,color:#000
-    style Cancelled fill:#FFEBEE,stroke:#C62828,stroke-width:2px,color:#000
-    style Refunded fill:#FFEBEE,stroke:#C62828,stroke-width:2px,color:#000
+    class S initial
+    class AW awaiting
+    class PA paid
+    class CO,PR,RD restaurantState
+    class PK,DL deliveryState
+    class DV success
+    class CA failure
+    class RF refund
 ```
 
 ### Transition Ownership Summary
 
-| Transition | From | To | Permitted Actors | Refund Triggered? |
+| Transition | From | To | Permitted Actors | Payment Effect |
 |---|---|---|---|---|
-| T-01 | Pending | Confirmed | Restaurant, Admin | No |
-| T-02 | Pending | Paid | System (gateway callback) | No |
-| T-03 | Pending | Cancelled | Customer, Restaurant, Admin, System | No |
-| T-04 | Paid | Confirmed | Restaurant, Admin | No |
-| T-05 | Paid | Cancelled | Customer, Restaurant, Admin, System | Yes — VNPay refund initiated |
-| T-06 | Confirmed | Preparing | Restaurant, Admin | No |
-| T-07 | Confirmed | Cancelled | Restaurant, Admin | Yes — VNPay refund initiated |
-| T-08 | Preparing | Ready for Pickup | Restaurant, Admin | No |
-| T-09 | Ready for Pickup | Picked Up | Shipper, Admin | No |
-| T-10 | Picked Up | Delivering | Shipper, Admin | No |
-| T-11 | Delivering | Delivered | Shipper, Admin | No |
-| T-12 | Delivered | Refunded | Admin only | Yes — dispute refund |
+| T-01 | Awaiting Confirmation | Confirmed | Restaurant, Administrator | COD order proceeds to fulfillment |
+| T-02 | Awaiting Confirmation | Paid | System through verified gateway callback | VNPay payment confirmed |
+| T-03 | Awaiting Confirmation | Cancelled | Customer, Restaurant, Administrator, System | No refund for COD; VNPay payment attempt is closed |
+| T-04 | Paid | Confirmed | Restaurant, Administrator | VNPay-paid order proceeds to fulfillment |
+| T-05 | Paid | Cancelled | Customer, Restaurant, Administrator, System | VNPay refund or compensation path applies |
+| T-06 | Confirmed | Preparing | Restaurant, Administrator | No payment change |
+| T-07 | Confirmed | Cancelled | Restaurant, Administrator | Refund applies when payment is already confirmed |
+| T-08 | Preparing | Ready for Pickup | Restaurant, Administrator | No payment change |
+| T-09 | Ready for Pickup | Picked Up | Delivery Personnel, Administrator | Shipper assignment recorded |
+| T-10 | Picked Up | Delivering | Assigned Delivery Personnel, Administrator | No payment change |
+| T-11 | Delivering | Delivered | Assigned Delivery Personnel, Administrator | Order completion contributes to GMV and commission |
+| T-12 | Delivered | Refunded | Administrator | Dispute refund recorded |
 
-## 6.4 Delivery Workflow
+## 6.3 Restaurant and Delivery Workflow
 
-```mermaid
-flowchart TD
-    %% Định nghĩa các Node
-    A([Order ready for pickup])
-    B[System identifies available shippers]
-    C{Shipper accepts assignment?}
-    D[Shipper picks up order from restaurant]
-    E[Shipper en route to customer]
-    F[Shipper confirms delivery]
-    G([Order status set to Delivered])
-    H[Customer prompted to submit review]
-
-    %% Giữ nguyên kết nối và nội dung text trên line
-    A --> B
-    B --> C
-    C -->|No or timeout| B
-    C -->|Yes| D
-    D --> E
-    E --> F
-    F --> G
-    G --> H
-
-    %% Styling: Màu sắc hiện đại và ép chữ đen
-    style A fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000
-    style B fill:#E1F5FE,stroke:#0288D1,stroke-width:2px,color:#000
-    style C fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px,color:#000
-    style D fill:#E0F2F1,stroke:#00695C,stroke-width:2px,color:#000
-    style E fill:#E0F7FA,stroke:#00ACC1,stroke-width:2px,color:#000
-    style F fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000
-    style G fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000
-    style H fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#000
-```
-
-## 6.5 Cancellation and Refund Workflow
-
-Orders may be cancelled by the customer, the restaurant, or an administrator, provided the order has not yet entered active preparation. Once a restaurant begins preparing an order, cancellation is no longer available through any channel. A cancellation reason is required in all cases for operational traceability.
-
-Refund eligibility is determined by payment method. COD orders carry no monetary refund obligation. Orders settled via online payment are refunded to the customer's original payment method when cancelled after payment has been confirmed. Administrators may separately approve a refund for a delivered order to resolve a customer dispute.
+_Figure 5: Restaurant preparation and delivery workflow_
 
 ```mermaid
 flowchart TD
-    %% Định nghĩa các Node với chữ đen rõ nét
-    A([Cancellation requested])
-    B{Order within\ncancellation window?}
-    C([Request rejected\nCustomer notified])
-    D[Order cancelled\nReason recorded]
-    E{Paid online?}
-    F([Order cancelled\nNo refund required\nCustomer notified])
-    G([Order cancelled\nRefund issued to original\npayment method\nCustomer notified])
-    H([Post-delivery dispute\nAdmin only])
-    I[Administrator reviews\nand approves refund]
-    J([Refund issued\nCustomer notified])
+    subgraph RestaurantOps["Restaurant Operations"]
+        A(["Restaurant Receives Order"])
+        B{"Accept or Reject?"}
+        C["Order Confirmed"]
+        D["Preparation Started"]
+        E["Food Ready for Pickup"]
+        K["Order Rejected with Reason"]
+    end
 
-    %% Giữ nguyên các kết nối và nội dung text trên line
+    subgraph DeliveryOps["Delivery Operations"]
+        F["Available Shipper Accepts Pickup"]
+        G["Shipper Collects Order"]
+        H["Shipper Delivers to Customer"]
+        I["Delivery Confirmed"]
+    end
+
+    subgraph OrderOutcome["Order Outcome"]
+        J(["Customer Receives Delivered Status"])
+        L(["Affected Parties Notified"])
+    end
+
     A --> B
-    B -->|No — preparation\nhas already begun| C
-    B -->|Yes| D
-    D --> E
-    E -->|No — COD| F
-    E -->|Yes| G
+    B -->|"Accept"| C --> D --> E --> F
+    B -->|"Reject"| K --> L
+    F --> G --> H --> I --> J
 
-    H --> I
-    I --> J
+    classDef restaurantNode fill:#F97316,stroke:#C2410C,color:#fff
+    classDef deliveryNode fill:#06B6D4,stroke:#0E7490,color:#fff
+    classDef decisionNode fill:#FEF9C3,stroke:#CA8A04,color:#78350F
+    classDef successNode fill:#16A34A,stroke:#166534,color:#fff
+    classDef failureNode fill:#EF4444,stroke:#B91C1C,color:#fff
+    classDef notifyNode fill:#FDF4FF,stroke:#EC4899,color:#831843
 
-    %% Styling: Phân nhóm màu sắc và ép chữ đen (#000)
-    style A fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000
-    style B fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px,color:#000
-    style C fill:#FFEBEE,stroke:#C62828,stroke-width:2px,color:#000
-    style D fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px,color:#000
-    style E fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px,color:#000
-    style F fill:#F5F5F5,stroke:#757575,stroke-width:2px,color:#000
-    style G fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000
-    style H fill:#E1F5FE,stroke:#0288D1,stroke-width:2px,color:#000
-    style I fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#000
-    style J fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000
+    class A,C,D,E restaurantNode
+    class B decisionNode
+    class F,G,H,I deliveryNode
+    class J successNode
+    class K failureNode
+    class L notifyNode
+
+    style RestaurantOps fill:#FFF7ED,stroke:#F97316,color:#7C2D12
+    style DeliveryOps fill:#ECFEFF,stroke:#06B6D4,color:#164E63
+    style OrderOutcome fill:#F0FDF4,stroke:#22C55E,color:#14532D
 ```
 
-### Cancellation and Refund Summary
+## 6.4 Cancellation and Refund Workflow
 
-| Scenario | Who May Act | Refund Outcome |
-|---|---|---|
-| Order not yet in preparation | Customer, Restaurant, Administrator | Refund if paid online; none for COD |
-| Order in preparation or later | — | Cancellation not permitted |
-| Post-delivery dispute | Administrator only | Full refund to original payment method |
+_Figure 6: Cancellation and refund workflow_
+
+```mermaid
+flowchart TD
+    subgraph CancelFlow["Cancellation Flow"]
+        A(["Cancellation Request"])
+        B{"Order State Permits Cancellation?"}
+        C["Reject Request with Reason"]
+        D["Record Cancellation Reason"]
+        E{"Payment Already Confirmed Online?"}
+        F["Close COD Order"]
+        G["Initiate Digital Refund or Compensation"]
+        H["Notify Customer, Restaurant and Shipper"]
+        I(["Cancellation Complete"])
+    end
+
+    subgraph DisputeFlow["Dispute and Refund Flow"]
+        J(["Delivered-Order Dispute"])
+        K["Administrator Reviews Dispute"]
+        L["Approve Refund"]
+        M(["Refund Recorded and Customer Notified"])
+    end
+
+    A --> B
+    B -->|"No"| C
+    B -->|"Yes"| D --> E
+    E -->|"COD"| F --> H --> I
+    E -->|"Online Payment"| G --> H --> I
+    J --> K --> L --> M
+
+    classDef startNode fill:#3B82F6,stroke:#1D4ED8,color:#fff
+    classDef processNode fill:#EFF6FF,stroke:#3B82F6,color:#1E3A8A
+    classDef decisionNode fill:#FEF9C3,stroke:#CA8A04,color:#78350F
+    classDef codNode fill:#F0FDF4,stroke:#22C55E,color:#14532D
+    classDef refundNode fill:#FEF3C7,stroke:#F59E0B,color:#78350F
+    classDef notifyNode fill:#FDF4FF,stroke:#EC4899,color:#831843
+    classDef successNode fill:#16A34A,stroke:#166534,color:#fff
+    classDef rejectNode fill:#FEE2E2,stroke:#EF4444,color:#7F1D1D
+    classDef adminNode fill:#EDE9FE,stroke:#8B5CF6,color:#4C1D95
+
+    class A,J startNode
+    class C rejectNode
+    class D,H processNode
+    class B,E decisionNode
+    class F,I codNode
+    class G refundNode
+    class K,L adminNode
+    class M successNode
+
+    style CancelFlow fill:#EFF6FF,stroke:#3B82F6,color:#1E3A8A
+    style DisputeFlow fill:#EDE9FE,stroke:#8B5CF6,color:#4C1D95
+```
+
+## 6.5 Review and Rating Workflow
+
+_Figure 7: Post-delivery review workflow_
+
+```mermaid
+flowchart TD
+    subgraph CustomerFeedback["Customer Feedback"]
+        A(["Order Delivered"])
+        B["Customer Views Delivered Order"]
+        C{"Submit Rating?"}
+        H(["No Review — Skipped"])
+    end
+
+    subgraph ReviewPipeline["Review Pipeline"]
+        D["Validate Ownership and Delivered Status"]
+        E["Store Rating and Optional Review"]
+    end
+
+    subgraph QualityUpdate["Quality and Visibility"]
+        F["Update Restaurant and Delivery Quality Indicators"]
+        G(["Review Visible in Approved Surfaces"])
+    end
+
+    A --> B --> C
+    C -->|"Yes"| D --> E --> F --> G
+    C -->|"No"| H
+
+    classDef customerNode fill:#3B82F6,stroke:#1D4ED8,color:#fff
+    classDef pipelineNode fill:#22C55E,stroke:#15803D,color:#fff
+    classDef qualityNode fill:#EC4899,stroke:#BE185D,color:#fff
+    classDef successNode fill:#16A34A,stroke:#166534,color:#fff
+    classDef neutralNode fill:#94A3B8,stroke:#64748B,color:#fff
+    classDef decisionNode fill:#FEF9C3,stroke:#CA8A04,color:#78350F
+
+    class A,B customerNode
+    class C decisionNode
+    class D,E pipelineNode
+    class F qualityNode
+    class G successNode
+    class H neutralNode
+
+    style CustomerFeedback fill:#DBEAFE,stroke:#3B82F6,color:#1E3A8A
+    style ReviewPipeline fill:#F0FDF4,stroke:#22C55E,color:#14532D
+    style QualityUpdate fill:#FDF4FF,stroke:#EC4899,color:#831843
+```
 
 ---
 
 # 7. Business Requirements
 
-Each Business Requirement defines a discrete, verifiable business need that the platform must satisfy. Requirements are linked to Business Objectives, Success Metrics, and platform features to support traceability.
+Each BRD requirement is discrete, verifiable, traceable to business objectives and source artifacts, and aligned with the approved release roadmap. Business rules from [Business_Rules.md](Business_Rules.md) are referenced as BUS-BR-N.
 
----
+## 7.1 Requirements Register
 
-## BR-1: Customer Identity and Access Management
+| BRD ID | Requirement | Business Requirement Statement | Business Value | Release Allocation | Source Anchors |
+|---|---|---|---|---|---|
+| BRD-01 | Customer Identity and Access | The platform shall support customer registration, authentication, session handling, profile data, and saved delivery addresses through secure account access. | Enables personalized ordering, order ownership, history, review attribution, and secure checkout. | Release 1 | BO-1, SM-1, FE-1, US-1, UC-1 |
+| BRD-02 | Partner Verification and Role Activation | Administrators shall approve restaurant partners and delivery personnel before they can receive orders or delivery assignments. | Protects marketplace trust, safety, service quality, and partner accountability. | Release 1 | BUS-BR-1, BO-2, BO-3, SM-2, FE-6, FE-7, FE-8, US-10, US-14, US-18 |
+| BRD-03 | Unified Restaurant and Food Discovery | Customers shall search and browse restaurants and menu items by keyword, category, cuisine, tag, and proximity through a unified discovery flow. | Reduces time to order and increases restaurant exposure. | Release 1 | BO-1, BO-2, SM-1, SM-2, FE-2, US-2 |
+| BRD-04 | Restaurant Menu and Availability Management | Restaurant partners shall manage profiles, delivery zones, menu categories, menu items, images, prices, and availability states. | Keeps menu data accurate, reduces unfulfillable orders, and supports restaurant autonomy. | Release 1 with Release 2 stock and branch refinements | BUS-BR-8, BO-2, SM-2, FE-6, US-10, US-11, US-12 |
+| BRD-05 | Single-Restaurant Cart Constraint | A customer's cart shall contain items from exactly one restaurant. Attempts to add another restaurant's item shall require clearing the cart or keeping the existing cart. | Preserves fulfillment integrity, pricing consistency, and checkout simplicity. | Release 1 | BUS-BR-2, BO-1, FE-3, US-5, US-22 |
+| BRD-06 | Delivery Zone and Service Area Validation | Checkout shall validate the customer address against restaurant delivery zones and the platform service area before order submission. | Prevents undeliverable orders, avoidable cancellations, and delivery cost waste. | Release 1 with Release 2 map refinement | BUS-BR-3, BUS-BR-6, BO-3, SM-4, FE-3, FE-5, US-6, US-20 |
+| BRD-07 | Checkout and Payment Support | Customers shall place orders using COD or VNPay in Release 1. VNPay orders shall advance only after verified gateway confirmation. | Supports payment choice, lowers cash-handling risk, and drives BO-4 digital payment adoption. | Release 1; MoMo in Release 2; additional wallets in Release 3 | BUS-BR-4, BO-4, FE-4, US-7 |
+| BRD-08 | Order Lifecycle and Status Visibility | Every order shall follow the approved lifecycle from Awaiting Confirmation through Delivered or an applicable terminal exception, with role-controlled transitions and visible status history. | Creates a trustworthy operational record for customers, restaurants, shippers, administrators, and reports. | Release 1 | BUS-BR-7, BO-1, BO-3, SM-3, SM-4, FE-5, US-8, US-9, US-34 |
+| BRD-09 | Restaurant Order Reception and Preparation | Restaurant partners shall receive order alerts, accept or reject eligible orders, update preparation status, and mark food ready for pickup. | Enables timely preparation and protects the 45-minute delivery metric. | Release 1 | BO-3, SM-2, SM-4, FE-6, US-13, US-23, US-24 |
+| BRD-10 | Delivery Dispatch and Completion | Delivery personnel shall manage availability, accept eligible pickup work, mark pickup and delivery progress, and confirm successful delivery. | Enables delivery success, correct assignment, and completion measurement. | Release 1 with Release 2 earnings and rating refinements | BO-3, SM-4, FE-7, US-14, US-15, US-16, US-17 |
+| BRD-11 | Notifications and Alerts | The platform shall deliver workflow-relevant notifications for order placement, payment results, restaurant action, pickup readiness, delivery progress, cancellation, refund, and review prompts. | Reduces manual polling, accelerates response time, and improves participant confidence. | Release 1 with Release 2 channel-preference refinement | BO-1, BO-3, SM-3, FE-12, US-9, US-13, US-23, US-24 |
+| BRD-12 | Cancellation, Refund, and Compensation | The platform shall support payment-aware cancellation, refund, and compensation flows with reason capture, actor traceability, and affected-party notifications. | Reduces disputes, protects financial correctness, and supports operational transparency. | Release 1 | BUS-BR-4, BUS-BR-7, BO-3, BO-4, FE-4, FE-5, US-24, US-29, US-35 |
+| BRD-13 | Review and Rating | Customers shall submit ratings and optional reviews after delivery, and aggregated quality signals shall support restaurant profiles, search, and marketplace trust. | Drives SM-3 customer satisfaction measurement and partner quality incentives. | Release 1 baseline with Release 2 moderation refinement | SM-3, FE-9, US-33 |
+| BRD-14 | Promotions, Coupons, and Loyalty | Restaurant and platform stakeholders shall manage discount codes, flash sales, and loyalty incentives according to approved scope and checkout validation rules. | Supports customer acquisition, retention, restaurant campaigns, and repeat order volume. | Promotion management in Release 2; loyalty points in Release 3 | SM-1, FE-10, US-36, US-37 |
+| BRD-15 | Commission and Operational Reporting | The platform shall calculate commission from delivered-order GMV and provide operational and financial reporting for administrators and restaurant partners. | Supports revenue governance, settlement transparency, and business decision-making. | Release 1 reporting baseline with Release 2 dashboard expansion | BUS-BR-5, BO-2, SM-2, FE-8, US-21, US-30, US-31 |
+| BRD-16 | Administration, Governance, Audit, and Exclusions | Administrators shall manage user accounts, roles, partner decisions, suspensions, platform health, promotions, audits, and explicit marketplace exclusions. B2B enterprise ordering and subscription meal plans remain excluded from all releases. | Maintains platform integrity, policy compliance, operational control, and academic scope discipline. | Release 1 governance baseline with Release 2 and Release 3 dashboard expansion | BUS-BR-1, BUS-BR-9, BO-2, BO-3, FE-8, US-18, US-19, US-25, US-26, US-27, US-28, US-29, US-32 |
 
-| Attribute | Detail |
-|---|---|
-| **BR ID** | BR-1 |
-| **Requirement Name** | Customer Identity and Access Management |
-| **Description** | The platform must support customer self-registration, secure authentication (email/password and OAuth-based social login), session management, and basic profile management including display name, phone number, and saved delivery addresses. |
-| **Business Value** | Identity is the prerequisite for every personalized platform service — order history, saved addresses, and review attribution. Without reliable authentication, no transactional or personalized capability is accessible to the customer. |
-| **Related Business Areas** | Customer Experience, Platform Security |
-| **Related Artifacts** | BO-1, SM-1, FE-1; User Story: US-1 |
+## 7.2 Business Rule Coverage
 
----
-
-## BR-2: Single-Restaurant Cart Constraint
-
-| Attribute | Detail |
-|---|---|
-| **BR ID** | BR-2 |
-| **Requirement Name** | Single-Restaurant Cart Constraint |
-| **Description** | A customer's active cart must contain items from exactly one restaurant at a time. If a customer attempts to add items from a second restaurant, the platform must prompt the customer to either clear the existing cart and start a new selection, or cancel the action and retain the current cart. |
-| **Business Value** | Maintains operational consistency across pricing, delivery zone enforcement, and order fulfillment. Mixed-restaurant carts cannot be dispatched to a single delivery agent and create irreconcilable checkout conflicts. |
-| **Related Business Areas** | Cart Management, Order Processing |
-| **Related Artifacts** | FE-3; User Story: US-5 |
-
----
-
-## BR-3: Delivery Zone Validation
-
-| Attribute | Detail |
-|---|---|
-| **BR ID** | BR-3 |
-| **Requirement Name** | Delivery Zone Validation |
-| **Description** | At checkout, the platform must validate whether the customer's specified delivery address falls within the selected restaurant's configured delivery zone. Orders with delivery addresses outside the zone must be blocked at checkout with a clear, actionable explanation. |
-| **Business Value** | Prevents undeliverable orders from entering the fulfillment pipeline. Unvalidated orders result in cancellations, refund costs, wasted delivery personnel trips, and negative customer experience. |
-| **Related Business Areas** | Checkout, Delivery Management, Restaurant Configuration |
-| **Related Artifacts** | BO-3, SM-4, FE-3, FE-5; User Story: US-6 |
-
----
-
-## BR-4: Payment Method Support
-
-| Attribute | Detail |
-|---|---|
-| **BR ID** | BR-4 |
-| **Requirement Name** | Payment Method Support |
-| **Description** | The platform must support at minimum Cash on Delivery (COD) and VNPay as payment methods at checkout. Each order is settled by exactly one payment method selected by the customer. For VNPay orders, payment confirmation from the gateway must be received and verified before the order status advances. |
-| **Business Value** | COD broadens platform accessibility for customers without digital payment accounts. VNPay enables faster settlement, reduces cash-handling risk for delivery personnel, and supports BO-4 (70% digital payment target). |
-| **Related Business Areas** | Payment Processing, Checkout |
-| **Related Artifacts** | BO-4, FE-4; User Story: US-7 |
-
----
-
-## BR-5: Unified Restaurant and Food Discovery
-
-| Attribute | Detail |
-|---|---|
-| **BR ID** | BR-5 |
-| **Requirement Name** | Unified Restaurant and Food Discovery |
-| **Description** | Customers must be able to search and browse restaurants and menu items through a single unified discovery interface. Search must support filtering by keyword, cuisine type, food category, tag, and geographic proximity. A single search request must return both matching restaurants and matching menu items in one response. |
-| **Business Value** | Discovery is the primary entry point to the ordering funnel. Effective, unified search reduces the time from intent to order placement, directly supporting BO-1 (reduce average ordering time by 50%). |
-| **Related Business Areas** | Customer Experience, Restaurant Discoverability |
-| **Related Artifacts** | BO-1, BO-2, SM-1, SM-2, FE-2; User Story: US-2 |
-
----
-
-## BR-6: Restaurant Menu Publication and Management
-
-| Attribute | Detail |
-|---|---|
-| **BR ID** | BR-6 |
-| **Requirement Name** | Restaurant Menu Publication and Management |
-| **Description** | Restaurant partners must be able to self-manage their menus through a dedicated portal — creating, updating, and deactivating menu categories and items, setting prices, managing item availability, and uploading images. Menu changes must be reflected to customers promptly. |
-| **Business Value** | Enables restaurant partners to operate independently, reduces platform support overhead for menu changes, and maintains the menu accuracy required to prevent unfulfillable orders. |
-| **Related Business Areas** | Restaurant Management, Menu Accuracy, Order Fulfillment |
-| **Related Artifacts** | BO-2, SM-2, FE-6; User Story: US-11 |
-
----
-
-## BR-7: Order Lifecycle and Status Management
-
-| Attribute | Detail |
-|---|---|
-| **BR ID** | BR-7 |
-| **Requirement Name** | Order Lifecycle and Status Management |
-| **Description** | Every order must progress through a well-defined lifecycle: Pending or Awaiting Payment → Confirmed → Preparing → Ready for Pickup → In Delivery → Delivered (or Cancelled at applicable stages). Each status transition must be triggered by the appropriate role, timestamped, and communicated in real time to all relevant participants. |
-| **Business Value** | Lifecycle transparency reduces support requests, enables accurate delivery time estimation, and provides the event foundation for notifications, tracking, financial reporting, and operational audit. |
-| **Related Business Areas** | Order Processing, Delivery Management, Customer Experience, Operations |
-| **Related Artifacts** | BO-1, BO-3, SM-4, FE-5, FE-6; User Story: US-8 |
-
----
-
-## BR-8: Real-Time Order and Delivery Tracking
-
-| Attribute | Detail |
-|---|---|
-| **BR ID** | BR-8 |
-| **Requirement Name** | Real-Time Order and Delivery Tracking |
-| **Description** | Customers must receive real-time status updates as their order progresses through the lifecycle. During active delivery, the delivery personnel's location must be visible to the customer on a map. Status updates must be delivered within a defined latency threshold under normal operating conditions. |
-| **Business Value** | Real-time visibility reduces customer anxiety, lowers the volume of "where is my order" support contacts, and is a primary competitive differentiator versus traditional ordering channels (phone, walk-in). |
-| **Related Business Areas** | Customer Experience, Delivery Management |
-| **Related Artifacts** | BO-1, BO-3, SM-3, SM-4, FE-5; User Story: US-9 |
-
----
-
-## BR-9: Restaurant Order Reception and Management
-
-| Attribute | Detail |
-|---|---|
-| **BR ID** | BR-9 |
-| **Requirement Name** | Restaurant Order Reception and Management |
-| **Description** | Restaurant partners must receive new order alerts in real time through their portal, acknowledge or reject incoming orders within a defined window, update preparation status as work progresses, and mark orders as ready for pickup. Orders not acknowledged within the defined window must trigger a platform-level escalation. |
-| **Business Value** | Reliable order acknowledgment and status updates are essential to meeting the 45-minute order-to-delivery target (SM-4) and the 95% delivery success rate (BO-3). Unacknowledged orders directly increase cancellation rates and customer dissatisfaction. |
-| **Related Business Areas** | Restaurant Management, Order Processing, Delivery Coordination |
-| **Related Artifacts** | BO-3, SM-2, SM-4, FE-6; User Story: US-13 |
-
----
-
-## BR-10: Delivery Personnel Dispatch and Management
-
-| Attribute | Detail |
-|---|---|
-| **BR ID** | BR-10 |
-| **Requirement Name** | Delivery Personnel Dispatch and Management |
-| **Description** | The platform must match available delivery personnel to pending orders based on proximity and current availability. Delivery personnel must be able to toggle their availability status, review and accept or decline assignments, confirm order pickup from the restaurant, and confirm delivery completion to the customer. |
-| **Business Value** | Efficient dispatch is the primary operational lever for achieving BO-3 (95% delivery success rate) and SM-4 (average delivery ≤ 45 minutes). Ineffective dispatch results in delayed deliveries, poor customer experience, and order cancellations. |
-| **Related Business Areas** | Delivery Operations, Order Fulfillment |
-| **Related Artifacts** | BO-3, SM-4, FE-7; User Stories: US-16, US-17 |
-
----
-
-## BR-11: Administrator Platform Oversight
-
-| Attribute | Detail |
-|---|---|
-| **BR ID** | BR-11 |
-| **Requirement Name** | Administrator Platform Oversight |
-| **Description** | Administrators must have full visibility and control over the platform — managing all user accounts, approving or suspending restaurant and delivery personnel registrations, monitoring active orders, and accessing revenue and operational reports. |
-| **Business Value** | Centralized oversight ensures partner quality, enforces platform policies, enables rapid response to operational incidents, and provides the data foundation for business decision-making and governance. |
-| **Related Business Areas** | Platform Governance, Risk Management, Business Intelligence |
-| **Related Artifacts** | BO-2, SM-2, FE-8; User Story: US-21 |
-
----
-
-## BR-12: Notifications and Alerts
-
-| Attribute | Detail |
-|---|---|
-| **BR ID** | BR-12 |
-| **Requirement Name** | Notifications and Alerts |
-| **Description** | The platform must deliver timely notifications to all participant roles for workflow-relevant events — including order placement confirmations, preparation status updates, delivery assignment alerts, delivery completion confirmations, and payment results. Notifications must be delivered via push notification to mobile applications and in-app messaging where supported. |
-| **Business Value** | Proactive notifications eliminate manual status polling, accelerate workflow response times (restaurant acknowledgment, shipper pickup), and improve satisfaction across all roles. |
-| **Related Business Areas** | Customer Experience, Restaurant Operations, Delivery Operations |
-| **Related Artifacts** | BO-1, BO-3, SM-3, FE-12; User Story: US-9 |
-
----
-
-## BR-13: Review and Rating System
-
-| Attribute | Detail |
-|---|---|
-| **BR ID** | BR-13 |
-| **Requirement Name** | Review and Rating System |
-| **Description** | Customers must be able to submit a numeric rating and optional written review for completed orders. Ratings must evaluate both the restaurant experience and the delivery experience. Aggregated ratings must be displayed on restaurant profiles and search results. |
-| **Business Value** | Ratings provide the social proof that drives informed purchasing decisions, incentivize quality improvement among restaurant and delivery partners, and are a key input to the SM-3 satisfaction target (≥ 4.0 / 5.0). |
-| **Related Business Areas** | Customer Experience, Partner Quality Management |
-| **Related Artifacts** | SM-3, FE-9; User Story: US-19 |
-
----
-
-## BR-14: Promotional and Loyalty Features
-
-| Attribute | Detail |
-|---|---|
-| **BR ID** | BR-14 |
-| **Requirement Name** | Promotional and Loyalty Features |
-| **Description** | The platform must support discount code redemption at checkout, time-limited flash sales initiated by restaurant partners or administrators, and a customer loyalty points program that rewards repeat ordering behavior. |
-| **Business Value** | Promotions are a primary acquisition and retention mechanism in competitive food delivery markets. A loyalty program supports SM-1 (weekly active customers ≥ 500) and drives long-term repeat order volume. |
-| **Related Business Areas** | Marketing, Customer Retention, Restaurant Partnership |
-| **Related Artifacts** | SM-1, FE-10 |
+| Business Rule Anchor | Source Rule | BRD Coverage |
+|---|---|---|
+| BUS-BR-1 | Partner verification | BRD-02, BRD-16 |
+| BUS-BR-2 | Single-restaurant cart | BRD-05 |
+| BUS-BR-3 | Delivery radius constraint | BRD-06 |
+| BUS-BR-4 | COD and VNPay payment rules | BRD-07, BRD-12 |
+| BUS-BR-5 | Commission calculation | BRD-15 |
+| BUS-BR-6 | Geographic scope constraint | BRD-06 |
+| BUS-BR-7 | Order lifecycle integrity | BRD-08, BRD-12 |
+| BUS-BR-8 | Real-time availability control | BRD-04 |
+| BUS-BR-9 | Enterprise exclusion | BRD-16 |
 
 ---
 
@@ -795,36 +735,37 @@ Each Business Requirement defines a discrete, verifiable business need that the 
 
 ## 8.1 Functional Capability List
 
-The table below maps each functional capability to its originating feature reference, target release, and current scope status.
-
-| FC ID | Capability | Feature Reference | Target Release | Scope Status |
+| FC ID | Capability | Feature Reference | Target Release Allocation | BRD Requirements |
 |---|---|---|---|---|
-| FC-1 | Customer Identity and Access | FE-1 | Release 1 | In Scope |
-| FC-2 | Unified Restaurant and Food Discovery | FE-2 | Release 1 | In Scope |
-| FC-3 | Cart Management and Checkout | FE-3 | Release 1 | In Scope |
-| FC-4 | Payment Processing — COD and VNPay | FE-4 | Release 1 | In Scope |
-| FC-5 | Order Status Tracking | FE-5 | Release 1 ; Release 2 (live map tracking) | Partial |
-| FC-6 | Restaurant Management Portal | FE-6 | Release 1 (menu and order management core); Release 2 (flash sales, multi-branch) | Partial |
-| FC-7 | Delivery Personnel Portal | FE-7 | Release 1 | In Scope |
-| FC-8 | Administrator Dashboard | FE-8 | Release 1 (user management, approvals, basic reporting) | In Scope |
-| FC-9 | Review and Rating System | FE-9 | Release 2 | Planned |
-| FC-10 | Promotions and Loyalty | FE-10 | Release 2+ | Planned |
-| FC-11 | Multi-Branch and Group Orders | FE-11 | Release 3 | Future |
-| FC-12 | Push Notifications | FE-12 | Release 1 (order events)| In Scope |
+| FC-01 | Customer Identity and Access | FE-1 | Release 1 | BRD-01 |
+| FC-02 | Unified Restaurant and Food Discovery | FE-2 | Release 1 | BRD-03 |
+| FC-03 | Cart Management and Checkout | FE-3 | Release 1 | BRD-05, BRD-06, BRD-07 |
+| FC-04 | Payment Processing - COD and VNPay | FE-4 | Release 1; MoMo Release 2; additional wallets Release 3 | BRD-07, BRD-12 |
+| FC-05 | Order Status Tracking | FE-5 | Release 1 status tracking; Release 2 live map tracking | BRD-08, BRD-11 |
+| FC-06 | Restaurant Management Portal | FE-6 | Release 1 menu and order management; Release 2 stock, campaign, and branch refinements | BRD-02, BRD-04, BRD-09, BRD-14 |
+| FC-07 | Delivery Personnel Portal | FE-7 | Release 1 availability, pickup, and delivery; Release 2 earnings and rating refinements | BRD-02, BRD-10 |
+| FC-08 | Administrator Dashboard | FE-8 | Release 1 governance and reports; Release 2 monitoring expansion; Release 3 BI expansion | BRD-15, BRD-16 |
+| FC-09 | Review and Rating System | FE-9 | Release 1 baseline review; Release 2 moderation refinement | BRD-13 |
+| FC-10 | Promotions and Loyalty | FE-10 | Release 2 promotions and coupon campaigns; Release 3 loyalty points | BRD-14 |
+| FC-11 | Multi-Branch, Group Orders, and Scheduling | FE-11 | Release 3 | BRD-04, BRD-14, BRD-16 |
+| FC-12 | Notifications | FE-12 | Release 1 order workflow notifications; Release 2 channel-preference refinement | BRD-11 |
 
-## 8.2 Future Detailed Documentation
+## 8.2 Defined Supporting Artifacts
 
-The following specification artifacts are planned to elaborate the capabilities listed above. They are not included in this BRD but are referenced for traceability.
-
-| Document | Description | Status |
+| Artifact | Location | Role in BRD Trace |
 |---|---|---|
-| Use Case Document | Detailed use case specifications per functional capability | Planned |
-| User Story Document | Agile user stories with acceptance criteria | In Progress |
-| Software Requirements Specification (SRS) | Full functional and non-functional requirements with priority and verification method | Planned |
-| System Architecture Document | Component architecture, deployment model, and integration design | Planned |
-| API Specification | REST API contract definitions for all external-facing endpoints | Planned |
-| Data Model Document | Relational schema, entity definitions, and data flow documentation | Planned |
-| Test Plan | Test strategy, test case outlines, and acceptance test plan | Planned |
+| Vision and Scope | [Food_Delivery_Vision_and_Scope.md](Food_Delivery_Vision_and_Scope.md) | Source for BO, SM, FE, release allocation, risks, assumptions, and dependencies |
+| Business Rules | [Business_Rules.md](Business_Rules.md) | Source for hard business rules BUS-BR-1 through BUS-BR-9 |
+| User Stories and Acceptance Criteria | [User-Stories-and-Acceptance-Criteria.md](User-Stories-and-Acceptance-Criteria.md) | Source for US coverage and acceptance-level trace |
+| Use Case Specification | [USE_CASE_SPECIFICATION.md](USE_CASE_SPECIFICATION.md) | Source for domain-level use cases UC-DOM-01 through UC-DOM-12 |
+| SRS | [SRS_FoodDelivery.md](SRS_FoodDelivery.md) | Source for UC-1 through UC-35 functional behavior |
+| SRS Sequence Diagrams | [SRS_SequenceDiagrams.md](SRS_SequenceDiagrams.md) | Source for sequence-level flow validation |
+| Utility Tree ASRs | [Utility-Tree-ASRs.md](Utility-Tree-ASRs.md) | Source for measurable quality attribute scenarios |
+| ASR | [ASR-ADD-SAD/ASR_FoodDelivery.md](ASR-ADD-SAD/ASR_FoodDelivery.md) | Source for architecture drivers AD-1 through AD-12 |
+| ADD | [ASR-ADD-SAD/ADD_FoodDelivery.md](ASR-ADD-SAD/ADD_FoodDelivery.md) | Source for quality scenarios and architecture views |
+| ADR | [ASR-ADD-SAD/ADR_FoodDelivery.md](ASR-ADD-SAD/ADR_FoodDelivery.md) | Source for architecture decisions ADR-001 through ADR-008 |
+| SAD | [ASR-ADD-SAD/SAD_FoodDelivery.md](ASR-ADD-SAD/SAD_FoodDelivery.md) | Source for final architecture view packaging and cross-view trace |
+| CD Guide | [ASR-ADD-SAD/CD_GUIDE.md](ASR-ADD-SAD/CD_GUIDE.md) | Source for deployment and release-process alignment |
 
 ---
 
@@ -832,34 +773,35 @@ The following specification artifacts are planned to elaborate the capabilities 
 
 ## 9.1 Role Matrix
 
-The following matrix defines which platform capabilities are accessible by each user role.
-
 | Capability | Customer | Restaurant Partner | Delivery Personnel | Administrator |
 |---|---|---|---|---|
-| Register and authenticate | ✓ | ✓ | ✓ | ✓ |
-| Browse restaurants and menu items | ✓ | — | — | ✓ |
-| Manage cart and proceed to checkout | ✓ | — | — | — |
-| Place and track own orders | ✓ | — | — | ✓ (view all) |
-| Submit reviews and ratings | ✓ | — | — | — |
-| Manage own restaurant profile and menu | — | ✓ | — | ✓ |
-| Receive and manage incoming orders | — | ✓ | — | ✓ (view) |
-| Toggle availability and accept delivery assignments | — | — | ✓ | — |
-| Update delivery pickup and completion status | — | — | ✓ | — |
-| Manage all user accounts | — | — | — | ✓ |
-| Approve or suspend partner accounts | — | — | — | ✓ |
-| Access platform-wide operational reports | — | ✓ (own data) | ✓ (own data) | ✓ (all data) |
-| Configure platform-level promotions | — | ✓ (own promotions) | — | ✓ |
+| Register and authenticate | Yes | Yes | Yes | Yes |
+| Browse restaurants and menu items | Yes | Yes | No | Yes |
+| Manage customer cart and checkout | Yes | No | No | No |
+| Place and track own orders | Yes | No | No | Yes, all orders |
+| Submit delivered-order reviews | Yes | No | No | Review oversight |
+| Manage own restaurant profile and menu | No | Yes | No | Yes |
+| Toggle restaurant and item availability | No | Yes | No | Yes |
+| Receive and manage incoming orders | No | Yes | No | Yes, oversight |
+| Toggle delivery availability | No | No | Yes | Yes, oversight |
+| Accept pickup and update delivery status | No | No | Yes | Yes, exception handling |
+| Manage all user accounts | No | No | No | Yes |
+| Approve, reject, suspend, or reactivate partners | No | No | No | Yes |
+| Access operational reports | Own data | Own restaurant data | Own delivery data | Platform-wide data |
+| Configure platform promotions and commission settings | No | Own restaurant promotions | No | Yes |
+| View audit and governance records | Own account history | Own partner decisions | Own partner decisions | Platform-wide audit |
 
 ## 9.2 Security Considerations
 
 | Area | Requirement |
 |---|---|
-| **Authentication** | All user accounts must be protected by secure credential management. Authentication must follow industry-standard protocols; sessions must be invalidated upon logout or expiry. |
-| **Authorization** | All platform actions must enforce role-based access control. No action may be performed or data returned outside a caller's assigned role and scope. |
-| **Payment Data** | Payment gateway credentials and transaction identifiers must never be stored in source control. All payment data in transit must be encrypted. Payment callbacks from VNPay must be cryptographically verified before any order state change is applied. |
-| **Location Data** | Customer delivery addresses and real-time location data must be transmitted over encrypted channels and must not appear in server logs or error responses. |
-| **Input Validation** | All customer-supplied inputs must be validated at the system boundary to prevent injection and manipulation attacks. |
-| **PII in Logs** | Personally identifiable information (PII), payment data, and location data must be excluded from application and infrastructure logs. |
+| Authentication | Accounts shall use secure credential management, authenticated sessions, and logout/session-expiry handling. |
+| Authorization | Role-based access control shall guard all protected actions and data scopes. |
+| Payment Data | Payment credentials and secrets shall stay outside source control; VNPay callbacks shall be cryptographically verified before order state changes. |
+| Location Data | Customer addresses and active delivery location data shall be transmitted over encrypted channels and excluded from application logs. |
+| Input Validation | All actor-supplied inputs shall be validated at platform boundaries to prevent injection, stored script execution, and data manipulation. |
+| Auditability | Privileged actions shall record actor, target, decision, timestamp, and reason where the business flow requires a reason. |
+| Privacy | Personally identifiable information, payment-sensitive data, and exact location data shall be protected according to least-disclosure principles. |
 
 ---
 
@@ -867,133 +809,184 @@ The following matrix defines which platform capabilities are accessible by each 
 
 ## 10.1 Performance
 
-| Requirement | Target |
-|---|---|
-| Search and browse response time | p95 ≤ 2 seconds under normal operating load |
-| Order placement end-to-end response | ≤ 3 seconds under normal operating load |
-| Real-time order status update delivery | ≤ 3 seconds from event occurrence to client receipt |
-| Admin dashboard page load | p95 ≤ 3 seconds under normal operating load |
+| Requirement | Target | Source Trace |
+|---|---|---|
+| Restaurant list first-page render | <= 2 seconds under typical mobile network conditions | Utility Tree, BO-1 |
+| Restaurant or item search backend response | p95 <= 2 seconds with pagination under normal operating conditions | Utility Tree, BRD-03 |
+| Order placement response | p95 <= 3 seconds under normal operating load | ADD QA-P-03, BRD-07 |
+| Order status update visibility | <= 5 seconds from status change to customer visibility under normal conditions | Utility Tree, ASR AD-4 |
+| Menu or availability propagation | <= 60 seconds for menu edits; <= 10 seconds for availability changes under peak load | Utility Tree, BRD-04 |
+| Admin monitoring view | p95 <= 2 seconds for 1,000 active orders with displayed data freshness <= 60 seconds | Utility Tree, BRD-15 |
 
 ## 10.2 Availability
 
-| Requirement | Target |
-|---|---|
-| Authentication service monthly uptime | ≥ 99% |
-| Order processing service monthly uptime | ≥ 99% |
-| Payment gateway availability (per provider SLA) | ≥ 99% (AS-3) |
-| Graceful degradation | Non-critical features must degrade gracefully without causing full platform unavailability |
+| Requirement | Target | Source Trace |
+|---|---|---|
+| Authentication endpoints | Monthly uptime >= 99.9% with retryable error behavior | Utility Tree |
+| Real-time order status channel | Monthly uptime >= 99.9% with fallback through refresh or polling | Utility Tree |
+| Payment provider availability assumption | Provider API availability >= 99.5% | AS-3 |
+| Notification channel resilience | Core order flow continues when optional channel delivery is degraded | ASR AD-9, ADD QA-A-03 |
 
-## 10.3 Scalability
+## 10.3 Reliability
 
-| Requirement | Target |
-|---|---|
-| Load test target | Platform must meet p95 performance targets at 2× projected peak concurrent user load |
-| Real-time connection concurrency | WebSocket infrastructure must support the projected peak number of concurrent active orders without service degradation |
-| Data volume growth | System must support growth in restaurant and menu item volume through Release 2 without requiring structural re-architecture |
+| Requirement | Target | Source Trace |
+|---|---|---|
+| Delivery success | At least 95% of dispatched orders delivered successfully | BO-3 |
+| Order lifecycle integrity | 100% of invalid out-of-sequence transitions rejected | Utility Tree, BUS-BR-7 |
+| Checkout idempotency | Repeated checkout with the same idempotency key returns the same order and creates zero duplicates | Utility Tree, ASR AD-1 |
+| Shipper assignment atomicity | At most one shipper assigned to a single order | Utility Tree, ASR AD-5 |
+| Payment state handling | VNPay callbacks, payment failure, timeout, cancellation, refund, and compensation paths are deterministic and idempotent | BUS-BR-4, ASR AD-2, ASR AD-12 |
 
-## 10.4 Reliability
+## 10.4 Scalability
 
-| Requirement | Target |
-|---|---|
-| Delivery success rate | ≥ 95% of dispatched orders delivered successfully (BO-3) |
-| Order idempotency | Duplicate order placement requests within a defined window must not result in duplicate orders |
-| Payment state handling | Payment state transitions must be idempotent and deterministic |
-| Data consistency | Order status must remain consistent across all participant views — customer, restaurant, shipper, and administrator — at all times |
+| Requirement | Target | Source Trace |
+|---|---|---|
+| Browse and search load | Platform meets p95 search targets at 2x projected peak browse/search load | Utility Tree |
+| Runtime scale model | API scaling uses complete modular-monolith instances behind a load balancer | SAD Deployment View, ADR-001 |
+| Shared runtime state | Cart, locks, idempotency, presence, and rate-limit state are assigned to Redis / Valkey runtime storage | ADR-006, SAD Data View |
 
 ## 10.5 Security
 
-| Requirement | Target |
-|---|---|
-| Authentication strength | Compliant with OWASP Application Security Verification Standard (ASVS) Level 2 |
-| Payment integration compliance | VNPay integration must pass sandbox certification before production deployment |
-| Secrets management | All API credentials managed via environment variables; none committed to source control |
-| Data in transit | All client-server communication encrypted via TLS |
+| Requirement | Target | Source Trace |
+|---|---|---|
+| Authentication and session security | OWASP ASVS Level 2 aligned controls for account access | Utility Tree, ASR AD-8 |
+| Admin authorization | 100% of unauthorized admin requests denied with non-sensitive responses and recorded security context | Utility Tree, BRD-16 |
+| Payment integrity | VNPay callback integrity verified before state mutation | Utility Tree, ASR AD-2 |
+| Review input safety | Review text validated and sanitized before display | Utility Tree, BRD-13 |
+| Secrets management | Credentials managed through environment configuration and excluded from source control | BRD-07, BRD-16 |
 
-## 10.6 Maintainability
+## 10.6 Maintainability and Conceptual Integrity
 
-| Requirement | Target |
-|---|---|
-| Containerization | All platform services must be containerized (Docker) to ensure environment consistency across development and production |
-| Configuration management | All environment-specific configuration managed through environment variables with no hard-coded credentials |
-| Module independence | Platform modules must be structured to allow independent evolution without requiring cascading changes across unrelated capabilities |
-| Documentation currency | This BRD and linked specification documents must be updated to reflect all accepted scope changes before implementation begins |
+| Requirement | Target | Source Trace |
+|---|---|---|
+| Architecture style | Platform responsibilities organized as a modular monolith with bounded contexts | ADR-001, ADR-002 |
+| Data ownership | One PostgreSQL platform database with bounded-context ownership of table groups | ADR-003, ADR-008 |
+| Event coordination | In-process EventBus with explicit events and ACL snapshots | ADR-004, ADR-005 |
+| Provider integration | Payment, notification, image, and external integrations handled behind ports and adapters | ADR-007 |
+| Order status vocabulary | One shared order-status model across modules and documents | Utility Tree, ADD QA-CI-01, SAD Runtime View |
+| Documentation currency | BRD, SRS, ASR, ADD, ADR, and SAD remain synchronized before submission baselines are exported to DOCX | Section 12, Section 13 |
 
 ---
 
 # 11. Constraints and Limitations
 
-| ID | Constraint / Limitation | Applicable Releases |
-|---|---|---|
-| **LI-1** | The platform serves a single designated geographic service area in the initial release. Multi-region expansion is planned for subsequent releases. | Release 1 |
-| **LI-2** | Release 1 supports COD and VNPay only. MoMo and additional digital payment gateways are planned for Release 2. | Release 1 |
-| **LI-3** | AI and ML-powered capabilities — including personalized recommendations, image-based search, fraud detection, and predictive delivery ETA — are excluded from Releases 1 and 2. | Releases 1–2 |
-| **LI-4** | B2B enterprise ordering and subscription meal plan features are out of scope for all planned releases. | All releases |
-| **LI-5** | Infrastructure costs must remain within student project budget constraints. Free-tier and student-tier cloud resources are to be prioritized. | Release 1 |
-| **LI-6** | Development team capacity is constrained by academic group size (3–5 members). Scope commitments for Release 1 must reflect this constraint. | Release 1 |
-| **LI-7** | Full map-based live delivery tracking (shipper location visible to customer in real time) is targeted for Release 2. Release 1 provides order status updates only. | Release 1 |
+| ID | Constraint / Limitation | Release Applicability | Business Rationale |
+|---|---|---|---|
+| LI-1 | The marketplace serves one designated geographic service area in Release 1. | Release 1 | Controls operational complexity and delivery feasibility. |
+| LI-2 | Release 1 supports COD and VNPay. MoMo is allocated to Release 2 and additional wallet methods to Release 3. | Release 1 through Release 3 | Balances payment choice with gateway certification effort. |
+| LI-3 | AI/ML capabilities such as personalized recommendations, image search, fraud detection, and predictive ETA are allocated to the Release 3+ roadmap. | Release 3+ | Protects Release 1 and Release 2 delivery focus. |
+| LI-4 | B2B enterprise ordering and subscription meal plans are excluded from the approved release set. | All releases | Preserves marketplace scope discipline. |
+| LI-5 | Infrastructure costs remain within student project budget constraints. | All releases | Supports academic viability and repeatable deployment. |
+| LI-6 | Team capacity is constrained by academic group size and semester timeline. | All releases | Keeps target scope aligned with available project capacity. |
+| LI-7 | Release 1 provides status tracking and workflow notifications; live map-based shipper tracking is allocated to Release 2. | Release 1 and Release 2 | Separates essential order visibility from enhanced map tracking. |
 
 ---
 
 # 12. Traceability Matrix
 
-The following matrix traces each Business Requirement to its supporting Business Objectives, Success Metrics, and mapped platform features.
+## 12.1 End-to-End Requirement Trace
 
-| BR ID | Requirement Name | BO-1 | BO-2 | BO-3 | BO-4 | SM-1 | SM-2 | SM-3 | SM-4 | Features |
-|---|---|---|---|---|---|---|---|---|---|---|
-| BR-1 | Customer Identity | ✓ | | | | ✓ | | | | FE-1 |
-| BR-2 | Single-Restaurant Cart | ✓ | | ✓ | | | | | | FE-3 |
-| BR-3 | Delivery Zone Validation | | | ✓ | | | | | ✓ | FE-3, FE-5 |
-| BR-4 | Payment Method Support | ✓ | | | ✓ | | | | | FE-4 |
-| BR-5 | Unified Discovery | ✓ | ✓ | | | ✓ | ✓ | | | FE-2 |
-| BR-6 | Menu Management | ✓ | ✓ | | | | ✓ | | | FE-6 |
-| BR-7 | Order Lifecycle | ✓ | ✓ | ✓ | | ✓ | ✓ | ✓ | ✓ | FE-5, FE-6 |
-| BR-8 | Real-Time Tracking | ✓ | | ✓ | | ✓ | | ✓ | ✓ | FE-5 |
-| BR-9 | Restaurant Order Mgmt | ✓ | ✓ | ✓ | | | ✓ | | ✓ | FE-6 |
-| BR-10 | Delivery Dispatch | | | ✓ | | | | ✓ | ✓ | FE-7 |
-| BR-11 | Admin Oversight | | ✓ | ✓ | | | ✓ | ✓ | | FE-8 |
-| BR-12 | Notifications | ✓ | | ✓ | | ✓ | | ✓ | | FE-12 |
-| BR-13 | Reviews and Ratings | | ✓ | | | | ✓ | ✓ | | FE-9 |
-| BR-14 | Promotions and Loyalty | ✓ | ✓ | | | ✓ | ✓ | | | FE-10 |
+| BRD ID | BO | SM | FE | Business Rule Anchor | User Stories | UC / SRS Trace | ASR Trace | ADD / ADR / SAD Trace |
+|---|---|---|---|---|---|---|---|---|
+| BRD-01 | BO-1 | SM-1 | FE-1 | Account security rules | US-1 | UC-1; UC-DOM-01; SD-1 | AD-8, AD-10, AD-11 | ADD QA-S-02, QA-S-03, QA-U-01; ADR-001, ADR-002, ADR-008; SAD 3.1, 3.2 |
+| BRD-02 | BO-2, BO-3 | SM-2 | FE-6, FE-7, FE-8 | BUS-BR-1 | US-10, US-14, US-18 | UC-11, UC-16, UC-27, UC-28; UC-DOM-06, UC-DOM-07, UC-DOM-10; SD-11, SD-16, SD-27, SD-28 | AD-8, AD-10 | ADD Logical View, QA-S-03, QA-SUP-02; ADR-001, ADR-002, ADR-003, ADR-008; SAD 3.1, 3.4 |
+| BRD-03 | BO-1, BO-2 | SM-1, SM-2 | FE-2 | Discovery source rules | US-2 | UC-2, UC-3; UC-DOM-02; SD-2, SD-3 | AD-3, AD-11 | ADD QA-P-01, QA-SC-01, QA-U-02; ADR-001, ADR-002, ADR-008; SAD 3.1, 3.2 |
+| BRD-04 | BO-2, BO-3 | SM-2, SM-4 | FE-6 | BUS-BR-8 | US-10, US-11, US-12, US-23 | UC-7, UC-11, UC-12, UC-13, UC-15; UC-DOM-06; SD-7, SD-11, SD-12, SD-13, SD-15 | AD-3, AD-7, AD-8 | ADD QA-P-04, QA-MA-01, QA-CI-02; ADR-002, ADR-004, ADR-005, ADR-008; SAD 3.1, 3.3, 3.4 |
+| BRD-05 | BO-1 | SM-1 | FE-3 | BUS-BR-2 | US-5, US-22 | UC-4, UC-5, UC-8; UC-DOM-03; SD-4, SD-5, SD-8 | AD-1, AD-6 | ADD QA-R-01, QA-R-04, QA-SC-02; ADR-003, ADR-006, ADR-008; SAD 3.3, 3.4 |
+| BRD-06 | BO-3 | SM-4 | FE-3, FE-5 | BUS-BR-3, BUS-BR-6 | US-6, US-20 | UC-6, UC-7, UC-8; UC-DOM-03, UC-DOM-06; SD-6, SD-7, SD-8 | AD-7 | ADD QA-R-04, QA-MA-01, QA-I-02; ADR-005, ADR-006, ADR-008; SAD 3.3, 3.4 |
+| BRD-07 | BO-1, BO-4 | SM-1 | FE-4 | BUS-BR-4 | US-7 | UC-8, UC-9, UC-25; UC-DOM-03, UC-DOM-04; SD-8, SD-9, SD-25 | AD-1, AD-2, AD-12 | ADD QA-S-01, QA-R-02, QA-R-06, QA-I-01; ADR-004, ADR-007, ADR-008; SAD 3.4, 3.5 |
+| BRD-08 | BO-1, BO-3 | SM-3, SM-4 | FE-5 | BUS-BR-7 | US-8, US-9, US-34 | UC-8, UC-10, UC-14, UC-15, UC-18, UC-19, UC-20, UC-21; UC-DOM-05, UC-DOM-07; SD-8, SD-10, SD-14, SD-15, SD-18, SD-19, SD-20, SD-21 | AD-4, AD-5, AD-10 | ADD QA-R-03, QA-P-02, QA-CI-01, QA-SUP-01; ADR-002, ADR-004, ADR-008; SAD 3.4 |
+| BRD-09 | BO-3 | SM-2, SM-4 | FE-6 | Restaurant order rules | US-13, US-23, US-24 | UC-14, UC-15, UC-21, UC-26; UC-DOM-06, UC-DOM-08; SD-14, SD-15, SD-21, SD-26 | AD-4, AD-5, AD-10, AD-12 | ADD QA-R-03, QA-R-07, QA-P-02, QA-SUP-01; ADR-002, ADR-004, ADR-008; SAD 3.4 |
+| BRD-10 | BO-3 | SM-4 | FE-7 | Delivery operation rules | US-14, US-15, US-16, US-17 | UC-16, UC-17, UC-18, UC-19; UC-DOM-07; SD-16, SD-17, SD-18, SD-19 | AD-4, AD-5, AD-8 | ADD QA-R-05, QA-P-02, QA-S-03, QA-CI-01; ADR-001, ADR-002, ADR-003, ADR-008; SAD 3.4 |
+| BRD-11 | BO-1, BO-3 | SM-3 | FE-12 | Notification workflow rules | US-9, US-13, US-23, US-24 | UC-20, UC-26; UC-DOM-08, UC-DOM-11; SD-20, SD-26 | AD-4, AD-9, AD-10 | ADD QA-A-02, QA-A-03, QA-I-02, QA-FL-03; ADR-004, ADR-006, ADR-007; SAD 3.4, 3.5 |
+| BRD-12 | BO-3, BO-4 | SM-3, SM-4 | FE-4, FE-5 | BUS-BR-4, BUS-BR-7 | US-24, US-29, US-35 | UC-21, UC-25, UC-32; UC-DOM-04, UC-DOM-05, UC-DOM-10; SD-21, SD-25, SD-32 | AD-2, AD-5, AD-12 | ADD QA-R-08, QA-FL-02, QA-SUP-01; ADR-004, ADR-007, ADR-008; SAD 3.4 |
+| BRD-13 | BO-2 | SM-3 | FE-9 | Review eligibility rules | US-33 | UC-10, UC-22; UC-DOM-09; SD-10, SD-22 | AD-5, AD-10 | ADD Logical View Review & Rating; ADD QA-S-02, QA-SUP-01; ADR-001, ADR-002; SAD 3.1, 3.4 |
+| BRD-14 | BO-1, BO-2 | SM-1, SM-2 | FE-10 | Promotion scope rules | US-36, US-37 | UC-23, UC-24; UC-DOM-06, UC-DOM-10; SD-23, SD-24 | AD-3, AD-12 | ADD Promotion BC, QA-R-08, QA-FL-01; ADR-002, ADR-007, ADR-008; SAD 3.1, 3.4 |
+| BRD-15 | BO-2, BO-4 | SM-2 | FE-8 | BUS-BR-5 | US-21, US-30, US-31 | UC-25, UC-33, UC-34; UC-DOM-04, UC-DOM-12; SD-25, SD-33, SD-34 | AD-10, AD-12 | ADD QA-SUP-03, QA-I-02; ADR-003, ADR-008; SAD 3.3, 3.6 |
+| BRD-16 | BO-2, BO-3 | SM-2, SM-4 | FE-8 | BUS-BR-1, BUS-BR-9 | US-18, US-19, US-25, US-26, US-27, US-28, US-29, US-32 | UC-27, UC-28, UC-29, UC-30, UC-31, UC-32, UC-34, UC-35; UC-DOM-10, UC-DOM-12; SD-27 through SD-35 | AD-8, AD-10, AD-11 | ADD Admin/Governance contract, QA-S-03, QA-SUP-02, QA-SUP-03; ADR-001, ADR-002, ADR-003, ADR-008; SAD 3.1, 3.2, 3.6 |
+
+## 12.2 Trace Closure Summary
+
+| Trace Layer | Closure Result | Evidence |
+|---|---|---|
+| BO to SM | Closed | BO-1 through BO-4 and SM-1 through SM-4 are preserved from Vision and Scope. |
+| SM to Feature | Closed | Section 8 maps FE-1 through FE-12 to release allocation and BRD requirements. |
+| Feature to BRD Requirement | Closed | Every FE maps to at least one BRD requirement. |
+| Business Rule to BRD Requirement | Closed | BUS-BR-1 through BUS-BR-9 are covered in Section 7.2. |
+| BRD Requirement to User Story | Closed | Section 12.1 maps each BRD requirement to one or more user stories. |
+| User Story to Use Case | Closed | User-story trace is aligned with UC-1 through UC-35 and UC-DOM-01 through UC-DOM-12. |
+| Use Case to SRS and Sequence | Closed | UC and SD references are included in Section 12.1. |
+| SRS to ASR | Closed | ASR drivers AD-1 through AD-12 cover the architecturally significant flows. |
+| ASR to ADD and ADR | Closed | ADD quality scenarios and ADR-001 through ADR-008 are referenced in the trace matrix. |
+| ADD and ADR to SAD | Closed | SAD views 3.1 through 3.6 package logical, implementation, data, runtime, deployment, and process views. |
+
+## 12.3 Duplicate and Orphan Review
+
+| Review Area | Result |
+|---|---|
+| Orphan BO | None |
+| Orphan SM | None |
+| Orphan FE | None |
+| Orphan business rule | None |
+| Orphan BRD requirement | None |
+| Duplicate requirements | Resolved by using BRD-01 through BRD-16 and mapping source business rules as BUS-BR-N anchors |
+| Invalid references | None in the final BRD artifact map |
+| Conflicting release allocation | Resolved through Section 8.1 target release allocation |
 
 ---
 
-# 13. Open Issues
+# 13. Submission Readiness Register
 
-The following items require resolution or clarification before or during detailed specification.
-
-| ID | Issue | Owner | Priority | Status |
-|---|---|---|---|---|
-| **OI-1** | Maps and geolocation provider selection (Google Maps vs. Mapbox) pending cost and API quota analysis | Development Team | High | Open |
-| **OI-2** | MoMo payment integration timeline and API certification requirements not yet confirmed | Development Team | Medium | Open |
-| **OI-3** | Delivery zone definition format per restaurant not yet determined — radius-based circle vs. polygon | Business Analyst | High | Open |
-| **OI-4** | Refund processing policy and timeline for VNPay-settled cancelled orders pending gateway clarification | Business Analyst | High | Open |
-| **OI-5** | Order cancellation eligibility window — how late in the lifecycle a customer may initiate cancellation — not yet specified | Business Analyst | Medium | Open |
-| **OI-6** | Review moderation policy — manual vs. automated content filtering — not yet defined | Product Owner | Medium | Open |
-| **OI-7** | Restaurant order acknowledgment SLA — the timeout window before platform escalation triggers — not yet agreed with partners | Business Analyst | High | Open |
-| **OI-8** | Delivery personnel onboarding and identity verification process not yet defined | Operations | Medium | Open |
+| Check | Result | Evidence |
+|---|---|---|
+| Submission wording normalized | Pass | Status and scope terms use Final Baseline, target release scope, approved roadmap, defined artifact, and role-defined approval language. |
+| Approval section complete | Pass | Section 0.2 has no blank cells and defines approval readiness by role. |
+| Business consistency | Pass | Objectives, success metrics, risks, assumptions, and workflows align with Vision and Scope plus Business Rules. |
+| Requirement completeness | Pass | BRD-01 through BRD-16 cover identity, partner verification, discovery, menu, cart, delivery zone, payment, lifecycle, restaurant operations, delivery, notifications, cancellation, review, promotions, commission, and governance. |
+| Scope alignment | Pass | Release 1, Release 2, and Release 3 allocations are explicit in Sections 1.2, 8.1, and 11. |
+| Terminology consistency | Pass | Awaiting Confirmation, Confirmed, Paid, Ready for Pickup, Picked Up, Delivering, Delivered, Cancelled, and Refunded are used consistently. |
+| Traceability closure | Pass | Section 12 traces BRD requirements through BO, SM, FE, business rules, user stories, use cases, SRS, ASR, ADD, ADR, and SAD. |
+| Mermaid diagrams | Pass | Figures 1 through 7 use DOCX-friendly Mermaid `flowchart` or `classDiagram` syntax with unique node identifiers. |
+| Formatting readiness | Pass | Heading levels, tables, captions, artifact links, and glossary entries are normalized for DOCX conversion. |
+| Submission blocker review | Pass | The BRD contains no empty sections, blank approval rows, unresolved artifact rows, or orphan requirement rows. |
 
 ---
 
 # 14. Appendix
 
-## 14.1 References
+## 14.1 Authoritative References
 
-| Reference | Document | Version | Date |
-|---|---|---|---|
-| Vision and Scope Document | `Food_Delivery_Vision_and_Scope.md` | 1.0 | 28/01/2026 |
-| OWASP Application Security Verification Standard | ASVS | 4.0 | — |
-| VNPay Integration Documentation | VNPay Developer Portal | Current | — |
+| Priority | Reference | Location | Role |
+|---:|---|---|---|
+| 1 | Vision and Scope | [Food_Delivery_Vision_and_Scope.md](Food_Delivery_Vision_and_Scope.md) | Business goals, scope, release allocation, risks, assumptions, dependencies |
+| 2 | BRD | [BRD.md](BRD.md) | Business requirements baseline |
+| 3 | Business Rules | [Business_Rules.md](Business_Rules.md) | Hard business rules and constraints |
+| 4 | User Stories and Acceptance Criteria | [User-Stories-and-Acceptance-Criteria.md](User-Stories-and-Acceptance-Criteria.md) | Story-level acceptance and QA trace |
+| 5 | Use Case Specification | [USE_CASE_SPECIFICATION.md](USE_CASE_SPECIFICATION.md) | Domain-level actor-system interaction |
+| 6 | SRS | [SRS_FoodDelivery.md](SRS_FoodDelivery.md) | Functional requirements and UC details |
+| 7 | SRS Sequence Diagrams | [SRS_SequenceDiagrams.md](SRS_SequenceDiagrams.md) | Sequence-level interaction detail |
+| 8 | Utility Tree ASRs | [Utility-Tree-ASRs.md](Utility-Tree-ASRs.md) | Quality attribute scenarios and response measures |
+| 9 | ASR | [ASR-ADD-SAD/ASR_FoodDelivery.md](ASR-ADD-SAD/ASR_FoodDelivery.md) | Architectural drivers and significant functional areas |
+| 10 | ADD | [ASR-ADD-SAD/ADD_FoodDelivery.md](ASR-ADD-SAD/ADD_FoodDelivery.md) | Attribute-driven design scenarios and views |
+| 11 | ADR | [ASR-ADD-SAD/ADR_FoodDelivery.md](ASR-ADD-SAD/ADR_FoodDelivery.md) | Architecture decisions ADR-001 through ADR-008 |
+| 12 | SAD | [ASR-ADD-SAD/SAD_FoodDelivery.md](ASR-ADD-SAD/SAD_FoodDelivery.md) | Final software architecture packaging and cross-view trace |
+| 13 | Implementation Validation Evidence | [../../src](../../src), [../../../web/src](../../../web/src), [../../../mobile/src](../../../mobile/src) | Validation of implemented terminology, feasibility, and artifact consistency |
 
-## 14.2 Supporting Documents
+## 14.2 Architecture Decision Reference
 
-The following documents are planned as linked specification artifacts that elaborate on the content of this BRD. They are referenced here but not included.
-
-| Document | Location | Status |
+| ADR | Decision | BRD Relevance |
 |---|---|---|
-| User Stories and Acceptance Criteria | `apps/api/docs/Final_Documents/User-Stories-and-Acceptance-Criteria.md` | In Progress |
-| Use Case Document | `apps/api/docs/Final_Documents/` *(planned)* | Planned |
-| Software Requirements Specification (SRS) | `apps/api/docs/Final_Documents/` *(planned)* | Planned |
-| System Architecture Document | `apps/api/docs/Final_Documents/` *(planned)* | Planned |
-| API Specification | `apps/api/docs/` *(planned)* | Planned |
-| Data Model Document | `apps/api/docs/Final_Documents/` *(planned)* | Planned |
-| Test Plan | `apps/api/docs/Final_Documents/` *(planned)* | Planned |
+| ADR-001 | Adopt Modular Monolith Architecture | Governs architecture style for all BRD capabilities |
+| ADR-002 | Adopt Bounded Context Separation | Supports capability ownership across Auth, Catalog, Ordering, Payment, Promotion, Notification, Review, and Governance |
+| ADR-003 | Use Database per BC Ownership | Supports data ownership, reports, and audit boundaries |
+| ADR-004 | Use In-process EventBus Communication | Supports workflow events, status visibility, and notifications |
+| ADR-005 | Adopt ACL Snapshot Pattern | Supports checkout validation, delivery zones, and cross-context read stability |
+| ADR-006 | Use Redis Runtime Layer | Supports cart, checkout locks, idempotency, presence, and volatile state |
+| ADR-007 | Use Ports and Adapters Integration Pattern | Supports VNPay, notification, image, and payment-provider extensibility |
+| ADR-008 | Adopt Drizzle Type-safe Persistence Layer | Supports durable state, schema evolution, and type-safe data access |
+
+## 14.3 Final Submission Statement
+
+This BRD is complete for DOCX conversion and academic submission as the business baseline for the SoLi Food Delivery Platform. The document preserves business intent, release allocation, traceability, terminology consistency, and architecture-document synchronization.
+
+**BRD ready for submission**

@@ -1,54 +1,99 @@
-# SRS Sequence Diagrams — Appendix SD
+# Appendix SD — Sequence Diagrams Specification
+
 ## SoLi Food Delivery Application
 
-**Document Version:** 2.0
-**Status:** Final
-**Scope:** UC-1 through UC-35 — Enterprise-Style PlantUML Sequence Diagrams
-**Traceability:** Root message numbers correspond **directly** to Activity Diagram step numbers in `SRS_FoodDelivery.md`.
+---
+
+| Field | Value |
+|-------|-------|
+| **Document Title** | Appendix SD — Sequence Diagrams Specification |
+| **Version** | 2.0 |
+| **Status** | Final — Submission Ready |
+| **Prepared For** | Software Requirements Specification — Final Submission |
+| **Project** | SoLi Food Delivery Application |
+| **Scope** | UC-1 through UC-35 — Enterprise-Style PlantUML Sequence Diagrams |
+| **Diagram Count** | 35 |
+| **Traceability Source** | SRS_FoodDelivery.md Activity Diagram step numbers |
+
+---
+
+**Traceability Statement**
+
+All root message numbers in each sequence diagram correspond **directly** to the activity step numbers in the matching UC section of `SRS_FoodDelivery.md`. No numbering divergence exists; verification can be performed by cross-referencing the activity diagram of each use case with the sequence messages bearing the same step label.
 
 ---
 
 ## Table of Contents
 
-- [SD-1: UC-1 — User Authentication](#sd-1-uc-1--user-authentication)
-- [SD-2: UC-2 — Discover Restaurants & Food](#sd-2-uc-2--discover-restaurants--food)
-- [SD-3: UC-3 — View Restaurant Details](#sd-3-uc-3--view-restaurant-details)
-- [SD-4: UC-4 — Add Item to Cart](#sd-4-uc-4--add-item-to-cart)
-- [SD-5: UC-5 — Manage Shopping Cart](#sd-5-uc-5--manage-shopping-cart)
-- [SD-6: UC-6 — Save & Manage Delivery Addresses](#sd-6-uc-6--save--manage-delivery-addresses)
-- [SD-7: UC-7 — Manage Delivery Zones](#sd-7-uc-7--manage-delivery-zones)
-- [SD-8: UC-8 — Place Order](#sd-8-uc-8--place-order)
-- [SD-9: UC-9 — Make Online Payment (VNPay)](#sd-9-uc-9--make-online-payment-vnpay)
-- [SD-10: UC-10 — View Order History](#sd-10-uc-10--view-order-history)
-- [SD-11: UC-11 — Restaurant Registration & Profile Management](#sd-11-uc-11--restaurant-registration--profile-management)
-- [SD-12: UC-12 — Manage Menu Catalog](#sd-12-uc-12--manage-menu-catalog)
-- [SD-13: UC-13 — Toggle Item & Restaurant Availability](#sd-13-uc-13--toggle-item--restaurant-availability)
-- [SD-14: UC-14 — Accept or Reject Order](#sd-14-uc-14--accept-or-reject-order)
-- [SD-15: UC-15 — Prepare Order for Pickup](#sd-15-uc-15--prepare-order-for-pickup)
-- [SD-16: UC-16 — Shipper Registration](#sd-16-uc-16--shipper-registration)
-- [SD-17: UC-17 — Manage Shipper Availability](#sd-17-uc-17--manage-shipper-availability)
-- [SD-18: UC-18 — Accept Delivery Assignment](#sd-18-uc-18--accept-delivery-assignment)
-- [SD-19: UC-19 — Deliver Order](#sd-19-uc-19--deliver-order)
-- [SD-20: UC-20 — Track Order Status](#sd-20-uc-20--track-order-status)
-- [SD-21: UC-21 — Cancel Order](#sd-21-uc-21--cancel-order)
-- [SD-22: UC-22 — Submit Rating & Review](#sd-22-uc-22--submit-rating--review)
-- [SD-23: UC-23 — Manage Restaurant Promotions](#sd-23-uc-23--manage-restaurant-promotions)
-- [SD-24: UC-24 — Manage Platform Promotions](#sd-24-uc-24--manage-platform-promotions)
-- [SD-25: UC-25 — Process Payment Refund](#sd-25-uc-25--process-payment-refund)
-- [SD-26: UC-26 — Manage Real-Time Notifications](#sd-26-uc-26--manage-real-time-notifications)
-- [SD-27: UC-27 — Approve or Reject Restaurant Applications](#sd-27-uc-27--approve-or-reject-restaurant-applications)
-- [SD-28: UC-28 — Approve or Reject Shipper Applications](#sd-28-uc-28--approve-or-reject-shipper-applications)
-- [SD-29: UC-29 — Suspend or Reactivate Partner Accounts](#sd-29-uc-29--suspend-or-reactivate-partner-accounts)
-- [SD-30: UC-30 — Monitor Orders and Platform Health](#sd-30-uc-30--monitor-orders-and-platform-health)
-- [SD-31: UC-31 — Search and Manage User Accounts](#sd-31-uc-31--search-and-manage-user-accounts)
-- [SD-32: UC-32 — Administrative Order Cancellation & Refund](#sd-32-uc-32--administrative-order-cancellation--refund)
-- [SD-33: UC-33 — View and Export Operational Reports](#sd-33-uc-33--view-and-export-operational-reports)
-- [SD-34: UC-34 — View Dashboard & Platform Overview](#sd-34-uc-34--view-dashboard--platform-overview)
-- [SD-35: UC-35 — Manage Admin Roles & Permissions](#sd-35-uc-35--manage-admin-roles--permissions)
+1. [Customer Module — SD-1 through SD-10](#customer-module)
+   - [SD-1: UC-1 — User Authentication](#sd-1)
+   - [SD-2: UC-2 — Discover Restaurants & Food](#sd-2)
+   - [SD-3: UC-3 — View Restaurant Details](#sd-3)
+   - [SD-4: UC-4 — Add Item to Cart](#sd-4)
+   - [SD-5: UC-5 — Manage Shopping Cart](#sd-5)
+   - [SD-6: UC-6 — Save & Manage Delivery Addresses](#sd-6)
+   - [SD-7: UC-7 — Manage Delivery Zones](#sd-7)
+   - [SD-8: UC-8 — Place Order](#sd-8)
+   - [SD-9: UC-9 — Make Online Payment (VNPay)](#sd-9)
+   - [SD-10: UC-10 — View Order History](#sd-10)
+2. [Restaurant Module — SD-11 through SD-15](#restaurant-module)
+   - [SD-11: UC-11 — Restaurant Registration & Profile Management](#sd-11)
+   - [SD-12: UC-12 — Manage Menu Catalog](#sd-12)
+   - [SD-13: UC-13 — Toggle Item & Restaurant Availability](#sd-13)
+   - [SD-14: UC-14 — Accept or Reject Order](#sd-14)
+   - [SD-15: UC-15 — Prepare Order for Pickup](#sd-15)
+3. [Shipper Module — SD-16 through SD-19](#shipper-module)
+   - [SD-16: UC-16 — Shipper Registration](#sd-16)
+   - [SD-17: UC-17 — Manage Shipper Availability](#sd-17)
+   - [SD-18: UC-18 — Accept Delivery Assignment](#sd-18)
+   - [SD-19: UC-19 — Deliver Order](#sd-19)
+4. [Shared Platform Services — SD-20 through SD-26](#shared-platform-services)
+   - [SD-20: UC-20 — Track Order Status](#sd-20)
+   - [SD-21: UC-21 — Cancel Order](#sd-21)
+   - [SD-22: UC-22 — Submit Rating & Review](#sd-22)
+   - [SD-23: UC-23 — Manage Restaurant Promotions](#sd-23)
+   - [SD-24: UC-24 — Manage Platform Promotions](#sd-24)
+   - [SD-25: UC-25 — Process Payment Refund](#sd-25)
+   - [SD-26: UC-26 — Manage Real-Time Notifications](#sd-26)
+5. [Administration and Governance — SD-27 through SD-35](#administration-and-governance)
+   - [SD-27: UC-27 — Approve or Reject Restaurant Applications](#sd-27)
+   - [SD-28: UC-28 — Approve or Reject Shipper Applications](#sd-28)
+   - [SD-29: UC-29 — Suspend or Reactivate Partner Accounts](#sd-29)
+   - [SD-30: UC-30 — Monitor Orders and Platform Health](#sd-30)
+   - [SD-31: UC-31 — Search and Manage User Accounts](#sd-31)
+   - [SD-32: UC-32 — Administrative Order Cancellation & Refund](#sd-32)
+   - [SD-33: UC-33 — View and Export Operational Reports](#sd-33)
+   - [SD-34: UC-34 — View Dashboard & Platform Overview](#sd-34)
+   - [SD-35: UC-35 — Manage Admin Roles & Permissions](#sd-35)
 
 ---
 
-## SD-1: UC-1 — User Authentication
+<div style="page-break-before: always;"></div>
+
+## Customer Module
+
+### Foundation and Customer Ordering Core
+
+This module covers all customer-facing flows from initial authentication through cart management, address management, delivery zone discovery, order placement, online payment, and order history retrieval. It forms the transactional core of the SoLi Food Delivery platform.
+
+---
+
+### SD-1 — UC-1: User Authentication
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-1 |
+| **Use Case** | UC-1 — User Authentication |
+| **Module** | Customer Module |
+| **Primary Actors** | Guest / Authenticated User |
+| **Primary Service** | Authentication Service |
+| **Related Services** | OTP Service |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-1 Activity Diagram steps 1-20 |
+
+**Overview**
+
+End-to-end authentication flow covering sign-in with session creation, new account registration with email uniqueness validation, and password reset via email-delivered OTP. All interaction step numbers correspond directly to numbered activity steps in SRS UC-1.
 
 ```plantuml
 @startuml SD-1_UserAuthentication
@@ -146,7 +191,22 @@ UI --> Actor : (18) Redirect to sign-in page
 
 ---
 
-## SD-2: UC-2 — Discover Restaurants & Food
+### SD-2 — UC-2: Discover Restaurants & Food
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-2 |
+| **Use Case** | UC-2 — Discover Restaurants & Food |
+| **Module** | Customer Module |
+| **Primary Actors** | User / Guest |
+| **Primary Service** | Search Service |
+| **Related Services** | Restaurant & Menu Catalog |
+| **Complexity** | Low |
+| **Trace Source** | SRS_FoodDelivery.md UC-2 Activity Diagram steps 1-6 |
+
+**Overview**
+
+Search and discovery flow for browsing restaurants and menu items with keyword, category, cuisine, and geolocation-based filters. Returns paginated results from the restaurant and menu catalog with availability and approval status applied.
 
 ```plantuml
 @startuml SD-2_DiscoverRestaurants
@@ -193,7 +253,22 @@ end
 
 ---
 
-## SD-3: UC-3 — View Restaurant Details
+### SD-3 — UC-3: View Restaurant Details
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-3 |
+| **Use Case** | UC-3 — View Restaurant Details |
+| **Module** | Customer Module |
+| **Primary Actors** | User / Guest |
+| **Primary Service** | Restaurant Service |
+| **Related Services** | Menu Catalog, Promotion Service |
+| **Complexity** | Low |
+| **Trace Source** | SRS_FoodDelivery.md UC-3 Activity Diagram steps 1-6 |
+
+**Overview**
+
+Retrieval of a single restaurant's full profile, menu catalog, and active promotions. Returns combined restaurant detail including operating hours, zone coverage, and item availability snapshot.
 
 ```plantuml
 @startuml SD-3_ViewRestaurantDetails
@@ -234,7 +309,22 @@ end
 
 ---
 
-## SD-4: UC-4 — Add Item to Cart
+### SD-4 — UC-4: Add Item to Cart
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-4 |
+| **Use Case** | UC-4 — Add Item to Cart |
+| **Module** | Customer Module |
+| **Primary Actors** | Customer (Authenticated) |
+| **Primary Service** | Cart Service |
+| **Related Services** | Menu Catalog |
+| **Complexity** | Low-Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-4 Activity Diagram steps 1-11 |
+
+**Overview**
+
+Validates item and modifier availability, applies a server-side pricing snapshot, and appends the line item to the customer's active cart. Enforces single-restaurant-per-cart constraint with conflict resolution options.
 
 ```plantuml
 @startuml SD-4_AddItemToCart
@@ -294,7 +384,22 @@ end
 
 ---
 
-## SD-5: UC-5 — Manage Shopping Cart
+### SD-5 — UC-5: Manage Shopping Cart
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-5 |
+| **Use Case** | UC-5 — Manage Shopping Cart |
+| **Module** | Customer Module |
+| **Primary Actors** | Customer |
+| **Primary Service** | Cart Service |
+| **Related Services** | Menu Catalog, Restaurant Catalog |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-5 Activity Diagram steps 1-20 |
+
+**Overview**
+
+Full cart lifecycle management including view, quantity update, item removal, cart clear, and coupon code application with discount preview. All mutations revalidate item availability and pricing before persisting.
 
 ```plantuml
 @startuml SD-5_ManageCart
@@ -416,7 +521,22 @@ UI --> Actor : (13) Confirm cart cleared
 
 ---
 
-## SD-6: UC-6 — Save & Manage Delivery Addresses
+### SD-6 — UC-6: Save & Manage Delivery Addresses
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-6 |
+| **Use Case** | UC-6 — Save & Manage Delivery Addresses |
+| **Module** | Customer Module |
+| **Primary Actors** | Customer |
+| **Primary Service** | Address Service |
+| **Related Services** | Authentication Service |
+| **Complexity** | Low |
+| **Trace Source** | SRS_FoodDelivery.md UC-6 Activity Diagram steps 1-10 |
+
+**Overview**
+
+CRUD operations for the customer address book with default-address management and coordinate validation. Enforces address immutability for orders that have already snapshotted the address at checkout.
 
 ```plantuml
 @startuml SD-6_DeliveryAddresses
@@ -477,7 +597,22 @@ end
 
 ---
 
-## SD-7: UC-7 — Manage Delivery Zones
+### SD-7 — UC-7: Manage Delivery Zones
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-7 |
+| **Use Case** | UC-7 — Manage Delivery Zones |
+| **Module** | Customer Module |
+| **Primary Actors** | Restaurant Owner, Administrator |
+| **Primary Service** | Delivery Zone Service |
+| **Related Services** | Restaurant Catalog |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-7 Activity Diagram steps 1-16 |
+
+**Overview**
+
+Creation, modification, and deletion of restaurant-specific delivery zones including coordinate polygon validation, minimum-order threshold, and zone overlap detection. Requires approved restaurant ownership for self-service operations.
 
 ```plantuml
 @startuml SD-7_ManageDeliveryZones
@@ -593,7 +728,22 @@ end
 
 ---
 
-## SD-8: UC-8 — Place Order
+### SD-8 — UC-8: Place Order
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-8 |
+| **Use Case** | UC-8 — Place Order |
+| **Module** | Customer Module |
+| **Primary Actors** | Customer |
+| **Primary Service** | Order Service |
+| **Related Services** | Promotion Service, Payment Service, Event Bus |
+| **Complexity** | High |
+| **Trace Source** | SRS_FoodDelivery.md UC-8 Activity Diagram steps 1-15 |
+
+**Overview**
+
+End-to-end checkout flow covering idempotency key control, Redis cart-lock acquisition, server-side price recomputation from the ACL snapshot, promotion reservation, order row persistence, payment initiation, and domain event publication. Client-supplied prices are never trusted.
 
 ```plantuml
 @startuml SD-8_PlaceOrder
@@ -703,7 +853,22 @@ end
 
 ---
 
-## SD-9: UC-9 — Make Online Payment (VNPay)
+### SD-9 — UC-9: Make Online Payment (VNPay)
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-9 |
+| **Use Case** | UC-9 — Make Online Payment (VNPay) |
+| **Module** | Customer Module |
+| **Primary Actors** | Customer |
+| **Primary Service** | Payment Service (VNPay) |
+| **Related Services** | Order Service, VNPay Gateway, Event Bus |
+| **Complexity** | High |
+| **Trace Source** | SRS_FoodDelivery.md UC-9 Activity Diagram steps 1-18 |
+
+**Overview**
+
+VNPay payment lifecycle including payment URL generation for browser redirect, IPN webhook verification with HMAC signature validation, order status promotion on confirmed payment, and return-URL processing for user-facing outcome display.
 
 ```plantuml
 @startuml SD-9_VNPayPayment
@@ -807,7 +972,22 @@ deactivate Scheduler
 
 ---
 
-## SD-10: UC-10 — View Order History
+### SD-10 — UC-10: View Order History
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-10 |
+| **Use Case** | UC-10 — View Order History |
+| **Module** | Customer Module |
+| **Primary Actors** | Customer, Restaurant Owner, Shipper, Administrator |
+| **Primary Service** | Order History Service |
+| **Related Services** | Order Repository |
+| **Complexity** | Low |
+| **Trace Source** | SRS_FoodDelivery.md UC-10 Activity Diagram steps 1-8 |
+
+**Overview**
+
+Role-scoped retrieval of paginated order history and full order detail including timeline events and line items. Each role sees only the orders within its own operational scope.
 
 ```plantuml
 @startuml SD-10_ViewOrderHistory
@@ -896,7 +1076,32 @@ UI --> Actor : (13) Display reorder proposal\n(customer selects items to re-add 
 
 ---
 
-## SD-11: UC-11 — Restaurant Registration & Profile Management
+<div style="page-break-before: always;"></div>
+
+## Restaurant Module
+
+### Restaurant Operations and Menu Management
+
+This module captures the restaurant owner operational flows including account onboarding, menu catalog management, real-time availability toggling, and order acceptance or rejection. These diagrams align with the restaurant-side bounded context in the SoLi architecture.
+
+---
+
+### SD-11 — UC-11: Restaurant Registration & Profile Management
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-11 |
+| **Use Case** | UC-11 — Restaurant Registration & Profile Management |
+| **Module** | Restaurant Module |
+| **Primary Actors** | Restaurant Owner, Administrator |
+| **Primary Service** | Restaurant Service |
+| **Related Services** | Image Service, Event Bus |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-11 Activity Diagram steps 1-18 |
+
+**Overview**
+
+Restaurant application submission with document upload, admin review and approval/rejection workflow, and self-service profile update for approved restaurants. Approval publishes a domain event that activates the restaurant for ordering.
 
 ```plantuml
 @startuml SD-11_RestaurantRegistrationProfileManagement
@@ -995,7 +1200,22 @@ AdminUI --> Admin : Show decision result
 
 ---
 
-## SD-12: UC-12 — Manage Menu Catalog
+### SD-12 — UC-12: Manage Menu Catalog
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-12 |
+| **Use Case** | UC-12 — Manage Menu Catalog |
+| **Module** | Restaurant Module |
+| **Primary Actors** | Restaurant Owner |
+| **Primary Service** | Menu Service |
+| **Related Services** | Restaurant Catalog, Image Service |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-12 Activity Diagram steps 1-14 |
+
+**Overview**
+
+Full menu catalog management including category CRUD, menu item CRUD with image upload, and modifier group and option CRUD. All mutations are scoped to the authenticated restaurant owner.
 
 ```plantuml
 @startuml SD-12_ManageMenuCatalog
@@ -1063,7 +1283,22 @@ end
 
 ---
 
-## SD-13: UC-13 — Toggle Item & Restaurant Availability
+### SD-13 — UC-13: Toggle Item & Restaurant Availability
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-13 |
+| **Use Case** | UC-13 — Toggle Item & Restaurant Availability |
+| **Module** | Restaurant Module |
+| **Primary Actors** | Restaurant Owner |
+| **Primary Service** | Availability Service |
+| **Related Services** | Restaurant Catalog, Event Bus |
+| **Complexity** | Low |
+| **Trace Source** | SRS_FoodDelivery.md UC-13 Activity Diagram steps 1-8 |
+
+**Overview**
+
+Real-time toggling of individual menu item availability and restaurant open/closed status with cache invalidation and downstream event publication so ordering flows immediately reflect the updated availability.
 
 ```plantuml
 @startuml SD-13_ToggleItemRestaurantAvailability
@@ -1137,7 +1372,22 @@ end
 
 ---
 
-## SD-14: UC-14 — Accept or Reject Order
+### SD-14 — UC-14: Accept or Reject Order
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-14 |
+| **Use Case** | UC-14 — Accept or Reject Order |
+| **Module** | Restaurant Module |
+| **Primary Actors** | Restaurant Owner |
+| **Primary Service** | Order Lifecycle Service |
+| **Related Services** | Order Repository, Event Bus, Notification Service |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-14 Activity Diagram steps 1-12 |
+
+**Overview**
+
+Restaurant-side order acceptance or rejection with optimistic locking to prevent duplicate state transitions, order status update, and downstream notification dispatch to the customer and delivery dispatch system.
 
 ```plantuml
 @startuml SD-14_AcceptOrRejectOrder
@@ -1223,7 +1473,22 @@ end
 
 ---
 
-## SD-15: UC-15 — Prepare Order for Pickup
+### SD-15 — UC-15: Prepare Order for Pickup
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-15 |
+| **Use Case** | UC-15 — Prepare Order for Pickup |
+| **Module** | Restaurant Module |
+| **Primary Actors** | Restaurant Owner |
+| **Primary Service** | Order Lifecycle Service |
+| **Related Services** | Order Repository, Event Bus, Notification Service, Dispatch Service |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-15 Activity Diagram steps 1-10 |
+
+**Overview**
+
+Order preparation lifecycle from confirmed state through marking ready-for-pickup. Triggers shipper dispatch pipeline and notifies the customer that the order is awaiting collection.
 
 ```plantuml
 @startuml SD-15_PrepareOrderForPickup
@@ -1309,7 +1574,32 @@ end
 
 ---
 
-## SD-16: UC-16 — Shipper Registration
+<div style="page-break-before: always;"></div>
+
+## Shipper Module
+
+### Delivery Personnel Operations
+
+This module covers the delivery personnel (shipper) lifecycle from registration and document verification through availability management, delivery assignment acceptance, and delivery confirmation. These flows operate within the delivery dispatch bounded context.
+
+---
+
+### SD-16 — UC-16: Shipper Registration
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-16 |
+| **Use Case** | UC-16 — Shipper Registration |
+| **Module** | Shipper Module |
+| **Primary Actors** | Delivery Personnel, Administrator |
+| **Primary Service** | Shipper Application Service |
+| **Related Services** | Image Service, Authentication Service, Event Bus |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-16 Activity Diagram steps 1-17 |
+
+**Overview**
+
+Shipper onboarding flow including application submission with government-issued document upload, admin review queue management, approval or rejection decision, and automatic account role elevation to shipper on approval.
 
 ```plantuml
 @startuml SD-16_ShipperRegistration
@@ -1383,7 +1673,22 @@ end
 
 ---
 
-## SD-17: UC-17 — Manage Shipper Availability
+### SD-17 — UC-17: Manage Shipper Availability
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-17 |
+| **Use Case** | UC-17 — Manage Shipper Availability |
+| **Module** | Shipper Module |
+| **Primary Actors** | Shipper |
+| **Primary Service** | Shipper Availability Service |
+| **Related Services** | Order Repository, Event Bus |
+| **Complexity** | Low-Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-17 Activity Diagram steps 1-11 |
+
+**Overview**
+
+Online/offline availability toggle for shippers. Going offline is guarded by an active-delivery check that prevents the shipper from dropping off the dispatch pool while a delivery is in progress.
 
 ```plantuml
 @startuml SD-17_ManageShipperAvailability
@@ -1451,7 +1756,22 @@ end
 
 ---
 
-## SD-18: UC-18 — Accept Delivery Assignment
+### SD-18 — UC-18: Accept Delivery Assignment
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-18 |
+| **Use Case** | UC-18 — Accept Delivery Assignment |
+| **Module** | Shipper Module |
+| **Primary Actors** | Shipper |
+| **Primary Service** | Delivery Dispatch Service |
+| **Related Services** | Order Repository, Event Bus, Notification Service |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-18 Activity Diagram steps 1-12 |
+
+**Overview**
+
+Delivery assignment acceptance with optimistic lock acquisition to prevent double-assignment, shipper binding to the order row, and notification to all stakeholders that pickup is in progress.
 
 ```plantuml
 @startuml SD-18_AcceptDeliveryAssignment
@@ -1528,7 +1848,22 @@ end
 
 ---
 
-## SD-19: UC-19 — Deliver Order
+### SD-19 — UC-19: Deliver Order
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-19 |
+| **Use Case** | UC-19 — Deliver Order |
+| **Module** | Shipper Module |
+| **Primary Actors** | Shipper |
+| **Primary Service** | Order Lifecycle Service |
+| **Related Services** | Order Repository, Event Bus, Notification Service |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-19 Activity Diagram steps 1-9 |
+
+**Overview**
+
+Complete delivery execution lifecycle from en-route status update through successful delivery confirmation with GPS proof-of-delivery. Publishes a delivery completion event that finalises the order and notifies the customer.
 
 ```plantuml
 @startuml SD-19_DeliverOrder
@@ -1603,7 +1938,32 @@ end
 
 ---
 
-## SD-20: UC-20 — Track Order Status
+<div style="page-break-before: always;"></div>
+
+## Shared Platform Services
+
+### Cross-Cutting Customer Interaction, Promotions, and Notifications
+
+This module encompasses cross-cutting flows shared across actor roles: real-time order tracking, cancellation policies, review submission, promotion management (restaurant and platform-wide), payment refund processing, and the real-time notification pipeline.
+
+---
+
+### SD-20 — UC-20: Track Order Status
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-20 |
+| **Use Case** | UC-20 — Track Order Status |
+| **Module** | Shared Platform Services |
+| **Primary Actors** | Customer, Restaurant Owner, Shipper |
+| **Primary Service** | Order Tracking Service |
+| **Related Services** | WebSocket Gateway, Order Repository |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-20 Activity Diagram steps 1-10 |
+
+**Overview**
+
+Real-time order status tracking using WebSocket push notifications, delivering live status updates to all stakeholder roles throughout the order lifecycle from placement through delivery.
 
 ```plantuml
 @startuml SD-20_TrackOrderStatus
@@ -1667,7 +2027,22 @@ end
 
 ---
 
-## SD-21: UC-21 — Cancel Order
+### SD-21 — UC-21: Cancel Order
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-21 |
+| **Use Case** | UC-21 — Cancel Order |
+| **Module** | Shared Platform Services |
+| **Primary Actors** | Customer, Restaurant Owner, Administrator |
+| **Primary Service** | Order Lifecycle Service |
+| **Related Services** | Order Repository, Refund Service, Event Bus |
+| **Complexity** | Medium-High |
+| **Trace Source** | SRS_FoodDelivery.md UC-21 Activity Diagram steps 1-15 |
+
+**Overview**
+
+Multi-role order cancellation with policy enforcement per actor and current order state, refund initiation for paid orders, and optimistic locking to prevent concurrent cancellation race conditions.
 
 ```plantuml
 @startuml SD-21_CancelOrder
@@ -1746,7 +2121,22 @@ end
 
 ---
 
-## SD-22: UC-22 — Submit Rating & Review
+### SD-22 — UC-22: Submit Rating & Review
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-22 |
+| **Use Case** | UC-22 — Submit Rating & Review |
+| **Module** | Shared Platform Services |
+| **Primary Actors** | Customer |
+| **Primary Service** | Review Service |
+| **Related Services** | Order Repository, Restaurant Catalog, Notification Service |
+| **Complexity** | Low |
+| **Trace Source** | SRS_FoodDelivery.md UC-22 Activity Diagram steps 1-10 |
+
+**Overview**
+
+Post-delivery review submission with one-per-order uniqueness enforced by a database constraint, atomic rating projection update on the restaurant record, and notification to the restaurant owner.
 
 ```plantuml
 @startuml SD-22_SubmitRatingReview
@@ -1821,7 +2211,22 @@ end
 
 ---
 
-## SD-23: UC-23 — Manage Restaurant Promotions
+### SD-23 — UC-23: Manage Restaurant Promotions
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-23 |
+| **Use Case** | UC-23 — Manage Restaurant Promotions |
+| **Module** | Shared Platform Services |
+| **Primary Actors** | Restaurant Owner |
+| **Primary Service** | Promotion Service (Restaurant) |
+| **Related Services** | Restaurant Catalog |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-23 Activity Diagram steps 1-14 |
+
+**Overview**
+
+Restaurant self-service promotion management including creation, editing, scheduling, activation, and deactivation of item-level and order-level discount promotions within admin-approved bounds.
 
 ```plantuml
 @startuml SD-23_ManageRestaurantPromotions
@@ -1911,7 +2316,22 @@ end
 
 ---
 
-## SD-24: UC-24 — Manage Platform Promotions
+### SD-24 — UC-24: Manage Platform Promotions
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-24 |
+| **Use Case** | UC-24 — Manage Platform Promotions |
+| **Module** | Shared Platform Services |
+| **Primary Actors** | Administrator |
+| **Primary Service** | Promotion Service (Admin) |
+| **Related Services** | Coupon Repository |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-24 Activity Diagram steps 1-16 |
+
+**Overview**
+
+Platform-wide promotion and coupon management by administrators, including bulk coupon batch generation, usage tracking, redemption limits, and full promotion lifecycle control across all restaurant tenants.
 
 ```plantuml
 @startuml SD-24_ManagePlatformPromotions
@@ -2009,7 +2429,22 @@ end
 
 ---
 
-## SD-25: UC-25 — Process Payment Refund
+### SD-25 — UC-25: Process Payment Refund
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-25 |
+| **Use Case** | UC-25 — Process Payment Refund |
+| **Module** | Shared Platform Services |
+| **Primary Actors** | Customer, Administrator |
+| **Primary Service** | Refund Service |
+| **Related Services** | Payment Gateway (VNPay), Order Repository, Event Bus |
+| **Complexity** | Medium-High |
+| **Trace Source** | SRS_FoodDelivery.md UC-25 Activity Diagram steps 1-14 |
+
+**Overview**
+
+End-to-end refund processing triggered by order cancellation or direct admin action. Covers VNPay refund API invocation, payment transaction state management with optimistic locking, and event-driven retry on failure.
 
 ```plantuml
 @startuml SD-25_ProcessPaymentRefund
@@ -2083,7 +2518,22 @@ end
 
 ---
 
-## SD-26: UC-26 — Manage Real-Time Notifications
+### SD-26 — UC-26: Manage Real-Time Notifications
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-26 |
+| **Use Case** | UC-26 — Manage Real-Time Notifications |
+| **Module** | Shared Platform Services |
+| **Primary Actors** | Customer, Restaurant Owner, Shipper, Administrator |
+| **Primary Service** | Notification Service |
+| **Related Services** | FCM (Firebase Cloud Messaging), WebSocket Gateway, Device Token Repository |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-26 Activity Diagram steps 1-16 |
+
+**Overview**
+
+Multi-channel notification delivery pipeline supporting FCM push and WebSocket in-app channels with quiet-hours enforcement, device token lifecycle management, and idempotent persistence to prevent duplicate notifications.
 
 ```plantuml
 @startuml SD-26_ManageRealTimeNotifications
@@ -2169,7 +2619,32 @@ UI --> User : Show updated inbox / preferences
 
 ---
 
-## SD-27: UC-27 — Approve or Reject Restaurant Applications
+<div style="page-break-before: always;"></div>
+
+## Administration and Governance
+
+### Admin Dashboard, Oversight, and Compliance
+
+This module covers the full administrator operational surface: partner onboarding approval (restaurant and shipper), account suspension and reactivation, order monitoring, user account management, administrative cancellation and refund, operational reporting, dashboard KPIs, and role permission management.
+
+---
+
+### SD-27 — UC-27: Approve or Reject Restaurant Applications
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-27 |
+| **Use Case** | UC-27 — Approve or Reject Restaurant Applications |
+| **Module** | Administration & Governance |
+| **Primary Actors** | Administrator |
+| **Primary Service** | Restaurant Approval Service |
+| **Related Services** | Restaurant Catalog, Event Bus, Notification Service |
+| **Complexity** | Low-Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-27 Activity Diagram steps 1-14 |
+
+**Overview**
+
+Admin-side restaurant application review and decision workflow with audit log recording, downstream event publication on approval, and applicant notification for both outcomes.
 
 ```plantuml
 @startuml SD-27_ApproveRejectRestaurantApplications
@@ -2233,7 +2708,22 @@ end
 
 ---
 
-## SD-28: UC-28 — Approve or Reject Shipper Applications
+### SD-28 — UC-28: Approve or Reject Shipper Applications
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-28 |
+| **Use Case** | UC-28 — Approve or Reject Shipper Applications |
+| **Module** | Administration & Governance |
+| **Primary Actors** | Administrator |
+| **Primary Service** | Shipper Approval Service |
+| **Related Services** | Authentication Service, Event Bus |
+| **Complexity** | Low-Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-28 Activity Diagram steps 1-16 |
+
+**Overview**
+
+Admin-side shipper application approval or rejection with atomic role elevation to shipper on approval, full audit trail recording, and domain event dispatch to notify downstream delivery and notification contexts.
 
 ```plantuml
 @startuml SD-28_ApproveRejectShipperApplications
@@ -2312,7 +2802,22 @@ end
 
 ---
 
-## SD-29: UC-29 — Suspend or Reactivate Partner Accounts
+### SD-29 — UC-29: Suspend or Reactivate Partner Accounts
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-29 |
+| **Use Case** | UC-29 — Suspend or Reactivate Partner Accounts |
+| **Module** | Administration & Governance |
+| **Primary Actors** | Administrator |
+| **Primary Service** | Partner Management Service |
+| **Related Services** | Authentication Service, Event Bus, Notification Service |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-29 Activity Diagram steps 1-13 |
+
+**Overview**
+
+Suspension and reactivation of customer, restaurant owner, and shipper accounts. Suspension immediately invalidates all active sessions, optionally sets an expiry timestamp for automatic reactivation, and records a mandatory audit entry.
 
 ```plantuml
 @startuml SD-29_SuspendReactivatePartnerAccounts
@@ -2395,7 +2900,22 @@ end
 
 ---
 
-## SD-30: UC-30 — Monitor Orders and Platform Health
+### SD-30 — UC-30: Monitor Orders and Platform Health
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-30 |
+| **Use Case** | UC-30 — Monitor Orders and Platform Health |
+| **Module** | Administration & Governance |
+| **Primary Actors** | Administrator |
+| **Primary Service** | Admin Order Service |
+| **Related Services** | Order Repository, Metrics Service |
+| **Complexity** | Low |
+| **Trace Source** | SRS_FoodDelivery.md UC-30 Activity Diagram steps 1-9 |
+
+**Overview**
+
+Administrative real-time order monitoring with multi-attribute filter search across all orders, live status breakdown KPIs, and individual order detail drill-down for operational oversight.
 
 ```plantuml
 @startuml SD-30_MonitorOrdersPlatformHealth
@@ -2463,7 +2983,22 @@ end
 
 ---
 
-## SD-31: UC-31 — Search and Manage User Accounts
+### SD-31 — UC-31: Search and Manage User Accounts
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-31 |
+| **Use Case** | UC-31 — Search and Manage User Accounts |
+| **Module** | Administration & Governance |
+| **Primary Actors** | Administrator |
+| **Primary Service** | User Management Service |
+| **Related Services** | Authentication Service, Order Repository |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-31 Activity Diagram steps 1-16 |
+
+**Overview**
+
+Admin user search with conjunctive multi-attribute filtering, full profile detail view, and inline account management actions. Role changes, suspensions, and order operations are delegated to their respective dedicated endpoints (UC-29, UC-30, UC-32, UC-35).
 
 ```plantuml
 @startuml SD-31_SearchManageUserAccounts
@@ -2553,7 +3088,22 @@ end
 
 ---
 
-## SD-32: UC-32 — Administrative Order Cancellation & Refund
+### SD-32 — UC-32: Administrative Order Cancellation & Refund
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-32 |
+| **Use Case** | UC-32 — Administrative Order Cancellation & Refund |
+| **Module** | Administration & Governance |
+| **Primary Actors** | Administrator |
+| **Primary Service** | Admin Order Lifecycle Service |
+| **Related Services** | Refund Service, Event Bus, Notification Service |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-32 Activity Diagram steps 1-12 |
+
+**Overview**
+
+Admin-initiated order cancellation and forced refund with eligibility validation, admin override privileges beyond customer cancellation windows, and downstream notification to all affected stakeholders.
 
 ```plantuml
 @startuml SD-32_AdminCancelRefund
@@ -2625,7 +3175,22 @@ end
 
 ---
 
-## SD-33: UC-33 — View and Export Operational Reports
+### SD-33 — UC-33: View and Export Operational Reports
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-33 |
+| **Use Case** | UC-33 — View and Export Operational Reports |
+| **Module** | Administration & Governance |
+| **Primary Actors** | Administrator |
+| **Primary Service** | Reporting Service |
+| **Related Services** | Order Repository, Payment Repository, Analytics Engine |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-33 Activity Diagram steps 1-12 |
+
+**Overview**
+
+On-demand generation and CSV or XLSX export of operational reports covering orders, financials, user registrations, and promotion analytics within configurable date ranges up to 366 days.
 
 ```plantuml
 @startuml SD-33_ViewExportOperationalReports
@@ -2688,7 +3253,22 @@ end
 
 ---
 
-## SD-34: UC-34 — View Dashboard & Platform Overview
+### SD-34 — UC-34: View Dashboard & Platform Overview
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-34 |
+| **Use Case** | UC-34 — View Dashboard & Platform Overview |
+| **Module** | Administration & Governance |
+| **Primary Actors** | Administrator |
+| **Primary Service** | Dashboard Service |
+| **Related Services** | Metrics Service, Order Repository, Analytics Engine |
+| **Complexity** | Low-Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-34 Activity Diagram steps 1-9 |
+
+**Overview**
+
+Real-time admin KPI dashboard presenting today's order and revenue metrics, 7-day trend summaries, live in-flight order pipeline, onboarding approval queue counts, and a recent platform activity stream.
 
 ```plantuml
 @startuml SD-34_ViewDashboardPlatformOverview
@@ -2735,7 +3315,22 @@ UI --> Admin : (7) Route to corresponding UC (UC-30, UC-27, UC-28, UC-31 or UC-3
 
 ---
 
-## SD-35: UC-35 — Manage Admin Roles & Permissions
+### SD-35 — UC-35: Manage Admin Roles & Permissions
+
+| Attribute | Value |
+|-----------|-------|
+| **SD ID** | SD-35 |
+| **Use Case** | UC-35 — Manage Admin Roles & Permissions |
+| **Module** | Administration & Governance |
+| **Primary Actors** | Administrator |
+| **Primary Service** | Role Management Service |
+| **Related Services** | Authentication Service, Event Bus, Audit Service |
+| **Complexity** | Medium |
+| **Trace Source** | SRS_FoodDelivery.md UC-35 Activity Diagram steps 1-12 |
+
+**Overview**
+
+Admin-to-admin role assignment and permission management with last-administrator safeguard preventing platform lockout, atomic role persistence, session refresh for affected users, and comprehensive audit trail recording.
 
 ```plantuml
 @startuml SD-35_ManageAdminRolesPermissions
@@ -2812,4 +3407,10 @@ end
 
 ---
 
-*End of Appendix SD — Sequence Diagrams v2.0*
+<div style="page-break-before: always;"></div>
+
+---
+
+*End of Appendix SD — Sequence Diagrams Specification v2.0*
+
+*SoLi Food Delivery Application — Final Submission*
