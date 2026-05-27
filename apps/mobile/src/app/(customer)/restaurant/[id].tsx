@@ -1,8 +1,8 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { RestaurantMenuScreen } from "@/src/features/restaurants";
 import { useRestaurant, useRestaurantMenu } from "@/src/features/restaurants/api";
-import { useAddToCart } from "@/src/features/cart";
-import { Text, View, TouchableOpacity, Alert } from "react-native";
+import { useGuardedAddToCart } from "@/src/features/cart";
+import { Text, View, TouchableOpacity } from "react-native";
 
 export default function RestaurantMenuPage() {
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
@@ -12,7 +12,7 @@ export default function RestaurantMenuPage() {
 
   const { data: restaurant, isLoading: isLoadingRestaurant, isError: isErrorRestaurant } = useRestaurant(normalizedId || "");
   const { data: menuData, isLoading: isLoadingMenu, isError: isErrorMenu } = useRestaurantMenu(normalizedId || "");
-  const { mutate: addToCart, isPending: isAddingToCart } = useAddToCart();
+  const { addItem, isPending: isAddingToCart } = useGuardedAddToCart();
 
   if (!normalizedId) {
     return (
@@ -71,7 +71,7 @@ export default function RestaurantMenuPage() {
     const menuItem = menuData.data.find((item) => item.id === itemId);
     if (!menuItem) return;
 
-    addToCart(
+    addItem(
       {
         menuItemId: menuItem.id,
         restaurantId: restaurant.id,
@@ -82,12 +82,7 @@ export default function RestaurantMenuPage() {
         quantity: 1,
       },
       {
-        onSuccess: () => {
-          Alert.alert("Success", `${menuItem.name} added to cart`);
-        },
-        onError: (error: any) => {
-          Alert.alert("Error", error.message || "Failed to add item to cart");
-        },
+        successMessage: `${menuItem.name} added to cart`,
       }
     );
   };

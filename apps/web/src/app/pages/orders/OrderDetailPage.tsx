@@ -43,7 +43,8 @@ export function OrderDetailPage() {
     return <Navigate to="/orders" replace />;
   }
 
-  const { street, district, city } = order.deliveryAddress;
+  const deliveryAddress = order.deliveryAddress || { street: '', district: '', city: '' };
+  const { street, district, city } = deliveryAddress;
   const addressStr = [street, district, city].filter(Boolean).join(", ");
   const itemsTotal = order.totalAmount - order.shippingFee;
 

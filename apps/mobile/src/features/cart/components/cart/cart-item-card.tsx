@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { Minus, Plus, Trash2, Utensils } from 'lucide-react-native';
 import { formatCurrency } from '@/src/lib/format-utils';
@@ -8,6 +8,7 @@ import { calculateItemTotal } from '../../utils/price-calculations';
 
 interface CartItemCardProps {
   item: CartItem;
+  onPress?: (menuItemId: string) => void;
   onIncrement: (id: string) => void;
   onDecrement: (id: string) => void;
   onRemove: (id: string) => void;
@@ -15,12 +16,18 @@ interface CartItemCardProps {
 
 export function CartItemCard({
   item,
+  onPress,
   onIncrement,
   onDecrement,
   onRemove,
 }: CartItemCardProps) {
   return (
-    <View className="flex-row items-center bg-surface-container-lowest rounded-[20px] p-3 gap-3 shadow-sm">
+    <Pressable
+      onPress={onPress ? () => onPress(item.menuItemId) : undefined}
+      accessibilityRole="button"
+      accessibilityLabel={`View details for ${item.name}`}
+      className="flex-row items-center bg-surface-container-lowest rounded-[20px] p-3 gap-3 shadow-sm active:scale-[0.98]"
+    >
       {/* Product image */}
       <View className="w-20 h-20 rounded-2xl overflow-hidden bg-surface-container">
         {item.imageUrl ? (
@@ -106,6 +113,6 @@ export function CartItemCard({
           </View>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }

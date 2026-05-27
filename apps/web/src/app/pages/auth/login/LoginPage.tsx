@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { LoginForm } from '@/features/auth/components/login/LoginForm';
 import { LoginAlternativeMethods } from '@/features/auth/components/login/LoginAlternativeMethods';
 import { LoginFooter } from '@/features/auth/components/login/LoginFooter';
@@ -23,6 +24,16 @@ export function LoginPage() {
         <CardContent className="space-y-4">
           <LoginForm />
           <LoginAlternativeMethods />
+
+          <div className="pt-4 border-t text-center text-sm text-on-surface-variant">
+            New to SoLi?{' '}
+            <Link
+              to="/auth/register"
+              className="font-semibold text-primary underline-offset-4 hover:underline"
+            >
+              Create an account
+            </Link>
+          </div>
         </CardContent>
 
         <LoginFooter />

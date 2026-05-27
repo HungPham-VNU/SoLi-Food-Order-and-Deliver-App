@@ -224,7 +224,7 @@ export class OrderHistoryService {
   }
 
   /**
-   * Kitchen operational view — returns confirmed/preparing/ready orders, oldest first.
+   * Kitchen operational view — returns pending/paid/confirmed/preparing/ready orders, oldest first.
    * No pagination; this is a live operational screen, not a historical query.
    */
   async getRestaurantActiveOrders(

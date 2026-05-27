@@ -1,7 +1,8 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MenuItemDetailScreen } from "@/src/features/restaurants";
 import { useMenuItem, useRestaurant } from "@/src/features/restaurants/api";
-import { useAddToCart } from "@/src/features/cart";
+import { useGuardedAddToCart } from "@/src/features/cart";
+import type { SelectedModifierResponse } from "@/src/features/cart";
 import { Text, View, TouchableOpacity, Alert } from "react-native";
 
 export default function MenuItemDetailPage() {
@@ -12,7 +13,7 @@ export default function MenuItemDetailPage() {
 
   const { data: menuItem, isLoading: isLoadingItem, isError: isErrorItem } = useMenuItem(normalizedId || "");
   const { data: restaurant, isLoading: isLoadingRestaurant, isError: isErrorRestaurant } = useRestaurant(menuItem?.restaurantId || "");
-  const { mutate: addToCart, isPending: isAddingToCart } = useAddToCart();
+  const { addItem, isPending: isAddingToCart } = useGuardedAddToCart();
 
   if (!normalizedId) {
     return (
@@ -66,7 +67,8 @@ export default function MenuItemDetailPage() {
     itemId: string,
     quantity: number,
     modifierSelections: Record<string, string[]>,
-    isUpdate?: boolean
+    isUpdate?: boolean,
+    optimisticSelectedModifiers?: SelectedModifierResponse[]
   ) => {
     if (!menuItem || !restaurant || isAddingToCart) {
       if (!isAddingToCart) {
@@ -80,7 +82,7 @@ export default function MenuItemDetailPage() {
       ([groupId, optionIds]) => optionIds.map(optionId => ({ groupId, optionId }))
     );
 
-    addToCart(
+    addItem(
       {
         menuItemId: menuItem.id,
         restaurantId: restaurant.id,
@@ -90,14 +92,12 @@ export default function MenuItemDetailPage() {
         imageUrl: menuItem.imageUrl ?? null,
         quantity,
         selectedModifiers,
+        optimisticSelectedModifiers,
       },
       {
-        onSuccess: () => {
-          Alert.alert("Success", `${menuItem.name} ${isUpdate ? 'updated in' : 'added to'} cart`);
+        successMessage: `${menuItem.name} ${isUpdate ? 'updated in' : 'added to'} cart`,
+        onOptimisticUpdate: () => {
           router.back();
-        },
-        onError: (error: any) => {
-          Alert.alert("Error", error.message || "Failed to add item to cart");
         },
       }
     );
@@ -109,6 +109,7 @@ export default function MenuItemDetailPage() {
       onBack={handleBack}
       onFavoriteToggle={handleFavoriteToggle}
       onAddToCart={handleAddToCart}
+      isAddingToCart={isAddingToCart}
     />
   );
 }

@@ -112,7 +112,7 @@ export function OrderHistoryScreen() {
               <OrderCard
                 key={order.orderId}
                 order={order}
-                onActionPress={() => {
+                onPress={() => {
                   router.push({
                     pathname: '/(customer)/orders/[id]',
                     params: { id: order.orderId },

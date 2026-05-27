@@ -16,6 +16,7 @@ export type {
   AddItemToCartRequest,
   CartResponse,
   CartItemResponse,
+  SelectedModifierResponse,
   SelectedOption,
   UpdateCartItemQuantityRequest,
   UpdateCartItemModifiersRequest,

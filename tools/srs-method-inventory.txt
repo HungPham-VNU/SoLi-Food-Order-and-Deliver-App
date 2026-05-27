@@ -1,0 +1,259 @@
+Total references: 259
+Unique class.method(params): 205
+Unique classes: 49
+--- CLASSES ---
+AddressService
+AdminAuditService
+AdminGuard
+AuthService
+CartService
+ChannelDispatcher
+CheckoutController
+CheckoutValidator
+CommandBus
+DashboardService
+DeviceTokenRepository
+EventPublisher
+IdempotencyService
+LockService
+MenuItemProjector
+MenuRepository
+MenuService
+ModifiersRepository
+ModifiersService
+NotificationGateway
+NotificationPreferenceService
+NotificationRepository
+NotificationService
+OrderHistoryService
+OrderingAcl
+OrderLifecycleService
+OrderRepository
+PartnerSuspensionService
+PartnerSuspensionTask
+PaymentRefundHandler
+PaymentService
+PaymentTimeoutTask
+PaymentTransactionRepository
+PricingService
+PromotionService
+QuietHoursService
+ReportService
+RestaurantRepository
+RestaurantService
+ReviewRepository
+ReviewService
+RolePermissionService
+SearchService
+ShipperOnboardingService
+ShipperService
+UserAdminService
+UserRepository
+VNPayService
+ZonesService
+--- UNIQUE METHODS ---
+AddressService.createAddress(customerId, label, line, lat, lon)
+AddressService.listAddresses(customerId)
+AddressService.snapshotAddressForOrder(orderId, address)
+AddressService.validateAddressDto(address)
+AddressService.validateCoordinatePair(lat, lon)
+AdminAuditService.appendApprovalAudit(restaurantId, adminId, decision)
+AdminAuditService.appendApprovalAudit(shipperId, adminId, decision)
+AdminAuditService.appendSuspensionAudit(partnerId, adminId, action)
+AdminAuditService.appendUserAccountAudit(userId, adminId, action)
+AdminAuditService.auditRoleChange(userId, role, action, adminId)
+AdminGuard.assertAdminRole(session)
+AuthService.createSession(userId, ipAddress, userAgent)
+AuthService.requestPasswordReset(email)
+AuthService.signInWithEmail(email, password)
+AuthService.signOut(sessionId)
+AuthService.signUpWithEmail(email, password, name)
+AuthService.validateSession(token)
+CartService.addItem(customerId, dto)
+CartService.assertSingleRestaurantCart(cart, restaurantId)
+CartService.clearCart(customerId)
+CartService.getCart(customerId)
+CartService.mergeLineItem(cart, item)
+CartService.refreshCartTtl(customerId)
+CartService.removeItem(customerId, cartItemId)
+CartService.updateItemModifiers(customerId, cartItemId, dto)
+CartService.updateItemQuantity(customerId, cartItemId, dto)
+ChannelDispatcher.dispatch(channel, recipientId, payload)
+ChannelDispatcher.selectChannels(notificationType, preferences)
+CheckoutController.checkout(session, headers, body)
+CheckoutValidator.validateCheckoutDto(body)
+CommandBus.execute(placeOrderCommand)
+CommandBus.execute(processIpnCommand)
+DashboardService.getAdminDashboard()
+DashboardService.getCachedDashboard(scope, key)
+DashboardService.getCustomerDashboard(customerId)
+DashboardService.getRestaurantDashboard(restaurantId)
+DashboardService.getShipperDashboard(shipperId)
+DeviceTokenRepository.invalidateDeviceToken(token)
+EventPublisher.publishMenuItemUpdatedEvent(menuItemId, restaurantId)
+EventPublisher.publishOrderCancelledAfterPaymentEvent(orderId, refundAmount)
+EventPublisher.publishOrderPlacedEvent(orderId, customerId, totalAmount)
+EventPublisher.publishOrderReadyForPickupEvent(orderId, restaurantId)
+EventPublisher.publishOrderStatusChangedEvent(orderId, oldStatus, newStatus)
+EventPublisher.publishPartnerSuspendedEvent(partnerId, partnerType)
+EventPublisher.publishPaymentConfirmedEvent(orderId, txnRef, amount)
+EventPublisher.publishPaymentFailedEvent(orderId, reason)
+EventPublisher.publishRestaurantUpdatedEvent(restaurantId)
+EventPublisher.publishRoleChangedEvent(userId, role, action)
+EventPublisher.publishShipperApprovedEvent(shipperId)
+EventPublisher.publishShipperAvailabilityChangedEvent(shipperId, isAvailable)
+IdempotencyService.checkIdempotency(idempotencyKey, customerId)
+LockService.acquireOrderLock(customerId)
+LockService.acquireOrderLock(orderId)
+LockService.acquirePaymentLock(transactionId)
+MenuItemProjector.projectMenuItemSnapshot(event)
+MenuRepository.findByRestaurant(restaurantId, opts)
+MenuService.assertMenuOwnership(restaurantId, requesterId, isAdmin)
+MenuService.toggleSoldOut(id, requesterId, isAdmin)
+MenuService.validateCategoryDto(dto)
+MenuService.validateMenuItemDto(dto)
+ModifiersRepository.findGroupsByMenuItem(menuItemId)
+ModifiersService.createGroup(menuItemId, session, dto)
+ModifiersService.updateGroup(menuItemId, id, session, dto)
+NotificationGateway.authenticateGatewayClient(socket)
+NotificationGateway.broadcastOrderStatusChanged(orderId, userId, status)
+NotificationPreferenceService.getPreferences(session)
+NotificationPreferenceService.updatePreferences(session, dto)
+NotificationRepository.persistNotification(payload)
+NotificationService.assertNotificationIdempotent(idempotencyKey)
+NotificationService.getInbox(session, query)
+NotificationService.markAllRead(session)
+NotificationService.markRead(session, id)
+NotificationService.resolveRecipient(event)
+OrderHistoryService.getAllOrders(filters)
+OrderHistoryService.getAllOrders(session, filters)
+OrderHistoryService.getAnyOrderDetail(id, session)
+OrderHistoryService.getCustomerOrderDetail(actorId, orderId)
+OrderHistoryService.getCustomerOrders(actorId, filters)
+OrderHistoryService.getMyOrderDetail(id, session)
+OrderHistoryService.getMyOrders(session, filters)
+OrderHistoryService.getReorderItems(id, session)
+OrderHistoryService.getTimeline(id, session)
+OrderHistoryService.validateOrderFilters(filters)
+OrderingAcl.loadMenuItemSnapshot(menuItemId)
+OrderingAcl.validateItemsAndModifiers(items, snapshot)
+OrderingAcl.validateModifiers(menuItemId, selections)
+OrderLifecycleService.assertCustomerRole(session)
+OrderLifecycleService.assertOrderAssignedToShipper(orderId, shipperId)
+OrderLifecycleService.assertOrderOwnedByCustomer(orderId, customerId)
+OrderLifecycleService.assertOrderOwnedByRestaurant(orderId, restaurantId)
+OrderLifecycleService.assertOrderStatus(orderId, expectedStatus)
+OrderLifecycleService.assertRestaurantRole(session)
+OrderLifecycleService.assertShipperRole(session)
+OrderLifecycleService.assertTransition(fromStatus, toStatus)
+OrderLifecycleService.cancelOrder(id, session, dto)
+OrderLifecycleService.confirm(id, session)
+OrderLifecycleService.deliver(id, session)
+OrderLifecycleService.enRoute(id, session)
+OrderLifecycleService.markReady(id, session)
+OrderLifecycleService.pickup(id, session)
+OrderLifecycleService.startPreparing(id, session)
+OrderLifecycleService.validateCancelReason(dto)
+OrderRepository.appendOrderAudit(orderId, actorId, action)
+OrderRepository.appendOrderHistory(orderId, status, actorId)
+OrderRepository.findOrderById(orderId)
+PartnerSuspensionService.findPartnerById(partnerId, partnerType)
+PartnerSuspensionService.liftSuspension(partnerId, adminId, partnerType)
+PartnerSuspensionService.revokePartnerSessions(partnerId)
+PartnerSuspensionService.suspendPartner(partnerId, adminId, reason, duration)
+PartnerSuspensionService.validateSuspensionDto(dto)
+PartnerSuspensionTask.suspensionExpiryTask()
+PaymentRefundHandler.handleOrderCancelledAfterPayment(event)
+PaymentService.assertAmountMatches(orderAmount, ipnAmount)
+PaymentService.assertIpnIdempotent(txnRef)
+PaymentService.assertRefundAmount(amount, originalAmount)
+PaymentService.assertRefundIdempotent(orderId)
+PaymentService.recordPaymentTransaction(orderId, amount, method)
+PaymentService.recordRefundTransaction(orderId, amount, gatewayRef)
+PaymentService.refund(id, session, dto)
+PaymentTimeoutTask.paymentTimeoutTask()
+PaymentTransactionRepository.findTransactionByOrderId(orderId)
+PaymentTransactionRepository.findTransactionByTxnRef(txnRef)
+PricingService.computeOrderTotals(items, fees, discount)
+PromotionService.activate(id)
+PromotionService.activate(id, session)
+PromotionService.cancel(id)
+PromotionService.cancel(id, session)
+PromotionService.computeAndReserveDiscount(orderId, customerId, items)
+PromotionService.createCoupons(id, dto)
+PromotionService.createCoupons(id, session, dto)
+PromotionService.pause(id)
+PromotionService.pause(id, session)
+PromotionService.rollbackReservations(orderId)
+PromotionService.validateCoupon(code)
+PromotionService.validatePromotionDto(dto)
+QuietHoursService.isWithinQuietHours(userId, now)
+ReportService.exportReport(reportType, dateRange, format)
+ReportService.getCachedReport(reportKey)
+ReportService.getOrderStats(startDate, endDate, filters)
+ReportService.getRestaurantPerformanceReport(restaurantId, startDate, endDate)
+ReportService.getRevenueReport(startDate, endDate, restaurantId)
+ReportService.getShipperPerformanceReport(shipperId, startDate, endDate)
+ReportService.validateReportParameters(reportType, dateRange)
+RestaurantRepository.findAll(offset, limit)
+RestaurantService.approve(id)
+RestaurantService.assertRestaurantOwnership(id, session)
+RestaurantService.assertRestaurantOwnership(restaurantId, session)
+RestaurantService.create(dto)
+RestaurantService.create(requesterId, isAdmin, dto)
+RestaurantService.create(restaurantId, requesterId, isAdmin, dto)
+RestaurantService.create(session, dto)
+RestaurantService.findOne(id)
+RestaurantService.listPendingRestaurants(filters)
+RestaurantService.setApproved(id, isApproved)
+RestaurantService.unapprove(id)
+RestaurantService.update(id, dto)
+RestaurantService.update(id, requesterId, isAdmin, dto)
+RestaurantService.update(id, restaurantId, requesterId, isAdmin, dto)
+RestaurantService.update(id, session, dto)
+RestaurantService.validateRestaurantDto(dto)
+ReviewRepository.findReviewByOrder(orderId)
+ReviewService.moderateReview(reviewId, adminId, action)
+ReviewService.recomputeRestaurantRating(restaurantId)
+ReviewService.submitOrderReview(orderId, customerId, rating, comment)
+ReviewService.validateReviewDto(dto)
+RolePermissionService.assertNotLastAdmin(userId, role)
+RolePermissionService.assignRoleToUser(userId, role, adminId)
+RolePermissionService.revokeRole(userId, role, adminId)
+RolePermissionService.revokeUserSessions(userId)
+RolePermissionService.validateRoleAssignmentDto(dto)
+SearchService.clampPagination(limit, offset)
+SearchService.scoreAndRank(results, query)
+SearchService.searchItems(q, category, tag)
+SearchService.searchRestaurants(q, lat, lon, radiusKm)
+SearchService.validateSearchQuery(q, lat, lon, radiusKm)
+ShipperOnboardingService.approveShipper(shipperId, adminId, decision)
+ShipperOnboardingService.findPendingShipperApplicationByEmail(email)
+ShipperOnboardingService.getShipperApplicationDetail(shipperId)
+ShipperOnboardingService.listPendingShipperApplications(filters)
+ShipperOnboardingService.listPendingShippers(filters)
+ShipperOnboardingService.rejectShipperRegistration(shipperId, adminId, reason)
+ShipperOnboardingService.uploadShipperDocument(shipperId, documentType, imageUrl)
+ShipperOnboardingService.validateShipperRegistrationDto(dto)
+ShipperService.assertShipperApproved(shipperId)
+ShipperService.getShipperActiveOrder(shipperId)
+ShipperService.setShipperAvailability(shipperId, isAvailable)
+UserAdminService.lockUserAccount(userId, adminId, reason)
+UserAdminService.resetUserPassword(userId, adminId)
+UserAdminService.searchUsers(query, filters)
+UserAdminService.updateUserProfile(userId, patch, adminId)
+UserAdminService.validateUserProfileDto(dto)
+UserAdminService.validateUserSearchFilters(filters)
+UserRepository.findUserByEmail(email)
+UserRepository.findUserById(userId)
+VNPayService.buildVNPayPaymentUrl(orderId, amount, ipAddr)
+VNPayService.handleReturn(query)
+VNPayService.requestVNPayRefund(transactionId, amount)
+VNPayService.verifyVNPaySignature(payload, secureHash)
+ZonesService.assertZoneOwnership(restaurantId, requesterId, isAdmin)
+ZonesService.calculateDeliveryFee(restaurantId, lat, lon)
+ZonesService.calculateFeeAndEta(zone, distance)
+ZonesService.estimateDelivery(restaurantId, query)
+ZonesService.remove(id, restaurantId, requesterId, isAdmin)
+ZonesService.selectDeliveryZone(restaurantId, lat, lon)
+ZonesService.validateZoneDto(zone)

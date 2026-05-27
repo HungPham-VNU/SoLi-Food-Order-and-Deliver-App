@@ -216,10 +216,12 @@ export interface MenuItemDetailScreenProps {
   itemId: string;
   onBack?: () => void;
   onFavoriteToggle?: (itemId: string) => void;
+  isAddingToCart?: boolean;
   onAddToCart?: (
     itemId: string,
     quantity: number,
     modifierSelections: Record<string, string[]>,
     isUpdate?: boolean,
+    optimisticSelectedModifiers?: import('@/src/features/cart').SelectedModifierResponse[],
   ) => void;
 }

@@ -2,6 +2,7 @@
 
 export interface CartItem {
   id: string;
+  menuItemId: string;
   name: string;
   price: number;
   quantity: number;
@@ -73,6 +74,7 @@ export interface AddItemToCartRequest {
   imageUrl?: string | null;
   quantity: number;
   selectedModifiers?: SelectedOption[];
+  optimisticSelectedModifiers?: SelectedModifierResponse[];
 }
 
 export interface UpdateCartItemQuantityRequest {

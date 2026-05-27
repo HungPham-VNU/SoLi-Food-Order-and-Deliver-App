@@ -1,4 +1,4 @@
-import 'react-native-reanimated';
+import '@/src/lib/reanimated-logger';
 import '../global.css';
 import '@/src/lib/nativewind-interop';
 import { AppState, Platform, ActivityIndicator, View } from 'react-native';

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { FormProvider, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Info } from 'lucide-react';
 import { CreateMenuItemHeader } from '@/features/menu/components/create/CreateMenuItemHeader';
 import { ProductEssenceCard } from '@/features/menu/components/create/ProductEssenceCard';
 import { DietaryTagsCard } from '@/features/menu/components/create/DietaryTagsCard';
@@ -52,7 +53,7 @@ export default function CreateMenuItemPage() {
         imageUrl: values.imageUrl || undefined,
         tags: values.tags,
       },
-      { onSuccess: () => navigate('/menu') },
+      { onSuccess: (item) => navigate(`/menu/edit/${item.id}`) },
     );
   };
 
@@ -105,9 +106,20 @@ export default function CreateMenuItemPage() {
           <div className="col-span-12 lg:col-span-8 space-y-8">
             <ProductEssenceCard
               categories={categories}
-              restaurantId={restaurantId}
+              restaurantId={restaurantId!}
             />
             <DietaryTagsCard />
+            <div className="space-y-6 bg-card rounded-3xl p-8 shadow-sm border border-border/50">
+              <div className="flex items-start gap-4">
+                <Info className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">Modifiers</h3>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Add size options, extras, and other customizations after creating this menu item. Modifiers will be available on the edit page once you publish.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
           <div className="col-span-12 lg:col-span-4 space-y-8">
             <MediaUploadCard />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -25,8 +25,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAddressStore } from '@/src/features/location';
 import { HomeTopBar } from '../components';
-import { useNearbyRestaurants } from '../api/restaurant-api';
+import {
+  useDeliveryEstimates,
+  useNearbyRestaurants,
+} from '../api/restaurant-api';
 import { FloatingCartButton } from '@/src/features/cart';
+import { formatCurrency } from '@/src/lib/format-utils';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', Icon: Utensils },
@@ -74,7 +78,19 @@ export function HomeScreen() {
     longitude,
   });
 
-  const restaurants = restaurantsData?.restaurants || [];
+  const restaurants = useMemo(
+    () => restaurantsData?.restaurants ?? [],
+    [restaurantsData?.restaurants],
+  );
+  const restaurantIds = useMemo(
+    () => restaurants.map((restaurant) => restaurant.id),
+    [restaurants],
+  );
+  const deliveryEstimateResults = useDeliveryEstimates(
+    restaurantIds,
+    latitude,
+    longitude,
+  );
 
   return (
     <View className="flex-1 bg-background font-inter text-on-surface">
@@ -217,9 +233,30 @@ export function HomeScreen() {
             </View>
           ) : (
             <View className="flex-col gap-5">
-              {restaurants.map((restaurant) => {
+              {restaurants.map((restaurant, index) => {
                 const imageUrl =
                   restaurant.coverImageUrl ?? restaurant.logoUrl ?? undefined;
+                const deliveryEstimateQuery = deliveryEstimateResults[index];
+                const deliveryEstimate = deliveryEstimateQuery?.data;
+                const isDeliveryEstimateLoading =
+                  deliveryEstimateQuery?.isLoading ||
+                  deliveryEstimateQuery?.isFetching;
+                const deliveryFee = deliveryEstimate?.deliveryFee;
+                const isFreeDelivery = deliveryFee === 0;
+                const deliveryTimeLabel =
+                  deliveryEstimate?.estimatedMinutes != null
+                    ? `${deliveryEstimate.estimatedMinutes} min`
+                    : isDeliveryEstimateLoading
+                      ? '...'
+                      : 'N/A';
+                const deliveryFeeLabel =
+                  deliveryFee != null
+                    ? isFreeDelivery
+                      ? 'Free'
+                      : formatCurrency(deliveryFee)
+                    : isDeliveryEstimateLoading
+                      ? '...'
+                      : 'Unavailable';
 
                 return (
                   <TouchableOpacity
@@ -257,7 +294,7 @@ export function HomeScreen() {
                           ({restaurant.reviewCount || 0}+)
                         </Text>
                       </View>
-                      {restaurant.deliveryFee === 0 && (
+                      {isFreeDelivery && (
                         <View className="absolute top-3 left-3 bg-primary px-2.5 py-1 rounded-lg shadow-md">
                           <Text className="text-on-primary font-inter text-xs font-bold uppercase tracking-wider">
                             Free Delivery
@@ -284,12 +321,12 @@ export function HomeScreen() {
                         <View className="flex-row items-center gap-1.5 bg-surface-container px-2.5 py-1.5 rounded-lg">
                           <Clock size={16} color="#1a1c1c" />
                           <Text className="font-inter text-xs font-semibold text-on-surface">
-                            {restaurant.deliveryTime || '20-30'} min
+                            {deliveryTimeLabel}
                           </Text>
                         </View>
                         <View
                           className={`flex-row items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${
-                            restaurant.deliveryFee === 0
+                            isFreeDelivery
                               ? 'bg-primary/10'
                               : 'bg-surface-container'
                           }`}
@@ -297,21 +334,17 @@ export function HomeScreen() {
                           <Truck
                             size={16}
                             color={
-                              restaurant.deliveryFee === 0
-                                ? '#00490e'
-                                : '#1a1c1c'
+                              isFreeDelivery ? '#00490e' : '#1a1c1c'
                             }
                           />
                           <Text
                             className={`font-inter text-xs font-bold ${
-                              restaurant.deliveryFee === 0
+                              isFreeDelivery
                                 ? 'text-primary'
                                 : 'text-on-surface'
                             }`}
                           >
-                            {restaurant.deliveryFee === 0
-                              ? 'Free'
-                              : `$${restaurant.deliveryFee} Delivery`}
+                            {deliveryFeeLabel}
                           </Text>
                         </View>
                       </View>

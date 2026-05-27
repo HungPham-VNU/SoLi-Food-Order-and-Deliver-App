@@ -36,3 +36,27 @@ export interface MenuOverview {
   outOfStockItems: number;
   categories: MenuCategory[];
 }
+
+export interface ModifierOption {
+  id: string;
+  groupId: string;
+  name: string;
+  price: number;
+  isDefault: boolean;
+  displayOrder: number;
+  isAvailable: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ModifierGroup {
+  id: string;
+  menuItemId: string;
+  name: string;
+  minSelections: number;
+  maxSelections: number;
+  displayOrder: number;
+  options: ModifierOption[];
+  createdAt: string;
+  updatedAt: string;
+}

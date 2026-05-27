@@ -16,11 +16,11 @@ export function useMyRestaurant() {
   return useQuery({
     queryKey: restaurantKeys.mine(),
     queryFn: async () => {
-      // Workaround for Issue #1: no /restaurants/mine endpoint.
-      // Fetch first page and find by ownerId. Sufficient for single-owner context.
-      const response = await restaurantApi.getAll({ limit: 50 });
-      const mine = response.data.data.find((r) => r.ownerId === userId);
-      return mine ?? null;
+      // Uses GET /restaurants/my which returns the caller's restaurant of
+      // ANY approval status — important so pending submissions surface here
+      // (the public /restaurants endpoint filters by approvedOnly).
+      const response = await restaurantApi.getMine();
+      return response.data ?? null;
     },
     enabled: !!userId,
     staleTime: 60_000,

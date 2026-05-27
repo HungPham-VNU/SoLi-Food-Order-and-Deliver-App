@@ -79,6 +79,7 @@ export function CartScreen({
 
   const cartItems: CartItem[] = (cart?.items || []).map((item) => ({
     id: item.cartItemId,
+    menuItemId: item.menuItemId,
     name: item.itemName,
     price: item.unitPrice,
     quantity: item.quantity,
@@ -155,6 +156,13 @@ export function CartScreen({
     [removeItem, isMutating],
   );
 
+  const handleItemPress = useCallback((menuItemId: string) => {
+    router.push({
+      pathname: '/restaurant/menu-item/[id]',
+      params: { id: menuItemId },
+    });
+  }, []);
+
   const handleBack = () => {
     if (onBack) {
       onBack();
@@ -212,7 +220,13 @@ export function CartScreen({
       />
 
       {/* ── Floating Header ──────────────────────────────────────────────────── */}
-      <CartHeader insetsTop={insets.top} onBack={handleBack} />
+      <CartHeader
+        insetsTop={insets.top}
+        onBack={handleBack}
+        restaurantName={cart?.restaurantName}
+        distanceKm={estimate?.distanceKm}
+        estimatedMinutes={estimate?.estimatedMinutes}
+      />
 
       {/* ── Body ─────────────────────────────────────────────────────────────── */}
       {!cart || cart.items.length === 0 ? (
@@ -242,6 +256,7 @@ export function CartScreen({
               <CartItemCard
                 key={item.id}
                 item={item}
+                onPress={handleItemPress}
                 onIncrement={handleIncrement}
                 onDecrement={handleDecrement}
                 onRemove={handleRemove}

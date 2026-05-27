@@ -1,6 +1,7 @@
 import { Fragment } from 'react';
 import { Link, Outlet, useMatches } from 'react-router-dom';
 import { AppSidebar } from '@/components/layout/AppSidebar';
+import { TopNavActions } from '@/components/layout/TopNavActions';
 import {
   SidebarProvider,
   SidebarInset,
@@ -43,7 +44,7 @@ export function MainLayout() {
       <SidebarInset className="bg-background min-w-0">
         <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background">
           <SidebarTrigger className="-ml-1" />
-          <div className="w-full flex-1 overflow-hidden">
+          <div className="flex-1 min-w-0 overflow-hidden">
             <Breadcrumb>
               <BreadcrumbList>
                 {breadcrumbs.map((breadcrumb) => (
@@ -66,6 +67,7 @@ export function MainLayout() {
               </BreadcrumbList>
             </Breadcrumb>
           </div>
+          <TopNavActions />
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-auto">
           <Outlet />

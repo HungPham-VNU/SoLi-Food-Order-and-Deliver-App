@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/src/lib/api-client';
 import {
   Restaurant,
@@ -33,6 +33,25 @@ const buildSearchQuery = (
         `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`,
     )
     .join('&');
+
+const buildDeliveryEstimateEndpoint = (
+  restaurantId: string,
+  lat: number,
+  lon: number,
+) => {
+  const queryString = buildSearchQuery({ lat, lon });
+  return `/api/restaurants/${restaurantId}/delivery-zones/delivery-estimate?${queryString}`;
+};
+
+export function fetchDeliveryEstimate(
+  restaurantId: string,
+  lat: number,
+  lon: number,
+) {
+  return apiFetch<DeliveryEstimateResponse>(
+    buildDeliveryEstimateEndpoint(restaurantId, lat, lon),
+  );
+}
 
 export const menuKeys = {
   all: ['menu-items'] as const,
@@ -142,11 +161,28 @@ export function useDeliveryEstimate(
 
   return useQuery({
     queryKey,
-    queryFn: () =>
-      apiFetch<DeliveryEstimateResponse>(
-        `/api/restaurants/${restaurantId}/delivery-zones/delivery-estimate?lat=${lat}&lon=${lon}`,
-      ),
+    queryFn: () => fetchDeliveryEstimate(restaurantId!, lat!, lon!),
     enabled: !!restaurantId && hasCoords,
+    retry: false,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+}
+
+export function useDeliveryEstimates(
+  restaurantIds: readonly string[],
+  lat: number | null,
+  lon: number | null,
+) {
+  const hasCoords = lat !== null && lon !== null;
+  const queries = hasCoords
+    ? restaurantIds.map((restaurantId) => ({
+        queryKey: restaurantKeys.estimate(restaurantId, lat, lon),
+        queryFn: () => fetchDeliveryEstimate(restaurantId, lat, lon),
+        enabled: !!restaurantId,
+        retry: false,
+        staleTime: 1000 * 60 * 5,
+      }))
+    : [];
+
+  return useQueries({ queries });
 }

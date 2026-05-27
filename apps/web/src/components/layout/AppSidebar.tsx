@@ -4,6 +4,8 @@ import {
   LayoutDashboard,
   ClipboardList,
   Utensils,
+  Map,
+  Settings,
   CircleHelp,
   LogOut,
 } from 'lucide-react';
@@ -20,23 +22,14 @@ import {
 import { signOut } from '@/lib/auth-client';
 import { resetAnalyticsIdentity } from '@/lib/analytics';
 import { Sentry } from '@/lib/observability';
+import { useLogout } from '@/features/auth/hooks/useLogout';
 
-const mainNavItems = [
-  {
-    title: 'Dashboard',
-    url: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'Orders',
-    url: '/orders',
-    icon: ClipboardList,
-  },
-  {
-    title: 'Menu',
-    url: '/menu',
-    icon: Utensils,
-  },
+const navItems = [
+  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+  { title: 'Orders', url: '/orders', icon: ClipboardList },
+  { title: 'Menu', url: '/menu', icon: Utensils },
+  { title: 'Delivery Zones', url: '/delivery-zones', icon: Map },
+  { title: 'Settings', url: '/settings', icon: Settings },
 ];
 
 const footerNavItems = [
@@ -70,7 +63,7 @@ export function AppSidebar() {
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-bold leading-tight text-primary">
-              Harvest Kitchen
+              SoLi Food
             </span>
             <span className="text-[10px] font-bold tracking-wider text-muted-foreground">
               MANAGEMENT PORTAL
@@ -81,7 +74,7 @@ export function AppSidebar() {
 
       <SidebarContent className="px-4">
         <SidebarMenu className="gap-1">
-          {mainNavItems.map((item) => {
+          {navItems.map((item) => {
             const isActive = location.pathname.startsWith(item.url);
             return (
               <SidebarMenuItem key={item.title}>
@@ -136,6 +129,28 @@ export function AppSidebar() {
             >
               <LogOut className="text-error" />
               <span className="text-error">Logout</span>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              className="text-on-surface-variant hover:bg-surface-container"
+            >
+              <Link to={helpItem.url} className="flex items-center gap-3">
+                <helpItem.icon className="text-on-surface-variant" />
+                <span className="font-medium">{helpItem.title}</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={logout}
+              disabled={isLoggingOut}
+              className="text-error hover:bg-error/10 hover:text-error focus-visible:text-error active:text-error disabled:opacity-50"
+            >
+              <LogOut className="text-error" />
+              <span className="font-medium text-error">
+                {isLoggingOut ? 'Logging out…' : 'Logout'}
+              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

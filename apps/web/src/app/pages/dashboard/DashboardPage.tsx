@@ -1,5 +1,11 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  useMyRestaurant,
+  useUpdateRestaurant,
+} from '@/features/restaurant/hooks/useRestaurants';
+import { useOrderCounts } from '@/features/dashboard/hooks/useOrderCounts';
+import { useApiConnectivity } from '@/features/dashboard/hooks/useApiConnectivity';
 
 const LOAD_BARS = [40, 60, 55, 80, 95, 70, 45, 30];
 
@@ -29,10 +35,27 @@ const STAFF = [
   },
 ];
 
+const PAD2 = (n: number) => String(n).padStart(2, '0');
+
 export function DashboardPage() {
-  const [isOpen, setIsOpen] = useState(true);
+  const { data: restaurant, isLoading: loadingRestaurant } = useMyRestaurant();
+  const { mutate: updateRestaurant, isPending: updatingStore } =
+    useUpdateRestaurant();
+
+  const { inProgress, readyForPickup, urgentReady, isLoading: loadingOrders } =
+    useOrderCounts();
+
+  const { status: apiStatus, pingMs } = useApiConnectivity();
+
   const [muted, setMuted] = useState(false);
   const [alertDismissed, setAlertDismissed] = useState(false);
+
+  const isOpen = restaurant?.isOpen ?? false;
+  const toggleStoreStatus = (next: boolean) => {
+    if (!restaurant) return;
+    if (next === restaurant.isOpen) return;
+    updateRestaurant({ id: restaurant.id, data: { isOpen: next } });
+  };
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto w-full">
@@ -49,7 +72,9 @@ export function DashboardPage() {
             <div>
               <h2 className="text-xl font-extrabold text-on-surface">Store Status</h2>
               <p className="text-sm text-on-surface-variant">
-                {isOpen
+                {loadingRestaurant
+                  ? 'Loading…'
+                  : isOpen
                   ? 'Currently accepting orders through all channels.'
                   : 'Store is closed. Not accepting new orders.'}
               </p>
@@ -57,8 +82,9 @@ export function DashboardPage() {
           </div>
           <div className="flex items-center gap-3 p-1.5 bg-surface-container rounded-full">
             <button
-              onClick={() => setIsOpen(true)}
-              className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all ${
+              onClick={() => toggleStoreStatus(true)}
+              disabled={updatingStore || loadingRestaurant}
+              className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all disabled:opacity-50 ${
                 isOpen
                   ? 'bg-primary text-white shadow-md'
                   : 'text-on-surface-variant hover:bg-surface-container-high'
@@ -67,8 +93,9 @@ export function DashboardPage() {
               Open
             </button>
             <button
-              onClick={() => setIsOpen(false)}
-              className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all ${
+              onClick={() => toggleStoreStatus(false)}
+              disabled={updatingStore || loadingRestaurant}
+              className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all disabled:opacity-50 ${
                 !isOpen
                   ? 'bg-primary text-white shadow-md'
                   : 'text-on-surface-variant hover:bg-surface-container-high'
@@ -108,10 +135,12 @@ export function DashboardPage() {
               </button>
             </div>
           </div>
-          {!alertDismissed ? (
+          {!alertDismissed && urgentReady > 0 ? (
             <div className="flex items-center gap-3 px-4 py-3 bg-error-container/20 rounded-2xl border border-error/10">
               <span className="material-symbols-outlined text-error">campaign</span>
-              <span className="text-sm font-semibold text-error">New Order Received!</span>
+              <span className="text-sm font-semibold text-error">
+                {urgentReady} order{urgentReady > 1 ? 's' : ''} waiting &gt; 10 min
+              </span>
               <button
                 onClick={() => setAlertDismissed(true)}
                 className="ml-auto text-xs font-bold uppercase underline text-error"
@@ -137,12 +166,14 @@ export function DashboardPage() {
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-on-primary-container/70">
               In Progress
             </span>
-            <h3 className="text-4xl font-black text-on-primary-container mt-1">12</h3>
+            <h3 className="text-4xl font-black text-on-primary-container mt-1">
+              {loadingOrders ? '—' : PAD2(inProgress)}
+            </h3>
             <p className="text-sm font-medium text-on-primary-container/80">Preparing now</p>
           </div>
           <div className="z-10 relative flex items-center gap-2">
             <span className="text-xs font-bold py-1 px-3 bg-on-primary-container/10 rounded-full text-on-primary-container">
-              Avg. 14 mins
+              Live count
             </span>
           </div>
           <span className="material-symbols-outlined absolute -right-4 -bottom-4 text-9xl text-on-primary-container/10 rotate-12 pointer-events-none">
@@ -156,12 +187,14 @@ export function DashboardPage() {
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-on-secondary-container/70">
               Outbound
             </span>
-            <h3 className="text-4xl font-black text-on-secondary-container mt-1">08</h3>
+            <h3 className="text-4xl font-black text-on-secondary-container mt-1">
+              {loadingOrders ? '—' : PAD2(readyForPickup)}
+            </h3>
             <p className="text-sm font-medium text-on-secondary-container/80">Ready for Pickup</p>
           </div>
           <div className="z-10 relative flex items-center gap-2">
             <span className="text-xs font-bold py-1 px-3 bg-on-secondary-container/10 rounded-full text-on-secondary-container">
-              3 urgent
+              {urgentReady > 0 ? `${urgentReady} urgent` : 'On track'}
             </span>
           </div>
           <span className="material-symbols-outlined absolute -right-4 -bottom-4 text-9xl text-on-secondary-container/10 -rotate-12 pointer-events-none">
@@ -178,13 +211,27 @@ export function DashboardPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-surface-container-low rounded-2xl">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-sm">sync_alt</span>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  apiStatus === 'connected'
+                    ? 'bg-primary/10 text-primary'
+                    : apiStatus === 'connecting'
+                    ? 'bg-secondary-container/40 text-on-secondary-container'
+                    : 'bg-error-container/40 text-error'
+                }`}>
+                  <span className="material-symbols-outlined text-sm">
+                    {apiStatus === 'connected' ? 'sync_alt' : apiStatus === 'connecting' ? 'sync' : 'sync_problem'}
+                  </span>
                 </div>
-                <span className="text-sm font-bold">WebSocket (Socket.io)</span>
+                <span className="text-sm font-bold">API Server</span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-black">
-                CONNECTED
+              <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                apiStatus === 'connected'
+                  ? 'bg-primary/10 text-primary'
+                  : apiStatus === 'connecting'
+                  ? 'bg-secondary-container/40 text-on-secondary-container'
+                  : 'bg-error-container/40 text-error'
+              }`}>
+                {apiStatus === 'connected' ? 'CONNECTED' : apiStatus === 'connecting' ? 'CONNECTING…' : 'OFFLINE'}
               </span>
             </div>
             <div className="flex items-center justify-between p-3 bg-surface-container-low rounded-2xl">
@@ -192,10 +239,10 @@ export function DashboardPage() {
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                   <span className="material-symbols-outlined text-sm">language</span>
                 </div>
-                <span className="text-sm font-bold">Network Stability</span>
+                <span className="text-sm font-bold">Network Latency</span>
               </div>
               <span className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-black">
-                98ms PING
+                {pingMs !== null ? `${pingMs}ms` : '— ms'}
               </span>
             </div>
           </div>
@@ -209,11 +256,9 @@ export function DashboardPage() {
         <div className="lg:col-span-2 bg-surface-container-lowest rounded-3xl overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
           <div className="p-6 flex justify-between items-center border-b border-surface-container">
             <h3 className="text-lg font-extrabold">Active Load Monitor</h3>
-            <div className="flex gap-2">
-              <span className="w-3 h-3 rounded-full bg-primary" />
-              <span className="w-3 h-3 rounded-full bg-surface-container-high" />
-              <span className="w-3 h-3 rounded-full bg-surface-container-high" />
-            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+              Demo data
+            </span>
           </div>
           <div className="p-8 aspect-[21/9] bg-gradient-to-b from-primary/5 to-transparent relative flex items-end gap-1">
             {LOAD_BARS.map((h, i) => (
@@ -229,7 +274,7 @@ export function DashboardPage() {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="px-4 py-2 bg-white/90 backdrop-blur shadow-xl rounded-2xl flex items-center gap-3 border border-primary/20">
                 <span className="material-symbols-outlined text-primary">trending_up</span>
-                <span className="text-sm font-bold">Peak capacity at 12:45 PM</span>
+                <span className="text-sm font-bold">Hourly load — analytics pending</span>
               </div>
             </div>
           </div>
@@ -237,9 +282,14 @@ export function DashboardPage() {
 
         {/* Staff Availability */}
         <div className="bg-surface-container-low rounded-3xl p-6 flex flex-col">
-          <h3 className="text-sm font-black uppercase tracking-widest text-on-surface-variant mb-6">
-            Staff Availability
-          </h3>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-sm font-black uppercase tracking-widest text-on-surface-variant">
+              Staff Availability
+            </h3>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+              Demo
+            </span>
+          </div>
           <div className="space-y-4 flex-1">
             {STAFF.map((member) => (
               <div
@@ -274,6 +324,7 @@ export function DashboardPage() {
           <Button
             variant="ghost"
             className="mt-6 w-full py-3 h-auto bg-surface-container-lowest text-primary text-xs font-black uppercase tracking-tighter rounded-2xl hover:bg-white transition-colors"
+            disabled
           >
             Assign Station
           </Button>

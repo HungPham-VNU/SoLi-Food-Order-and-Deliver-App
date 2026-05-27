@@ -11,7 +11,12 @@ export type OrderStatus =
   | 'refunded';
 
 export type PaymentMethod = 'cod' | 'vnpay';
-export type TriggeredByRole = 'customer' | 'restaurant' | 'shipper' | 'admin' | 'system';
+export type TriggeredByRole =
+  | 'customer'
+  | 'restaurant'
+  | 'shipper'
+  | 'admin'
+  | 'system';
 
 export interface OrderListItem {
   orderId: string;
@@ -87,6 +92,7 @@ export interface OrderDetail {
   estimatedDeliveryMinutes: number | null;
   note: string | null;
   paymentUrl: string | null;
+  subtotal?: number;
   deliveryAddress: DeliveryAddressResponse;
   shipperId: string | null;
   createdAt: string;
