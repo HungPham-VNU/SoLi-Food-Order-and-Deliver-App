@@ -22,18 +22,6 @@ services:
     restart: unless-stopped
     command: redis-server --save 60 1 --loglevel warning
 
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.123.0
-    container_name: food_order_otel_collector
-    command: ['--config=/etc/otelcol-contrib/config.yaml']
-    ports:
-      - '4317:4317'
-      - '4318:4318'
-      - '13133:13133'
-    volumes:
-      - ./infra/otel-collector/local.yaml:/etc/otelcol-contrib/config.yaml:ro
-    restart: unless-stopped
-
 volumes:
   food_order_db:
     driver: local

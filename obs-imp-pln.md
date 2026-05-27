@@ -50,7 +50,7 @@ Expo React Native App
 NestJS API
   ├── OpenTelemetry SDK: traces, metrics, resource attributes
   ├── Structured logger: application logs
-  └── OTLP exporter or OpenTelemetry Collector
+  └── OTLP HTTP exporters
         ↓
 Grafana Cloud
   ├── Traces
@@ -60,21 +60,9 @@ Grafana Cloud
   └── Alerts
 ```
 
-## Recommended telemetry flow
+## Telemetry flow
 
-For production, prefer this flow:
-
-```txt
-NestJS API
-  ↓
-OpenTelemetry SDK
-  ↓
-OpenTelemetry Collector
-  ↓
-Grafana Cloud OTLP endpoint
-```
-
-For a faster first implementation, direct export is acceptable:
+The API exports directly to Grafana Cloud:
 
 ```txt
 NestJS API
@@ -83,8 +71,6 @@ OpenTelemetry SDK
   ↓
 Grafana Cloud OTLP endpoint
 ```
-
-The Collector is recommended because it lets the team change observability vendors later without changing application code.
 
 ---
 
@@ -191,21 +177,14 @@ COMMIT_SHA=<git-commit-sha>
 
 ```env
 OTEL_SERVICE_NAME=project-api
-OTEL_EXPORTER_OTLP_ENDPOINT=<grafana-cloud-otlp-endpoint>
-OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic <base64-instance-id-and-token>
+GRAFANA_CLOUD_OTLP_ENDPOINT=<grafana-cloud-otlp-endpoint>
+GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID=<instance-id>
+GRAFANA_CLOUD_OTLP_TOKEN=<access-policy-token>
 OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production,service.version=1.0.0,commit.sha=<git-commit-sha>
 OTEL_TRACES_EXPORTER=otlp
 OTEL_METRICS_EXPORTER=otlp
 OTEL_LOGS_EXPORTER=otlp
 ```
-
-If using an OpenTelemetry Collector, the app should point to the Collector instead of Grafana Cloud directly:
-
-```env
-OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-```
-
-The Collector will then forward telemetry to Grafana Cloud.
 
 ## Sentry web
 
@@ -258,7 +237,7 @@ EXPO_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 4. Add service metadata.
 5. Enable auto-instrumentation where stable.
 6. Add custom spans for important business operations.
-7. Configure OTLP export to Grafana Cloud or the Collector.
+7. Configure direct OTLP export to Grafana Cloud.
 8. Add structured logging.
 9. Add a `/health` endpoint for uptime checks.
 
@@ -355,36 +334,24 @@ Never log:
 
 ---
 
-# 6. OpenTelemetry Collector
+# 6. Direct Grafana Cloud OTLP Export
 
 ## Recommendation
 
-Use direct OTLP export first if the team needs speed.
+Use the OpenTelemetry Node SDK in the API and export OTLP HTTP telemetry
+directly to Grafana Cloud. The API owns exporter endpoint selection and Basic
+auth header creation from environment variables.
 
-Add the Collector before production hardening or before sending telemetry from multiple services.
+## Configuration
 
-## Why use a Collector
+Direct export requires:
 
-The Collector provides:
+- `GRAFANA_CLOUD_OTLP_ENDPOINT`
+- `GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID`
+- `GRAFANA_CLOUD_OTLP_TOKEN`
 
-- vendor portability
-- batching
-- retries
-- sampling
-- filtering
-- data redaction
-- centralized exporter configuration
-- easier migration from Grafana Cloud to another backend
-
-## Minimal Collector responsibilities
-
-The Collector should:
-
-- receive OTLP over HTTP and/or gRPC
-- batch telemetry
-- add or normalize resource attributes
-- forward data to Grafana Cloud
-- optionally drop noisy telemetry
+The endpoint should be the Grafana Cloud OTLP gateway URL, usually ending in
+`/otlp`. The API appends the signal path for traces, metrics, and logs.
 
 ## Sampling
 

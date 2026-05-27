@@ -52,6 +52,40 @@ function parseKeyValueList(value: string | undefined): Record<string, string> {
   );
 }
 
+function hasHeader(headers: Record<string, string>, name: string): boolean {
+  const normalizedName = name.toLowerCase();
+  return Object.keys(headers).some(
+    (key) => key.toLowerCase() === normalizedName,
+  );
+}
+
+function buildGrafanaCloudAuthorizationHeader(
+  usernameOrInstanceId: string,
+  token: string,
+): string {
+  return `Basic ${Buffer.from(
+    `${usernameOrInstanceId}:${token}`,
+    'utf8',
+  ).toString('base64')}`;
+}
+
+function buildExporterHeaders(config: typeof env): Record<string, string> {
+  const headers = parseKeyValueList(config.OTEL_EXPORTER_OTLP_HEADERS);
+
+  if (
+    config.GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID &&
+    config.GRAFANA_CLOUD_OTLP_TOKEN &&
+    !hasHeader(headers, 'authorization')
+  ) {
+    headers.Authorization = buildGrafanaCloudAuthorizationHeader(
+      config.GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID,
+      config.GRAFANA_CLOUD_OTLP_TOKEN,
+    );
+  }
+
+  return headers;
+}
+
 function otlpUrl(
   endpoint: string,
   signalPath: '/v1/traces' | '/v1/metrics' | '/v1/logs',
@@ -73,10 +107,16 @@ function isHealthRequest(url?: string | null): boolean {
   return isHealthPath(path);
 }
 
-const otlpEndpoint = env.OTEL_EXPORTER_OTLP_ENDPOINT?.trim();
+const otlpEndpoint = (
+  env.OTEL_EXPORTER_OTLP_ENDPOINT ?? env.GRAFANA_CLOUD_OTLP_ENDPOINT
+)?.trim();
 const tracesEnabled = env.OTEL_TRACES_EXPORTER.toLowerCase() !== 'none';
 const metricsEnabled = env.OTEL_METRICS_EXPORTER.toLowerCase() !== 'none';
 const logsEnabled = env.OTEL_LOGS_EXPORTER.toLowerCase() !== 'none';
+
+if (otlpEndpoint) {
+  process.env.OTEL_EXPORTER_OTLP_ENDPOINT ??= otlpEndpoint;
+}
 
 if (
   otlpEndpoint?.match(/:4317(\/|$)/) &&
@@ -101,7 +141,7 @@ if (otlpEndpoint && (tracesEnabled || metricsEnabled || logsEnabled)) {
     process.env.OTEL_EXPORTER_OTLP_HEADERS = env.OTEL_EXPORTER_OTLP_HEADERS;
   }
 
-  const exporterHeaders = parseKeyValueList(env.OTEL_EXPORTER_OTLP_HEADERS);
+  const exporterHeaders = buildExporterHeaders(env);
 
   sdk = new NodeSDK({
     resource: resourceFromAttributes({

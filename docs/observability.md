@@ -3,7 +3,7 @@
 UITFood uses a production MVP observability setup:
 
 - Sentry captures API, web, and mobile exceptions with release/environment tags.
-- OpenTelemetry exports API traces and metrics to an OTLP HTTP collector when configured.
+- OpenTelemetry exports API traces, metrics, and logs directly to Grafana Cloud over OTLP HTTP when configured.
 - The API emits JSON logs with request IDs, trace IDs, route, status, duration, and safe context.
 - Render health checks use API readiness and web container liveness endpoints.
 
@@ -18,7 +18,9 @@ SENTRY_RELEASE=sha-<git-sha>
 SENTRY_TRACES_SAMPLE_RATE=0.1
 
 OTEL_SERVICE_NAME=uitfood-api
-OTEL_EXPORTER_OTLP_ENDPOINT=
+GRAFANA_CLOUD_OTLP_ENDPOINT=https://otlp-gateway-prod-REGION.grafana.net/otlp
+GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID=<instance-id>
+GRAFANA_CLOUD_OTLP_TOKEN=<access-policy-token>
 OTEL_TRACES_SAMPLER=parentbased_traceidratio
 OTEL_TRACES_SAMPLER_ARG=0.1
 LOG_LEVEL=info
@@ -49,7 +51,7 @@ CI variables and secrets:
 - `SENTRY_WEB_PROJECT` and `SENTRY_MOBILE_PROJECT` as GitHub variables.
 - `VITE_SENTRY_DSN`, `EXPO_PUBLIC_SENTRY_DSN`, and sample-rate variables as GitHub variables.
 
-If DSNs are empty, Sentry is disabled. If `OTEL_EXPORTER_OTLP_ENDPOINT` is empty, API OTLP export is disabled while JSON logs and request IDs remain active.
+If DSNs are empty, Sentry is disabled. If neither `OTEL_EXPORTER_OTLP_ENDPOINT` nor `GRAFANA_CLOUD_OTLP_ENDPOINT` is set, API OTLP export is disabled while JSON logs and request IDs remain active.
 
 ## Health Checks
 

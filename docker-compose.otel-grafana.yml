@@ -1,9 +1,0 @@
-services:
-  otel-collector:
-    command: ['--config=/etc/otelcol-contrib/grafana-cloud.yaml']
-    environment:
-      GRAFANA_CLOUD_OTLP_ENDPOINT: ${GRAFANA_CLOUD_OTLP_ENDPOINT:?GRAFANA_CLOUD_OTLP_ENDPOINT is required}
-      GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID: ${GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID:?GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID is required}
-      GRAFANA_CLOUD_OTLP_TOKEN: ${GRAFANA_CLOUD_OTLP_TOKEN:?GRAFANA_CLOUD_OTLP_TOKEN is required}
-    volumes:
-      - ./infra/otel-collector/grafana-cloud.yaml:/etc/otelcol-contrib/grafana-cloud.yaml:ro

@@ -63,6 +63,12 @@ projects:
                 sync: false
               - key: OTEL_EXPORTER_OTLP_HEADERS
                 sync: false
+              - key: GRAFANA_CLOUD_OTLP_ENDPOINT
+                sync: false
+              - key: GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID
+                sync: false
+              - key: GRAFANA_CLOUD_OTLP_TOKEN
+                sync: false
               - key: OTEL_RESOURCE_ATTRIBUTES
                 sync: false
               - key: OTEL_TRACES_EXPORTER
