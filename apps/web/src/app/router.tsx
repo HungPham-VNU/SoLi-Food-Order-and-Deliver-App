@@ -1,3 +1,4 @@
+import { withFaroRouterInstrumentation } from '@grafana/faro-react';
 import { createBrowserRouter } from 'react-router-dom';
 import { RegisterPage } from '@/app/pages/auth/register/RegisterPage';
 import { RegisterLocationPage } from '@/app/pages/auth/register/RegisterBusinessPage';
@@ -17,7 +18,7 @@ import { RequireAuth } from '@/components/auth/RequireAuth';
 import { RequireRestaurantAccess } from '@/components/auth/RequireRestaurantAccess';
 import { RootRedirect } from '@/components/auth/RootRedirect';
 
-export const router = createBrowserRouter([
+export const router = withFaroRouterInstrumentation(createBrowserRouter([
   {
     path: '/auth/register',
     element: <RegisterPage />,
@@ -106,4 +107,4 @@ export const router = createBrowserRouter([
       },
     ],
   },
-]);
+]));
