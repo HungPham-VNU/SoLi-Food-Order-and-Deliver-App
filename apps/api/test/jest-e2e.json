@@ -2,6 +2,8 @@
   "preset": "ts-jest/presets/default-esm",
   "extensionsToTreatAsEsm": [".ts"],
   "rootDir": ".",
+  "cache": false,
+  "cacheDirectory": "<rootDir>/.jest-cache",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "moduleNameMapper": {
