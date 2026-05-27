@@ -67,7 +67,7 @@ export function PromotionsPage() {
   const [filter, setFilter] = useState<FilterId>('all');
   const { data, isLoading } = usePromotions({ limit: 100 });
 
-  const promotions = data?.items ?? [];
+  const promotions = useMemo(() => data?.items ?? [], [data?.items]);
 
   const counts = useMemo(() => {
     const c: Record<FilterId, number> = {

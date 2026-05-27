@@ -74,7 +74,7 @@ export function UsersPage() {
     sortDirection: 'desc',
   });
 
-  const users = data?.users ?? [];
+  const users = useMemo(() => data?.users ?? [], [data?.users]);
   const total = data?.total ?? 0;
 
   const filtered = useMemo(() => {

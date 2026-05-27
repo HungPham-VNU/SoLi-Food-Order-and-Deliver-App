@@ -60,7 +60,9 @@ import { runObserved } from '@/observability/trace';
 @WebSocketGateway({
   namespace: '/notifications',
   cors: {
-    origin: (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174')
+    origin: (
+      process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174'
+    )
       .split(',')
       .map((o) => o.trim()),
     credentials: true,
