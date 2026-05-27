@@ -64,7 +64,9 @@ export interface CreatePromotionDto {
   endsAt: string;
 }
 
-export interface UpdatePromotionDto extends Partial<Omit<CreatePromotionDto, 'type' | 'scope' | 'trigger'>> {}
+export type UpdatePromotionDto = Partial<
+  Omit<CreatePromotionDto, 'type' | 'scope' | 'trigger'>
+>;
 
 export const promotionsApi = {
   list: (params?: {

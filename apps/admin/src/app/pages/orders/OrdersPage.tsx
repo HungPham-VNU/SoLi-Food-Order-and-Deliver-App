@@ -67,7 +67,7 @@ export function OrdersPage() {
   );
 
   const { data, isLoading } = useOrders(filters);
-  const orders = data?.data ?? [];
+  const orders = useMemo(() => data?.data ?? [], [data?.data]);
   const total = data?.total ?? 0;
 
   const filtered = useMemo(() => {

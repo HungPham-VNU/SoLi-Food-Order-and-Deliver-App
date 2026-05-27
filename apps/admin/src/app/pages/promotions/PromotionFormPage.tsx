@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -24,6 +24,7 @@ import {
 } from '@/features/promotions/hooks/usePromotions';
 import type {
   CreatePromotionDto,
+  Promotion,
   PromotionScope,
   PromotionTrigger,
   PromotionType,
@@ -71,46 +72,79 @@ function defaultEndsAt(): string {
 export function PromotionFormPage() {
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
+  const { data: existing, isLoading: loadingExisting } = usePromotion(id ?? null);
+
+  if (isEdit && loadingExisting) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <span className="material-symbols-outlined animate-spin text-primary text-3xl">
+          progress_activity
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <PromotionFormContent
+      key={existing?.id ?? 'new'}
+      id={id ?? null}
+      existing={existing ?? null}
+    />
+  );
+}
+
+function PromotionFormContent({
+  id,
+  existing,
+}: {
+  id: string | null;
+  existing: Promotion | null;
+}) {
+  const isEdit = !!id;
   const navigate = useNavigate();
   const createMutation = useCreatePromotion();
   const updateMutation = useUpdatePromotion();
   const activateMutation = useActivatePromotion();
-  const { data: existing, isLoading: loadingExisting } = usePromotion(id ?? null);
 
   // ---- form state ----
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [type, setType] = useState<PromotionType>('percentage');
-  const [scope, setScope] = useState<PromotionScope>('platform');
-  const [restaurantId, setRestaurantId] = useState('');
-  const [trigger, setTrigger] = useState<PromotionTrigger>('auto_apply');
-  const [stackingMode, setStackingMode] = useState<StackingMode>('non_stackable');
-  const [discountValue, setDiscountValue] = useState<string>('');
-  const [minOrderAmount, setMinOrderAmount] = useState<string>('');
-  const [maxDiscountAmount, setMaxDiscountAmount] = useState<string>('');
-  const [maxTotalUses, setMaxTotalUses] = useState<string>('');
-  const [maxUsesPerUser, setMaxUsesPerUser] = useState<string>('');
-  const [startsAt, setStartsAt] = useState<string>(defaultStartsAt());
-  const [endsAt, setEndsAt] = useState<string>(defaultEndsAt());
-
-  // Hydrate form when editing
-  useEffect(() => {
-    if (!existing) return;
-    setName(existing.name);
-    setDescription(existing.description ?? '');
-    setType(existing.type);
-    setScope(existing.scope);
-    setRestaurantId(existing.restaurantId ?? '');
-    setTrigger(existing.trigger);
-    setStackingMode(existing.stackingMode);
-    setDiscountValue(String(existing.discountValue));
-    setMinOrderAmount(existing.minOrderAmount ? String(existing.minOrderAmount) : '');
-    setMaxDiscountAmount(existing.maxDiscountAmount ? String(existing.maxDiscountAmount) : '');
-    setMaxTotalUses(existing.maxTotalUses ? String(existing.maxTotalUses) : '');
-    setMaxUsesPerUser(existing.maxUsesPerUser ? String(existing.maxUsesPerUser) : '');
-    setStartsAt(toLocalDateTimeInput(existing.startsAt));
-    setEndsAt(toLocalDateTimeInput(existing.endsAt));
-  }, [existing]);
+  const [name, setName] = useState(existing?.name ?? '');
+  const [description, setDescription] = useState(existing?.description ?? '');
+  const [type, setType] = useState<PromotionType>(
+    existing?.type ?? 'percentage',
+  );
+  const [scope, setScope] = useState<PromotionScope>(
+    existing?.scope ?? 'platform',
+  );
+  const [restaurantId, setRestaurantId] = useState(
+    existing?.restaurantId ?? '',
+  );
+  const [trigger, setTrigger] = useState<PromotionTrigger>(
+    existing?.trigger ?? 'auto_apply',
+  );
+  const [stackingMode, setStackingMode] = useState<StackingMode>(
+    existing?.stackingMode ?? 'non_stackable',
+  );
+  const [discountValue, setDiscountValue] = useState<string>(
+    existing ? String(existing.discountValue) : '',
+  );
+  const [minOrderAmount, setMinOrderAmount] = useState<string>(
+    existing?.minOrderAmount ? String(existing.minOrderAmount) : '',
+  );
+  const [maxDiscountAmount, setMaxDiscountAmount] = useState<string>(
+    existing?.maxDiscountAmount ? String(existing.maxDiscountAmount) : '',
+  );
+  const [maxTotalUses, setMaxTotalUses] = useState<string>(
+    existing?.maxTotalUses ? String(existing.maxTotalUses) : '',
+  );
+  const [maxUsesPerUser, setMaxUsesPerUser] = useState<string>(
+    existing?.maxUsesPerUser ? String(existing.maxUsesPerUser) : '',
+  );
+  const [startsAt, setStartsAt] = useState<string>(
+    existing ? toLocalDateTimeInput(existing.startsAt) : defaultStartsAt(),
+  );
+  const [endsAt, setEndsAt] = useState<string>(
+    existing ? toLocalDateTimeInput(existing.endsAt) : defaultEndsAt(),
+  );
 
   // ---- derived ----
   const isPercentage = type === 'percentage';
@@ -193,16 +227,6 @@ export function PromotionFormPage() {
   }
 
   const isSaving = createMutation.isPending || updateMutation.isPending || activateMutation.isPending;
-
-  if (isEdit && loadingExisting) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <span className="material-symbols-outlined animate-spin text-primary text-3xl">
-          progress_activity
-        </span>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-3xl mx-auto flex flex-col gap-6">

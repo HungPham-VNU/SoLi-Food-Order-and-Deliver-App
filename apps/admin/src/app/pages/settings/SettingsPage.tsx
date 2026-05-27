@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import {
   Settings,
   User,
@@ -84,28 +84,35 @@ function ProfileTab() {
   const { data: session } = useSession();
   const update = useUpdateProfile();
   const user = session?.user;
+  const userId = user?.id ?? null;
 
-  const [name, setName] = useState('');
-  const [image, setImage] = useState('');
+  const [draft, setDraft] = useState({
+    userId: null as string | null,
+    name: '',
+    image: '',
+  });
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      setName(user.name ?? '');
-      setImage(user.image ?? '');
-    }
-  }, [user]);
+  const profile =
+    draft.userId === userId
+      ? draft
+      : {
+          userId,
+          name: user?.name ?? '',
+          image: user?.image ?? '',
+        };
 
   const dirty =
     user != null &&
-    (name.trim() !== (user.name ?? '') || image.trim() !== (user.image ?? ''));
+    (profile.name.trim() !== (user.name ?? '') ||
+      profile.image.trim() !== (user.image ?? ''));
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!dirty) return;
     await update.mutateAsync({
-      name: name.trim(),
-      image: image.trim() || undefined,
+      name: profile.name.trim(),
+      image: profile.image.trim() || undefined,
     });
     setSavedAt(Date.now());
   }
@@ -120,9 +127,9 @@ function ProfileTab() {
         <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
         <div className="relative flex items-center gap-4">
           <Avatar className="h-16 w-16 ring-4 ring-primary/15 shadow-lg shadow-primary/10">
-            <AvatarImage src={image || user?.image || undefined} />
+            <AvatarImage src={profile.image || user?.image || undefined} />
             <AvatarFallback className="bg-gradient-to-br from-primary to-primary-700 text-primary-foreground text-xl font-bold">
-              {getInitials(name || user?.name || 'A')}
+              {getInitials(profile.name || user?.name || 'A')}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
@@ -153,8 +160,10 @@ function ProfileTab() {
           <Label htmlFor="name">Display name</Label>
           <Input
             id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={profile.name}
+            onChange={(e) =>
+              setDraft({ ...profile, name: e.target.value })
+            }
             placeholder="Your name"
             minLength={1}
           />
@@ -177,8 +186,10 @@ function ProfileTab() {
           <Label htmlFor="image">Avatar URL</Label>
           <Input
             id="image"
-            value={image}
-            onChange={(e) => setImage(e.target.value)}
+            value={profile.image}
+            onChange={(e) =>
+              setDraft({ ...profile, image: e.target.value })
+            }
             placeholder="https://…"
           />
           <p className="text-xs text-muted-foreground">

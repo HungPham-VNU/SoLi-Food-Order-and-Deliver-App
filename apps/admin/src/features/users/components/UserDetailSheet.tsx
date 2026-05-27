@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,22 +49,45 @@ export function UserDetailSheet({ user, onClose }: Props) {
   const banMutation = useBanUser();
   const unbanMutation = useUnbanUser();
   const removeMutation = useRemoveUser();
+  const userId = user?.id ?? null;
 
-  const [selectedRole, setSelectedRole] = useState<AppRole | null>(null);
-  const [banReason, setBanReason] = useState('');
-  const [banDurationIdx, setBanDurationIdx] = useState<number>(1); // default 7 days
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [roleDraft, setRoleDraft] = useState<{
+    userId: string | null;
+    role: AppRole | null;
+  }>({ userId: null, role: null });
+  const [actionDraft, setActionDraft] = useState({
+    userId: null as string | null,
+    banReason: '',
+    banDurationIdx: 1,
+    deleteConfirm: false,
+  });
 
-  // Hydrate role selector / reset local UI state when user changes.
-  useEffect(() => {
-    if (user) {
-      setSelectedRole(effectiveRole(user));
-    } else {
-      setSelectedRole(null);
-      setBanReason('');
-      setDeleteConfirm(false);
-    }
-  }, [user]);
+  const selectedRole =
+    roleDraft.userId === userId
+      ? roleDraft.role
+      : user
+        ? effectiveRole(user)
+        : null;
+  const actions =
+    actionDraft.userId === userId
+      ? actionDraft
+      : {
+          userId,
+          banReason: '',
+          banDurationIdx: 1,
+          deleteConfirm: false,
+        };
+  const updateActions = (patch: Partial<typeof actionDraft>) =>
+    setActionDraft({ ...actions, ...patch });
+  const resetLocalState = () => {
+    setRoleDraft({ userId: null, role: null });
+    setActionDraft({
+      userId: null,
+      banReason: '',
+      banDurationIdx: 1,
+      deleteConfirm: false,
+    });
+  };
 
   async function handleSaveRole() {
     if (!user || !selectedRole || selectedRole === effectiveRole(user)) return;
@@ -73,13 +96,13 @@ export function UserDetailSheet({ user, onClose }: Props) {
 
   async function handleBan() {
     if (!user) return;
-    const duration = BAN_DURATIONS[banDurationIdx];
+    const duration = BAN_DURATIONS[actions.banDurationIdx];
     await banMutation.mutateAsync({
       userId: user.id,
-      banReason: banReason.trim() || undefined,
+      banReason: actions.banReason.trim() || undefined,
       banExpiresIn: duration.seconds ?? undefined,
     });
-    setBanReason('');
+    updateActions({ banReason: '' });
   }
 
   async function handleUnban() {
@@ -90,11 +113,20 @@ export function UserDetailSheet({ user, onClose }: Props) {
   async function handleDelete() {
     if (!user) return;
     await removeMutation.mutateAsync(user.id);
+    resetLocalState();
     onClose();
   }
 
   return (
-    <Sheet open={!!user} onOpenChange={(open) => !open && onClose()}>
+    <Sheet
+      open={!!user}
+      onOpenChange={(open) => {
+        if (!open) {
+          resetLocalState();
+          onClose();
+        }
+      }}
+    >
       <SheetContent
         className="overflow-y-auto p-0 flex flex-col"
         style={{ width: '520px', maxWidth: '520px' }}
@@ -180,7 +212,7 @@ export function UserDetailSheet({ user, onClose }: Props) {
                         <button
                           key={r}
                           type="button"
-                          onClick={() => setSelectedRole(r)}
+                          onClick={() => setRoleDraft({ userId, role: r })}
                           className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
                             active
                               ? 'border-primary bg-primary-50/40 text-primary ring-1 ring-primary'
@@ -250,12 +282,12 @@ export function UserDetailSheet({ user, onClose }: Props) {
                       <Label className="text-xs">Duration</Label>
                       <div className="grid grid-cols-4 gap-2 mt-1.5">
                         {BAN_DURATIONS.map((d, i) => {
-                          const active = banDurationIdx === i;
+                          const active = actions.banDurationIdx === i;
                           return (
                             <button
                               key={d.label}
                               type="button"
-                              onClick={() => setBanDurationIdx(i)}
+                              onClick={() => updateActions({ banDurationIdx: i })}
                               className={`rounded-md border px-2 py-1.5 text-xs font-medium transition-colors ${
                                 active
                                   ? 'border-red-400 bg-red-50 text-red-700'
@@ -275,8 +307,10 @@ export function UserDetailSheet({ user, onClose }: Props) {
                       </Label>
                       <Input
                         id="banReason"
-                        value={banReason}
-                        onChange={(e) => setBanReason(e.target.value)}
+                        value={actions.banReason}
+                        onChange={(e) =>
+                          updateActions({ banReason: e.target.value })
+                        }
                         placeholder="e.g. Violation of Terms of Service"
                         className="mt-1.5"
                       />
@@ -307,11 +341,11 @@ export function UserDetailSheet({ user, onClose }: Props) {
                     </p>
                   </div>
 
-                  {!deleteConfirm ? (
+                  {!actions.deleteConfirm ? (
                     <Button
                       variant="outline"
                       className="w-full gap-2 border-red-300 text-red-700 hover:bg-red-100"
-                      onClick={() => setDeleteConfirm(true)}
+                      onClick={() => updateActions({ deleteConfirm: true })}
                     >
                       <Trash2 className="h-4 w-4" />
                       Delete user
@@ -321,7 +355,7 @@ export function UserDetailSheet({ user, onClose }: Props) {
                       <Button
                         variant="outline"
                         className="flex-1"
-                        onClick={() => setDeleteConfirm(false)}
+                        onClick={() => updateActions({ deleteConfirm: false })}
                       >
                         Cancel
                       </Button>

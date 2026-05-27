@@ -243,7 +243,7 @@ export function RestaurantsPage() {
   const unapproveMutation = useUnapproveRestaurant();
   const deleteMutation = useDeleteRestaurant();
 
-  const restaurants = data?.data ?? [];
+  const restaurants = useMemo(() => data?.data ?? [], [data?.data]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return restaurants;
