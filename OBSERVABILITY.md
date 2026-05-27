@@ -50,6 +50,12 @@ If you prefer the standard OpenTelemetry header variable instead, set
 `OTEL_EXPORTER_OTLP_ENDPOINT` to the Grafana Cloud OTLP endpoint and
 `OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic%20<base64-instance-id-and-token>`.
 
+## Grafana Dashboard
+
+Import `infra/grafana/dashboards/uitfood-api-telemetry.json` in Grafana Cloud to
+view API metrics, logs, and traces in one place. See
+`docs/grafana-cloud-dashboard.md` for import steps and query troubleshooting.
+
 ## Privacy Defaults
 
 - Backend logs redact authorization, cookies, tokens, secrets, passwords, API keys, payment signatures, and IP-like fields.
