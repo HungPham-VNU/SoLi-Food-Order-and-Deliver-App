@@ -10,7 +10,7 @@ const OBSERVABILITY_HEADERS = [
 
 export function createCorsOptions(): CorsOptions {
   return {
-    origin: (process.env.CORS_ORIGIN || 'http://localhost:5173')
+    origin: (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174')
       .split(',')
       .map((origin) => origin.trim()),
     credentials: true,

@@ -256,12 +256,6 @@ export function useAddToCart() {
   return useMutation({
     mutationKey: cartKeys.mutation(),
     mutationFn: addItemToCart,
-    onSuccess: (_, variables) => {
-      trackMobileEvent('cart_item_added', {
-        menu_item_id: variables.menuItemId,
-        quantity: variables.quantity,
-      });
-      queryClient.invalidateQueries({ queryKey: cartKeys.all });
     onMutate: async (payload) => {
       const context = await snapshotCart(queryClient);
       queryClient.setQueryData<CartResponse | null>(cartKeys.myCart(), (cart) =>
@@ -272,7 +266,11 @@ export function useAddToCart() {
     onError: (_error, _payload, context) => {
       rollbackCart(queryClient, context);
     },
-    onSuccess: (cart) => {
+    onSuccess: (cart, variables) => {
+      trackMobileEvent('cart_item_added', {
+        menu_item_id: variables.menuItemId,
+        quantity: variables.quantity,
+      });
       syncCartFromServer(queryClient, cart);
     },
     onSettled: () => {

@@ -46,7 +46,7 @@ describe('Observability E2E', () => {
   it('CORS preflight allows observability headers', async () => {
     const res = await http
       .options('/api/live')
-      .set('Origin', 'http://localhost:5173')
+      .set('Origin', 'http://localhost:5174')
       .set('Access-Control-Request-Method', 'GET')
       .set(
         'Access-Control-Request-Headers',
