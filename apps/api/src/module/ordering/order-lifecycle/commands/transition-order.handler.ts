@@ -22,6 +22,7 @@ import { TRANSITIONS, type TransitionRule } from '../constants/transitions';
 import { OrderStatusChangedEvent } from '@/shared/events/order-status-changed.event';
 import { OrderReadyForPickupEvent } from '@/shared/events/order-ready-for-pickup.event';
 import { OrderCancelledAfterPaymentEvent } from '@/shared/events/order-cancelled-after-payment.event';
+import { runObserved } from '@/observability/trace';
 
 /**
  * TransitionOrderHandler
@@ -54,6 +55,18 @@ export class TransitionOrderHandler implements ICommandHandler<TransitionOrderCo
   ) {}
 
   async execute(cmd: TransitionOrderCommand): Promise<Order> {
+    return runObserved(
+      'order.status_update',
+      {
+        orderId: cmd.orderId,
+        toStatus: cmd.toStatus,
+        actorRole: cmd.actorRole,
+      },
+      () => this.executeTransition(cmd),
+    );
+  }
+
+  private async executeTransition(cmd: TransitionOrderCommand): Promise<Order> {
     const { orderId, toStatus, actorId, actorRole, note } = cmd;
 
     // -------------------------------------------------------------------------

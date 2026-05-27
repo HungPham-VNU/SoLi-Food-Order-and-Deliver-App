@@ -2,6 +2,7 @@ import type { LoggerService, LogLevel } from '@nestjs/common';
 import { trace } from '@opentelemetry/api';
 import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 import type { LogBody } from '@opentelemetry/api-logs';
+import { isOtelLogsEnabled } from './observability-config';
 import { toLogAttributes } from './otel-attributes';
 import { getRequestContext } from './request-context';
 import { redactString, redactValue } from './redaction';
@@ -115,7 +116,7 @@ export class JsonLogger implements LoggerService {
     record: Record<string, unknown>,
     body: unknown,
   ): void {
-    if ((process.env.OTEL_LOGS_EXPORTER ?? 'none').toLowerCase() === 'none') {
+    if (!isOtelLogsEnabled()) {
       return;
     }
 
@@ -143,7 +144,7 @@ export class JsonLogger implements LoggerService {
     }
 
     const first = extras[0];
-    if (typeof first === 'string') {
+    if (typeof first === 'string' && first.includes('\n')) {
       stack = first;
       extras.shift();
     }

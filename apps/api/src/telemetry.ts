@@ -1,3 +1,3 @@
-import { shutdownTelemetry } from './observability/instrumentation';
+import './observability/instrumentation';
 
-export { shutdownTelemetry };
+export { shutdownTelemetry } from './observability/instrumentation';

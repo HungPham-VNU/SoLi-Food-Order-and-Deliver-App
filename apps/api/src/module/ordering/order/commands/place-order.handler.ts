@@ -53,6 +53,7 @@ import {
   type IPromotionApplicationPort,
   type CartItemInput,
 } from '@/shared/ports/promotion-application.port';
+import { runObserved } from '@/observability/trace';
 
 /**
  * Local projection of a delivery zone — contains only the fields needed for
@@ -144,6 +145,18 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
   ) {}
 
   async execute(command: PlaceOrderCommand): Promise<Order> {
+    return runObserved(
+      'order.create',
+      {
+        customerId: command.customerId,
+        paymentMethod: command.paymentMethod,
+        hasCoupon: command.couponCode !== undefined,
+      },
+      () => this.executeOrder(command),
+    );
+  }
+
+  private async executeOrder(command: PlaceOrderCommand): Promise<Order> {
     const {
       customerId,
       deliveryAddress,

@@ -31,11 +31,13 @@ function safeProperties(properties: Properties = {}): Properties {
   );
 }
 
-export function initAnalytics(): void {
+export function initAnalytics(onLoaded?: () => void): void {
   if (initialized) return;
 
   const apiKey = import.meta.env.VITE_POSTHOG_KEY;
   if (!apiKey) return;
+
+  initialized = true;
 
   posthog.init(apiKey, {
     api_host: import.meta.env.VITE_POSTHOG_HOST ?? 'https://app.posthog.com',
@@ -44,10 +46,9 @@ export function initAnalytics(): void {
     autocapture: false,
     loaded: (client) => {
       client.register(appMetadata());
+      onLoaded?.();
     },
   });
-
-  initialized = true;
 }
 
 export function isAnalyticsEnabled(): boolean {

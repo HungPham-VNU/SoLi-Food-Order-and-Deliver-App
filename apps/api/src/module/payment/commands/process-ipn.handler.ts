@@ -77,8 +77,8 @@ export class ProcessIpnHandler implements ICommandHandler<ProcessIpnCommand> {
 
   async execute(command: ProcessIpnCommand): Promise<IpnResponse> {
     return runObserved(
-      'command.payment.process_ipn',
-      { 'payment.provider': 'vnpay' },
+      'payment.verify',
+      { 'payment.provider': 'vnpay', operation: 'ipn' },
       async () => {
         // -------------------------------------------------------------------------
         // Step 1: Verify HMAC SHA512 signature.

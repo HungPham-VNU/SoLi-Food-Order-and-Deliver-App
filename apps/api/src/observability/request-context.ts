@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { metrics, trace } from '@opentelemetry/api';
 import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 import type { NextFunction, Request, Response } from 'express';
+import { isHealthPath, isOtelLogsEnabled } from './observability-config';
 import { toLogAttributes } from './otel-attributes';
 import { redactHeaders } from './redaction';
 
@@ -50,10 +51,16 @@ function requestPath(req: Request): string {
   return (req.path || req.originalUrl || req.url || '').split('?')[0] || '/';
 }
 
-function isHealthPath(path: string): boolean {
-  return (
-    path === '/api/live' || path === '/api/ready' || path === '/api/health'
-  );
+function responseLogLevel(statusCode: number): 'error' | 'warn' | 'info' {
+  if (statusCode >= 500) return 'error';
+  if (statusCode >= 400) return 'warn';
+  return 'info';
+}
+
+function responseSeverity(statusCode: number): SeverityNumber {
+  if (statusCode >= 500) return SeverityNumber.ERROR;
+  if (statusCode >= 400) return SeverityNumber.WARN;
+  return SeverityNumber.INFO;
 }
 
 export function getRequestContext(): RequestContext | undefined {
@@ -82,6 +89,13 @@ export function requestContextMiddleware(
       'http.request.method': context.method,
       'url.path': context.path,
     };
+    let activeDecremented = false;
+
+    function decrementActiveRequests() {
+      if (activeDecremented) return;
+      activeDecremented = true;
+      activeRequests.add(-1, metricBase);
+    }
 
     activeRequests.add(1, metricBase);
 
@@ -93,7 +107,7 @@ export function requestContextMiddleware(
         'http.response.status_code': res.statusCode,
       };
 
-      activeRequests.add(-1, metricBase);
+      decrementActiveRequests();
 
       if (isHealthPath(context.path)) return;
 
@@ -104,7 +118,7 @@ export function requestContextMiddleware(
       }
 
       const record = {
-        level: res.statusCode >= 500 ? 'error' : 'info',
+        level: responseLogLevel(res.statusCode),
         timestamp: new Date().toISOString(),
         event: 'http.request',
         service: process.env.OTEL_SERVICE_NAME ?? 'uitfood-api',
@@ -127,11 +141,10 @@ export function requestContextMiddleware(
         }),
       };
 
-      if ((process.env.OTEL_LOGS_EXPORTER ?? 'none').toLowerCase() !== 'none') {
+      if (isOtelLogsEnabled()) {
         otelLogger.emit({
           eventName: 'http.request',
-          severityNumber:
-            res.statusCode >= 500 ? SeverityNumber.ERROR : SeverityNumber.INFO,
+          severityNumber: responseSeverity(res.statusCode),
           severityText: record.level,
           body: `${context.method} ${context.path} ${res.statusCode}`,
           attributes: toLogAttributes(record),
@@ -139,6 +152,10 @@ export function requestContextMiddleware(
       }
 
       console.log(JSON.stringify(record));
+    });
+
+    res.on('close', () => {
+      decrementActiveRequests();
     });
 
     next();

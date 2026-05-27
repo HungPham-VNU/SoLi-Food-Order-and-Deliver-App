@@ -4,11 +4,14 @@ import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 
+const sentryRelease =
+  process.env.VITE_SENTRY_RELEASE ?? process.env.VITE_APP_VERSION;
+
 const shouldUploadSourcemaps =
   !!process.env.SENTRY_AUTH_TOKEN &&
   !!process.env.SENTRY_ORG &&
   !!process.env.SENTRY_PROJECT &&
-  !!process.env.VITE_SENTRY_RELEASE;
+  !!sentryRelease;
 
 const plugins = [react(), tailwindcss()];
 
@@ -19,7 +22,7 @@ if (shouldUploadSourcemaps) {
       project: process.env.SENTRY_PROJECT,
       authToken: process.env.SENTRY_AUTH_TOKEN,
       release: {
-        name: process.env.VITE_SENTRY_RELEASE,
+        name: sentryRelease,
       },
       sourcemaps: {
         assets: './dist/**',

@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:18
+    image: postgres:17-alpine
     container_name: food_order_db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
@@ -23,7 +23,7 @@ services:
     command: redis-server --save 60 1 --loglevel warning
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
+    image: otel/opentelemetry-collector-contrib:0.123.0
     container_name: food_order_otel_collector
     command: ['--config=/etc/otelcol-contrib/config.yaml']
     ports:

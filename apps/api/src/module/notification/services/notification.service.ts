@@ -31,6 +31,7 @@ import type {
   UpdateNotificationPreferenceDto,
   NotificationPreferenceResponseDto,
 } from '../dto/preference.dto';
+import { runObserved } from '@/observability/trace';
 
 // ---------------------------------------------------------------------------
 // Input type for sendFromEvent
@@ -167,6 +168,22 @@ export class NotificationService {
    * the return value or propagate to the caller.
    */
   async sendFromEvent(params: SendFromEventParams): Promise<number> {
+    return runObserved(
+      'notification.send',
+      {
+        type: params.type,
+        recipientRole: params.recipientRole,
+        channelCount: params.channels.length,
+        channels: params.channels.join(','),
+        hasOrderId: params.orderId !== undefined,
+      },
+      () => this.sendFromEventInternal(params),
+    );
+  }
+
+  private async sendFromEventInternal(
+    params: SendFromEventParams,
+  ): Promise<number> {
     const {
       type,
       recipientId,

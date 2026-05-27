@@ -1,5 +1,6 @@
 import { SpanStatusCode, trace } from '@opentelemetry/api';
 import { logs, SeverityNumber } from '@opentelemetry/api-logs';
+import { isOtelLogsEnabled } from './observability-config';
 import { toLogAttributes } from './otel-attributes';
 import { redactValue } from './redaction';
 
@@ -65,7 +66,7 @@ export function recordException(
     attributes: safeAttributes,
   };
 
-  if ((process.env.OTEL_LOGS_EXPORTER ?? 'none').toLowerCase() !== 'none') {
+  if (isOtelLogsEnabled()) {
     otelLogger.emit({
       eventName: 'app.exception',
       severityNumber: SeverityNumber.ERROR,

@@ -101,4 +101,32 @@ describe('requestContextMiddleware', () => {
     expect(record.traceId).toBe(spanContext.traceId);
     expect(record.spanId).toBe(spanContext.spanId);
   });
+
+  it('logs client errors at warn level', () => {
+    const logSpy = jest
+      .spyOn(console, 'log')
+      .mockImplementation(() => undefined);
+    const response = new EventEmitter() as EventEmitter & {
+      statusCode: number;
+      setHeader: jest.Mock;
+    };
+    response.statusCode = 404;
+    response.setHeader = jest.fn();
+
+    const request = {
+      method: 'GET',
+      path: '/api/missing',
+      originalUrl: '/api/missing',
+      url: '/api/missing',
+      headers: {},
+    };
+
+    requestContextMiddleware(request as never, response as never, jest.fn());
+    response.emit('finish');
+
+    const record = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+      level?: string;
+    };
+    expect(record.level).toBe('warn');
+  });
 });

@@ -12,6 +12,7 @@ import {
   ATTR_SERVICE_VERSION,
 } from '@opentelemetry/semantic-conventions';
 import { validate } from '../config/env.schema';
+import { isHealthPath } from './observability-config';
 
 const env = validate(process.env);
 
@@ -69,15 +70,29 @@ function otlpUrl(
 
 function isHealthRequest(url?: string | null): boolean {
   const path = (url ?? '').split('?')[0];
-  return (
-    path === '/api/live' || path === '/api/ready' || path === '/api/health'
-  );
+  return isHealthPath(path);
 }
 
 const otlpEndpoint = env.OTEL_EXPORTER_OTLP_ENDPOINT?.trim();
 const tracesEnabled = env.OTEL_TRACES_EXPORTER.toLowerCase() !== 'none';
 const metricsEnabled = env.OTEL_METRICS_EXPORTER.toLowerCase() !== 'none';
 const logsEnabled = env.OTEL_LOGS_EXPORTER.toLowerCase() !== 'none';
+
+if (
+  otlpEndpoint?.match(/:4317(\/|$)/) &&
+  (tracesEnabled || metricsEnabled || logsEnabled)
+) {
+  console.warn(
+    JSON.stringify({
+      level: 'warn',
+      timestamp: new Date().toISOString(),
+      event: 'otel.endpoint_warning',
+      message:
+        'OTLP HTTP exporters are configured but endpoint uses port 4317 (gRPC). Use port 4318 for HTTP/protobuf.',
+      endpoint: otlpEndpoint,
+    }),
+  );
+}
 
 if (otlpEndpoint && (tracesEnabled || metricsEnabled || logsEnabled)) {
   process.env.OTEL_TRACES_SAMPLER = env.OTEL_TRACES_SAMPLER;

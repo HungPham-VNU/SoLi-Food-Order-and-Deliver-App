@@ -1,3 +1,4 @@
+import * as Crypto from 'expo-crypto';
 import * as Sentry from '@sentry/react-native';
 
 function numberFromEnv(value: string | undefined, fallback: number): number {
@@ -40,7 +41,7 @@ export function initMobileObservability(): void {
 }
 
 export function createRequestId(): string {
-  return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
+  return Crypto.randomUUID();
 }
 
 export function captureMobileException(

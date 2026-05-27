@@ -5,6 +5,7 @@ import { IPaymentInitiationPort } from '@/shared/ports/payment-initiation.port';
 import { VNPayService } from './vnpay.service';
 import { PaymentTransactionRepository } from '../repositories/payment-transaction.repository';
 import type { PaymentTransaction } from '../domain/payment-transaction.schema';
+import { runObserved } from '@/observability/trace';
 
 /**
  * PaymentService
@@ -55,6 +56,25 @@ export class PaymentService implements IPaymentInitiationPort {
    * @inheritdoc IPaymentInitiationPort.initiateVNPayPayment
    */
   async initiateVNPayPayment(
+    orderId: string,
+    customerId: string,
+    amount: number,
+    ipAddr: string,
+  ): Promise<{ txnId: string; paymentUrl: string }> {
+    return runObserved(
+      'payment.initiate',
+      {
+        orderId,
+        customerId,
+        amount,
+        provider: 'vnpay',
+      },
+      () =>
+        this.initiateVNPayPaymentInternal(orderId, customerId, amount, ipAddr),
+    );
+  }
+
+  private async initiateVNPayPaymentInternal(
     orderId: string,
     customerId: string,
     amount: number,

@@ -4,6 +4,8 @@ interface LogRecord {
   level: string;
   context?: string;
   message: string;
+  stack?: string;
+  extras?: unknown[];
 }
 
 function firstLoggedLine(spy: jest.SpyInstance): string {
@@ -43,5 +45,14 @@ describe('JsonLogger', () => {
     expect(errorSpy).toHaveBeenCalledTimes(1);
     const record = JSON.parse(firstLoggedLine(errorSpy)) as LogRecord;
     expect(record.message).toBe('token=[REDACTED]');
+  });
+
+  it('does not treat plain string params as stack traces', () => {
+    new JsonLogger().error('failed', 'plain detail', { attempt: 1 });
+
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const record = JSON.parse(firstLoggedLine(errorSpy)) as LogRecord;
+    expect(record.stack).toBeUndefined();
+    expect(record.extras).toEqual(['plain detail', { attempt: 1 }]);
   });
 });
