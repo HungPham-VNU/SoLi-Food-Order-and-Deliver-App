@@ -32,7 +32,7 @@ const ROUTE_GROUPS: readonly RouteGroupMatcher[] = [
   { routeGroup: 'my', prefixes: ['/api/my'] },
   {
     routeGroup: 'restaurant',
-    prefixes: ['/api/restaurant', '/api/restaurnent'],
+    prefixes: ['/api/restaurant'],
   },
   { routeGroup: 'payments', prefixes: ['/api/payments', '/api/payment'] },
 ] as const;
