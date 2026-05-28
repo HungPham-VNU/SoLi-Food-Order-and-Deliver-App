@@ -6,6 +6,11 @@ import type { NextFunction, Request, Response } from 'express';
 import { isHealthPath, isOtelLogsEnabled } from './observability-config';
 import { toLogAttributes } from './otel-attributes';
 import { redactHeaders } from './redaction';
+import {
+  describeRouteTelemetry,
+  setRouteTelemetrySpanAttributes,
+  type RouteTelemetry,
+} from './route-telemetry';
 
 export interface RequestContext {
   requestId: string;
@@ -14,6 +19,7 @@ export interface RequestContext {
   startedAt: number;
   traceId?: string;
   spanId?: string;
+  route: RouteTelemetry;
 }
 
 const storage = new AsyncLocalStorage<RequestContext>();
@@ -80,7 +86,10 @@ export function requestContextMiddleware(
     startedAt: performance.now(),
     traceId: span?.traceId,
     spanId: span?.spanId,
+    route: describeRouteTelemetry(requestPath(req)),
   };
+
+  setRouteTelemetrySpanAttributes(context.route);
 
   res.setHeader('x-request-id', context.requestId);
 
@@ -88,6 +97,12 @@ export function requestContextMiddleware(
     const metricBase = {
       'http.request.method': context.method,
       'url.path': context.path,
+      'http.route': context.route.routeTemplate,
+      'app.route.group': context.route.routeGroup,
+      'app.route.monitored': context.route.monitoredRoute,
+      ...(context.route.routeScope
+        ? { 'app.route.scope': context.route.routeScope }
+        : {}),
     };
     let activeDecremented = false;
 
@@ -131,6 +146,10 @@ export function requestContextMiddleware(
         spanId: context.spanId,
         method: context.method,
         path: context.path,
+        routeTemplate: context.route.routeTemplate,
+        routeGroup: context.route.routeGroup,
+        routeScope: context.route.routeScope,
+        monitoredRoute: context.route.monitoredRoute,
         statusCode: res.statusCode,
         durationMs,
         userId: user?.id,

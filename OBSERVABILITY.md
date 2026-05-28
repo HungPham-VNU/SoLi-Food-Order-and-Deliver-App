@@ -2,7 +2,7 @@
 
 ## Runtime Flow
 
-- API: OpenTelemetry auto-instrumentation and custom spans export OTLP traces, metrics, and logs directly to Grafana Cloud over OTLP HTTP.
+- API: OpenTelemetry auto-instrumentation and custom spans export OTLP traces, metrics, and route-grouped logs directly to Grafana Cloud over OTLP HTTP.
 - Web: Grafana Faro captures browser errors, logs, Web Vitals, sessions, route changes, and frontend traces; PostHog captures page views and product events.
 - Mobile: Sentry React Native captures JS/native errors; PostHog React Native captures lifecycle, screen views, and key events.
 
@@ -50,6 +50,9 @@ pnpm --filter api dev
 
 Then call `GET /api/ready` or any API endpoint and check the Grafana Cloud
 Explore views for traces, metrics, and logs with `service.name=uitfood-api`.
+Route telemetry for monitored API families is labelled with `app.route.group`
+and `http.route`, including `menu-items`, `restaurants`, `search`,
+`promotions`, `carts`, `my`, `restaurant`, and `payments`.
 
 If you prefer the standard OpenTelemetry header variable instead, set
 `OTEL_EXPORTER_OTLP_ENDPOINT` to the Grafana Cloud OTLP endpoint and
@@ -71,6 +74,7 @@ changes, Web Vitals, and uploaded source maps.
 ## Privacy Defaults
 
 - Backend logs redact authorization, cookies, tokens, secrets, passwords, API keys, payment signatures, and IP-like fields.
+- Backend request logs include `routeTemplate`, `routeGroup`, and `routeScope` when applicable.
 - Web Faro only sets user ID; it does not send user email or name.
 - Faro geolocation tracking is disabled client-side.
 - PostHog session replay is disabled by default on web and mobile.

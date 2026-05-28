@@ -5,7 +5,7 @@ UITFood uses a production MVP observability setup:
 - OpenTelemetry exports API traces, metrics, and logs directly to Grafana Cloud over OTLP HTTP when configured.
 - Grafana Faro captures web browser errors, logs, Web Vitals, sessions, route changes, frontend traces, and source-map metadata.
 - Sentry captures mobile exceptions with release/environment tags.
-- The API emits JSON logs with request IDs, trace IDs, route, status, duration, and safe context.
+- The API emits JSON logs with request IDs, trace IDs, route template, route group, status, duration, and safe context.
 - Render health checks use API readiness and web container liveness endpoints.
 
 ## Runtime Configuration
@@ -86,9 +86,13 @@ API logs are JSON written to stdout/stderr for Render log collection. Each reque
 
 - `requestId`
 - `traceId` and `spanId` when OpenTelemetry is active
-- HTTP method, path, status, and duration
+- HTTP method, path, route template, route group, status, and duration
 - `cfRay` when Render/Cloudflare forwards it
 - user ID when already available on the request
+
+The monitored API route groups are `menu-items`, `restaurants`, `search`,
+`promotions`, `carts`, `my`, `restaurant`, and `payments`. Metrics and traces
+also receive `app.route.group`, `app.route.monitored`, and `http.route`.
 
 The redaction layer removes sensitive headers and common secret fields, including auth cookies, bearer tokens, FCM tokens, payment hashes/signatures, SMTP credentials, Cloudinary secrets, and explicitly labelled IP fields. Do not log request bodies, payment payloads, raw addresses, or provider credentials.
 
