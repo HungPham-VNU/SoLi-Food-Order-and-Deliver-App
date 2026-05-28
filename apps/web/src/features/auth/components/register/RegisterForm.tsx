@@ -18,7 +18,7 @@ type FormValues = z.infer<typeof schema>;
 
 export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const { mutate: signUp, isPending, error } = useSignUp();
+  const { signUpWithEmail, isPending, error } = useSignUp();
 
   const {
     register,
@@ -37,7 +37,7 @@ export function RegisterForm() {
         </p>
       </div>
 
-      <form className="space-y-6" onSubmit={handleSubmit((data) => signUp(data))}>
+      <form className="space-y-6" onSubmit={handleSubmit(signUpWithEmail)}>
         {/* Name */}
         <div className="space-y-2">
           <Label

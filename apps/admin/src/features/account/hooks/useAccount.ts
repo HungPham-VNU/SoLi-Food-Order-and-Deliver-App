@@ -1,5 +1,5 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { authClient } from '@/lib/auth-client';
+import { useState } from 'react';
+import { authClient, useSession } from '@/lib/auth-client';
 import { ApiError } from '@/lib/api-client';
 
 export interface UpdateProfileInput {
@@ -13,27 +13,64 @@ export interface ChangePasswordInput {
   revokeOtherSessions?: boolean;
 }
 
+function toApiError(
+  error: { status?: number; code?: string; message?: string },
+  fallbackCode: string,
+  fallbackMessage: string,
+) {
+  return new ApiError(
+    error.status ?? 400,
+    error.code ?? fallbackCode,
+    error.message ?? fallbackMessage,
+  );
+}
+
+function toError(caught: unknown, fallbackMessage: string) {
+  return caught instanceof Error ? caught : new Error(fallbackMessage);
+}
+
 /**
  * Updates the current admin's profile (name + avatar URL).
  * Backed by better-auth's `updateUser` endpoint, which is callable by any
  * authenticated user against their own account.
  */
 export function useUpdateProfile() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: UpdateProfileInput) => {
-      const { data, error } = await (authClient as any).updateUser(input);
-      if (error) {
-        throw new ApiError(
-          error.status ?? 400,
-          error.code ?? 'UPDATE_PROFILE_FAILED',
-          error.message ?? 'Failed to update profile',
+  const { refetch: refetchSession } = useSession();
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutateAsync = async (input: UpdateProfileInput) => {
+    setIsPending(true);
+    setError(null);
+
+    try {
+      const { data, error: updateError } = await (authClient as any).updateUser(
+        input,
+      );
+      if (updateError) {
+        throw toApiError(
+          updateError,
+          'UPDATE_PROFILE_FAILED',
+          'Failed to update profile',
         );
       }
+
+      await refetchSession();
       return data;
-    },
-    onSuccess: () => qc.invalidateQueries(),
-  });
+    } catch (caught) {
+      const nextError = toError(caught, 'Failed to update profile');
+      setError(nextError);
+      throw nextError;
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  const mutate = (input: UpdateProfileInput) => {
+    void mutateAsync(input).catch(() => undefined);
+  };
+
+  return { mutate, mutateAsync, isPending, error };
 }
 
 /**
@@ -41,17 +78,37 @@ export function useUpdateProfile() {
  * `revokeOtherSessions: true` forces a re-login on every other device.
  */
 export function useChangePassword() {
-  return useMutation({
-    mutationFn: async (input: ChangePasswordInput) => {
-      const { data, error } = await (authClient as any).changePassword(input);
-      if (error) {
-        throw new ApiError(
-          error.status ?? 400,
-          error.code ?? 'CHANGE_PASSWORD_FAILED',
-          error.message ?? 'Failed to change password',
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutateAsync = async (input: ChangePasswordInput) => {
+    setIsPending(true);
+    setError(null);
+
+    try {
+      const { data, error: passwordError } =
+        await (authClient as any).changePassword(input);
+      if (passwordError) {
+        throw toApiError(
+          passwordError,
+          'CHANGE_PASSWORD_FAILED',
+          'Failed to change password',
         );
       }
+
       return data;
-    },
-  });
+    } catch (caught) {
+      const nextError = toError(caught, 'Failed to change password');
+      setError(nextError);
+      throw nextError;
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  const mutate = (input: ChangePasswordInput) => {
+    void mutateAsync(input).catch(() => undefined);
+  };
+
+  return { mutate, mutateAsync, isPending, error };
 }

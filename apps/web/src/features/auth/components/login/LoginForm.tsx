@@ -16,7 +16,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function LoginForm() {
-  const { mutate: signIn, isPending, error } = useSignIn();
+  const { signInWithEmail, isPending, error } = useSignIn();
 
   const {
     register,
@@ -25,7 +25,7 @@ export function LoginForm() {
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit((data) => signIn(data))}>
+    <form className="space-y-4" onSubmit={handleSubmit(signInWithEmail)}>
       <div className="space-y-2">
         <Label
           htmlFor="loginEmail"
