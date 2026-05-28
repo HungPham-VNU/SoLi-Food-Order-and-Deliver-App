@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signUp } from '@/lib/auth-client';
 import { ApiError } from '@/lib/api-client';
@@ -12,14 +12,20 @@ export interface SignUpInput {
 
 export function useSignUp() {
   const navigate = useNavigate();
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  return useMutation({
-    mutationFn: async (input: SignUpInput) => {
+  const signUpWithEmail = async (input: SignUpInput) => {
+    setIsPending(true);
+    setError(null);
+
+    try {
       const result = await signUp.email({
         email: input.email,
         password: input.password,
         name: input.name,
       });
+
       if (result.error) {
         throw new ApiError(
           result.error.status ?? 400,
@@ -27,18 +33,25 @@ export function useSignUp() {
           result.error.message ?? 'Registration failed',
         );
       }
-      return result.data;
-    },
-    onSuccess: () => {
+
       trackEvent('signup_success', { method: 'email' });
       navigate('/auth/register/business');
-    },
-    onError: (error) => {
+
+      return result.data;
+    } catch (caught) {
+      const nextError =
+        caught instanceof Error ? caught : new Error('Registration failed');
+      setError(nextError);
       trackEvent('signup_failure', {
         method: 'email',
-        code: error instanceof ApiError ? error.code : 'UNKNOWN',
-        status: error instanceof ApiError ? error.status : 0,
+        code: nextError instanceof ApiError ? nextError.code : 'UNKNOWN',
+        status: nextError instanceof ApiError ? nextError.status : 0,
       });
-    },
-  });
+      return null;
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return { signUpWithEmail, isPending, error };
 }

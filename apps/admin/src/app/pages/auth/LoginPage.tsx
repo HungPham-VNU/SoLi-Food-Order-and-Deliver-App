@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Navigate } from 'react-router-dom';
 import { ShieldCheck, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,22 +7,42 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useSignIn } from '@/features/auth/hooks/useSignIn';
 import { ApiError } from '@/lib/api-client';
+import { useSession } from '@/lib/auth-client';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const signIn = useSignIn();
+  const {
+    signInWithEmail,
+    isPending: isSigningIn,
+    error: signInError,
+  } = useSignIn();
+  const { data: session, isPending } = useSession();
+
+  if (isPending) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="material-symbols-outlined animate-spin text-primary text-4xl">
+          progress_activity
+        </span>
+      </div>
+    );
+  }
+
+  if ((session?.user as any)?.role === 'admin') {
+    return <Navigate to="/restaurants" replace />;
+  }
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!email.trim() || !password) return;
-    signIn.mutate({ email: email.trim(), password });
+    void signInWithEmail({ email: email.trim(), password });
   }
 
   const errorMessage =
-    signIn.error instanceof ApiError
-      ? signIn.error.message
-      : signIn.error
+    signInError instanceof ApiError
+      ? signInError.message
+      : signInError
         ? 'Sign-in failed. Check your credentials.'
         : null;
 
@@ -79,9 +100,9 @@ export function LoginPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={signIn.isPending}
+              disabled={isSigningIn}
             >
-              {signIn.isPending ? 'Signing in…' : 'Sign in'}
+              {isSigningIn ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
 

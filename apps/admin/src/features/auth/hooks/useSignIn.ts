@@ -1,6 +1,6 @@
-import { useMutation } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signIn, signOut } from '@/lib/auth-client';
+import { signIn, signOut, useSession } from '@/lib/auth-client';
 import { ApiError } from '@/lib/api-client';
 
 export interface SignInInput {
@@ -10,13 +10,20 @@ export interface SignInInput {
 
 export function useSignIn() {
   const navigate = useNavigate();
+  const { refetch: refetchSession } = useSession();
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  return useMutation({
-    mutationFn: async (input: SignInInput) => {
+  const signInWithEmail = async (input: SignInInput) => {
+    setIsPending(true);
+    setError(null);
+
+    try {
       const result = await signIn.email({
         email: input.email,
         password: input.password,
       });
+
       if (result.error) {
         throw new ApiError(
           result.error.status ?? 401,
@@ -24,6 +31,7 @@ export function useSignIn() {
           result.error.message ?? 'Invalid credentials',
         );
       }
+
       const role = (result.data?.user as any)?.role;
       // Reject non-admin accounts on the admin portal.
       if (role !== 'admin') {
@@ -34,10 +42,20 @@ export function useSignIn() {
           'This portal is for administrators only. Please use the restaurant portal.',
         );
       }
-      return result.data;
-    },
-    onSuccess: () => {
+
+      await refetchSession();
       navigate('/restaurants', { replace: true });
-    },
-  });
+
+      return result.data;
+    } catch (caught) {
+      const nextError =
+        caught instanceof Error ? caught : new Error('Sign-in failed');
+      setError(nextError);
+      return null;
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return { signInWithEmail, isPending, error };
 }

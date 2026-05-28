@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useSession, authClient } from '@/lib/auth-client';
-import { useQueryClient } from '@tanstack/react-query';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useImageUpload } from '@/features/menu/hooks/useImageUpload';
 
@@ -36,7 +35,6 @@ function roleLabel(role?: string | null) {
 
 export function ProfileTab() {
   const { data: session, refetch } = useSession();
-  const queryClient = useQueryClient();
   const user = session?.user;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -102,7 +100,6 @@ export function ProfileTab() {
     handleSubmit(async ({ name }) => {
       await authClient.updateUser({ name });
       await refetch();
-      queryClient.invalidateQueries({ queryKey: ['restaurants'] });
       setSavedAt(Date.now());
       setTimeout(() => setSavedAt(null), 2500);
     })(e);

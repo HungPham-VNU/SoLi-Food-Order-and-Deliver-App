@@ -8,8 +8,10 @@ import * as schema from '../drizzle/schema';
 export const APP_ROLES = ['admin', 'restaurant', 'shipper', 'user'] as const;
 export type AppRole = (typeof APP_ROLES)[number];
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 export const auth = betterAuth({
-  baseUrl: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
+  baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
   database: drizzleAdapter(db, {
     provider: 'pg',
     schema,
@@ -54,6 +56,16 @@ export const auth = betterAuth({
     expo(),
   ],
   advanced: {
+    ...(isProduction
+      ? {
+          defaultCookieAttributes: {
+            sameSite: 'none',
+            secure: true,
+            partitioned: true,
+          } as const,
+          useSecureCookies: true,
+        }
+      : {}),
     database: {
       generateId: () => crypto.randomUUID(),
     },
