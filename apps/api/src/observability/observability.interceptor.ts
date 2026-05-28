@@ -9,6 +9,10 @@ import type { Request } from 'express';
 import { catchError, throwError } from 'rxjs';
 import { getRequestContext } from './request-context';
 import { recordException } from './errors';
+import {
+  describeRouteTelemetry,
+  setRouteTelemetrySpanAttributes,
+} from './route-telemetry';
 
 function objectRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === 'object'
@@ -24,6 +28,18 @@ export class ObservabilityInterceptor implements NestInterceptor {
       transport === 'http'
         ? context.switchToHttp().getRequest<Request | undefined>()
         : undefined;
+    const routeTelemetry = request
+      ? describeRouteTelemetry(
+          request.path || request.originalUrl || request.url,
+        )
+      : undefined;
+
+    if (routeTelemetry) {
+      setRouteTelemetrySpanAttributes(routeTelemetry, {
+        'nestjs.controller': context.getClass().name,
+        'nestjs.handler': context.getHandler().name || 'unknown',
+      });
+    }
 
     return next.handle().pipe(
       catchError((error: unknown) => {
@@ -35,7 +51,7 @@ export class ObservabilityInterceptor implements NestInterceptor {
           recordException(error, {
             requestId: requestContext?.requestId ?? 'unknown',
             handler: context.getHandler().name || 'unknown',
-            ...this.exceptionExtras(context, request, status),
+            ...this.exceptionExtras(context, request, status, routeTelemetry),
           });
         }
 
@@ -48,11 +64,16 @@ export class ObservabilityInterceptor implements NestInterceptor {
     context: ExecutionContext,
     request: Request | undefined,
     status: number | undefined,
+    routeTelemetry?: ReturnType<typeof describeRouteTelemetry>,
   ): Record<string, unknown> {
     const transport = context.getType<string>();
     const base = {
       transport,
       status,
+      routeTemplate: routeTelemetry?.routeTemplate,
+      routeGroup: routeTelemetry?.routeGroup,
+      routeScope: routeTelemetry?.routeScope,
+      monitoredRoute: routeTelemetry?.monitoredRoute,
     };
 
     if (transport === 'http') {

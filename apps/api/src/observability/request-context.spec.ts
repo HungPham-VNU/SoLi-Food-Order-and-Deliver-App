@@ -67,9 +67,13 @@ describe('requestContextMiddleware', () => {
       spanId: '1'.repeat(16),
       traceFlags: 1,
     };
+    const activeSpan = {
+      spanContext: () => spanContext,
+      setAttributes: jest.fn(),
+    };
     const getActiveSpanSpy = jest
       .spyOn(trace, 'getActiveSpan')
-      .mockReturnValue({ spanContext: () => spanContext } as never);
+      .mockReturnValue(activeSpan as never);
     const logSpy = jest
       .spyOn(console, 'log')
       .mockImplementation(() => undefined);
@@ -128,5 +132,41 @@ describe('requestContextMiddleware', () => {
       level?: string;
     };
     expect(record.level).toBe('warn');
+  });
+
+  it('adds monitored route telemetry to request logs', () => {
+    const logSpy = jest
+      .spyOn(console, 'log')
+      .mockImplementation(() => undefined);
+    const response = new EventEmitter() as EventEmitter & {
+      statusCode: number;
+      setHeader: jest.Mock;
+    };
+    response.statusCode = 200;
+    response.setHeader = jest.fn();
+
+    const request = {
+      method: 'GET',
+      path: '/api/carts/my/items',
+      originalUrl: '/api/carts/my/items',
+      url: '/api/carts/my/items',
+      headers: {},
+    };
+
+    requestContextMiddleware(request as never, response as never, jest.fn());
+    response.emit('finish');
+
+    const record = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+      routeTemplate?: string;
+      routeGroup?: string;
+      routeScope?: string;
+      monitoredRoute?: boolean;
+    };
+    expect(record).toMatchObject({
+      routeTemplate: '/api/carts/my/items',
+      routeGroup: 'carts',
+      routeScope: 'my',
+      monitoredRoute: true,
+    });
   });
 });
