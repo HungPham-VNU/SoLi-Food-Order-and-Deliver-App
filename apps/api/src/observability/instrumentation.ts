@@ -7,6 +7,7 @@ import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
 import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { resourceFromAttributes } from '@opentelemetry/resources';
+import { RuntimeNodeInstrumentation } from '@opentelemetry/instrumentation-runtime-node';
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
@@ -181,6 +182,7 @@ if (otlpEndpoint && (tracesEnabled || metricsEnabled || logsEnabled)) {
         ]
       : undefined,
     instrumentations: [
+      new RuntimeNodeInstrumentation({ monitoringPrecision: 5000 }),
       getNodeAutoInstrumentations({
         '@opentelemetry/instrumentation-http': {
           ignoreIncomingRequestHook: (request) => isHealthRequest(request.url),
