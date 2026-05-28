@@ -1,0 +1,86 @@
+name: Admin CI/CD Pipeline
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'apps/admin/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Admin
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code (Checkout)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+
+      - name: Turbo Cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-admin-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-admin-
+            ${{ runner.os }}-turbo-
+
+      - name: Check (Lint)
+        run: pnpm --filter=admin run lint
+
+      - name: Check (Typecheck)
+        run: pnpm --filter=admin run typecheck
+
+      - name: Security Scan (Audit)
+        run: pnpm audit --audit-level high
+
+      - name: Unit Test
+        run: pnpm --filter=admin run test
+
+      - name: Build
+        run: pnpm --filter=admin run build
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_APP_ENV: production
+          VITE_APP_VERSION: ${{ vars.APP_VERSION || '0.1.0' }}
+          VITE_COMMIT_SHA: ${{ github.sha }}
+
+  publish:
+    name: Publish Admin Docker Image
+    needs: validate
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/cd-package-docker.yml
+    with:
+      app: admin
+      gh_actor: ${{ github.actor }}
+      gh_repository: ${{ github.repository }}
+      vite_api_base_url: ${{ vars.VITE_API_BASE_URL }}
+      vite_app_env: production
+      vite_app_version: ${{ vars.APP_VERSION || '0.1.0' }}
+      vite_commit_sha: ${{ github.sha }}
+      vite_grafana_faro_app_name: uitfood-admin
+    secrets: inherit
+
+  deploy-render:
+    name: Deploy Admin Image to Render
+    needs: publish
+    if: github.ref == 'refs/heads/master'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/cd-render-image.yml
+    with:
+      app: admin
+      gh_repository: ${{ github.repository }}
+    secrets:
+      RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_ADMIN_DEPLOY_HOOK }}

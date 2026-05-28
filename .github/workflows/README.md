@@ -12,6 +12,8 @@ this directory is organized by filename prefix instead of nested folders.
   triggers the Render API image deploy hook.
 - `pipeline-web.yml`: Web-specific CI/CD pipeline that publishes Docker and
   triggers the Render Web image deploy hook.
+- `pipeline-admin.yml`: Admin-specific CI/CD pipeline that publishes Docker and
+  triggers the Render Admin image deploy hook.
 - `pipeline-mobile.yml`: Mobile-specific CI/CD pipeline.
 - `pipeline-render-iac.yml`: Render Terraform pipeline that applies
   `infra/render/**` changes on `master`.
