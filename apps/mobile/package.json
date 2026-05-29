@@ -80,6 +80,7 @@
     "@types/react": "~19.2.14",
     "autoprefixer": "^10.5.0",
     "babel-preset-expo": "^55.0.21",
+    "eas-build-cache-provider": "^19.0.0",
     "eslint": "^9.39.4",
     "eslint-config-expo": "~55.0.1",
     "postcss": "^8.5.14",

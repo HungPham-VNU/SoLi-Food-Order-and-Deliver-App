@@ -12,11 +12,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
   ArrowLeft,
+  Briefcase,
+  Building2,
   Clock3,
+  FileEdit,
+  Home,
   LocateFixed,
   Map,
   MapPin,
   MoreVertical,
+  Pencil,
+  Plus,
   Search,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -226,29 +232,28 @@ export function AddressSelectionScreen() {
         </View>
       </View>
 
-      <View className="z-10 border-b border-surface-container-high bg-surface px-4 pb-2">
-        <View className="flex-row gap-2">
+      <View className="z-10 mt-2 border-b border-surface-container-highest bg-surface px-2 pb-2">
+        <View className="flex-row gap-4">
           {(['recent', 'saved'] as const).map((tab) => {
             const isActive = activeTab === tab;
             return (
               <TouchableOpacity
                 key={tab}
                 onPress={() => setActiveTab(tab)}
-                className={`rounded-full px-5 py-2 ${
-                  isActive ? 'bg-primary-fixed' : 'bg-transparent'
-                }`}
+                className="relative px-2 pb-2"
                 accessibilityRole="tab"
                 accessibilityState={{ selected: isActive }}
               >
                 <Text
-                  className={`font-jakarta-sans text-sm ${
-                    isActive
-                      ? 'font-semibold text-on-primary-fixed-variant'
-                      : 'font-medium text-on-surface-variant'
+                  className={`font-jakarta-sans text-base font-semibold ${
+                    isActive ? 'text-primary' : 'text-on-surface-variant'
                   }`}
                 >
                   {tab === 'recent' ? 'Recent' : 'Saved'}
                 </Text>
+                {isActive && (
+                  <View className="absolute bottom-[-9px] left-0 h-[3px] w-full rounded-t-full bg-primary" />
+                )}
               </TouchableOpacity>
             );
           })}
@@ -344,24 +349,75 @@ export function AddressSelectionScreen() {
             ))}
           </View>
         ) : (
-          <View className="gap-2">
-            {savedAddresses.length > 0 ? (
-              savedAddresses.map((address) => (
-                <LocationRow
-                  key={address.id}
-                  title={address.label}
-                  subtitle={address.address}
-                  icon={<MapPin size={21} color="#40493d" />}
-                  onPress={() =>
-                    handleSelectAddress(address.address, address.coords)
-                  }
-                />
-              ))
-            ) : (
-              <Text className="px-4 py-3 text-sm text-on-surface-variant">
-                No saved addresses yet.
+          <View className="mt-2 gap-2">
+            <TouchableOpacity
+              onPress={() => router.push('/(customer)/add-location')}
+              className="flex-row items-center gap-4 rounded-xl border border-transparent p-4 active:border-surface-container-highest active:bg-surface-container-lowest"
+            >
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary-fixed/30">
+                <Plus size={20} color="#0d631b" />
+              </View>
+              <Text className="flex-1 font-jakarta-sans text-base font-semibold text-primary-container">
+                Add new
               </Text>
-            )}
+            </TouchableOpacity>
+
+            <View className="mx-4 my-2 h-px border-t-2 border-surface-container" />
+
+            <TouchableOpacity
+              onPress={() => {}}
+              className="relative flex-row items-start gap-4 overflow-hidden rounded-xl border border-surface-container-low bg-surface-container-lowest p-4 active:bg-surface-container-lowest"
+              style={{
+                boxShadow: '0 2px 12px 0 rgba(26,28,28,0.03)',
+              }}
+            >
+              <View className="mt-1 h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-low">
+                <Home size={20} color="#0d631b" fill="#0d631b" />
+              </View>
+              <View className="min-w-0 flex-1 pr-8">
+                <Text className="mb-1 font-jakarta-sans text-lg font-bold text-on-surface">
+                  Home
+                </Text>
+                <Text
+                  className="mb-3 font-inter text-sm leading-relaxed text-on-surface-variant"
+                  numberOfLines={2}
+                >
+                  66km • 21 Do Luong St., 21 Do Luong, Phuoc Thang Ward, Ho Chi
+                  Minh...
+                </Text>
+                <View className="mt-2 flex-col gap-2">
+                  <View className="flex-row items-center gap-2">
+                    <Building2 size={16} color="#40493d" />
+                    <Text className="font-inter text-sm text-on-surface-variant">
+                      Floor / unit no.
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center gap-2">
+                    <FileEdit size={16} color="#40493d" />
+                    <Text className="font-inter text-sm text-on-surface-variant">
+                      Note to driver
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity className="absolute right-4 top-4 rounded-full p-2 active:bg-surface-container">
+                <Pencil size={20} color="#40493d" />
+              </TouchableOpacity>
+            </TouchableOpacity>
+
+            <View className="mx-4 my-2 h-px border-t-2 border-surface-container" />
+
+            <TouchableOpacity
+              onPress={() => {}}
+              className="flex-row items-center gap-4 rounded-xl border border-transparent p-4 active:border-surface-container-highest active:bg-surface-container-lowest"
+            >
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-container">
+                <Briefcase size={20} color="#0d631b" fill="#0d631b" />
+              </View>
+              <Text className="flex-1 font-jakarta-sans text-base font-semibold text-primary-container">
+                Add work
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>

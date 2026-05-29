@@ -24,6 +24,7 @@ interface AddressState {
   savedAddresses: SavedAddress[];
   recentSearches: RecentSearch[];
   setSelectedAddress: (address: string, coords?: Coordinates | null) => void;
+  addSavedAddress: (address: Omit<SavedAddress, 'id'>) => void;
 }
 
 export const useAddressStore = create<AddressState>((set) => ({
@@ -38,4 +39,11 @@ export const useAddressStore = create<AddressState>((set) => ({
       latitude: coords?.latitude ?? null,
       longitude: coords?.longitude ?? null,
     }),
+  addSavedAddress: (address) =>
+    set((state) => ({
+      savedAddresses: [
+        ...state.savedAddresses,
+        { ...address, id: Math.random().toString(36).substring(2, 9) },
+      ],
+    })),
 }));
