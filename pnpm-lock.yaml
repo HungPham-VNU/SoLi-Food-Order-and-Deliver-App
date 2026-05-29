@@ -160,9 +160,6 @@ importers:
       '@nestjs/swagger':
         specifier: ^11.4.3
         version: 11.4.3(@nestjs/common@11.1.21(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.21)(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)
-      '@nestjs/terminus':
-        specifier: ^11.1.1
-        version: 11.1.1(@grpc/grpc-js@1.14.3)(@grpc/proto-loader@0.8.1)(@nestjs/common@11.1.21(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.21)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/websockets':
         specifier: ^11.1.21
         version: 11.1.21(@nestjs/common@11.1.21(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.21)(@nestjs/platform-socket.io@11.1.21)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -528,6 +525,9 @@ importers:
       '@expo/ngrok':
         specifier: ^4.1.3
         version: 4.1.3
+      '@sentry/cli':
+        specifier: ^3.4.3
+        version: 3.4.3
       '@types/react':
         specifier: ~19.2.14
         version: 19.2.14
@@ -2984,54 +2984,6 @@ packages:
       class-validator:
         optional: true
 
-  '@nestjs/terminus@11.1.1':
-    resolution: {integrity: sha512-Ssql79H+EQY/Wg108eJqN4NiNsO/tLrj+qbzOWSQUf2JE4vJQ2RG3WTqUOrYjfjWmVHD3+Ys0+azed7LSMKScw==}
-    peerDependencies:
-      '@grpc/grpc-js': '*'
-      '@grpc/proto-loader': '*'
-      '@mikro-orm/core': '*'
-      '@mikro-orm/nestjs': '*'
-      '@nestjs/axios': ^2.0.0 || ^3.0.0 || ^4.0.0
-      '@nestjs/common': ^10.0.0 || ^11.0.0
-      '@nestjs/core': ^10.0.0 || ^11.0.0
-      '@nestjs/microservices': ^10.0.0 || ^11.0.0
-      '@nestjs/mongoose': ^11.0.0
-      '@nestjs/sequelize': ^10.0.0 || ^11.0.0
-      '@nestjs/typeorm': ^10.0.0 || ^11.0.0
-      '@prisma/client': '*'
-      mongoose: '*'
-      reflect-metadata: 0.1.x || 0.2.x
-      rxjs: 7.x
-      sequelize: '*'
-      typeorm: '*'
-    peerDependenciesMeta:
-      '@grpc/grpc-js':
-        optional: true
-      '@grpc/proto-loader':
-        optional: true
-      '@mikro-orm/core':
-        optional: true
-      '@mikro-orm/nestjs':
-        optional: true
-      '@nestjs/axios':
-        optional: true
-      '@nestjs/microservices':
-        optional: true
-      '@nestjs/mongoose':
-        optional: true
-      '@nestjs/sequelize':
-        optional: true
-      '@nestjs/typeorm':
-        optional: true
-      '@prisma/client':
-        optional: true
-      mongoose:
-        optional: true
-      sequelize:
-        optional: true
-      typeorm:
-        optional: true
-
   '@nestjs/testing@11.1.21':
     resolution: {integrity: sha512-RhzaUFxr6/bpXWjKIzr7p2eHKMFMLwPgsxJNFcCf2CkkT3UEjW+KRGb7E2JY+fh+ck3zAdvQJrzATDnSsVlFZw==}
     peerDependencies:
@@ -4744,8 +4696,19 @@ packages:
     engines: {node: '>=18'}
     os: [darwin]
 
+  '@sentry/cli-darwin@3.4.3':
+    resolution: {integrity: sha512-KUeP9d0rQ9L/A4SU9U6K8fMeRaWLV24FVH9JE6V6tbi4S9feJwKjfXXCpsqTk87Do5k0sohaz4SFiOkbypePLA==}
+    engines: {node: '>=18'}
+    os: [darwin]
+
   '@sentry/cli-linux-arm64@3.4.2':
     resolution: {integrity: sha512-xsA7DjZkFBBu5WLINimWv50h+jSxS5+F+6DxMYcgXkYZ4pbEWToG+IcBaZGsqXKNIYIUyd7hQvqCH/LFNAqShA==}
+    engines: {node: '>=18'}
+    cpu: [arm64]
+    os: [linux, freebsd, android]
+
+  '@sentry/cli-linux-arm64@3.4.3':
+    resolution: {integrity: sha512-DPu03ywFtmBC/mtQ2+oWZDPHn9hYPLCYNgSxgBkHKrbYcgv4uJLTrl84at3NI/CU8VnpUbx+oeq03chmezZBPA==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [linux, freebsd, android]
@@ -4756,8 +4719,20 @@ packages:
     cpu: [arm]
     os: [linux, freebsd, android]
 
+  '@sentry/cli-linux-arm@3.4.3':
+    resolution: {integrity: sha512-3dPFWfaB5g31KnwKuQwHboXfh9+m2Gzk/i6eoQsbMamGQWVguQRHn1mZ1PmGykEMvWH3YFopMcfjPt4euNG/ag==}
+    engines: {node: '>=18'}
+    cpu: [arm]
+    os: [linux, freebsd, android]
+
   '@sentry/cli-linux-i686@3.4.2':
     resolution: {integrity: sha512-AD8l7GGwGIixALSYeIBWsAqLQgi90df4Z3XIGPOqkJWSg5xh40Qk0r1zHXUwayGabtY8YgDlcAUS1CQ+1Tqu9Q==}
+    engines: {node: '>=18'}
+    cpu: [x86, ia32]
+    os: [linux, freebsd, android]
+
+  '@sentry/cli-linux-i686@3.4.3':
+    resolution: {integrity: sha512-7Jvx+TZLWJJiKCua6YRDXnE+juSuHP4Tw80HzVtEGTgrgGVJTn2VRCwgDQjPKNrRvjeOK7M6/TnFECOqa750xw==}
     engines: {node: '>=18'}
     cpu: [x86, ia32]
     os: [linux, freebsd, android]
@@ -4768,8 +4743,20 @@ packages:
     cpu: [x64]
     os: [linux, freebsd, android]
 
+  '@sentry/cli-linux-x64@3.4.3':
+    resolution: {integrity: sha512-2opnMFIx/c1lRqW0SiKMy2q3ChuB7tCadfS8WEJKAMdfQLQrSQmyW/9fhBGK9fDSMqGFVoxU6aaSS89GKnkN8g==}
+    engines: {node: '>=18'}
+    cpu: [x64]
+    os: [linux, freebsd, android]
+
   '@sentry/cli-win32-arm64@3.4.2':
     resolution: {integrity: sha512-fjBS2to5oJpfWmK5l14fZgoRfTOAZIFqa4Ej+urOLU3NH4etehDRHgGMcxPPLjoVkkAC6M/auf1+rQc1tt0olg==}
+    engines: {node: '>=18'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@sentry/cli-win32-arm64@3.4.3':
+    resolution: {integrity: sha512-7Nup5qlbogV99zGcgreTqkUy3IRK1C4T3NYTDVO4iu36E31V0pOqyjqh5WSS/6jf9TkDugmkieSv+UjfKwZMFQ==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [win32]
@@ -4780,14 +4767,31 @@ packages:
     cpu: [x86, ia32]
     os: [win32]
 
+  '@sentry/cli-win32-i686@3.4.3':
+    resolution: {integrity: sha512-ENQtxeeH/jc2FRDSbPDs7RSy4+27RFFa8SxYnQUjWVCxCTgh0w3lfE61RzqWcvQ+4D04g/tPbb3TKMtTQIdcRw==}
+    engines: {node: '>=18'}
+    cpu: [x86, ia32]
+    os: [win32]
+
   '@sentry/cli-win32-x64@3.4.2':
     resolution: {integrity: sha512-FfFQzBkTvyU7AafzaOxhAFlmXKMe+9aXKNjnvA4VRHeBExdS71ZHKcPn44rZppoDLHWCrR2nm35WZG4so+jmSA==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
 
+  '@sentry/cli-win32-x64@3.4.3':
+    resolution: {integrity: sha512-pd69Woj4U1L/T+t0kmxNx+1GM096tcQg1NQH34IqwrE+tRiui0IKW3euu2E3bcu4ckJWlNmNHwXpONgZELK4EQ==}
+    engines: {node: '>=18'}
+    cpu: [x64]
+    os: [win32]
+
   '@sentry/cli@3.4.2':
     resolution: {integrity: sha512-8HOEe8y4ZtSxBhABSq4fzGgWc1PAR15ptfhrBwxTaqgXAN6CUsPCC/uvdO4gtgo8zKFkD0E5n34YY09tEXJGRg==}
+    engines: {node: '>= 18'}
+    hasBin: true
+
+  '@sentry/cli@3.4.3':
+    resolution: {integrity: sha512-sUhfoIWwkVdM2SVtUdIgfY/3p1z369dYYNOZqPjB/7mpiv4owVVS0BD2Aedx8LdBJaTzRcIzSJMhuJ6vcIiSCg==}
     engines: {node: '>= 18'}
     hasBin: true
 
@@ -5573,9 +5577,6 @@ packages:
   anser@1.4.10:
     resolution: {integrity: sha512-hCv9AqTQ8ycjpSd3upOJd7vFwW1JaoYQ7tpham03GJ1ca8/65rqn0RpaWpItOAd6ylW9wAw6luXYPJIyPFVOww==}
 
-  ansi-align@3.0.1:
-    resolution: {integrity: sha512-IOfwwBF5iczOjp/WeY4YxyjqAFMQoZufdQWDd19SEExbVLNXqvpzSJ/M7Za4/sCPmQ0+GRquoA7bGcINcxew6w==}
-
   ansi-colors@4.1.3:
     resolution: {integrity: sha512-/6w/C21Pm1A7aZitlI5Ni/2J6FFQN8i1Cvz3kHABAAbw93v/NlvKdVOqz7CCWz/3iv/JplRSEEZ83XION15ovw==}
     engines: {node: '>=6'}
@@ -5895,10 +5896,6 @@ packages:
   boolbase@1.0.0:
     resolution: {integrity: sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww==}
 
-  boxen@5.1.2:
-    resolution: {integrity: sha512-9gYgQKXx+1nP8mP7CzFyaUARhg7D3n1dF/FnErWmu9l6JvGpNUN278h0aSb+QjoiKSWG+iZ3uHrcqk0qrY9RQQ==}
-    engines: {node: '>=10'}
-
   bplist-creator@0.1.0:
     resolution: {integrity: sha512-sXaHZicyEEmY86WyueLTQesbeoH/mquvarJaQNbjuOQO+7gbFcDEWqKmcWA4cOTLzFlfgvkiVxolk1k5bBIpmg==}
 
@@ -6012,10 +6009,6 @@ packages:
   chardet@2.1.1:
     resolution: {integrity: sha512-PsezH1rqdV9VvyNhxxOW32/d75r01NY7TQCmOqomRo15ZSOKbpTFVsfjghxo6JloQUCGnH4k1LGu0R4yCLlWQQ==}
 
-  check-disk-space@3.4.0:
-    resolution: {integrity: sha512-drVkSqfwA+TvuEhFipiR1OC9boEGZL5RrWvVsOthdcvQNXyCCuKkEiTOTXZ7qxSf/GLwq4GvzfrQD/Wz325hgw==}
-    engines: {node: '>=16'}
-
   chokidar@3.6.0:
     resolution: {integrity: sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw==}
     engines: {node: '>= 8.10.0'}
@@ -6061,10 +6054,6 @@ packages:
 
   class-variance-authority@0.7.1:
     resolution: {integrity: sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==}
-
-  cli-boxes@2.2.1:
-    resolution: {integrity: sha512-y4coMcylgSCdVinjiDBuR8PCC2bLjyGTwEmPb9NHR/QaNU6EUOXcTY/s6VjGMD6ENSEaeQYHCY0GNGS5jfMwPw==}
-    engines: {node: '>=6'}
 
   cli-cursor@2.1.0:
     resolution: {integrity: sha512-8lgKz8LmCRYZZQDpRyT2m5rKJ08TnU4tR9FFFW2rxpxR1FzWi4PQ/NfyODchAatHaUgnSPVcx/R5w6NuTBzFiw==}
@@ -10452,10 +10441,6 @@ packages:
     resolution: {integrity: sha512-0fr/mIH1dlO+x7TlcMy+bIDqKPsw/70tVyeHW787goQjhmqaZe10uwLujubK9q9Lg6Fiho1KUKDYz0Z7k7g5/g==}
     engines: {node: '>=4'}
 
-  type-fest@0.20.2:
-    resolution: {integrity: sha512-Ne+eE4r0/iWnpAxD852z3A+N0Bt5RN//NjJwRd2VFHEmrywxf5vsZlh4R6lixl6B+wz/8d+maTSAkN1FIkI3LQ==}
-    engines: {node: '>=10'}
-
   type-fest@0.21.3:
     resolution: {integrity: sha512-t0rzBq87m3fVcduHDUFhKmyyX+9eo6WQjZvf51Ea/M0Q7+T374Jp1aUiyUl0GKxp8M/OETVHSDvmkyPgvX+X2w==}
     engines: {node: '>=10'}
@@ -10822,10 +10807,6 @@ packages:
     resolution: {integrity: sha512-GlaYyEb07DPxYCKhKzplCWBJtvxZcZMrL+4UkrTSJHHPyZU4mYYTv3qaOe77H7EODLSSopAUFAc6W8U4yqvscg==}
     engines: {node: ^16.13.0 || >=18.0.0}
     hasBin: true
-
-  widest-line@3.1.0:
-    resolution: {integrity: sha512-NsmoXalsWVDMGupxZ5R08ka9flZjjiLvHVAWYOKtiKM8ujtZWr9cRffak+uSE48+Ob8ObalXpwyeUiyDD6QFgg==}
-    engines: {node: '>=8'}
 
   word-wrap@1.2.5:
     resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
@@ -13926,18 +13907,6 @@ snapshots:
       class-transformer: 0.5.1
       class-validator: 0.15.1
 
-  '@nestjs/terminus@11.1.1(@grpc/grpc-js@1.14.3)(@grpc/proto-loader@0.8.1)(@nestjs/common@11.1.21(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.21)(reflect-metadata@0.2.2)(rxjs@7.8.2)':
-    dependencies:
-      '@nestjs/common': 11.1.21(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/core': 11.1.21(@nestjs/common@11.1.21(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.21)(@nestjs/websockets@11.1.21)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      boxen: 5.1.2
-      check-disk-space: 3.4.0
-      reflect-metadata: 0.2.2
-      rxjs: 7.8.2
-    optionalDependencies:
-      '@grpc/grpc-js': 1.14.3
-      '@grpc/proto-loader': 0.8.1
-
   '@nestjs/testing@11.1.21(@nestjs/common@11.1.21(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.21)(@nestjs/platform-express@11.1.21)':
     dependencies:
       '@nestjs/common': 11.1.21(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -16196,25 +16165,49 @@ snapshots:
   '@sentry/cli-darwin@3.4.2':
     optional: true
 
+  '@sentry/cli-darwin@3.4.3':
+    optional: true
+
   '@sentry/cli-linux-arm64@3.4.2':
+    optional: true
+
+  '@sentry/cli-linux-arm64@3.4.3':
     optional: true
 
   '@sentry/cli-linux-arm@3.4.2':
     optional: true
 
+  '@sentry/cli-linux-arm@3.4.3':
+    optional: true
+
   '@sentry/cli-linux-i686@3.4.2':
+    optional: true
+
+  '@sentry/cli-linux-i686@3.4.3':
     optional: true
 
   '@sentry/cli-linux-x64@3.4.2':
     optional: true
 
+  '@sentry/cli-linux-x64@3.4.3':
+    optional: true
+
   '@sentry/cli-win32-arm64@3.4.2':
+    optional: true
+
+  '@sentry/cli-win32-arm64@3.4.3':
     optional: true
 
   '@sentry/cli-win32-i686@3.4.2':
     optional: true
 
+  '@sentry/cli-win32-i686@3.4.3':
+    optional: true
+
   '@sentry/cli-win32-x64@3.4.2':
+    optional: true
+
+  '@sentry/cli-win32-x64@3.4.3':
     optional: true
 
   '@sentry/cli@3.4.2':
@@ -16232,6 +16225,22 @@ snapshots:
       '@sentry/cli-win32-arm64': 3.4.2
       '@sentry/cli-win32-i686': 3.4.2
       '@sentry/cli-win32-x64': 3.4.2
+
+  '@sentry/cli@3.4.3':
+    dependencies:
+      progress: 2.0.3
+      proxy-from-env: 1.1.0
+      undici: 6.25.0
+      which: 2.0.2
+    optionalDependencies:
+      '@sentry/cli-darwin': 3.4.3
+      '@sentry/cli-linux-arm': 3.4.3
+      '@sentry/cli-linux-arm64': 3.4.3
+      '@sentry/cli-linux-i686': 3.4.3
+      '@sentry/cli-linux-x64': 3.4.3
+      '@sentry/cli-win32-arm64': 3.4.3
+      '@sentry/cli-win32-i686': 3.4.3
+      '@sentry/cli-win32-x64': 3.4.3
 
   '@sentry/core@10.53.1': {}
 
@@ -17114,10 +17123,6 @@ snapshots:
 
   anser@1.4.10: {}
 
-  ansi-align@3.0.1:
-    dependencies:
-      string-width: 4.2.3
-
   ansi-colors@4.1.3: {}
 
   ansi-escapes@4.3.2:
@@ -17551,17 +17556,6 @@ snapshots:
 
   boolbase@1.0.0: {}
 
-  boxen@5.1.2:
-    dependencies:
-      ansi-align: 3.0.1
-      camelcase: 6.3.0
-      chalk: 4.1.2
-      cli-boxes: 2.2.1
-      string-width: 4.2.3
-      type-fest: 0.20.2
-      widest-line: 3.1.0
-      wrap-ansi: 7.0.0
-
   bplist-creator@0.1.0:
     dependencies:
       stream-buffers: 2.2.0
@@ -17678,8 +17672,6 @@ snapshots:
 
   chardet@2.1.1: {}
 
-  check-disk-space@3.4.0: {}
-
   chokidar@3.6.0:
     dependencies:
       anymatch: 3.1.3
@@ -17739,8 +17731,6 @@ snapshots:
   class-variance-authority@0.7.1:
     dependencies:
       clsx: 2.1.1
-
-  cli-boxes@2.2.1: {}
 
   cli-cursor@2.1.0:
     dependencies:
@@ -23236,8 +23226,6 @@ snapshots:
 
   type-detect@4.0.8: {}
 
-  type-fest@0.20.2: {}
-
   type-fest@0.21.3: {}
 
   type-fest@0.7.1: {}
@@ -23644,10 +23632,6 @@ snapshots:
   which@4.0.0:
     dependencies:
       isexe: 3.1.5
-
-  widest-line@3.1.0:
-    dependencies:
-      string-width: 4.2.3
 
   word-wrap@1.2.5: {}
 
