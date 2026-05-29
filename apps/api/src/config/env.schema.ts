@@ -46,10 +46,6 @@ const baseEnvSchema = z.object({
   // ---------------------------------------------------------------------------
   // Redis
   // ---------------------------------------------------------------------------
-  // Cloud deployments (Render, Railway, etc.) provide a single REDIS_URL.
-  // When set, REDIS_URL takes precedence over REDIS_HOST / REDIS_PORT.
-  // Use the rediss:// scheme for TLS (required on Render managed Redis).
-  REDIS_URL: z.preprocess(emptyStringToUndefined, z.string().url().optional()),
   REDIS_HOST: z.string().min(1).default('localhost'),
   REDIS_PORT: z.coerce.number().int().positive().default(6379),
 
