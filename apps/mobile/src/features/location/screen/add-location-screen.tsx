@@ -87,10 +87,14 @@ export function AddLocationScreen() {
     addressInputRef.current?.focus();
   };
 
-  const isFormValid = name.trim().length > 0 && (selectedAddress.length > 0 || addressQuery.trim().length > 0);
+  const isFormValid =
+    name.trim().length > 0 &&
+    selectedAddress.length > 0 &&
+    latitude !== null &&
+    longitude !== null;
 
   const handleSave = () => {
-    if (!isFormValid) return;
+    if (!isFormValid || latitude === null || longitude === null) return;
 
     const lowerName = name.trim().toLowerCase();
     const type = lowerName.includes('home')
