@@ -103,7 +103,6 @@ function otlpUrl(
   return `${normalized}${signalPath}`;
 }
 
-
 const otlpEndpoint = (
   env.OTEL_EXPORTER_OTLP_ENDPOINT ?? env.GRAFANA_CLOUD_OTLP_ENDPOINT
 )?.trim();
@@ -181,7 +180,8 @@ if (otlpEndpoint && (tracesEnabled || metricsEnabled || logsEnabled)) {
       new RuntimeNodeInstrumentation({ monitoringPrecision: 5000 }),
       getNodeAutoInstrumentations({
         '@opentelemetry/instrumentation-http': {
-          ignoreIncomingRequestHook: (request) => isSilentPath((request.url ?? '').split('?')[0]),
+          ignoreIncomingRequestHook: (request) =>
+            isSilentPath((request.url ?? '').split('?')[0]),
         },
         '@opentelemetry/instrumentation-fs': { enabled: false },
       }),
