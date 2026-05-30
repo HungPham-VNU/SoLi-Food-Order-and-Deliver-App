@@ -1,4 +1,4 @@
-import type { OperationalState } from '@/features/analytics/mockData';
+import type { OperationalState } from '@/features/analytics/types';
 
 const STATUS_STYLES: Record<
   OperationalState['status'],
@@ -24,23 +24,71 @@ const STATUS_STYLES: Record<
   },
 };
 
+function formatSecondsDelta(seconds: number): {
+  highlight: string;
+  qualifier: string;
+} {
+  const abs = Math.abs(seconds);
+  const display =
+    abs >= 60
+      ? `${Math.floor(abs / 60)}m ${String(abs % 60).padStart(2, '0')}s`
+      : `${abs}s`;
+  if (seconds < 0) return { highlight: `${display} faster`, qualifier: 'than baseline' };
+  if (seconds > 0) return { highlight: `${display} slower`, qualifier: 'than baseline' };
+  return { highlight: 'on pace', qualifier: 'with baseline' };
+}
+
+function copyForStatus(state: OperationalState): {
+  headline: string;
+  before: string;
+  highlight: string;
+  after: string;
+} {
+  const { highlight, qualifier } = formatSecondsDelta(state.deltaSeconds);
+
+  if (state.status === 'critical') {
+    return {
+      headline:
+        state.stuckOrderCount > 0
+          ? `${state.stuckOrderCount} order${state.stuckOrderCount > 1 ? 's' : ''} stuck — review now`
+          : 'Operations need attention',
+      before: 'Kitchen is running ',
+      highlight,
+      after: ` ${qualifier}.`,
+    };
+  }
+  if (state.status === 'attention') {
+    return {
+      headline: 'A small spike, watch closely',
+      before: 'Kitchen is running ',
+      highlight,
+      after: ` ${qualifier}.`,
+    };
+  }
+  return {
+    headline: 'Operations are running smoothly',
+    before: 'Kitchen is running ',
+    highlight,
+    after: `${qualifier === 'with baseline' ? '' : ' ' + qualifier}. No stuck orders.`,
+  };
+}
+
 export function OperationalStateBanner({ state }: { state: OperationalState }) {
   const style = STATUS_STYLES[state.status];
+  const copy = copyForStatus(state);
 
-  const [before, after] = state.detail.split('{highlight}');
-
-  const max = Math.max(...state.sparkline);
-  const min = Math.min(...state.sparkline);
+  const sparkline = state.sparkline.length > 0 ? state.sparkline : [0];
+  const max = Math.max(...sparkline);
+  const min = Math.min(...sparkline);
   const range = Math.max(max - min, 1);
-  const points = state.sparkline
+  const points = sparkline
     .map((v, i) => {
-      const x = (i / (state.sparkline.length - 1)) * 100;
+      const x = (i / Math.max(sparkline.length - 1, 1)) * 100;
       const y = 30 - ((v - min) / range) * 22 - 4;
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(' ');
-  const lastX = 100;
-  const lastY = 30 - ((state.sparkline.at(-1)! - min) / range) * 22 - 4;
+  const lastY = 30 - ((sparkline.at(-1)! - min) / range) * 22 - 4;
 
   return (
     <section className="bg-surface-container-lowest border border-outline-variant/60 rounded-2xl shadow-sm p-6 flex flex-col md:flex-row md:items-center gap-6 md:justify-between">
@@ -52,12 +100,12 @@ export function OperationalStateBanner({ state }: { state: OperationalState }) {
         </div>
         <div>
           <h2 className="font-headline text-lg font-bold text-on-surface mb-1">
-            {state.headline}
+            {copy.headline}
           </h2>
           <p className="text-sm text-on-surface-variant leading-relaxed">
-            {before}
-            <span className="font-mono font-semibold text-primary">{state.highlight}</span>
-            {after}
+            {copy.before}
+            <span className="font-mono font-semibold text-primary">{copy.highlight}</span>
+            {copy.after}
           </p>
         </div>
       </div>
@@ -83,7 +131,7 @@ export function OperationalStateBanner({ state }: { state: OperationalState }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <circle cx={lastX} cy={lastY} r={2.2} fill={style.sparkColor} />
+          <circle cx={100} cy={lastY} r={2.2} fill={style.sparkColor} />
         </svg>
       </div>
     </section>

@@ -39,6 +39,7 @@ export class PaymentFailedEventHandler implements IEventHandler<PaymentFailedEve
           null, // system actor — no user ID
           'system',
           reason,
+          'payment_failed',
         ),
       );
     } catch (err) {

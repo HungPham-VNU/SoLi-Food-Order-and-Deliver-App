@@ -4,6 +4,7 @@ import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
 import { OrderLifecycleModule } from './order-lifecycle/order-lifecycle.module';
 import { OrderHistoryModule } from './order-history/order-history.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { AclModule } from './acl/acl.module';
 
 /**
@@ -33,6 +34,7 @@ import { AclModule } from './acl/acl.module';
     // swallowed by OrderLifecycleModule's catch-all GET /orders/:id (INCON-2).
     OrderHistoryModule,
     OrderLifecycleModule,
+    AnalyticsModule,
   ],
 })
 export class OrderingModule {}

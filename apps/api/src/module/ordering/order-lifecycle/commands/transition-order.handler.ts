@@ -67,7 +67,8 @@ export class TransitionOrderHandler implements ICommandHandler<TransitionOrderCo
   }
 
   private async executeTransition(cmd: TransitionOrderCommand): Promise<Order> {
-    const { orderId, toStatus, actorId, actorRole, note } = cmd;
+    const { orderId, toStatus, actorId, actorRole, note, cancellationReason } =
+      cmd;
 
     // -------------------------------------------------------------------------
     // 1. Load order
@@ -181,7 +182,13 @@ export class TransitionOrderHandler implements ICommandHandler<TransitionOrderCo
         );
       }
 
-      // Append audit log entry (atomic with status update)
+      // Append audit log entry (atomic with status update).
+      // Default cancellationReason for cancel/refund transitions when the caller
+      // didn't supply one — keeps the analytics donut from over-reporting "other".
+      const resolvedReason =
+        cancellationReason ??
+        (toStatus === 'cancelled' || toStatus === 'refunded' ? 'other' : null);
+
       await tx.insert(orderStatusLogs).values({
         orderId,
         fromStatus: order.status,
@@ -189,6 +196,7 @@ export class TransitionOrderHandler implements ICommandHandler<TransitionOrderCo
         triggeredBy: actorId ?? null,
         triggeredByRole: actorRole,
         note: note ?? null,
+        cancellationReason: resolvedReason,
       });
 
       return result[0];

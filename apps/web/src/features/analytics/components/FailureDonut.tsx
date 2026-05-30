@@ -1,4 +1,4 @@
-import type { FailureSegment } from '@/features/analytics/mockData';
+import type { FailureSegment } from '@/features/analytics/types';
 
 export function FailureDonut({ segments }: { segments: FailureSegment[] }) {
   const total = segments.reduce((sum, s) => sum + s.count, 0);
@@ -8,7 +8,22 @@ export function FailureDonut({ segments }: { segments: FailureSegment[] }) {
   const cx = 112;
   const cy = 112;
 
-  let runningOffset = 0;
+  // Precompute each arc's dash/offset purely so the JSX callback has no side effects.
+  const arcs = segments.reduce<
+    Array<{
+      seg: FailureSegment;
+      dash: number;
+      gap: number;
+      offset: number;
+    }>
+  >((acc, seg) => {
+    const ratio = total > 0 ? seg.count / total : 0;
+    const dash = ratio * circumference;
+    const gap = circumference - dash;
+    const consumed = acc.reduce((sum, a) => sum + a.dash, 0);
+    acc.push({ seg, dash, gap, offset: -consumed });
+    return acc;
+  }, []);
 
   return (
     <section className="bg-surface-container-lowest border border-outline-variant/60 rounded-2xl shadow-sm p-6 h-full">
@@ -19,26 +34,19 @@ export function FailureDonut({ segments }: { segments: FailureSegment[] }) {
       <div className="relative h-56 flex items-center justify-center">
         <svg width="224" height="224" className="-rotate-90">
           <circle cx={cx} cy={cy} r={radius} fill="transparent" stroke="#f3f3f3" strokeWidth={28} />
-          {segments.map((seg) => {
-            const ratio = seg.count / total;
-            const dash = ratio * circumference;
-            const gap = circumference - dash;
-            const offset = -runningOffset;
-            runningOffset += dash;
-            return (
-              <circle
-                key={seg.label}
-                cx={cx}
-                cy={cy}
-                r={radius}
-                fill="transparent"
-                stroke={seg.color}
-                strokeWidth={28}
-                strokeDasharray={`${dash} ${gap}`}
-                strokeDashoffset={offset}
-              />
-            );
-          })}
+          {arcs.map(({ seg, dash, gap, offset }) => (
+            <circle
+              key={seg.label}
+              cx={cx}
+              cy={cy}
+              r={radius}
+              fill="transparent"
+              stroke={seg.color}
+              strokeWidth={28}
+              strokeDasharray={`${dash} ${gap}`}
+              strokeDashoffset={offset}
+            />
+          ))}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="font-headline font-bold text-4xl text-on-surface font-mono">

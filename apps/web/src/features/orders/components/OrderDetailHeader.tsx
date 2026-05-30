@@ -47,7 +47,7 @@ export function OrderDetailHeader({
     hour: "2-digit", minute: "2-digit",
   });
 
-  const cancellable = group === "incoming" || group === "preparing";
+  const cancellable = order.status === "pending" || order.status === "paid" || order.status === "confirmed";
 
   return (
     <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">

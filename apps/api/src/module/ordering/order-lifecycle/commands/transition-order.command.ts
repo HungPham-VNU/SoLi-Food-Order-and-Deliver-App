@@ -1,4 +1,8 @@
-import type { OrderStatus, TriggeredByRole } from '../../order/order.schema';
+import type {
+  CancellationReason,
+  OrderStatus,
+  TriggeredByRole,
+} from '../../order/order.schema';
 
 /**
  * TransitionOrderCommand
@@ -12,6 +16,8 @@ import type { OrderStatus, TriggeredByRole } from '../../order/order.schema';
  *
  * `actorId` is null for system-initiated transitions (cron, payment events).
  * `actorRole` is 'system' for system-initiated transitions.
+ * `cancellationReason` is only meaningful when toStatus is 'cancelled' or
+ *   'refunded'. Persisted on order_status_logs for the analytics taxonomy.
  */
 export class TransitionOrderCommand {
   constructor(
@@ -21,5 +27,6 @@ export class TransitionOrderCommand {
     public readonly actorId: string | null,
     public readonly actorRole: TriggeredByRole,
     public readonly note?: string,
+    public readonly cancellationReason?: CancellationReason,
   ) {}
 }

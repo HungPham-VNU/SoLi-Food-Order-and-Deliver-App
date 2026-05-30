@@ -1,18 +1,41 @@
-const TIME_LABELS = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
+import type { RefundRatePoint } from '@/features/analytics/types';
 
 const W = 800;
 const H = 200;
 const PAD_X = 0;
 const PAD_Y = 12;
 
-export function RefundRateChart({ series }: { series: number[] }) {
-  const max = Math.max(...series, 5); // critical band is >5%
+function formatHourLabel(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return `${String(d.getHours()).padStart(2, '0')}:00`;
+  } catch {
+    return iso;
+  }
+}
+
+export function RefundRateChart({ series }: { series: RefundRatePoint[] }) {
+  if (series.length === 0) {
+    return (
+      <section className="bg-surface-container-lowest border border-outline-variant/60 rounded-2xl shadow-sm p-6 h-full">
+        <h3 className="font-headline text-lg font-bold text-on-surface mb-2">
+          Refund Rate Over Time
+        </h3>
+        <p className="text-sm text-on-surface-variant py-10 text-center">
+          No delivered orders in this window yet — nothing to plot.
+        </p>
+      </section>
+    );
+  }
+
+  const pctSeries = series.map((p) => p.rate * 100);
+  const max = Math.max(...pctSeries, 5);
   const min = 0;
-  const stepX = (W - PAD_X * 2) / (series.length - 1);
-  const points = series.map((v, i) => {
+  const stepX = (W - PAD_X * 2) / Math.max(series.length - 1, 1);
+  const points = series.map((p, i) => {
     const x = PAD_X + stepX * i;
-    const y = PAD_Y + (1 - (v - min) / (max - min)) * (H - PAD_Y * 2);
-    return { x, y, v };
+    const y = PAD_Y + (1 - (p.rate * 100 - min) / (max - min)) * (H - PAD_Y * 2);
+    return { x, y, pct: p.rate * 100, hour: p.hour };
   });
 
   const linePath = points
@@ -20,7 +43,6 @@ export function RefundRateChart({ series }: { series: number[] }) {
     .join(' ');
   const areaPath = `${linePath} L ${points.at(-1)!.x} ${H} L ${points[0].x} ${H} Z`;
 
-  // Critical band — represents >5%
   const criticalY = PAD_Y + (1 - 5 / max) * (H - PAD_Y * 2);
 
   return (
@@ -30,7 +52,7 @@ export function RefundRateChart({ series }: { series: number[] }) {
           Refund Rate Over Time
         </h3>
         <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant bg-surface-container px-3 py-1 rounded-full">
-          % of paid orders
+          % of delivered orders
         </span>
       </div>
 
@@ -47,7 +69,6 @@ export function RefundRateChart({ series }: { series: number[] }) {
             </linearGradient>
           </defs>
 
-          {/* Critical band ( > 5% ) */}
           <rect
             x={0}
             y={PAD_Y}
@@ -85,7 +106,7 @@ export function RefundRateChart({ series }: { series: number[] }) {
               stroke="white"
               strokeWidth={1.5}
             >
-              <title>{`${p.v.toFixed(1)}%`}</title>
+              <title>{`${p.pct.toFixed(1)}%`}</title>
             </circle>
           ))}
         </svg>
@@ -96,8 +117,8 @@ export function RefundRateChart({ series }: { series: number[] }) {
       </div>
 
       <div className="flex justify-between mt-2 text-[11px] font-mono text-on-surface-variant">
-        {TIME_LABELS.map((l) => (
-          <span key={l}>{l}</span>
+        {points.map((p, i) => (
+          <span key={i}>{formatHourLabel(p.hour)}</span>
         ))}
       </div>
     </section>

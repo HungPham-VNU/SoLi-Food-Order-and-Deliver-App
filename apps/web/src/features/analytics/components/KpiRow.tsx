@@ -1,42 +1,58 @@
-import type { KitchenKpi } from '@/features/analytics/mockData';
+import type { KitchenKpi, KpiDelta } from '@/features/analytics/types';
 
-type Direction = KitchenKpi['supporting'][number]['deltaDirection'];
+type Tone = 'good' | 'bad' | 'flat';
 
-function deltaPresentation(direction: Direction) {
-  switch (direction) {
-    case 'up':
-      return {
-        // "up" here means the metric went up — for time/refund metrics that's usually worse
-        bg: 'bg-error-container/40',
-        text: 'text-error',
-        icon: 'arrow_upward',
-      };
-    case 'down':
-      return {
-        bg: 'bg-primary/10',
-        text: 'text-primary',
-        icon: 'arrow_downward',
-      };
-    case 'flat':
-      return {
-        bg: 'bg-surface-container',
-        text: 'text-on-surface-variant',
-        icon: 'horizontal_rule',
-      };
-    case 'perfect':
-      return {
-        bg: 'bg-primary/10',
-        text: 'text-primary',
-        icon: 'check_circle',
-      };
+/**
+ * Resolve a metric's `direction` into a tone. `up` is bad here — all the
+ * metrics on the page (time, refund rate, auto-cancel) are improvements when
+ * they shrink.
+ */
+function toneFor(direction: KpiDelta['direction']): Tone {
+  if (direction === 'down') return 'good';
+  if (direction === 'up') return 'bad';
+  return 'flat';
+}
+
+function presentation(tone: Tone) {
+  if (tone === 'good') {
+    return { bg: 'bg-primary/10', text: 'text-primary', icon: 'arrow_downward' };
   }
+  if (tone === 'bad') {
+    return {
+      bg: 'bg-error-container/40',
+      text: 'text-error',
+      icon: 'arrow_upward',
+    };
+  }
+  return {
+    bg: 'bg-surface-container',
+    text: 'text-on-surface-variant',
+    icon: 'horizontal_rule',
+  };
+}
+
+/** Build the human-readable delta phrase for a metric. */
+function deltaPhrase(card: KpiDelta, units: 'seconds' | 'percent'): string {
+  if (card.direction === 'flat') return 'Stable vs baseline';
+  const abs = Math.abs(card.delta);
+  if (units === 'seconds') {
+    const display =
+      abs >= 60
+        ? `${Math.floor(abs / 60)}m ${String(abs % 60).padStart(2, '0')}s`
+        : `${abs}s`;
+    return card.direction === 'down' ? `${display} faster` : `${display} slower`;
+  }
+  const pct = (abs * 100).toFixed(1);
+  return card.direction === 'down' ? `${pct}% improvement` : `${pct}% worse`;
+}
+
+function unitsFor(label: string): 'seconds' | 'percent' {
+  return label.toLowerCase().includes('rate') ? 'percent' : 'seconds';
 }
 
 export function KpiRow({ kpi }: { kpi: KitchenKpi }) {
-  const heroDelta = deltaPresentation(
-    // Hero is "time to accept" — going down = good, up = bad.
-    kpi.hero.deltaDirection === 'down' ? 'down' : kpi.hero.deltaDirection === 'up' ? 'up' : 'flat',
-  );
+  const heroTone = toneFor(kpi.hero.direction);
+  const heroPres = presentation(heroTone);
 
   return (
     <section className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -53,14 +69,13 @@ export function KpiRow({ kpi }: { kpi: KitchenKpi }) {
             {kpi.hero.value}
           </span>
           <span
-            className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold ${heroDelta.bg} ${heroDelta.text}`}
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold ${heroPres.bg} ${heroPres.text}`}
           >
-            <span className="material-symbols-outlined text-[16px]">{heroDelta.icon}</span>
-            {kpi.hero.deltaLabel}
+            <span className="material-symbols-outlined text-[16px]">{heroPres.icon}</span>
+            {deltaPhrase(kpi.hero, 'seconds')}
           </span>
         </div>
 
-        {/* Decorative sparkline background */}
         <svg
           className="absolute bottom-0 left-0 right-0 h-20 z-0 opacity-60"
           preserveAspectRatio="none"
@@ -82,7 +97,9 @@ export function KpiRow({ kpi }: { kpi: KitchenKpi }) {
       {/* Supporting trio */}
       <div className="md:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-6">
         {kpi.supporting.map((card) => {
-          const delta = deltaPresentation(card.deltaDirection);
+          const tone = toneFor(card.direction);
+          const pres = presentation(tone);
+          const units = unitsFor(card.label);
           return (
             <article
               key={card.label}
@@ -94,9 +111,9 @@ export function KpiRow({ kpi }: { kpi: KitchenKpi }) {
               <p className="font-headline font-bold text-2xl text-on-surface font-mono tracking-tight mb-3">
                 {card.value}
               </p>
-              <div className={`inline-flex items-center gap-1 text-xs font-semibold ${delta.text}`}>
-                <span className="material-symbols-outlined text-[16px]">{delta.icon}</span>
-                <span>{card.deltaLabel}</span>
+              <div className={`inline-flex items-center gap-1 text-xs font-semibold ${pres.text}`}>
+                <span className="material-symbols-outlined text-[16px]">{pres.icon}</span>
+                <span>{deltaPhrase(card, units)}</span>
               </div>
             </article>
           );

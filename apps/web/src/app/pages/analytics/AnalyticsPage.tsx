@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
-import { ANALYTICS_DATA, type RangeKey } from '@/features/analytics/mockData';
+import { useState } from 'react';
+import type { AnalyticsRange } from '@/features/analytics/types';
+import { decorateFailureSegment } from '@/features/analytics/types';
+import { useOperationalAnalytics } from '@/features/analytics/hooks/useOperationalAnalytics';
 import { OperationalStateBanner } from '@/features/analytics/components/OperationalStateBanner';
 import { KpiRow } from '@/features/analytics/components/KpiRow';
 import { TimeToAcceptHistogram } from '@/features/analytics/components/TimeToAcceptHistogram';
@@ -8,18 +10,19 @@ import { HourlyDensityChart } from '@/features/analytics/components/HourlyDensit
 import { RefundRateChart } from '@/features/analytics/components/RefundRateChart';
 import { SlowItemsTable } from '@/features/analytics/components/SlowItemsTable';
 import { IncidentsList } from '@/features/analytics/components/IncidentsList';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const RANGES: { key: RangeKey; label: string }[] = [
+const RANGES: { key: AnalyticsRange; label: string }[] = [
   { key: 'today', label: 'Today' },
   { key: 'yesterday', label: 'Yesterday' },
   { key: '7d', label: 'Last 7 Days' },
 ];
 
 export function AnalyticsPage() {
-  const [range, setRange] = useState<RangeKey>('today');
+  const [range, setRange] = useState<AnalyticsRange>('today');
   const [compareBaseline, setCompareBaseline] = useState(true);
 
-  const data = useMemo(() => ANALYTICS_DATA[range], [range]);
+  const { data, isLoading, isError, error } = useOperationalAnalytics(range);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto w-full">
@@ -81,31 +84,70 @@ export function AnalyticsPage() {
         </label>
       </section>
 
-      <OperationalStateBanner state={data.operationalState} />
+      {isLoading && <AnalyticsSkeleton />}
 
-      <KpiRow kpi={data.kitchenKpi} />
-
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7">
-          <TimeToAcceptHistogram buckets={data.timeToAcceptBuckets} />
+      {isError && (
+        <div className="bg-error-container/30 border border-error/30 text-error rounded-2xl p-6 text-sm">
+          Couldn't load analytics: {(error as Error)?.message ?? 'Unknown error'}.
         </div>
-        <div className="lg:col-span-5">
-          <FailureDonut segments={data.failureSegments} />
-        </div>
-      </section>
+      )}
 
-      <HourlyDensityChart data={data.hourlyDensity} showBaseline={compareBaseline} />
+      {data && (
+        <>
+          <OperationalStateBanner state={data.current.operationalState} />
 
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8">
-          <RefundRateChart series={data.refundRateSeries} />
-        </div>
-        <div className="lg:col-span-4">
-          <SlowItemsTable items={data.slowItems} />
-        </div>
-      </section>
+          <KpiRow kpi={data.current.kitchenKpi} />
 
-      <IncidentsList incidents={data.incidents} />
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-7">
+              <TimeToAcceptHistogram buckets={data.current.timeToAcceptBuckets} />
+            </div>
+            <div className="lg:col-span-5">
+              <FailureDonut
+                segments={data.current.failureSegments.map(decorateFailureSegment)}
+              />
+            </div>
+          </section>
+
+          <HourlyDensityChart
+            current={data.current.hourlyDensity}
+            baseline={data.baseline.hourlyDensity}
+            showBaseline={compareBaseline}
+          />
+
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-8">
+              <RefundRateChart series={data.current.refundRateSeries} />
+            </div>
+            <div className="lg:col-span-4">
+              <SlowItemsTable items={data.current.slowItems} />
+            </div>
+          </section>
+
+          <IncidentsList incidents={data.current.incidents} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function AnalyticsSkeleton() {
+  return (
+    <div className="space-y-6">
+      <Skeleton className="h-24 w-full rounded-2xl" />
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        <Skeleton className="md:col-span-4 h-44 rounded-2xl" />
+        <div className="md:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-32 rounded-2xl" />
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <Skeleton className="lg:col-span-7 h-80 rounded-2xl" />
+        <Skeleton className="lg:col-span-5 h-80 rounded-2xl" />
+      </div>
+      <Skeleton className="h-72 w-full rounded-2xl" />
     </div>
   );
 }

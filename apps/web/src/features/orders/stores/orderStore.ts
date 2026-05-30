@@ -70,7 +70,9 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
 
   setOrders: (items) =>
     set({
-      orders: items.map(mapOrderListItemToOrder),
+      orders: items
+        .filter((item) => item.status !== 'cancelled' && item.status !== 'refunded')
+        .map(mapOrderListItemToOrder),
     }),
 
   reorderOrder: (orderId, sourceStatus, destinationStatus, sourceIndex, destinationIndex) =>

@@ -1,4 +1,11 @@
-import type { SlowItem } from '@/features/analytics/mockData';
+import type { SlowItem } from '@/features/analytics/types';
+
+function formatSeconds(seconds: number): string {
+  const safe = Math.max(Math.round(seconds), 0);
+  const m = Math.floor(safe / 60);
+  const s = safe % 60;
+  return `${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+}
 
 export function SlowItemsTable({ items }: { items: SlowItem[] }) {
   return (
@@ -16,10 +23,10 @@ export function SlowItemsTable({ items }: { items: SlowItem[] }) {
           </thead>
           <tbody className="divide-y divide-outline-variant">
             {items.map((item) => (
-              <tr key={item.name} className="hover:bg-surface-container-low transition-colors">
+              <tr key={item.menuItemId} className="hover:bg-surface-container-low transition-colors">
                 <td className="py-3 px-4 text-sm font-medium text-on-surface">{item.name}</td>
                 <td className="py-3 px-4 text-right font-mono text-sm text-on-surface-variant">
-                  {item.avgPrep}
+                  {formatSeconds(item.avgPrepSeconds)}
                 </td>
               </tr>
             ))}
