@@ -232,15 +232,15 @@ export function AddressSelectionScreen() {
         </View>
       </View>
 
-      <View className="z-10 mt-2 border-b border-surface-container-highest bg-surface px-2 pb-2">
-        <View className="flex-row gap-4">
+      <View className="z-10 mt-2 border-b border-surface-container-highest bg-surface pb-2">
+        <View className="flex-row">
           {(['recent', 'saved'] as const).map((tab) => {
             const isActive = activeTab === tab;
             return (
               <TouchableOpacity
                 key={tab}
                 onPress={() => setActiveTab(tab)}
-                className="relative px-2 pb-2"
+                className="relative flex-1 items-center pb-2"
                 accessibilityRole="tab"
                 accessibilityState={{ selected: isActive }}
               >
@@ -341,7 +341,7 @@ export function AddressSelectionScreen() {
                 key={location.id}
                 title={location.title}
                 subtitle={location.subtitle}
-                icon={<Clock3 size={21} color="#40493d" fill="#40493d" />}
+                icon={<Clock3 size={21} color="#40493d" />}
                 onPress={() =>
                   handleSelectAddress(location.address, location.coords ?? null)
                 }
@@ -372,7 +372,7 @@ export function AddressSelectionScreen() {
               }}
             >
               <View className="mt-1 h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-low">
-                <Home size={20} color="#0d631b" fill="#0d631b" />
+                <Home size={20} color="#0d631b" />
               </View>
               <View className="min-w-0 flex-1 pr-8">
                 <Text className="mb-1 font-jakarta-sans text-lg font-bold text-on-surface">
@@ -412,7 +412,7 @@ export function AddressSelectionScreen() {
               className="flex-row items-center gap-4 rounded-xl border border-transparent p-4 active:border-surface-container-highest active:bg-surface-container-lowest"
             >
               <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-container">
-                <Briefcase size={20} color="#0d631b" fill="#0d631b" />
+                <Briefcase size={20} color="#0d631b" />
               </View>
               <Text className="flex-1 font-jakarta-sans text-base font-semibold text-primary-container">
                 Add work
