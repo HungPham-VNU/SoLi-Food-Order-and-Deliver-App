@@ -5,10 +5,12 @@ import type { CheckoutSummary } from '../../types';
 
 interface CheckoutPriceBreakdownProps {
   summary: CheckoutSummary;
+  appliedCouponCode?: string | null;
 }
 
 export function CheckoutPriceBreakdown({
   summary,
+  appliedCouponCode,
 }: CheckoutPriceBreakdownProps) {
   return (
     <View className="bg-surface-container-lowest rounded-2xl p-4 gap-3 border border-outline-variant/15">
@@ -48,7 +50,9 @@ export function CheckoutPriceBreakdown({
             className="text-primary text-sm"
             style={{ fontFamily: 'Inter_400Regular' }}
           >
-            Discount ({summary.discountPercent}%)
+            {appliedCouponCode
+              ? `Promo (${appliedCouponCode})`
+              : 'Promo Discount'}
           </Text>
           <Text
             className="text-primary text-sm"

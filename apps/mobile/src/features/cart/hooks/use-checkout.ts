@@ -5,6 +5,7 @@ import { useSession } from '@/src/lib/auth-client';
 import { useAddressStore } from '@/src/features/location/store/address-store';
 import { useCheckoutStore } from '../store/checkout-store';
 import { useDeliveryEstimate } from '@/src/features/restaurants/api/restaurant-api';
+import { usePreviewDiscount } from '@/src/features/promotions/hooks/use-preview-discount';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { checkoutCart } from '../api/cart-api';
 import Toast from 'react-native-toast-message';
@@ -13,27 +14,20 @@ import * as Crypto from 'expo-crypto';
 import type { CheckoutSummary, CartItem, CheckoutDto } from '../types';
 import { trackMobileEvent } from '@/src/lib/analytics';
 
-const DISCOUNT_THRESHOLD = 500000; // 500k VND
-const DISCOUNT_PERCENT = 10; // 10%
 const DEFAULT_DELIVERY_FEE = 15000; // 15k VND
 
 function computeOrderSummary(
   subtotal: number,
   deliveryFee: number = DEFAULT_DELIVERY_FEE,
+  discountAmount: number = 0,
   estimatedMinutes?: number,
 ): CheckoutSummary {
-  const remaining = Math.max(0, DISCOUNT_THRESHOLD - subtotal);
-  const discount =
-    subtotal >= DISCOUNT_THRESHOLD ? subtotal * (DISCOUNT_PERCENT / 100) : 0;
-  const total = subtotal - discount + deliveryFee;
+  const total = subtotal - discountAmount + deliveryFee;
   return {
     subtotal,
-    discount,
+    discount: discountAmount,
     delivery: deliveryFee,
     total,
-    discountThreshold: DISCOUNT_THRESHOLD,
-    discountPercent: DISCOUNT_PERCENT,
-    remainingForDiscount: remaining,
     estimatedMinutes,
   };
 }
@@ -51,6 +45,17 @@ export function useCheckout() {
     longitude,
   );
 
+  const { selectedPaymentMethod, appliedCouponCode } = useCheckoutStore();
+
+  const deliveryFee = estimate?.deliveryFee ?? DEFAULT_DELIVERY_FEE;
+
+  const { data: discountPreview } = usePreviewDiscount(
+    cart?.restaurantId,
+    cart?.totalAmount,
+    deliveryFee,
+    appliedCouponCode,
+  );
+
   const checkoutMutation = useMutation({
     mutationFn: (data: { dto: CheckoutDto; idempotencyKey?: string }) =>
       checkoutCart(data.dto, data.idempotencyKey),
@@ -58,8 +63,9 @@ export function useCheckout() {
       trackMobileEvent('order_created', {
         order_id: data.orderId,
         payment_method: data.paymentMethod,
-        total_amount: summary.total,
+        total_amount: data.totalAmount,
         item_count: cartItems.length,
+        discount_amount: data.discountAmount,
       });
       queryClient.invalidateQueries({ queryKey: ['cart'] });
       if (data.paymentMethod === 'vnpay' && data.paymentUrl) {
@@ -103,7 +109,8 @@ export function useCheckout() {
         longitude: longitude ?? undefined,
       },
       paymentMethod: selectedPaymentMethod.id === 'vnpay' ? 'vnpay' : 'cod',
-      note: '', // Could be wired up to a note input
+      note: '',
+      couponCode: appliedCouponCode ?? undefined,
     };
 
     const randomBytes = await Crypto.getRandomBytesAsync(16);
@@ -115,6 +122,7 @@ export function useCheckout() {
     });
     checkoutMutation.mutate({ dto, idempotencyKey });
   };
+
   const cartItems: CartItem[] =
     cart?.items.map((item) => ({
       id: item.cartItemId,
@@ -126,12 +134,11 @@ export function useCheckout() {
       selectedModifiers: item.selectedModifiers,
     })) || [];
 
-  const { selectedPaymentMethod } = useCheckoutStore();
-
-  const deliveryFee = estimate?.deliveryFee ?? DEFAULT_DELIVERY_FEE;
+  const discountAmount = discountPreview?.discountAmount ?? 0;
   const summary = computeOrderSummary(
     cart?.totalAmount || 0,
     deliveryFee,
+    discountAmount,
     estimate?.estimatedMinutes,
   );
 
@@ -144,8 +151,10 @@ export function useCheckout() {
     estimate,
     selectedAddress,
     selectedPaymentMethod,
+    appliedCouponCode,
     cartItems,
     summary,
+    discountPreview,
     handleBack,
     handlePlaceOrder,
     isPlacingOrder: checkoutMutation.isPending,
