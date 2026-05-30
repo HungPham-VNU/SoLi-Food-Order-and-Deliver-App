@@ -37,6 +37,13 @@
       "bundler": "metro"
     },
     "plugins": [
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "nguyen-ai-truong-danh",
+          "project": "uitfood-mobile"
+        }
+      ],
       "expo-router",
       "@sentry/react-native/expo",
       [

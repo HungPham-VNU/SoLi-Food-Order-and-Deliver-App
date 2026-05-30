@@ -261,6 +261,14 @@ export class OrderDetailDto {
 
   @ApiProperty({ type: [OrderStatusLogEntryDto] })
   timeline!: OrderStatusLogEntryDto[];
+
+  // UC-22: true when the customer has already submitted a review for this
+  // order. Used by the mobile client to hide the "Rate & Review" button after
+  // submission. Computed by OrderHistoryService via cross-BC reviews read.
+  @ApiPropertyOptional({
+    description: 'True when a review exists for this order (UC-22)',
+  })
+  hasReview?: boolean;
 }
 
 // ---------------------------------------------------------------------------

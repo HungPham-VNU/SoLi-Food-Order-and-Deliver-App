@@ -99,6 +99,36 @@ export function useNearbyRestaurants(params: NearbyRestaurantsParams = {}) {
   });
 }
 
+interface UnifiedSearchParams {
+  q: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  radiusKm?: number;
+  offset?: number;
+  limit?: number;
+}
+
+export function useUnifiedSearch(params: UnifiedSearchParams) {
+  const { q, latitude, longitude, radiusKm = 5, offset = 0, limit = 20 } = params;
+  const trimmedQ = q.trim();
+  const hasCoords = latitude != null && longitude != null;
+  const queryString = buildSearchQuery({
+    q: trimmedQ || undefined,
+    lat: hasCoords ? (latitude ?? undefined) : undefined,
+    lon: hasCoords ? (longitude ?? undefined) : undefined,
+    radiusKm: hasCoords ? radiusKm : undefined,
+    offset,
+    limit,
+  });
+  const endpoint = `/api/search?${queryString}`;
+
+  return useQuery({
+    queryKey: restaurantKeys.search(queryString),
+    queryFn: () => apiFetch<UnifiedSearchResponse>(endpoint),
+    enabled: trimmedQ.length > 0,
+  });
+}
+
 export function useRestaurant(id: string) {
   return useQuery({
     queryKey: restaurantKeys.detail(id),

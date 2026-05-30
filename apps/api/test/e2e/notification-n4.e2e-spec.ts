@@ -483,7 +483,10 @@ describe('§3 Multi-Channel Dispatch — In-App + Push', () => {
         undefined,
       ),
     );
-    await delay(300);
+    // Remote Redis (Upstash) adds ~50-200ms per call. §3 is first to exercise
+    // the full dispatch pipeline (cold connection + 4 concurrent dispatches),
+    // so a generous delay is needed. §5/§6 run later with a warm connection.
+    await delay(1500);
 
     const allNotifs = await getNotificationsForUser(customerId);
     const inApp = allNotifs.find(

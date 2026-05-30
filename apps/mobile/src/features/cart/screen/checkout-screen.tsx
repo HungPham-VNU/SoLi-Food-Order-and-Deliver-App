@@ -7,7 +7,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { Tag } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { useCheckout } from '../hooks';
+import { useCheckoutStore } from '../store/checkout-store';
+import {
+  useValidateCoupon,
+  useActivePromotions,
+} from '@/src/features/promotions';
 import {
   CheckoutHeader,
   CheckoutDeliverySection,
@@ -29,10 +36,71 @@ export function SingleScreenCheckout() {
     selectedPaymentMethod,
     cartItems,
     summary,
+    cart,
+    appliedCouponCode,
+    discountPreview,
     handleBack,
     handlePlaceOrder,
     isPlacingOrder,
   } = useCheckout();
+
+  const { setAppliedCouponCode } = useCheckoutStore();
+
+  const validateCouponMutation = useValidateCoupon();
+  const { data: activePromotions } = useActivePromotions(cart?.restaurantId);
+
+  const autoApplyPromotions = activePromotions?.filter(
+    (p) => p.trigger === 'auto_apply',
+  );
+
+  const handleApplyPromo = (code: string) => {
+    if (!cart?.restaurantId) return;
+    validateCouponMutation.mutate(
+      {
+        code,
+        restaurantId: cart.restaurantId,
+        itemsSubtotal: cart.totalAmount,
+        shippingFee: estimate?.deliveryFee ?? 15000,
+      },
+      {
+        onSuccess: (result) => {
+          if (result.applicable) {
+            setAppliedCouponCode(code.toUpperCase());
+          } else {
+            validateCouponMutation.reset();
+          }
+        },
+      },
+    );
+  };
+
+  const handleClearPromo = () => {
+    setAppliedCouponCode(null);
+    validateCouponMutation.reset();
+  };
+
+  const handleBrowsePromo = () => {
+    if (!cart?.restaurantId) return;
+    router.push({
+      pathname: '/(customer)/checkout/promo-picker',
+      params: {
+        restaurantId: cart.restaurantId,
+        cartSubtotal: String(cart.totalAmount),
+      },
+    });
+  };
+
+  const couponError = (() => {
+    if (!validateCouponMutation.isError && !validateCouponMutation.data) return null;
+    if (validateCouponMutation.isError) {
+      const err = validateCouponMutation.error as any;
+      return err?.message || 'Invalid coupon code';
+    }
+    if (validateCouponMutation.data && !validateCouponMutation.data.applicable) {
+      return validateCouponMutation.data.reason || 'Coupon code is not applicable';
+    }
+    return null;
+  })();
 
   if (isLoading) {
     return (
@@ -82,9 +150,44 @@ export function SingleScreenCheckout() {
 
         <CheckoutOrderSummary items={cartItems} />
 
-        <CheckoutPriceBreakdown summary={summary} />
+        <CheckoutPriceBreakdown
+          summary={summary}
+          appliedCouponCode={appliedCouponCode}
+        />
 
-        <CheckoutPromoSection onApply={(code) => console.log('Applying promo:', code)} />
+        {/* Auto-apply promotions banner */}
+        {autoApplyPromotions && autoApplyPromotions.length > 0 && (
+          <View className="bg-primary/8 rounded-2xl p-4 gap-2 border border-primary/20">
+            <View className="flex-row items-center gap-2">
+              <Tag size={16} color="#0d631b" />
+              <Text
+                className="text-primary text-sm"
+                style={{ fontFamily: 'Inter_600SemiBold' }}
+              >
+                Active Deals
+              </Text>
+            </View>
+            {autoApplyPromotions.map((promo) => (
+              <Text
+                key={promo.id}
+                className="text-on-surface text-xs"
+                style={{ fontFamily: 'Inter_400Regular' }}
+              >
+                • {promo.name}
+              </Text>
+            ))}
+          </View>
+        )}
+
+        <CheckoutPromoSection
+          onApply={handleApplyPromo}
+          onClear={handleClearPromo}
+          onBrowse={handleBrowsePromo}
+          isValidating={validateCouponMutation.isPending}
+          appliedCode={appliedCouponCode}
+          appliedDiscount={discountPreview?.discountAmount}
+          error={couponError}
+        />
 
         <CheckoutPaymentSection
           paymentMethod={selectedPaymentMethod ?? undefined}

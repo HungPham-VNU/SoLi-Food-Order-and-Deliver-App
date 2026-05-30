@@ -124,6 +124,7 @@ export interface CheckoutDto {
   deliveryAddress: DeliveryAddressDto;
   paymentMethod: 'cod' | 'vnpay';
   note?: string;
+  couponCode?: string;
 }
 
 export interface CheckoutResponseDto {
@@ -131,6 +132,7 @@ export interface CheckoutResponseDto {
   status: string;
   totalAmount: number;
   shippingFee: number;
+  discountAmount: number;
   paymentMethod: 'cod' | 'vnpay';
   paymentUrl?: string;
   estimatedDeliveryMinutes?: number;

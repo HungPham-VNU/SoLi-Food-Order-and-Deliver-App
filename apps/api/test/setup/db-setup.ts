@@ -31,6 +31,9 @@ import {
   couponCodes,
   promotions,
 } from '../../src/module/promotion/domain/promotion.schema';
+import { reviews } from '../../src/module/review/domain/review.schema';
+import { notifications } from '../../src/module/notification/domain/notification.schema';
+import { notificationDeliveryLogs } from '../../src/module/notification/domain/notification-delivery-log.schema';
 
 // ─── Test user credentials ────────────────────────────────────────────────────
 //
@@ -93,6 +96,15 @@ export async function resetUsers(): Promise<void> {
  */
 export async function resetDb(): Promise<void> {
   const db = getTestDb();
+  // Notification BC — no FK constraints (D-P7 pattern). Must be cleared before
+  // reviews/orders so heap order is deterministic for tests that use
+  // rows[rows.length - 1] without ORDER BY (e.g. RV-110).
+  await db.delete(notificationDeliveryLogs);
+  await db.delete(notifications);
+  // Review BC — no FK to orders/restaurants (cross-BC), so must be deleted explicitly
+  // BEFORE orders/restaurants so the rating projection writes from any in-flight test
+  // are gone before the next test inserts.
+  await db.delete(reviews);
   // orders cascade-deletes: order_items, order_status_logs
   await db.delete(orders);
   await db.delete(orderingMenuItemSnapshots);

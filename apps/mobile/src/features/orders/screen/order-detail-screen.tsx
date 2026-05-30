@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Star } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { formatCurrency } from '@/src/lib/format-utils';
 import { useMyOrderDetail } from '../hooks/use-order-history';
@@ -179,6 +179,31 @@ export function OrderDetailScreen() {
                 : 'Location details unavailable'}
             </Text>
           </View>
+
+          {order.status === 'delivered' && (
+            <TouchableOpacity
+              onPress={() =>
+                router.push(`/(customer)/orders/${order.orderId}/rate`)
+              }
+              className={`flex-row items-center justify-center rounded-2xl py-4 mb-10 ${
+                order.hasReview ? 'bg-surface-container-high' : 'bg-primary'
+              }`}
+            >
+              <Star
+                size={20}
+                color={order.hasReview ? '#0d631b' : '#ffffff'}
+                fill={order.hasReview ? '#0d631b' : 'transparent'}
+              />
+              <Text
+                className={
+                  order.hasReview ? 'text-primary ml-2' : 'text-on-primary ml-2'
+                }
+                style={{ fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16 }}
+              >
+                {order.hasReview ? 'View Your Review' : 'Rate & Review'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       )}
     </View>

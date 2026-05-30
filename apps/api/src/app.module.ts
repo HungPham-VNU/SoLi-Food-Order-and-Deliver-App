@@ -17,6 +17,7 @@ import { NotificationModule } from './module/notification/notification.module';
 import { ImageModule } from './module/image/image.module';
 import { PromotionModule } from './module/promotion/promotion.module';
 import { AdminAnalyticsModule } from './module/admin-analytics/admin-analytics.module';
+import { ReviewModule } from './module/review/review.module';
 import { validate } from './config/env.schema';
 import { vnpayConfig } from './config/vnpay.config';
 import { ObservabilityInterceptor } from './observability/observability.interceptor';
@@ -39,6 +40,7 @@ import { ObservabilityInterceptor } from './observability/observability.intercep
     PaymentModule,
     NotificationModule,
     ImageModule,
+    ReviewModule,
 
     AuthModule.forRoot({
       auth,
