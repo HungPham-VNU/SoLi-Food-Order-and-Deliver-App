@@ -1,7 +1,7 @@
 import '@/src/lib/reanimated-logger';
 import '../global.css';
 import '@/src/lib/nativewind-interop';
-import { AppState, Platform, ActivityIndicator, View } from 'react-native';
+import { AppState, Platform, ActivityIndicator, View, Text } from 'react-native';
 import {
   QueryClient,
   QueryClientProvider,
@@ -9,7 +9,7 @@ import {
   onlineManager,
 } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   getMessaging,
@@ -76,11 +76,33 @@ if (Platform.OS !== 'web') {
   });
 }
 
+function MobileErrorFallback() {
+  return (
+    <View className="flex-1 items-center justify-center bg-white px-6">
+      <Text className="text-lg font-semibold text-gray-900">
+        Something went wrong
+      </Text>
+      <Text className="mt-2 text-sm text-gray-500 text-center">
+        Please restart the app.
+      </Text>
+    </View>
+  );
+}
+
 function RootNavigation() {
   const { data: session, isPending } = useSession();
   const segments = useSegments();
   const router = useRouter();
+  const pathname = usePathname();
   const userId = session?.user?.id;
+
+  useEffect(() => {
+    Sentry.addBreadcrumb({
+      category: 'navigation',
+      message: `Navigated to ${pathname}`,
+      level: 'info',
+    });
+  }, [pathname]);
 
   // Initialize notifications
   useNotificationSocket();
@@ -166,11 +188,13 @@ function AppLayout() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <MobileAnalyticsProvider>
-        <RootNavigation />
-      </MobileAnalyticsProvider>
-    </QueryClientProvider>
+    <Sentry.ErrorBoundary fallback={<MobileErrorFallback />}>
+      <QueryClientProvider client={queryClient}>
+        <MobileAnalyticsProvider>
+          <RootNavigation />
+        </MobileAnalyticsProvider>
+      </QueryClientProvider>
+    </Sentry.ErrorBoundary>
   );
 }
 

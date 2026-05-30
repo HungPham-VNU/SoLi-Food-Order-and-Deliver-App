@@ -1,4 +1,5 @@
 import { shutdownTelemetry } from './telemetry';
+import { recordException } from './observability/errors';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder, OpenAPIObject } from '@nestjs/swagger';
 import { auth } from './lib/auth';
@@ -41,6 +42,37 @@ function installShutdownHandler(app: INestApplication): void {
       })();
     });
   }
+}
+
+function installUncaughtHandlers(): void {
+  process.on('uncaughtException', (error: Error) => {
+    recordException(error, { source: 'uncaughtException' });
+    console.error(
+      JSON.stringify({
+        level: 'fatal',
+        timestamp: new Date().toISOString(),
+        event: 'process.uncaught_exception',
+        message: error.message,
+        stack: error.stack,
+      }),
+    );
+    process.exit(1);
+  });
+
+  process.on('unhandledRejection', (reason: unknown) => {
+    const error = reason instanceof Error ? reason : new Error(String(reason));
+    recordException(error, { source: 'unhandledRejection' });
+    console.error(
+      JSON.stringify({
+        level: 'fatal',
+        timestamp: new Date().toISOString(),
+        event: 'process.unhandled_rejection',
+        message: error.message,
+        stack: error.stack,
+      }),
+    );
+    process.exit(1);
+  });
 }
 
 async function bootstrap() {
@@ -125,5 +157,6 @@ async function bootstrap() {
   await app.listen(process.env.PORT ?? 3000);
 }
 
+installUncaughtHandlers();
 // eslint-disable-next-line
 bootstrap();

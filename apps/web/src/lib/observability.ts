@@ -125,4 +125,11 @@ export function resetObservabilityUser(): void {
   faroClient?.api.resetUser();
 }
 
+export function pushObservabilityEvent(
+  name: string,
+  attributes?: Record<string, string>,
+): void {
+  faroClient?.api.pushEvent(name, attributes);
+}
+
 export { FaroErrorBoundary };

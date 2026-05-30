@@ -12,6 +12,7 @@ import * as Linking from 'expo-linking';
 import * as Crypto from 'expo-crypto';
 import type { CheckoutSummary, CartItem, CheckoutDto } from '../types';
 import { trackMobileEvent } from '@/src/lib/analytics';
+import { Sentry } from '@/src/lib/observability';
 
 const DISCOUNT_THRESHOLD = 500000; // 500k VND
 const DISCOUNT_PERCENT = 10; // 10%
@@ -107,13 +108,27 @@ export function useCheckout() {
     };
 
     const randomBytes = await Crypto.getRandomBytesAsync(16);
-    const idempotencyKey = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    const idempotencyKey = Array.from(randomBytes)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
     trackMobileEvent('checkout_submitted', {
       payment_method: dto.paymentMethod,
       item_count: cartItems.length,
       total_amount: summary.total,
     });
-    checkoutMutation.mutate({ dto, idempotencyKey });
+    await Sentry.startSpan(
+      {
+        name: 'checkout.place_order',
+        op: 'ui.action',
+        attributes: {
+          'checkout.payment_method': dto.paymentMethod,
+          'checkout.item_count': cartItems.length,
+        },
+      },
+      async () => {
+        await checkoutMutation.mutateAsync({ dto, idempotencyKey });
+      },
+    );
   };
   const cartItems: CartItem[] =
     cart?.items.map((item) => ({
@@ -151,4 +166,3 @@ export function useCheckout() {
     isPlacingOrder: checkoutMutation.isPending,
   };
 }
-

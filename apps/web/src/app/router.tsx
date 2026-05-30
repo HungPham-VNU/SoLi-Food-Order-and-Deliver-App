@@ -1,5 +1,6 @@
 import { withFaroRouterInstrumentation } from '@grafana/faro-react';
 import { createBrowserRouter } from 'react-router-dom';
+import { FaroErrorBoundary } from '@/lib/observability';
 import { RegisterPage } from '@/app/pages/auth/register/RegisterPage';
 import { RegisterLocationPage } from '@/app/pages/auth/register/RegisterBusinessPage';
 import { RegisterPendingPage } from '@/app/pages/auth/register/RegisterPendingPage';
@@ -17,6 +18,15 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 import { RequireRestaurantAccess } from '@/components/auth/RequireRestaurantAccess';
 import { RootRedirect } from '@/components/auth/RootRedirect';
+
+function PageErrorFallback() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center px-4">
+      <p className="text-lg font-semibold text-foreground">This page encountered an error.</p>
+      <p className="text-sm text-muted-foreground">Try refreshing the page.</p>
+    </div>
+  );
+}
 
 export const router = withFaroRouterInstrumentation(createBrowserRouter([
   {
@@ -59,17 +69,17 @@ export const router = withFaroRouterInstrumentation(createBrowserRouter([
             children: [
               {
                 path: 'dashboard',
-                element: <DashboardPage />,
+                element: <FaroErrorBoundary fallback={<PageErrorFallback />}><DashboardPage /></FaroErrorBoundary>,
                 handle: { breadcrumb: 'Dashboard' },
               },
               {
                 path: 'orders',
                 handle: { breadcrumb: 'Orders' },
                 children: [
-                  { index: true, element: <OrdersPage /> },
+                  { index: true, element: <FaroErrorBoundary fallback={<PageErrorFallback />}><OrdersPage /></FaroErrorBoundary> },
                   {
                     path: ':orderId',
-                    element: <OrderDetailPage />,
+                    element: <FaroErrorBoundary fallback={<PageErrorFallback />}><OrderDetailPage /></FaroErrorBoundary>,
                     handle: { breadcrumb: 'Order Detail' },
                   },
                 ],
@@ -78,27 +88,27 @@ export const router = withFaroRouterInstrumentation(createBrowserRouter([
                 path: 'menu',
                 handle: { breadcrumb: 'Menu' },
                 children: [
-                  { index: true, element: <MenuManagementPage /> },
+                  { index: true, element: <FaroErrorBoundary fallback={<PageErrorFallback />}><MenuManagementPage /></FaroErrorBoundary> },
                   {
                     path: 'create',
-                    element: <CreateMenuItemPage />,
+                    element: <FaroErrorBoundary fallback={<PageErrorFallback />}><CreateMenuItemPage /></FaroErrorBoundary>,
                     handle: { breadcrumb: 'Create Item' },
                   },
                   {
                     path: 'edit/:itemId',
-                    element: <EditMenuItemPage />,
+                    element: <FaroErrorBoundary fallback={<PageErrorFallback />}><EditMenuItemPage /></FaroErrorBoundary>,
                     handle: { breadcrumb: 'Edit Item' },
                   },
                 ],
               },
               {
                 path: 'delivery-zones',
-                element: <DeliveryZonesPage />,
+                element: <FaroErrorBoundary fallback={<PageErrorFallback />}><DeliveryZonesPage /></FaroErrorBoundary>,
                 handle: { breadcrumb: 'Delivery Zones' },
               },
               {
                 path: 'settings',
-                element: <SettingsPage />,
+                element: <FaroErrorBoundary fallback={<PageErrorFallback />}><SettingsPage /></FaroErrorBoundary>,
                 handle: { breadcrumb: 'Settings' },
               },
             ],

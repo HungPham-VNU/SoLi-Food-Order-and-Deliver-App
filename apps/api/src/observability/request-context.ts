@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { metrics, trace } from '@opentelemetry/api';
 import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 import type { NextFunction, Request, Response } from 'express';
-import { isHealthPath, isOtelLogsEnabled } from './observability-config';
+import { isSilentPath, isOtelLogsEnabled } from './observability-config';
 import { toLogAttributes } from './otel-attributes';
 import { redactHeaders } from './redaction';
 import {
@@ -124,7 +124,7 @@ export function requestContextMiddleware(
 
       decrementActiveRequests();
 
-      if (isHealthPath(context.path)) return;
+      if (isSilentPath(context.path)) return;
 
       requestCount.add(1, metricAttributes);
       requestDuration.record(durationMs, metricAttributes);

@@ -1,3 +1,4 @@
+import * as Application from 'expo-application';
 import * as Crypto from 'expo-crypto';
 import * as Sentry from '@sentry/react-native';
 
@@ -19,11 +20,15 @@ export function initMobileObservability(): void {
   const release =
     process.env.EXPO_PUBLIC_SENTRY_RELEASE ??
     process.env.EXPO_PUBLIC_APP_VERSION;
+  const dist =
+    Application.nativeBuildVersion ??
+    process.env.EXPO_PUBLIC_BUILD_NUMBER;
 
   Sentry.init({
     dsn,
     environment,
     release,
+    dist,
     tracesSampleRate: numberFromEnv(
       process.env.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
       0.1,

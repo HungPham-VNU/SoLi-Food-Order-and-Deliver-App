@@ -13,7 +13,7 @@ import {
   ATTR_SERVICE_VERSION,
 } from '@opentelemetry/semantic-conventions';
 import { validate } from '../config/env.schema';
-import { isHealthPath } from './observability-config';
+import { isSilentPath } from './observability-config';
 
 const env = validate(process.env);
 
@@ -103,11 +103,6 @@ function otlpUrl(
   return `${normalized}${signalPath}`;
 }
 
-function isHealthRequest(url?: string | null): boolean {
-  const path = (url ?? '').split('?')[0];
-  return isHealthPath(path);
-}
-
 const otlpEndpoint = (
   env.OTEL_EXPORTER_OTLP_ENDPOINT ?? env.GRAFANA_CLOUD_OTLP_ENDPOINT
 )?.trim();
@@ -185,7 +180,8 @@ if (otlpEndpoint && (tracesEnabled || metricsEnabled || logsEnabled)) {
       new RuntimeNodeInstrumentation({ monitoringPrecision: 5000 }),
       getNodeAutoInstrumentations({
         '@opentelemetry/instrumentation-http': {
-          ignoreIncomingRequestHook: (request) => isHealthRequest(request.url),
+          ignoreIncomingRequestHook: (request) =>
+            isSilentPath((request.url ?? '').split('?')[0]),
         },
         '@opentelemetry/instrumentation-fs': { enabled: false },
       }),
