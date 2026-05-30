@@ -7,3 +7,4 @@ export * from './order-ready-for-pickup.event';
 export * from './order-cancelled-after-payment.event';
 export * from './payment-confirmed.event';
 export * from './payment-failed.event';
+export * from './review-submitted.event';
