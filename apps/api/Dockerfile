@@ -31,6 +31,7 @@ COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 RUN pnpm install --prod --frozen-lockfile
 
 FROM node:22-alpine AS runner
+RUN apk add --no-cache ca-certificates
 WORKDIR /app/apps/api
 ENV NODE_ENV=production
 
