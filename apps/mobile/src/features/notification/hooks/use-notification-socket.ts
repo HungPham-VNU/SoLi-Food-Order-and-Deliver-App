@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import { io, Socket } from 'socket.io-client';
 import { useSession, authClient } from '@/src/lib/auth-client';
 import { useNotificationStore } from '@/src/store/notification-store';
@@ -25,6 +26,10 @@ const WS_URL = getWsUrl(BASE_URL);
 
 export function useNotificationSocket() {
   const socketRef = useRef<Socket | null>(null);
+  // Tracks whether we disconnected the socket because the app went to the
+  // background. Used to ensure we only reconnect when AppState caused the
+  // disconnect, not after auth failures or session expiry.
+  const pausedByAppStateRef = useRef(false);
   const { data: session } = useSession();
   const { addNotification, markReadInStore, markAllReadInStore } =
     useNotificationStore();
@@ -139,6 +144,31 @@ export function useNotificationSocket() {
       socketRef.current = null;
     };
   }, [session, addNotification, markReadInStore, markAllReadInStore]);
+
+  // Disconnect the socket when the app is backgrounded so the server's
+  // UserPresenceService marks the user offline. This allows push notifications
+  // to be delivered instead of being suppressed (the server suppresses push
+  // when it sees an active WebSocket connection, assuming in-app delivery
+  // suffices — but the app is not visible in the background).
+  // Reconnect when the app returns to the foreground to restore real-time events.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      const socket = socketRef.current;
+      if (!socket) return;
+
+      if (nextAppState === 'background') {
+        socket.disconnect();
+        pausedByAppStateRef.current = true;
+      } else if (nextAppState === 'active' && pausedByAppStateRef.current) {
+        pausedByAppStateRef.current = false;
+        if (!socket.connected) {
+          socket.connect();
+        }
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   return socketRef;
 }
