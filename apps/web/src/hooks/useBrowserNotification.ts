@@ -1,17 +1,14 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 type NotificationPermissionState = NotificationPermission | 'unsupported';
 
-export function useBrowserNotification() {
-  const [permission, setPermission] = useState<NotificationPermissionState>('default');
+function readPermission(): NotificationPermissionState {
+  if (!('Notification' in window)) return 'unsupported';
+  return Notification.permission;
+}
 
-  useEffect(() => {
-    if (!('Notification' in window)) {
-      setPermission('unsupported');
-    } else {
-      setPermission(Notification.permission);
-    }
-  }, []);
+export function useBrowserNotification() {
+  const [permission, setPermission] = useState<NotificationPermissionState>(readPermission);
 
   const requestPermission = useCallback(async (): Promise<NotificationPermissionState> => {
     if (!('Notification' in window)) {

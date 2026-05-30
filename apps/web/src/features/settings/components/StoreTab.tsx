@@ -19,32 +19,32 @@ const DEFAULT_CENTER = { lat: 10.762622, lng: 106.660172 };
 
 function LocationMarker() {
   const { setValue } = useFormContext<UpdateRestaurantFormValues>();
-  const [position, setPosition] = useState<L.LatLng | null>(null);
   const map = useMap();
 
   const lat = useWatch<UpdateRestaurantFormValues, 'latitude'>({ name: 'latitude' });
   const lng = useWatch<UpdateRestaurantFormValues, 'longitude'>({ name: 'longitude' });
 
-  // Sync position state with form values
+  // Derive position directly from form values — no state needed
+  const position =
+    lat !== undefined && lng !== undefined
+      ? new L.LatLng(lat, lng)
+      : new L.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng);
+
+  // Side effect only: seed defaults and fly the map when coords change significantly
   useEffect(() => {
-    if (lat !== undefined && lng !== undefined) {
-      const newPos = new L.LatLng(lat, lng);
-      setPosition(newPos);
-      
-      // If the map center is too far from the new position (e.g. from geocoding), fly to it
-      if (map.getCenter().distanceTo(newPos) > 500) {
-        map.flyTo(newPos, 15);
-      }
-    } else {
-      setPosition(new L.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng));
+    if (lat === undefined || lng === undefined) {
       setValue('latitude', DEFAULT_CENTER.lat);
       setValue('longitude', DEFAULT_CENTER.lng);
+      return;
+    }
+    const newPos = new L.LatLng(lat, lng);
+    if (map.getCenter().distanceTo(newPos) > 500) {
+      map.flyTo(newPos, 15);
     }
   }, [lat, lng, map, setValue]);
 
   useMapEvents({
-    click(e) {
-      setPosition(e.latlng);
+    click(e: { latlng: L.LatLng }) {
       setValue('latitude', e.latlng.lat, { shouldValidate: true, shouldDirty: true });
       setValue('longitude', e.latlng.lng, { shouldValidate: true, shouldDirty: true });
     },
@@ -57,16 +57,15 @@ function LocationMarker() {
         const marker = markerRef.current;
         if (marker != null) {
           const latlng = marker.getLatLng();
-          setPosition(latlng);
           setValue('latitude', latlng.lat, { shouldValidate: true, shouldDirty: true });
           setValue('longitude', latlng.lng, { shouldValidate: true, shouldDirty: true });
         }
       },
     }),
-    [setValue]
+    [setValue],
   );
 
-  return position === null ? null : (
+  return (
     <Marker draggable={true} eventHandlers={eventHandlers} position={position} ref={markerRef} />
   );
 }
@@ -76,7 +75,7 @@ function LocateControl() {
   const { setValue } = useFormContext<UpdateRestaurantFormValues>();
   
   const handleLocate = () => {
-    map.locate().on('locationfound', function (e) {
+    map.locate().on('locationfound', function (e: L.LocationEvent) {
       map.flyTo(e.latlng, map.getZoom());
       setValue('latitude', e.latlng.lat, { shouldValidate: true, shouldDirty: true });
       setValue('longitude', e.latlng.lng, { shouldValidate: true, shouldDirty: true });
