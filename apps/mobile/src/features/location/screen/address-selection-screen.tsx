@@ -13,9 +13,7 @@ import { useRouter } from 'expo-router';
 import {
   ArrowLeft,
   Briefcase,
-  Building2,
   Clock3,
-  FileEdit,
   Home,
   LocateFixed,
   Map,
@@ -24,21 +22,16 @@ import {
   Pencil,
   Plus,
   Search,
+  Star,
+  Trash2,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAddressSearch, useCurrentLocation } from '../hooks';
+import type { SavedAddress } from '../store/address-store';
 import { useAddressStore } from '../store/address-store';
 
 type LocationTab = 'recent' | 'saved';
-
-type LocationListItem = {
-  id: string;
-  title: string;
-  subtitle: string;
-  address: string;
-  coords?: { latitude: number; longitude: number } | null;
-};
 
 interface LocationRowProps {
   title: string;
@@ -49,33 +42,6 @@ interface LocationRowProps {
   disabled?: boolean;
   testID?: string;
 }
-
-const DEFAULT_RECENT_LOCATIONS: LocationListItem[] = [
-  {
-    id: 'bcons-plaza',
-    title: 'Bcons Plaza Apartment',
-    subtitle: '0.08km - Thong Nhat, Dong Hoa Ward',
-    address: 'Bcons Plaza Apartment, Thong Nhat, Dong Hoa Ward',
-  },
-  {
-    id: 'mien-dong-station',
-    title: 'Mien Dong New Coach Station',
-    subtitle: '2.98km - Xa Lo Ha Noi, Long Binh',
-    address: 'Mien Dong New Coach Station, Xa Lo Ha Noi, Long Binh',
-  },
-  {
-    id: 'national-university',
-    title: 'National University Station',
-    subtitle: '3.14km - Song Hanh Xa Lo Ha Noi',
-    address: 'National University Station, Song Hanh Xa Lo Ha Noi',
-  },
-  {
-    id: 'm-one-south-saigon',
-    title: 'M-One South Saigon',
-    subtitle: '18km - Huynh Tan Phat, District 7',
-    address: 'M-One South Saigon, Huynh Tan Phat, District 7',
-  },
-];
 
 function LocationRow({
   title,
@@ -122,6 +88,79 @@ function LocationRow({
   );
 }
 
+function SavedAddressIcon({ type }: { type: SavedAddress['type'] }) {
+  if (type === 'home') return <Home size={20} color="#0d631b" />;
+  if (type === 'work') return <Briefcase size={20} color="#0d631b" />;
+  return <Star size={20} color="#0d631b" />;
+}
+
+function SavedAddressRow({
+  item,
+  onPress,
+  onEdit,
+  onDelete,
+}: {
+  item: SavedAddress;
+  onPress: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <View
+      className="relative overflow-hidden rounded-xl border border-surface-container-low bg-surface-container-lowest"
+      style={{
+        shadowColor: 'rgba(26,28,28,1)',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 12,
+        elevation: 1,
+      }}
+    >
+      <TouchableOpacity
+        onPress={onPress}
+        className="flex-row items-start gap-4 p-4 pr-20 active:bg-surface-container-low"
+        accessibilityRole="button"
+        accessibilityLabel={`${item.label}: ${item.address}`}
+      >
+        <View className="mt-1 h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-fixed/20">
+          <SavedAddressIcon type={item.type} />
+        </View>
+        <View className="min-w-0 flex-1">
+          <Text className="mb-0.5 font-jakarta-sans text-base font-bold text-on-surface">
+            {item.label}
+          </Text>
+          <Text
+            className="font-inter text-sm leading-relaxed text-on-surface-variant"
+            numberOfLines={2}
+          >
+            {item.address}
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Action buttons */}
+      <View className="absolute right-3 top-3 flex-row gap-1">
+        <TouchableOpacity
+          onPress={onEdit}
+          className="rounded-full p-2 active:bg-surface-container"
+          accessibilityRole="button"
+          accessibilityLabel={`Edit ${item.label}`}
+        >
+          <Pencil size={18} color="#40493d" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onDelete}
+          className="rounded-full p-2 active:bg-error/10"
+          accessibilityRole="button"
+          accessibilityLabel={`Delete ${item.label}`}
+        >
+          <Trash2 size={18} color="#ba1a1a" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 export function AddressSelectionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -133,6 +172,9 @@ export function AddressSelectionScreen() {
     longitude,
     savedAddresses,
     recentSearches,
+    addRecentSearch,
+    removeSavedAddress,
+    clearRecentSearches,
   } = useAddressStore();
   const {
     query: searchQuery,
@@ -153,8 +195,11 @@ export function AddressSelectionScreen() {
   const handleSelectAddress = (
     address: string,
     coords?: { latitude: number; longitude: number } | null,
+    subtitle?: string,
+    label?: string,
   ) => {
     setSelectedAddress(address, coords);
+    addRecentSearch(address, coords, subtitle, label);
     clearLocationError();
     clearSearchError();
     router.back();
@@ -167,6 +212,7 @@ export function AddressSelectionScreen() {
     }
 
     setSelectedAddress(result.label, result.coords);
+    addRecentSearch(result.label, result.coords);
     router.back();
   };
 
@@ -174,16 +220,32 @@ export function AddressSelectionScreen() {
     Alert.alert('Choose on Map', 'Map picker feature coming soon!');
   };
 
-  const recentLocations: LocationListItem[] =
-    recentSearches.length > 0
-      ? recentSearches.map((search) => ({
-          id: search.id,
-          title: search.address,
-          subtitle: 'Recent search',
-          address: search.address,
-          coords: search.coords,
-        }))
-      : DEFAULT_RECENT_LOCATIONS;
+  const handleDeleteSaved = (id: string, label: string) => {
+    Alert.alert(
+      'Remove Saved Address',
+      `Remove "${label}" from your saved places?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => removeSavedAddress(id),
+        },
+      ],
+    );
+  };
+
+  const handleEditSaved = (_id: string) => {
+    // Navigate to add-location with pre-filled data (future enhancement)
+    router.push('/(customer)/add-location');
+  };
+
+  const handleClearRecent = () => {
+    Alert.alert('Clear Recent', 'Clear all recent searches?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Clear', style: 'destructive', onPress: clearRecentSearches },
+    ]);
+  };
 
   return (
     <View className="flex-1 bg-surface">
@@ -218,7 +280,7 @@ export function AddressSelectionScreen() {
       <View className="z-10 bg-surface px-4 pb-4 pt-2">
         <View className="relative justify-center">
           <View className="pointer-events-none absolute left-4 z-10">
-            <MapPin size={21} color="#00490e" fill="#00490e" />
+            <MapPin size={21} color="#00490e" />
           </View>
           <TextInput
             ref={searchInputRef}
@@ -326,30 +388,86 @@ export function AddressSelectionScreen() {
                 subtitle={result.subtitle || 'Search result'}
                 icon={<MapPin size={21} color="#40493d" />}
                 onPress={() =>
-                  handleSelectAddress(result.label, {
-                    latitude: result.latitude,
-                    longitude: result.longitude,
-                  })
+                  handleSelectAddress(
+                    result.label,
+                    {
+                      latitude: result.latitude,
+                      longitude: result.longitude,
+                    },
+                    result.subtitle || undefined,
+                  )
                 }
               />
             ))}
           </View>
         ) : activeTab === 'recent' ? (
           <View className="gap-2">
-            {recentLocations.map((location) => (
-              <LocationRow
-                key={location.id}
-                title={location.title}
-                subtitle={location.subtitle}
-                icon={<Clock3 size={21} color="#40493d" />}
-                onPress={() =>
-                  handleSelectAddress(location.address, location.coords ?? null)
-                }
-              />
-            ))}
+            {recentSearches.length > 0 ? (
+              <>
+                <View className="flex-row items-center justify-between px-1">
+                  <Text className="font-jakarta-sans text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+                    Recent
+                  </Text>
+                  <TouchableOpacity
+                    onPress={handleClearRecent}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear recent searches"
+                  >
+                    <Text className="font-inter text-xs text-primary">
+                      Clear all
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                {recentSearches.map((search) => {
+                  let title: string;
+                  let subtitle: string;
+                  if (search.label) {
+                    title = search.label;
+                    subtitle = search.address;
+                  } else if (search.subtitle) {
+                    title = search.address;
+                    subtitle = search.subtitle;
+                  } else {
+                    const commaIdx = search.address.indexOf(',');
+                    title =
+                      commaIdx !== -1
+                        ? search.address.slice(0, commaIdx).trim()
+                        : search.address;
+                    subtitle =
+                      commaIdx !== -1
+                        ? search.address.slice(commaIdx + 1).trim()
+                        : 'Recent search';
+                  }
+                  return (
+                    <LocationRow
+                      key={search.id}
+                      title={title}
+                      subtitle={subtitle}
+                      icon={<Clock3 size={21} color="#40493d" />}
+                      onPress={() =>
+                        handleSelectAddress(search.address, search.coords)
+                      }
+                    />
+                  );
+                })}
+              </>
+            ) : (
+              <View className="items-center py-12 gap-3">
+                <View className="h-14 w-14 items-center justify-center rounded-full bg-surface-container">
+                  <Clock3 size={28} color="#9ca3af" />
+                </View>
+                <Text className="font-jakarta-sans text-base font-semibold text-on-surface-variant">
+                  No recent searches
+                </Text>
+                <Text className="text-center font-inter text-sm text-on-surface-variant">
+                  Addresses you pick will appear here
+                </Text>
+              </View>
+            )}
           </View>
         ) : (
           <View className="mt-2 gap-2">
+            {/* Add new saved place */}
             <TouchableOpacity
               onPress={() => router.push('/(customer)/add-location')}
               className="flex-row items-center gap-4 rounded-xl border border-transparent p-4 active:border-surface-container-highest active:bg-surface-container-lowest"
@@ -358,66 +476,43 @@ export function AddressSelectionScreen() {
                 <Plus size={20} color="#0d631b" />
               </View>
               <Text className="flex-1 font-jakarta-sans text-base font-semibold text-primary-container">
-                Add new
+                Add new saved place
               </Text>
             </TouchableOpacity>
 
-            <View className="mx-4 my-2 h-px border-t-2 border-surface-container" />
-
-            <TouchableOpacity
-              onPress={() => {}}
-              className="relative flex-row items-start gap-4 overflow-hidden rounded-xl border border-surface-container-low bg-surface-container-lowest p-4 active:bg-surface-container-lowest"
-              style={{
-                boxShadow: '0 2px 12px 0 rgba(26,28,28,0.03)',
-              }}
-            >
-              <View className="mt-1 h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-low">
-                <Home size={20} color="#0d631b" />
-              </View>
-              <View className="min-w-0 flex-1 pr-8">
-                <Text className="mb-1 font-jakarta-sans text-lg font-bold text-on-surface">
-                  Home
-                </Text>
-                <Text
-                  className="mb-3 font-inter text-sm leading-relaxed text-on-surface-variant"
-                  numberOfLines={2}
-                >
-                  66km • 21 Do Luong St., 21 Do Luong, Phuoc Thang Ward, Ho Chi
-                  Minh...
-                </Text>
-                <View className="mt-2 flex-col gap-2">
-                  <View className="flex-row items-center gap-2">
-                    <Building2 size={16} color="#40493d" />
-                    <Text className="font-inter text-sm text-on-surface-variant">
-                      Floor / unit no.
-                    </Text>
-                  </View>
-                  <View className="flex-row items-center gap-2">
-                    <FileEdit size={16} color="#40493d" />
-                    <Text className="font-inter text-sm text-on-surface-variant">
-                      Note to driver
-                    </Text>
-                  </View>
+            {savedAddresses.length > 0 ? (
+              <>
+                <View className="mx-4 my-2 h-px border-t-2 border-surface-container" />
+                {savedAddresses.map((item) => (
+                  <SavedAddressRow
+                    key={item.id}
+                    item={item}
+                    onPress={() =>
+                      handleSelectAddress(
+                        item.address,
+                        item.coords,
+                        undefined,
+                        item.label,
+                      )
+                    }
+                    onEdit={() => handleEditSaved(item.id)}
+                    onDelete={() => handleDeleteSaved(item.id, item.label)}
+                  />
+                ))}
+              </>
+            ) : (
+              <View className="items-center py-12 gap-3">
+                <View className="h-14 w-14 items-center justify-center rounded-full bg-surface-container">
+                  <MapPin size={28} color="#9ca3af" />
                 </View>
+                <Text className="font-jakarta-sans text-base font-semibold text-on-surface-variant">
+                  No saved places yet
+                </Text>
+                <Text className="text-center font-inter text-sm text-on-surface-variant">
+                  Tap &quot;Add new saved place&quot; to get started
+                </Text>
               </View>
-              <TouchableOpacity className="absolute right-4 top-4 rounded-full p-2 active:bg-surface-container">
-                <Pencil size={20} color="#40493d" />
-              </TouchableOpacity>
-            </TouchableOpacity>
-
-            <View className="mx-4 my-2 h-px border-t-2 border-surface-container" />
-
-            <TouchableOpacity
-              onPress={() => {}}
-              className="flex-row items-center gap-4 rounded-xl border border-transparent p-4 active:border-surface-container-highest active:bg-surface-container-lowest"
-            >
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-container">
-                <Briefcase size={20} color="#0d631b" />
-              </View>
-              <Text className="flex-1 font-jakarta-sans text-base font-semibold text-primary-container">
-                Add work
-              </Text>
-            </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>

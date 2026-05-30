@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,8 @@ import {
   Croissant,
   Utensils,
   Heart,
+  X,
+  MapPin,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -28,9 +30,10 @@ import { HomeTopBar } from '../components';
 import {
   useDeliveryEstimates,
   useNearbyRestaurants,
+  useUnifiedSearch,
 } from '../api/restaurant-api';
 import { FloatingCartButton } from '@/src/features/cart';
-import { formatCurrency } from '@/src/lib/format-utils';
+import { formatCurrency, formatPrice } from '@/src/lib/format-utils';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', Icon: Utensils },
@@ -65,15 +68,33 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const { latitude, longitude } = useAddressStore();
-  
+
   const hasCoordinates = latitude != null && longitude != null;
+  const isSearchActive = debouncedQuery.length > 0;
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const {
     data: restaurantsData,
     isLoading,
     error,
   } = useNearbyRestaurants({
+    latitude,
+    longitude,
+  });
+
+  const {
+    data: searchData,
+    isLoading: isSearchLoading,
+    error: searchError,
+  } = useUnifiedSearch({
+    q: debouncedQuery,
     latitude,
     longitude,
   });
@@ -91,6 +112,10 @@ export function HomeScreen() {
     latitude,
     longitude,
   );
+
+  const searchRestaurants = searchData?.restaurants ?? [];
+  const searchItems = searchData?.items ?? [];
+  const hasSearchResults = searchRestaurants.length > 0 || searchItems.length > 0;
 
   return (
     <View className="flex-1 bg-background font-inter text-on-surface">
@@ -111,14 +136,187 @@ export function HomeScreen() {
               <Search size={20} color="#40493d" />
             </View>
             <TextInput
-              className="w-full h-14 pl-12 pr-4 bg-surface-container-lowest border border-surface-variant rounded-full font-inter text-sm text-on-surface shadow-sm"
+              className="w-full h-14 pl-12 pr-12 bg-surface-container-lowest border border-surface-variant rounded-full font-inter text-sm text-on-surface shadow-sm"
               placeholder="Search restaurants, dishes..."
               placeholderTextColor="#40493d"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+              clearButtonMode="never"
             />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                className="absolute right-4 z-10"
+              >
+                <X size={18} color="#40493d" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
-        {/* Categories Section */}
+        {isSearchActive ? (
+          /* ── Search Results ── */
+          <View className="px-4 pb-6">
+            <Text className="font-jakarta-sans text-lg font-bold text-on-surface-variant mb-4">
+              Results for &ldquo;{debouncedQuery}&rdquo;
+            </Text>
+
+            {isSearchLoading ? (
+              <ActivityIndicator size="large" color="#00490e" />
+            ) : searchError ? (
+              <Text className="text-error text-center my-4">
+                Error loading search results
+              </Text>
+            ) : !hasSearchResults ? (
+              <View className="items-center justify-center my-10 gap-3">
+                <Search size={48} color="#707a6c" />
+                <Text className="text-on-surface-variant font-medium text-center">
+                  No results found for &ldquo;{debouncedQuery}&rdquo;
+                </Text>
+              </View>
+            ) : (
+              <View className="gap-6">
+                {/* Restaurants Results */}
+                {searchRestaurants.length > 0 && (
+                  <View>
+                    <Text className="font-jakarta-sans text-xl font-extrabold text-on-background mb-3">
+                      Restaurants ({searchData?.total.restaurants})
+                    </Text>
+                    <View className="gap-4">
+                      {searchRestaurants.map((restaurant) => (
+                        <TouchableOpacity
+                          key={restaurant.id}
+                          onPress={() =>
+                            router.push({
+                              pathname: '/restaurant/[id]',
+                              params: { id: restaurant.id },
+                            })
+                          }
+                          className="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm active:scale-[0.98] border border-surface-variant/20 flex-row"
+                        >
+                          <View className="w-24 h-24 flex-shrink-0">
+                            {restaurant.coverImageUrl ?? restaurant.logoUrl ? (
+                              <Image
+                                source={{
+                                  uri:
+                                    (restaurant.coverImageUrl ??
+                                      restaurant.logoUrl) as string,
+                                }}
+                                className="w-full h-full"
+                                contentFit="cover"
+                                transition={200}
+                                cachePolicy="memory-disk"
+                              />
+                            ) : (
+                              <View className="w-full h-full bg-surface-container items-center justify-center">
+                                <Utensils size={28} color="#707a6c" />
+                              </View>
+                            )}
+                          </View>
+                          <View className="flex-1 p-3 justify-center gap-1">
+                            <View className="flex-row items-center justify-between">
+                              <Text
+                                className="font-jakarta-sans font-bold text-base text-on-background flex-1 mr-2"
+                                numberOfLines={1}
+                              >
+                                {restaurant.name}
+                              </Text>
+                              <View
+                                className={`px-2 py-0.5 rounded-full ${restaurant.isOpen ? 'bg-primary/10' : 'bg-error/10'}`}
+                              >
+                                <Text
+                                  className={`font-inter text-xs font-semibold ${restaurant.isOpen ? 'text-primary' : 'text-error'}`}
+                                >
+                                  {restaurant.isOpen ? 'Open' : 'Closed'}
+                                </Text>
+                              </View>
+                            </View>
+                            {restaurant.cuisineType && (
+                              <Text className="font-inter text-xs text-on-surface-variant">
+                                {restaurant.cuisineType}
+                              </Text>
+                            )}
+                            <View className="flex-row items-center gap-1">
+                              <MapPin size={12} color="#707a6c" />
+                              <Text
+                                className="font-inter text-xs text-on-surface-variant flex-1"
+                                numberOfLines={1}
+                              >
+                                {restaurant.distanceKm != null
+                                  ? `${restaurant.distanceKm.toFixed(1)} km away`
+                                  : restaurant.address}
+                              </Text>
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {/* Food Items Results */}
+                {searchItems.length > 0 && (
+                  <View>
+                    <Text className="font-jakarta-sans text-xl font-extrabold text-on-background mb-3">
+                      Food Items ({searchData?.total.items})
+                    </Text>
+                    <View className="gap-3">
+                      {searchItems.map((item) => (
+                        <TouchableOpacity
+                          key={item.id}
+                          onPress={() =>
+                            router.push({
+                              pathname: '/restaurant/[id]',
+                              params: { id: item.restaurant.id },
+                            })
+                          }
+                          className="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm active:scale-[0.98] border border-surface-variant/20 flex-row"
+                        >
+                          <View className="w-24 h-24 flex-shrink-0">
+                            {item.imageUrl ? (
+                              <Image
+                                source={{ uri: item.imageUrl }}
+                                className="w-full h-full"
+                                contentFit="cover"
+                                transition={200}
+                                cachePolicy="memory-disk"
+                              />
+                            ) : (
+                              <View className="w-full h-full bg-surface-container items-center justify-center">
+                                <Utensils size={28} color="#707a6c" />
+                              </View>
+                            )}
+                          </View>
+                          <View className="flex-1 p-3 justify-center gap-1">
+                            <Text
+                              className="font-jakarta-sans font-bold text-base text-on-background"
+                              numberOfLines={1}
+                            >
+                              {item.name}
+                            </Text>
+                            <Text className="font-inter text-sm font-semibold text-primary">
+                              {formatPrice(item.price)} VND
+                            </Text>
+                            <Text
+                              className="font-inter text-xs text-on-surface-variant"
+                              numberOfLines={1}
+                            >
+                              {[item.categoryName, item.restaurant.name]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        ) : (
+          <>
         <View className="mb-8">
           <ScrollView
             horizontal
@@ -355,6 +553,8 @@ export function HomeScreen() {
             </View>
           )}
         </View>
+          </>
+        )}
       </ScrollView>
       <FloatingCartButton />
     </View>
