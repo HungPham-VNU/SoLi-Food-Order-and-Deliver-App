@@ -183,7 +183,8 @@ if (otlpEndpoint && (tracesEnabled || metricsEnabled || logsEnabled)) {
           ignoreIncomingRequestHook: (request) =>
             isSilentPath((request.url ?? '').split('?')[0]),
         },
-        '@opentelemetry/instrumentation-fs': { enabled: false },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        '@opentelemetry/instrumentation-fs': { enabled: false } as any,
       }),
     ],
   });
