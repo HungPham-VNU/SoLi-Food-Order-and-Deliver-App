@@ -31,6 +31,7 @@ import {
   couponCodes,
   promotions,
 } from '../../src/module/promotion/domain/promotion.schema';
+import { reviews } from '../../src/module/review/domain/review.schema';
 
 // ─── Test user credentials ────────────────────────────────────────────────────
 //
@@ -93,6 +94,10 @@ export async function resetUsers(): Promise<void> {
  */
 export async function resetDb(): Promise<void> {
   const db = getTestDb();
+  // Review BC — no FK to orders/restaurants (cross-BC), so must be deleted explicitly
+  // BEFORE orders/restaurants so the rating projection writes from any in-flight test
+  // are gone before the next test inserts.
+  await db.delete(reviews);
   // orders cascade-deletes: order_items, order_status_logs
   await db.delete(orders);
   await db.delete(orderingMenuItemSnapshots);

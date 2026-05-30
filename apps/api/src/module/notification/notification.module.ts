@@ -52,6 +52,7 @@ import { OrderStatusChangedNotificationHandler } from './events/order-status-cha
 import { PaymentConfirmedNotificationHandler } from './events/payment-confirmed.handler';
 import { PaymentFailedNotificationHandler } from './events/payment-failed.handler';
 import { OrderCancelledAfterPaymentNotificationHandler } from './events/order-cancelled-after-payment.handler';
+import { ReviewSubmittedNotificationHandler } from './events/review-submitted.handler';
 
 /**
  * NotificationModule — Phase N-4 Multi-Channel Delivery
@@ -178,6 +179,7 @@ import { OrderCancelledAfterPaymentNotificationHandler } from './events/order-ca
     PaymentConfirmedNotificationHandler,
     PaymentFailedNotificationHandler,
     OrderCancelledAfterPaymentNotificationHandler,
+    ReviewSubmittedNotificationHandler,
   ],
   exports: [],
 })

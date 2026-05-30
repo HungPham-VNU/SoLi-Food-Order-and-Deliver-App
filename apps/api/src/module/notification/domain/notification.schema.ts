@@ -40,6 +40,7 @@ export const notificationTypeEnum = pgEnum('notification_type', [
 
   // --- Restaurant-facing events ---
   'new_order_received', // Restaurant owner: new order waiting for confirmation
+  'new_review', // Restaurant owner: new customer review submitted (UC-22)
 
   // --- Shipper-facing events (Delivery BC — future) ---
   'pickup_request', // [RESERVED] Shipper: order ready to be picked up

@@ -28,6 +28,12 @@ export const restaurants = pgTable(
     cuisineType: text('cuisine_type'),
     logoUrl: text('logo_url'),
     coverImageUrl: text('cover_image_url'),
+    // Rating projection (UC-22). averageRating is denormalized for fast
+    // public reads; ratingSum + reviewCount are the authoritative integer
+    // counters maintained inside SubmitReviewHandler's transaction (BR-22.12).
+    averageRating: real('average_rating').notNull().default(0),
+    ratingSum: integer('rating_sum').notNull().default(0),
+    reviewCount: integer('review_count').notNull().default(0),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },

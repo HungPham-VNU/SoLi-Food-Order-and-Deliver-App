@@ -1,0 +1,159 @@
+import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
+import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
+import { eq, sql } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
+import * as schema from '@/drizzle/schema';
+import {
+  ORDER_ELIGIBILITY_PORT,
+  type IOrderEligibilityPort,
+} from '@/shared/ports/order-eligibility.port';
+import { ReviewSubmittedEvent } from '@/shared/events/review-submitted.event';
+import { reviews, type Review } from '../domain/review.schema';
+import { ReviewRepository } from '../repositories/review.repository';
+import { SubmitReviewCommand } from './submit-review.command';
+
+/**
+ * SubmitReviewHandler
+ *
+ * Core of UC-22 (Submit Rating & Review).
+ *
+ * Flow (Section 10.3 of UC22 implementation proposal):
+ *  1. Optimistic duplicate pre-check (BR-22.9)            → 409
+ *  2. Order eligibility check via ORDER_ELIGIBILITY_PORT
+ *     - 404 if missing (MSG-HIST-01)
+ *     - 404 if not owned by caller (BR-22.4, BR-22.5)
+ *     - 422 if status ≠ 'delivered' (BR-22.6, BR-22.7)
+ *  3. DB transaction:
+ *     - INSERT review row
+ *     - UPDATE restaurants rating projection using integer ratingSum (BR-22.12)
+ *  4. Catch DB UniqueConstraintViolation (23505) → 409 (BR-22.8)
+ *  5. Post-commit eventBus.publish(ReviewSubmittedEvent) — failure logged only
+ *
+ * Architecture (ADR-007 — Ports and Adapters):
+ *  - Events published OUTSIDE the transaction (ADR-004; same as TransitionOrderHandler).
+ *  - Order eligibility delegated to ORDER_ELIGIBILITY_PORT — no direct coupling
+ *    to the Ordering BC's schema, repositories, or module internals.
+ *  - Restaurant rating write uses schema.restaurants via the @/drizzle/schema
+ *    barrel (ADR-003 stable contract). The update runs INSIDE the same
+ *    transaction as the review INSERT so rating columns and reviews can never
+ *    drift; passing Drizzle's `tx` context to a port would leak ORM internals,
+ *    so the barrel approach is the accepted exception for this transactional write.
+ *
+ * Phase: RV-2 — Review BC
+ */
+@Injectable()
+@CommandHandler(SubmitReviewCommand)
+export class SubmitReviewHandler implements ICommandHandler<
+  SubmitReviewCommand,
+  Review
+> {
+  private readonly logger = new Logger(SubmitReviewHandler.name);
+
+  constructor(
+    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
+    private readonly reviewRepo: ReviewRepository,
+    private readonly eventBus: EventBus,
+    @Inject(ORDER_ELIGIBILITY_PORT)
+    private readonly orderEligibilityPort: IOrderEligibilityPort,
+  ) {}
+
+  async execute(cmd: SubmitReviewCommand): Promise<Review> {
+    // -------------------------------------------------------------------------
+    // 1. Optimistic duplicate pre-check (BR-22.9)
+    //    Returns a richer 409 body than the raw DB unique violation can.
+    // -------------------------------------------------------------------------
+    const existing = await this.reviewRepo.findByOrderId(cmd.orderId);
+    if (existing) {
+      throw new ConflictException({
+        message: 'You have already submitted a review for this order.',
+        code: 'MSG-RATE-03',
+        existingReview: {
+          createdAt: existing.createdAt.toISOString(),
+          stars: existing.stars,
+        },
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. Order eligibility check via ORDER_ELIGIBILITY_PORT (ADR-007)
+    //    The port is provided by the Ordering BC's OrderEligibilityAdapter.
+    //    Throws NotFoundException / UnprocessableEntityException on failure.
+    // -------------------------------------------------------------------------
+    const { restaurantId } = await this.orderEligibilityPort.checkEligibility(
+      cmd.orderId,
+      cmd.customerId,
+    );
+
+    // -------------------------------------------------------------------------
+    // 3. Transactional INSERT + rating projection (BR-22.11, BR-22.12)
+    //    Catch 23505 (UniqueConstraintViolation) → 409 to cover the race between
+    //    two concurrent submissions that both passed step 1 (BR-22.8).
+    // -------------------------------------------------------------------------
+    let inserted: Review;
+    try {
+      inserted = await this.db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(reviews)
+          .values({
+            orderId: cmd.orderId,
+            customerId: cmd.customerId,
+            restaurantId,
+            stars: cmd.stars,
+            comment: cmd.comment ?? null,
+            tags: cmd.tags ?? null,
+            moderationStatus: 'visible',
+          })
+          .returning();
+
+        // BR-22.12: rating projection via the shared schema barrel (ADR-003).
+        // Integer ratingSum eliminates floating-point drift across many reviews
+        // and enables exact moderation-safe recalculation when reviews are hidden.
+        await tx
+          .update(schema.restaurants)
+          .set({
+            ratingSum: sql`${schema.restaurants.ratingSum} + ${cmd.stars}`,
+            reviewCount: sql`${schema.restaurants.reviewCount} + 1`,
+            averageRating: sql`(${schema.restaurants.ratingSum} + ${cmd.stars})::real / (${schema.restaurants.reviewCount} + 1)`,
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.restaurants.id, restaurantId));
+
+        return created;
+      });
+    } catch (err) {
+      // PostgreSQL unique violation
+      if ((err as { code?: string })?.code === '23505') {
+        throw new ConflictException({
+          message: 'You have already submitted a review for this order.',
+          code: 'MSG-RATE-03',
+        });
+      }
+      throw err;
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. Publish ReviewSubmittedEvent AFTER the transaction commits
+    //    (consistent with TransitionOrderHandler pattern). DB state is
+    //    authoritative; downstream notification miss is observable in logs.
+    // -------------------------------------------------------------------------
+    try {
+      this.eventBus.publish(
+        new ReviewSubmittedEvent(
+          inserted.id,
+          inserted.orderId,
+          inserted.customerId,
+          inserted.restaurantId,
+          inserted.stars,
+        ),
+      );
+    } catch (err) {
+      this.logger.error(
+        `Failed to publish ReviewSubmittedEvent for reviewId=${inserted.id}: ${(err as Error).message}`,
+        (err as Error).stack,
+      );
+    }
+
+    return inserted;
+  }
+}
