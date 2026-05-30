@@ -115,8 +115,8 @@ export const orders = pgTable(
     totalAmount: integer('total_amount').notNull(),
     /**
      * Shipping fee computed at checkout time from the innermost eligible delivery
-     * zone snapshot: baseFee + Math.round(distanceKm × perKmRate).
-     * Stored as integer VND.
+     * zone snapshot: roundToNearest1000(baseFee + distanceKm × perKmRate).
+     * Stored as integer VND, always a multiple of 1000.
      */
     shippingFee: integer('shipping_fee').notNull().default(0),
     /**
