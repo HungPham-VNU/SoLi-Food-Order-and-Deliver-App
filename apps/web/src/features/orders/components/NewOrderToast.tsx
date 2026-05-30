@@ -1,15 +1,30 @@
 import { useEffect, useState } from 'react';
 import { useOrderStore } from '@/features/orders/stores/orderStore';
 import { Button } from '@/components/ui/button';
+import { useBrowserNotification } from '@/hooks/useBrowserNotification';
 
 export function NewOrderToast() {
   const { newOrderToast, acceptOrder, dismissToast } = useOrderStore();
   const [visible, setVisible] = useState(false);
+  const { sendNotification } = useBrowserNotification();
 
   useEffect(() => {
     let t: ReturnType<typeof setTimeout> | undefined;
     if (newOrderToast) {
       t = setTimeout(() => setVisible(true), 100);
+
+      const itemCount = newOrderToast.detail?.items?.length ?? 0;
+      const total = newOrderToast.detail?.totals?.total;
+      const itemLabel = itemCount === 1 ? 'item' : 'items';
+      const totalStr = total != null ? `$${total.toFixed(2)} total` : '';
+      const bodyText = itemCount > 0
+        ? `${itemCount} ${itemLabel}${totalStr ? ` • ${totalStr}` : ''}`
+        : totalStr || 'New order received';
+
+      sendNotification(`New Order ${newOrderToast.orderNumber}`, {
+        body: bodyText,
+        icon: '/favicon.ico',
+      });
     } else {
       t = setTimeout(() => setVisible(false), 0);
     }

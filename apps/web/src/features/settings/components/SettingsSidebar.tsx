@@ -13,6 +13,7 @@ const TABS: Array<{
   variant?: 'default' | 'danger';
 }> = [
   { value: 'profile', label: 'Profile', icon: 'person' },
+  { value: 'store', label: 'Store Profile', icon: 'storefront' },
   { value: 'security', label: 'Security', icon: 'lock' },
   { value: 'notifications', label: 'Notifications', icon: 'notifications' },
   { value: 'devices', label: 'Devices', icon: 'devices' },

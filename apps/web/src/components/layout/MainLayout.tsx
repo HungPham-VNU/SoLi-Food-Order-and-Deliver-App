@@ -42,11 +42,11 @@ export function MainLayout() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="bg-background min-w-0">
-        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background">
-          <SidebarTrigger className="-ml-1" />
+        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b border-primary/20 px-4 bg-primary text-primary-foreground">
+          <SidebarTrigger className="-ml-1 text-primary-foreground hover:bg-black/10" />
           <div className="flex-1 min-w-0 overflow-hidden">
             <Breadcrumb>
-              <BreadcrumbList>
+              <BreadcrumbList className="text-primary-foreground/70">
                 {breadcrumbs.map((breadcrumb) => (
                   <Fragment key={breadcrumb.href}>
                     {breadcrumb.href !== breadcrumbs[0]?.href && (
@@ -55,9 +55,9 @@ export function MainLayout() {
                     <BreadcrumbItem>
                       {breadcrumb.href ===
                       breadcrumbs[breadcrumbs.length - 1]?.href ? (
-                        <BreadcrumbPage>{breadcrumb.label}</BreadcrumbPage>
+                        <BreadcrumbPage className="text-primary-foreground font-semibold">{breadcrumb.label}</BreadcrumbPage>
                       ) : (
-                        <BreadcrumbLink asChild>
+                        <BreadcrumbLink asChild className="hover:text-primary-foreground">
                           <Link to={breadcrumb.href}>{breadcrumb.label}</Link>
                         </BreadcrumbLink>
                       )}

@@ -33,6 +33,7 @@ export const MUTED_CATEGORY_OPTIONS: Array<{ value: string; label: string }> = [
 
 export type SettingsTab =
   | 'profile'
+  | 'store'
   | 'security'
   | 'notifications'
   | 'devices'
