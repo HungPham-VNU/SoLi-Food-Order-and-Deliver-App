@@ -99,6 +99,7 @@ export interface OrderDetail {
   updatedAt: string;
   items: OrderItemResponse[];
   timeline: OrderStatusLogEntry[];
+  hasReview?: boolean;
 }
 
 export interface ReorderModifier {

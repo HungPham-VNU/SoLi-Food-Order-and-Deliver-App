@@ -3,11 +3,14 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   Query,
   ParseUUIDPipe,
   ParseIntPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { Roles, Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import {
@@ -15,6 +18,7 @@ import {
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+  ApiNoContentResponse,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -228,5 +232,32 @@ export class PromotionRestaurantController {
       session.user.id,
     );
     return PromotionResponseDto.fromRow(row);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Cancel (soft-delete) my promotion',
+    description:
+      'Transitions a promotion you own to cancelled. The row is retained for audit/analytics; it is not hard-deleted.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiQuery({
+    name: 'restaurantId',
+    type: String,
+    format: 'uuid',
+    required: true,
+  })
+  @ApiNoContentResponse({ description: 'Promotion cancelled' })
+  @ApiBadRequestResponse({ description: 'Promotion is already cancelled' })
+  @ApiNotFoundResponse({ description: 'Promotion not found' })
+  @ApiForbiddenResponse({ description: 'You do not own this promotion' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token' })
+  async cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('restaurantId', ParseUUIDPipe) restaurantId: string,
+    @Session() session: UserSession,
+  ): Promise<void> {
+    await this.service.cancelPromotion(id, restaurantId, session.user.id);
   }
 }

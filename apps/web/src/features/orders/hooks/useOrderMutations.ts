@@ -61,8 +61,8 @@ export function useMarkReady() {
 export function useCancelOrder() {
   const invalidate = useTransition();
   return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      ordersApi.cancelOrder(id, reason),
+    mutationFn: ({ id, reason, reasonCode }: { id: string; reason: string; reasonCode?: string }) =>
+      ordersApi.cancelOrder(id, reason, reasonCode),
     onSuccess: (_, { id }) => {
       trackEvent('order_status_changed', {
         order_id: id,

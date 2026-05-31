@@ -136,7 +136,14 @@ export function DeliveryZonesPage() {
         {/* RIGHT: Tools */}
         <aside className="lg:col-span-4 space-y-6">
           <DeliveryEstimator restaurantId={restaurantId} />
-          <CoverageMap zones={zones} />
+          <CoverageMap 
+            zones={zones} 
+            restaurantLocation={
+              restaurant?.latitude && restaurant?.longitude
+                ? { lat: restaurant.latitude, lng: restaurant.longitude }
+                : null
+            }
+          />
         </aside>
       </div>
 

@@ -132,6 +132,20 @@ export class PromotionService implements IPromotionApplicationPort {
 
         let bestDiscount = 0;
         for (const p of candidates) {
+          // Skip promotions the customer has already exhausted their per-user
+          // quota on, so reservation selection matches previewAutoApply (which
+          // filters inside the loop). Without this, the engine could pick a
+          // higher-discount promotion the user can no longer use and bail in
+          // Step 3 — denying a deserved lesser discount and diverging from the
+          // previewed amount.
+          if (p.maxUsesPerUser !== null && p.maxUsesPerUser !== undefined) {
+            const userUses = await this.usageRepo.countActiveUsagesByCustomer(
+              p.id,
+              customerId,
+            );
+            if (userUses >= p.maxUsesPerUser) continue;
+          }
+
           const result = this.engine.computeDiscount({
             promotion: p,
             itemsSubtotal,
@@ -186,51 +200,69 @@ export class PromotionService implements IPromotionApplicationPort {
       if (!quotaOk) return noDiscount('Promotion quota exhausted');
 
       // ------------------------------------------------------------------
-      // Step 5: atomically increment coupon uses (if coupon trigger)
+      // From here the promotion counter is incremented. Any failure before the
+      // promotion_usages reservation row is persisted must compensate the
+      // counters — otherwise they leak permanently: there is no usage row for
+      // the cleanup task (releaseStaleReservations) to find and roll back.
       // ------------------------------------------------------------------
-      if (couponCodeId) {
-        const couponOk = await this.couponRepo.atomicIncrementUses(
-          couponCodeId,
-          now,
-        );
-        if (!couponOk) {
-          // Rollback the promotion increment before returning
-          await this.promotionRepo.decrementUses(promotion.id);
-          return noDiscount('Coupon code has been exhausted or expired');
+      let couponIncremented = false;
+      try {
+        // ----------------------------------------------------------------
+        // Step 5: atomically increment coupon uses (if coupon trigger)
+        // ----------------------------------------------------------------
+        if (couponCodeId) {
+          const couponOk = await this.couponRepo.atomicIncrementUses(
+            couponCodeId,
+            now,
+          );
+          if (!couponOk) {
+            // Rollback the promotion increment before returning
+            await this.promotionRepo.decrementUses(promotion.id);
+            return noDiscount('Coupon code has been exhausted or expired');
+          }
+          couponIncremented = true;
+          // Check if code is now exhausted and update status
+          await this.couponRepo.checkAndMarkExhausted(couponCodeId);
         }
-        // Check if code is now exhausted and update status
-        await this.couponRepo.checkAndMarkExhausted(couponCodeId);
+
+        // ----------------------------------------------------------------
+        // Step 6: insert promotion_usages reservation row
+        // ----------------------------------------------------------------
+        const usage = await this.usageRepo.create({
+          id: randomUUID(),
+          promotionId: promotion.id,
+          couponCodeId,
+          orderId: tempOrderId,
+          customerId,
+          discountOnItems: pricing.discountOnItems,
+          discountOnShipping: pricing.discountOnShipping,
+          discountAmount: pricing.discountAmount,
+          status: 'reserved',
+          reservedAt: now,
+        });
+
+        this.logger.log(
+          `Discount reserved: promotionId=${promotion.id} orderId=${tempOrderId} ` +
+            `discount=${pricing.discountAmount} VND usageId=${usage.id}`,
+        );
+
+        return {
+          reserved: true,
+          promotionId: promotion.id,
+          couponCodeId,
+          usageId: usage.id,
+          discountAmount: pricing.discountAmount,
+          breakdown: [pricing.breakdown],
+        };
+      } catch (innerErr) {
+        // Compensate every counter we incremented before the failure so a
+        // transient DB error can never permanently consume quota.
+        await this.promotionRepo.decrementUses(promotion.id);
+        if (couponIncremented && couponCodeId) {
+          await this.couponRepo.decrementUses(couponCodeId);
+        }
+        throw innerErr;
       }
-
-      // ------------------------------------------------------------------
-      // Step 6: insert promotion_usages reservation row
-      // ------------------------------------------------------------------
-      const usage = await this.usageRepo.create({
-        id: randomUUID(),
-        promotionId: promotion.id,
-        couponCodeId,
-        orderId: tempOrderId,
-        customerId,
-        discountOnItems: pricing.discountOnItems,
-        discountOnShipping: pricing.discountOnShipping,
-        discountAmount: pricing.discountAmount,
-        status: 'reserved',
-        reservedAt: now,
-      });
-
-      this.logger.log(
-        `Discount reserved: promotionId=${promotion.id} orderId=${tempOrderId} ` +
-          `discount=${pricing.discountAmount} VND usageId=${usage.id}`,
-      );
-
-      return {
-        reserved: true,
-        promotionId: promotion.id,
-        couponCodeId,
-        usageId: usage.id,
-        discountAmount: pricing.discountAmount,
-        breakdown: [pricing.breakdown],
-      };
     } catch (err) {
       this.logger.error('computeAndReserveDiscount failed', err);
       // On unexpected errors, return no-discount rather than failing checkout
@@ -278,6 +310,43 @@ export class PromotionService implements IPromotionApplicationPort {
         `rollbackReservations failed for order=${orderId}`,
         err,
       );
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // releaseStaleReservations (Cron Task)
+  // ---------------------------------------------------------------------------
+
+  async releaseStaleReservations(cutoff: Date): Promise<number> {
+    try {
+      const staleUsages = await this.usageRepo.findStaleReservations(
+        cutoff,
+        500,
+      );
+      if (staleUsages.length === 0) return 0;
+
+      const rolledBack = await this.usageRepo.rollbackByIds(
+        staleUsages.map((u) => u.id),
+      );
+
+      // Decrement counters for each rolled-back usage
+      for (const usage of rolledBack) {
+        await this.promotionRepo.decrementUses(usage.promotionId);
+        if (usage.couponCodeId) {
+          await this.couponRepo.decrementUses(usage.couponCodeId);
+        }
+      }
+
+      if (rolledBack.length > 0) {
+        this.logger.log(
+          `Released ${rolledBack.length} stale promotion reservation(s)`,
+        );
+      }
+
+      return rolledBack.length;
+    } catch (err) {
+      this.logger.error('releaseStaleReservations failed', err);
+      return 0;
     }
   }
 

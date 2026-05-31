@@ -7,6 +7,7 @@ import { PaymentConfirmedEvent } from '@/shared/events/payment-confirmed.event';
 import { PaymentFailedEvent } from '@/shared/events/payment-failed.event';
 import type { PaymentTransaction } from '../domain/payment-transaction.schema';
 import { runObserved } from '@/observability/trace';
+import { recordPaymentFailure } from '@/observability/domain-metrics';
 
 // ---------------------------------------------------------------------------
 // VNPay IPN response codes (defined in VNPay merchant documentation).
@@ -90,6 +91,7 @@ export class ProcessIpnHandler implements ICommandHandler<ProcessIpnCommand> {
         const verification = this.vnpayService.verifyIpn(command.query);
 
         if (!verification.valid) {
+          recordPaymentFailure({ reason: 'invalid_signature' });
           this.logger.warn(
             `IPN rejected — invalid signature. ` +
               `Raw query keys: [${Object.keys(command.query).join(', ')}]`,
@@ -121,6 +123,7 @@ export class ProcessIpnHandler implements ICommandHandler<ProcessIpnCommand> {
         const txn = await this.txnRepo.findById(txnRef);
 
         if (!txn) {
+          recordPaymentFailure({ reason: 'order_not_found' });
           this.logger.warn(
             `IPN references unknown txnRef=${txnRef} — no PaymentTransaction found.`,
           );
@@ -171,6 +174,7 @@ export class ProcessIpnHandler implements ICommandHandler<ProcessIpnCommand> {
             providerTxnId,
           );
           if (mismatchFailed) {
+            recordPaymentFailure({ reason: 'amount_mismatch' });
             this.publishPaymentFailed(
               txn,
               `IPN amount mismatch: expected ${txn.amount}, got ${ipnAmount}`,
@@ -309,6 +313,7 @@ export class ProcessIpnHandler implements ICommandHandler<ProcessIpnCommand> {
     // T-03 cancel command, which would fail silently but is wasteful.
     const failed = await this.markFailed(txn, rawQuery, providerTxnId);
     if (failed) {
+      recordPaymentFailure({ reason: 'declined', responseCode });
       const reason = `VNPay declined payment — responseCode=${responseCode}`;
       this.publishPaymentFailed(txn, reason);
       this.logger.log(

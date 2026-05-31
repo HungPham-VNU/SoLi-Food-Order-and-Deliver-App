@@ -15,6 +15,8 @@ import { PromotionAdminController } from './controllers/promotion-admin.controll
 import { PromotionRestaurantController } from './controllers/promotion-restaurant.controller';
 import { PromotionPublicController } from './controllers/promotion-public.controller';
 
+import { PromotionReservationCleanupTask } from './tasks/promotion-reservation-cleanup.task';
+
 /**
  * PromotionModule — Phase PR-1 + PR-2 implementation.
  *
@@ -36,6 +38,7 @@ import { PromotionPublicController } from './controllers/promotion-public.contro
  *   PromotionAdminService       — admin CRUD + coupon management
  *   PromotionRestaurantService  — restaurant-owner scoped management
  *   PROMOTION_APPLICATION_PORT  — DI token bound to PromotionService via useExisting
+ *   PromotionReservationCleanupTask - Cleanup stale reservations
  *
  * Controllers:
  *   PromotionAdminController      — /promotions/admin/**
@@ -69,6 +72,7 @@ import { PromotionPublicController } from './controllers/promotion-public.contro
     PromotionService,
     PromotionAdminService,
     PromotionRestaurantService,
+    PromotionReservationCleanupTask,
     {
       provide: PROMOTION_APPLICATION_PORT,
       useExisting: PromotionService,

@@ -66,9 +66,26 @@ export const triggeredByRoleEnum = pgEnum('order_triggered_by_role', [
   'system',
 ]);
 
+/**
+ * Structured cancellation/refund taxonomy. Stored on order_status_logs rows
+ * whose toStatus is 'cancelled' or 'refunded'. Powers the analytics donut
+ * and any future failure-taxonomy reporting.
+ */
+export const cancellationReasonEnum = pgEnum('order_cancellation_reason', [
+  'kitchen_cancel',
+  'driver_no_show',
+  'out_of_stock',
+  'customer_request',
+  'payment_failed',
+  'timeout',
+  'other',
+]);
+
 /** Derived TypeScript types for use across the ordering BC. */
 export type OrderStatus = (typeof orderStatusEnum.enumValues)[number];
 export type TriggeredByRole = (typeof triggeredByRoleEnum.enumValues)[number];
+export type CancellationReason =
+  (typeof cancellationReasonEnum.enumValues)[number];
 
 // ---------------------------------------------------------------------------
 // DeliveryAddress shape (JSONB — stored inline in orders row)
@@ -232,6 +249,11 @@ export const orderStatusLogs = pgTable('order_status_logs', {
   triggeredBy: uuid('triggered_by'), // null = system
   triggeredByRole: triggeredByRoleEnum('triggered_by_role').notNull(),
   note: text('note'),
+  /**
+   * Structured reason — only meaningful when toStatus is 'cancelled' or 'refunded'.
+   * Null for all other transitions. Use the freeform `note` for human-readable detail.
+   */
+  cancellationReason: cancellationReasonEnum('cancellation_reason'),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

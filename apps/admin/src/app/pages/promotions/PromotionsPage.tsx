@@ -259,9 +259,11 @@ function PromotionCard({ promotion: p }: { promotion: Promotion }) {
                 {p.scope === 'platform' ? 'Platform' : 'Restaurant'}
               </Badge>
             </div>
-            <h3 className="text-base font-semibold text-on-surface mt-2">
-              {p.name}
-            </h3>
+            <Link to={`/promotions/${p.id}`} className="hover:underline">
+              <h3 className="text-base font-semibold text-on-surface mt-2">
+                {p.name}
+              </h3>
+            </Link>
             <p className="text-xs text-muted-foreground mt-0.5">
               {PROMOTION_TYPE_LABELS[p.type]}
             </p>
@@ -355,9 +357,11 @@ function PromotionCard({ promotion: p }: { promotion: Promotion }) {
                   </Link>
                 </DropdownMenuItem>
                 {p.trigger === 'coupon_code' && (
-                  <DropdownMenuItem disabled className="text-muted-foreground">
-                    <Ticket className="mr-2 h-4 w-4" />
-                    View coupons (soon)
+                  <DropdownMenuItem asChild>
+                    <Link to={`/promotions/${p.id}`}>
+                      <Ticket className="mr-2 h-4 w-4" />
+                      View coupons
+                    </Link>
                   </DropdownMenuItem>
                 )}
                 {p.status !== 'cancelled' && (

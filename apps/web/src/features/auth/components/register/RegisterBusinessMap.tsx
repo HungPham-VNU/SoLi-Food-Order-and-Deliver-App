@@ -1,12 +1,77 @@
-import {
-  MapPin,
-  LocateFixed,
-  Utensils,
-  Plus,
-  Minus,
-  Lightbulb,
-} from 'lucide-react';
+import { useEffect } from 'react';
+import { useFormContext } from 'react-hook-form';
+import { MapPin, LocateFixed, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import type { RestaurantFormValues } from '@/features/restaurant/schemas/restaurant.schema';
+
+// Fix for default Leaflet icon missing in React
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+const DEFAULT_CENTER = { lat: 10.762622, lng: 106.660172 }; // Ho Chi Minh City
+
+import { useWatch } from 'react-hook-form';
+
+
+function LocationMarker() {
+  const { setValue } = useFormContext<RestaurantFormValues>();
+  const map = useMap();
+
+  const lat = useWatch<RestaurantFormValues, 'latitude'>({ name: 'latitude' });
+  const lng = useWatch<RestaurantFormValues, 'longitude'>({ name: 'longitude' });
+
+  const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng);
+  const position = hasValidCoords
+    ? new L.LatLng(lat!, lng!)
+    : new L.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng);
+
+  useEffect(() => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      setValue('latitude', DEFAULT_CENTER.lat);
+      setValue('longitude', DEFAULT_CENTER.lng);
+      return;
+    }
+    const newPos = new L.LatLng(lat!, lng!);
+    if (map.getCenter().distanceTo(newPos) > 500) {
+      map.flyTo(newPos, 15);
+    }
+  }, [lat, lng, map, setValue]);
+
+  return <Marker draggable={false} position={position} />;
+}
+
+function LocateControl() {
+  const map = useMap();
+  const { setValue } = useFormContext<RestaurantFormValues>();
+  
+  const handleLocate = () => {
+    map.locate().on('locationfound', function (e: L.LocationEvent) {
+      map.flyTo(e.latlng, map.getZoom());
+      setValue('latitude', e.latlng.lat, { shouldValidate: true, shouldDirty: true });
+      setValue('longitude', e.latlng.lng, { shouldValidate: true, shouldDirty: true });
+    });
+  };
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      onClick={handleLocate}
+      className="p-2 bg-surface-container text-on-surface-variant rounded-lg hover:bg-surface-container-high transition-colors"
+      title="Find my location"
+    >
+      <LocateFixed className="w-4 h-4" />
+    </Button>
+  );
+}
 
 export function RegisterBusinessMap() {
   return (
@@ -17,52 +82,26 @@ export function RegisterBusinessMap() {
             <MapPin className="w-5 h-5 text-primary" />
             <span className="font-bold text-on-surface">Pinpoint Accuracy</span>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="p-2 bg-surface-container text-on-surface-variant rounded-lg hover:bg-surface-container-high transition-colors"
-          >
-            <LocateFixed className="w-4 h-4" />
-          </Button>
+          {/* We will render the locate button via a child component so it has access to useMap */}
         </div>
 
-        <div className="relative aspect-[4/5] bg-surface-container">
-          <img
-            alt="Location Map"
-            className="w-full h-full object-cover"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBMZf1C7mmgAEqw4LiAPdP-ymZRcDA-7Vv7g3ArSHzGK5cryqh2vQPQr4iB66mMLblbenazyDAcg09cnnQWI8zfXde7Q3hACEURVnAF4rkxDdDaOqBJfDEkqBeVn4JjRxolJy3ne1KiithP0c2Eon6wT-akrYOtG9pk9BRX2KQ082UMxtdyHWPxGR_nhRFxX_AYYybHkXARRFwJn2_bzkqJQugohe2bPshw47NZD02dqRn1id8iJgr9gj8GqYp_W0MQPmTF5wMDh98"
-          />
-
-          {/* Map Marker */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="relative">
-              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1.5 bg-black/20 blur-[2px] rounded-full" />
-              <div className="relative bg-primary text-on-primary p-3 rounded-2xl rounded-bl-none -rotate-45 shadow-2xl animate-bounce">
-                <Utensils className="w-6 h-6 rotate-45" />
-              </div>
+        <div className="relative aspect-[4/5] bg-surface-container z-0">
+          <MapContainer 
+            center={[DEFAULT_CENTER.lat, DEFAULT_CENTER.lng]} 
+            zoom={13} 
+            scrollWheelZoom={true}
+            className="w-full h-full"
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <LocationMarker />
+            
+            <div className="absolute top-4 right-4 z-[1000] bg-white rounded-lg shadow-md">
+               <LocateControl />
             </div>
-          </div>
-
-          {/* Map Controls */}
-          <div className="absolute bottom-6 right-6 flex flex-col gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="w-10 h-10 bg-surface-container-lowest/80 backdrop-blur-md border border-outline-variant/20 rounded-xl text-on-surface shadow-xl hover:bg-surface-container-lowest transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="w-10 h-10 bg-surface-container-lowest/80 backdrop-blur-md border border-outline-variant/20 rounded-xl text-on-surface shadow-xl hover:bg-surface-container-lowest transition-colors"
-            >
-              <Minus className="w-5 h-5" />
-            </Button>
-          </div>
+          </MapContainer>
         </div>
 
         <div className="p-6 bg-primary/5 border-t border-outline-variant/10">
@@ -71,8 +110,8 @@ export function RegisterBusinessMap() {
               <Lightbulb className="w-4 h-4 text-primary" />
             </div>
             <p className="text-sm text-on-surface-variant leading-relaxed">
-              <span className="font-bold">Pro Tip:</span> Drag the pin to your
-              restaurant's main delivery entrance. This helps couriers find you
+              <span className="font-bold">Pro Tip:</span> Drag the pin or click on the map to set your
+              restaurant's exact location. This helps couriers find you
               faster and reduces delivery times.
             </p>
           </div>

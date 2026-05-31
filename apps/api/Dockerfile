@@ -49,4 +49,4 @@ COPY --from=production-deps /app/apps/api/node_modules ./node_modules
 
 EXPOSE 3000
 
-CMD ["node", "dist/main"]
+CMD ["node", "--require", "./dist/telemetry", "dist/main"]

@@ -1,5 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { eq, and, lt, sql } from 'drizzle-orm';
+import { eq, and, lt, sql, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
 import * as schema from '@/drizzle/schema';
@@ -79,6 +79,21 @@ export class PromotionUsageRepository {
   // ---------------------------------------------------------------------------
   // Read
   // ---------------------------------------------------------------------------
+
+  async rollbackByIds(ids: string[]): Promise<PromotionUsage[]> {
+    if (ids.length === 0) return [];
+    const now = new Date();
+    return this.db
+      .update(promotionUsages)
+      .set({ status: 'rolled_back', rolledBackAt: now })
+      .where(
+        and(
+          inArray(promotionUsages.id, ids),
+          sql`${promotionUsages.status} IN ('reserved', 'confirmed')`,
+        ),
+      )
+      .returning();
+  }
 
   async findById(id: string): Promise<PromotionUsage | null> {
     const [row] = await this.db

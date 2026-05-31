@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   ShieldCheck,
+  LayoutDashboard,
   Store,
   ClipboardList,
   Tag,
@@ -12,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/features/users/utils/format';
 
 const navItems = [
+  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Restaurants', url: '/restaurants', icon: Store },
   { title: 'Orders', url: '/orders', icon: ClipboardList },
   { title: 'Promotions', url: '/promotions', icon: Tag },

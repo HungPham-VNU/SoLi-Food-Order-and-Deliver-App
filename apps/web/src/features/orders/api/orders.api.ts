@@ -90,6 +90,6 @@ export const ordersApi = {
     apiClient.patch(`/api/orders/${id}/ready`),
 
   /** PATCH /orders/:id/cancel — T-03/T-05/T-07: cancel from any cancellable state */
-  cancelOrder: (id: string, reason: string) =>
-    apiClient.patch(`/api/orders/${id}/cancel`, { reason }),
+  cancelOrder: (id: string, reason: string, reasonCode?: string) =>
+    apiClient.patch(`/api/orders/${id}/cancel`, { reason, reasonCode }),
 };

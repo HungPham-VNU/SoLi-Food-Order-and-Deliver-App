@@ -270,6 +270,34 @@ export class PromotionAdminService {
     );
   }
 
+  /**
+   * Revokes a single coupon code (status → 'revoked'), disabling it for future
+   * checkouts. Already-confirmed usages are untouched — revocation only blocks
+   * new reservations, it does not refund or decrement existing usage counters.
+   */
+  async revokeCouponCode(
+    promotionId: string,
+    couponId: string,
+  ): Promise<CouponCode> {
+    const coupon = await this.couponRepo.findById(couponId);
+    if (!coupon || coupon.promotionId !== promotionId) {
+      throw new NotFoundException(
+        `Coupon ${couponId} not found for promotion ${promotionId}`,
+      );
+    }
+    if (coupon.status === 'revoked') {
+      throw new BadRequestException('Coupon code is already revoked');
+    }
+
+    const revoked = await this.couponRepo.revokeCode(couponId);
+    if (!revoked) throw new NotFoundException(`Coupon ${couponId} not found`);
+
+    this.logger.log(
+      `Admin revoked coupon id=${couponId} for promotion id=${promotionId}`,
+    );
+    return revoked;
+  }
+
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------

@@ -54,6 +54,7 @@ import {
   type CartItemInput,
 } from '@/shared/ports/promotion-application.port';
 import { runObserved } from '@/observability/trace';
+import { recordOrderPlaced } from '@/observability/domain-metrics';
 
 /**
  * Local projection of a delivery zone — contains only the fields needed for
@@ -529,6 +530,8 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
       );
     });
     this.logger.log(`Cart cleared for customerId=${customerId}`);
+
+    recordOrderPlaced({ paymentMethod });
 
     this.logger.log(
       `Order placed: orderId=${finalOrder.id}, customerId=${customerId}, ` +

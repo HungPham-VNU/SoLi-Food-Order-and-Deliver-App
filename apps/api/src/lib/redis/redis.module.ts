@@ -20,9 +20,16 @@ import { RedisService } from './redis.service.js';
         let client: Redis;
         if (redisUrl) {
           // Cloud deployments (Render, Railway…) supply a REDIS_URL.
-          // ioredis handles rediss:// TLS automatically when a URL is passed.
-          logger.log('Redis configured via REDIS_URL');
-          client = new Redis(redisUrl, { lazyConnect: true, retryStrategy });
+          // Explicitly set tls:{} for rediss:// because ioredis v5 does not
+          // reliably propagate TLS from the URL protocol when extra options are
+          // passed alongside the URL string.
+          const isTls = redisUrl.startsWith('rediss://');
+          logger.log(`Redis configured via REDIS_URL (TLS: ${isTls})`);
+          client = new Redis(redisUrl, {
+            lazyConnect: true,
+            retryStrategy,
+            ...(isTls && { tls: {} }),
+          });
         } else {
           logger.log(
             `Redis configured via REDIS_HOST/REDIS_PORT (${process.env.REDIS_HOST ?? 'localhost'}:${process.env.REDIS_PORT ?? 6379})`,

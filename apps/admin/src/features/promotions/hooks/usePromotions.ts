@@ -4,6 +4,8 @@ import {
   type CreatePromotionDto,
   type UpdatePromotionDto,
   type PromotionStatus,
+  type CreateCouponCodesDto,
+  type CouponStatus,
 } from '../api/promotions.api';
 
 const LIST_KEY = 'admin-promotions';
@@ -67,3 +69,42 @@ export function usePausePromotion() {
     onSuccess: () => qc.invalidateQueries({ queryKey: [LIST_KEY] }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Coupon Hooks
+// ---------------------------------------------------------------------------
+
+export function usePromotionCoupons(
+  promotionId: string,
+  params?: { offset?: number; limit?: number; status?: CouponStatus },
+) {
+  return useQuery({
+    queryKey: [LIST_KEY, 'coupons', promotionId, params],
+    queryFn: () => promotionsApi.listCoupons(promotionId, params),
+    enabled: !!promotionId,
+  });
+}
+
+export function useGenerateCoupons() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ promotionId, dto }: { promotionId: string; dto: CreateCouponCodesDto }) =>
+      promotionsApi.generateCoupons(promotionId, dto),
+    onSuccess: (_, { promotionId }) => {
+      qc.invalidateQueries({ queryKey: [LIST_KEY, 'coupons', promotionId] });
+      qc.invalidateQueries({ queryKey: [LIST_KEY, 'detail', promotionId] });
+    },
+  });
+}
+
+export function useRevokeCoupon() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ promotionId, couponId }: { promotionId: string; couponId: string }) =>
+      promotionsApi.revokeCoupon(promotionId, couponId),
+    onSuccess: (_, { promotionId }) => {
+      qc.invalidateQueries({ queryKey: [LIST_KEY, 'coupons', promotionId] });
+    },
+  });
+}
+

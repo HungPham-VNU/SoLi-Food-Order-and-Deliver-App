@@ -226,6 +226,35 @@ export class PromotionRestaurantService {
     return updated;
   }
 
+  /**
+   * Soft-delete: transitions the promotion to 'cancelled'. The row is retained
+   * because promotion_usages reference it for audit/analytics — mirrors the
+   * admin cancel behaviour.
+   */
+  async cancelPromotion(
+    id: string,
+    restaurantId: string,
+    callerId: string,
+  ): Promise<Promotion> {
+    await this.assertRestaurantOwner(restaurantId, callerId);
+    const existing = await this.promotionRepo.findByIdOrThrow(id);
+    this.assertPromotionBelongsToRestaurant(existing, restaurantId);
+
+    if (existing.status === 'cancelled') {
+      throw new BadRequestException('Promotion is already cancelled');
+    }
+
+    const updated = await this.promotionRepo.update(id, {
+      status: 'cancelled',
+    });
+    if (!updated) throw new NotFoundException(`Promotion ${id} not found`);
+
+    this.logger.log(
+      `Restaurant cancelled promotion id=${id} restaurantId=${restaurantId}`,
+    );
+    return updated;
+  }
+
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------

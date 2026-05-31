@@ -253,4 +253,25 @@ export class PromotionAdminController {
       limit: limit ?? 50,
     };
   }
+
+  @Patch(':id/coupons/:couponId/revoke')
+  @ApiOperation({
+    summary: 'Revoke a coupon code',
+    description:
+      'Disables a single coupon code (status → revoked). Existing confirmed usages are untouched; the code can no longer be applied at checkout.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid', description: 'Promotion UUID' })
+  @ApiParam({ name: 'couponId', format: 'uuid', description: 'Coupon UUID' })
+  @ApiOkResponse({ type: CouponCodeResponseDto })
+  @ApiBadRequestResponse({ description: 'Coupon code is already revoked' })
+  @ApiNotFoundResponse({ description: 'Coupon not found for this promotion' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token' })
+  @ApiForbiddenResponse({ description: 'Admin role required' })
+  async revokeCoupon(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('couponId', ParseUUIDPipe) couponId: string,
+  ): Promise<CouponCodeResponseDto> {
+    const row = await this.service.revokeCouponCode(id, couponId);
+    return CouponCodeResponseDto.fromRow(row);
+  }
 }

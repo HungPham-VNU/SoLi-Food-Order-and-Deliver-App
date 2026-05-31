@@ -1,4 +1,4 @@
-# USE CASE SPECIFICATION
+﻿# USE CASE SPECIFICATION
 
 ## SoLi Food Delivery Platform
 
@@ -151,31 +151,31 @@ rectangle "SoLi Food Delivery Platform" {
   usecase "Reporting & Monitoring" as DOM_RPT
 }
 
-Guest --> DOM_AUTH
-Guest --> DOM_DISC
-Customer --> DOM_AUTH
-Customer --> DOM_DISC
-Customer --> DOM_CART
-Customer --> DOM_PAY
-Customer --> DOM_ORD
-Customer --> DOM_TRACK
-Customer --> DOM_REV
-Customer --> DOM_NOTIF
+Guest -- DOM_AUTH
+Guest -- DOM_DISC
+Customer -- DOM_AUTH
+Customer -- DOM_DISC
+Customer -- DOM_CART
+Customer -- DOM_PAY
+Customer -- DOM_ORD
+Customer -- DOM_TRACK
+Customer -- DOM_REV
+Customer -- DOM_NOTIF
 
-Restaurant --> DOM_AUTH
-Restaurant --> DOM_REST
-Restaurant --> DOM_NOTIF
-Restaurant --> DOM_REV
+Restaurant -- DOM_AUTH
+Restaurant -- DOM_REST
+Restaurant -- DOM_NOTIF
+Restaurant -- DOM_REV
 
-Shipper --> DOM_AUTH
-Shipper --> DOM_SHIP
-Shipper --> DOM_NOTIF
-Shipper --> DOM_TRACK
+Shipper -- DOM_AUTH
+Shipper -- DOM_SHIP
+Shipper -- DOM_NOTIF
+Shipper -- DOM_TRACK
 
-Admin --> DOM_AUTH
-Admin --> DOM_ADMIN
-Admin --> DOM_RPT
-Admin --> DOM_REV
+Admin -- DOM_AUTH
+Admin -- DOM_ADMIN
+Admin -- DOM_RPT
+Admin -- DOM_REV
 
 DOM_CART ..> DOM_AUTH : <<include>>
 DOM_CART ..> DOM_PAY : <<include>>
@@ -183,13 +183,13 @@ DOM_ORD ..> DOM_NOTIF : <<include>>
 DOM_REST ..> DOM_NOTIF : <<include>>
 DOM_SHIP ..> DOM_NOTIF : <<include>>
 
-SystemActor --> DOM_PAY
-SystemActor --> DOM_ORD
-SystemActor --> DOM_NOTIF
+SystemActor -- DOM_PAY
+SystemActor -- DOM_ORD
+SystemActor -- DOM_NOTIF
 
-DOM_PAY <--> VNPay
-DOM_NOTIF --> FCM
-DOM_NOTIF --> Email
+DOM_PAY -- VNPay
+DOM_NOTIF -- FCM
+DOM_NOTIF -- Email
 @enduml
 ```
 
@@ -229,20 +229,20 @@ rectangle "Authentication & Account Management" {
   usecase "Impersonate User\n(Debug)" as UC_AUTH_10
 }
 
-Guest --> UC_AUTH_01
-Guest --> UC_AUTH_02
-Guest --> UC_AUTH_11
-Guest --> UC_AUTH_12
+Guest -- UC_AUTH_01
+Guest -- UC_AUTH_02
+Guest -- UC_AUTH_11
+Guest -- UC_AUTH_12
 
-RegUser --> UC_AUTH_03
-RegUser --> UC_AUTH_04
-RegUser --> UC_AUTH_05
-RegUser --> UC_AUTH_06
-RegUser --> UC_AUTH_07
+RegUser -- UC_AUTH_03
+RegUser -- UC_AUTH_04
+RegUser -- UC_AUTH_05
+RegUser -- UC_AUTH_06
+RegUser -- UC_AUTH_07
 
-Admin --> UC_AUTH_08
-Admin --> UC_AUTH_09
-Admin --> UC_AUTH_10
+Admin -- UC_AUTH_08
+Admin -- UC_AUTH_09
+Admin -- UC_AUTH_10
 
 UC_AUTH_07 ..> UC_AUTH_01 : <<extend>>
 
@@ -279,12 +279,12 @@ rectangle "Restaurant Discovery & Search" {
   usecase "View Ratings\nSummary" as UC_DISC_10
 }
 
-Guest --> UC_DISC_01
-Guest --> UC_DISC_02
-Guest --> UC_DISC_03
-Guest --> UC_DISC_07
-Guest --> UC_DISC_09
-Guest --> UC_DISC_10
+Guest -- UC_DISC_01
+Guest -- UC_DISC_02
+Guest -- UC_DISC_03
+Guest -- UC_DISC_07
+Guest -- UC_DISC_09
+Guest -- UC_DISC_10
 
 UC_DISC_04 ..> UC_DISC_03 : <<extend>>
 UC_DISC_05 ..> UC_DISC_03 : <<extend>>
@@ -321,19 +321,19 @@ rectangle "Cart & Checkout" {
   usecase "Apply Discount\nCode" as UC_CART_12
 }
 
-Customer --> UC_CART_01
-Customer --> UC_CART_02
-Customer --> UC_CART_03
-Customer --> UC_CART_04
-Customer --> UC_CART_05
-Customer --> UC_CART_06
-Customer --> UC_CART_07
-Customer --> UC_CART_11
-Customer --> UC_CART_12
+Customer -- UC_CART_01
+Customer -- UC_CART_02
+Customer -- UC_CART_03
+Customer -- UC_CART_04
+Customer -- UC_CART_05
+Customer -- UC_CART_06
+Customer -- UC_CART_07
+Customer -- UC_CART_11
+Customer -- UC_CART_12
 
-SystemActor --> UC_CART_08
-SystemActor --> UC_CART_09
-SystemActor --> UC_CART_10
+SystemActor -- UC_CART_08
+SystemActor -- UC_CART_09
+SystemActor -- UC_CART_10
 
 UC_CART_02 ..> UC_CART_08 : <<include>>
 UC_CART_07 ..> UC_CART_08 : <<include>>
@@ -368,16 +368,16 @@ rectangle "Payment" {
   usecase "View Payment\nReceipt" as UC_PAY_10
 }
 
-Customer --> UC_PAY_01
-Customer --> UC_PAY_03
-Customer --> UC_PAY_08
-Customer --> UC_PAY_10
+Customer -- UC_PAY_01
+Customer -- UC_PAY_03
+Customer -- UC_PAY_08
+Customer -- UC_PAY_10
 
-VNPay --> UC_PAY_02
-SystemActor --> UC_PAY_04
-SystemActor --> UC_PAY_05
-SystemActor --> UC_PAY_06
-Admin --> UC_PAY_07
+VNPay -- UC_PAY_02
+SystemActor -- UC_PAY_04
+SystemActor -- UC_PAY_05
+SystemActor -- UC_PAY_06
+Admin -- UC_PAY_07
 
 UC_PAY_02 ..> UC_PAY_04 : <<include>>
 @enduml
@@ -403,14 +403,14 @@ rectangle "Order Tracking & History" {
   usecase "Auto-Cancel on\nAccept Timeout" as UC_ORD_07
 }
 
-Customer --> UC_ORD_01
-Customer --> UC_ORD_02
-Customer --> UC_ORD_03
-Customer --> UC_ORD_04
-Customer --> UC_ORD_05
-Customer --> UC_ORD_06
+Customer -- UC_ORD_01
+Customer -- UC_ORD_02
+Customer -- UC_ORD_03
+Customer -- UC_ORD_04
+Customer -- UC_ORD_05
+Customer -- UC_ORD_06
 
-SystemActor --> UC_ORD_07
+SystemActor -- UC_ORD_07
 
 UC_ORD_02 ..> UC_ORD_04 : <<include>>
 @enduml
@@ -456,26 +456,26 @@ rectangle "Restaurant Operations" {
   }
 }
 
-Restaurant --> UC_REST_01
-Restaurant --> UC_REST_02
-Restaurant --> UC_REST_03
-Restaurant --> UC_REST_04
-Restaurant --> UC_REST_05
-Restaurant --> UC_REST_06
-Restaurant --> UC_REST_07
-Restaurant --> UC_REST_08
-Restaurant --> UC_REST_09
-Restaurant --> UC_REST_10_11
-Restaurant --> UC_REST_12_15
-Restaurant --> UC_REST_14
-Restaurant --> UC_REST_16_18
-Restaurant --> UC_REST_19
-Restaurant --> UC_REST_20
-Restaurant --> UC_REST_22
+Restaurant -- UC_REST_01
+Restaurant -- UC_REST_02
+Restaurant -- UC_REST_03
+Restaurant -- UC_REST_04
+Restaurant -- UC_REST_05
+Restaurant -- UC_REST_06
+Restaurant -- UC_REST_07
+Restaurant -- UC_REST_08
+Restaurant -- UC_REST_09
+Restaurant -- UC_REST_10_11
+Restaurant -- UC_REST_12_15
+Restaurant -- UC_REST_14
+Restaurant -- UC_REST_16_18
+Restaurant -- UC_REST_19
+Restaurant -- UC_REST_20
+Restaurant -- UC_REST_22
 
-Admin --> UC_REST_02
-Admin --> UC_REST_06
-Admin --> UC_REST_09
+Admin -- UC_REST_02
+Admin -- UC_REST_06
+Admin -- UC_REST_09
 
 @enduml
 ```
@@ -502,19 +502,19 @@ rectangle "Delivery Operations" {
   usecase "View Earnings\nStatement" as UC_SHIP_09
 }
 
-Shipper --> UC_SHIP_01
-Shipper --> UC_SHIP_02
-Shipper --> UC_SHIP_03
-Shipper --> UC_SHIP_04
-Shipper --> UC_SHIP_05
-Shipper --> UC_SHIP_06
-Shipper --> UC_SHIP_07
-Shipper --> UC_SHIP_08
-Shipper --> UC_SHIP_09
+Shipper -- UC_SHIP_01
+Shipper -- UC_SHIP_02
+Shipper -- UC_SHIP_03
+Shipper -- UC_SHIP_04
+Shipper -- UC_SHIP_05
+Shipper -- UC_SHIP_06
+Shipper -- UC_SHIP_07
+Shipper -- UC_SHIP_08
+Shipper -- UC_SHIP_09
 
-Admin --> UC_SHIP_03
-Admin --> UC_SHIP_04
-Admin --> UC_SHIP_05
+Admin -- UC_SHIP_03
+Admin -- UC_SHIP_04
+Admin -- UC_SHIP_05
 
 @enduml
 ```
@@ -581,24 +581,24 @@ rectangle "Notifications" {
   }
 }
 
-User --> UC_NOTIF_INAPP
-User --> UC_NOTIF_PUSH
-User --> UC_NOTIF_07
-User --> UC_NOTIF_08
-User --> UC_NOTIF_09
-User --> UC_NOTIF_10
-User --> UC_NOTIF_11
-User --> UC_NOTIF_12
-User --> UC_NOTIF_13
-User --> UC_NOTIF_14
-User --> UC_NOTIF_15
-User --> UC_NOTIF_16
+User -- UC_NOTIF_INAPP
+User -- UC_NOTIF_PUSH
+User -- UC_NOTIF_07
+User -- UC_NOTIF_08
+User -- UC_NOTIF_09
+User -- UC_NOTIF_10
+User -- UC_NOTIF_11
+User -- UC_NOTIF_12
+User -- UC_NOTIF_13
+User -- UC_NOTIF_14
+User -- UC_NOTIF_15
+User -- UC_NOTIF_16
 
-Customer --> UC_NOTIF_EMAIL
+Customer -- UC_NOTIF_EMAIL
 
-SystemActor --> UC_NOTIF_INAPP
-SystemActor --> UC_NOTIF_PUSH
-SystemActor --> UC_NOTIF_EMAIL
+SystemActor -- UC_NOTIF_INAPP
+SystemActor -- UC_NOTIF_PUSH
+SystemActor -- UC_NOTIF_EMAIL
 
 UC_NOTIF_08 ..> UC_NOTIF_09 : <<include>>
 UC_NOTIF_10 ..> UC_NOTIF_08 : <<extend>>
@@ -640,17 +640,17 @@ rectangle "Reviews & Feedback (Planned — R2)" {
   usecase "Moderate / Remove\nReview" as UC_REV_05
 }
 
-Customer --> UC_REV_01
-Customer --> UC_REV_02
-Customer --> UC_REV_04
-Customer --> UC_REV_06
+Customer -- UC_REV_01
+Customer -- UC_REV_02
+Customer -- UC_REV_04
+Customer -- UC_REV_06
 
-Guest --> UC_REV_02
-Guest --> UC_REV_06
+Guest -- UC_REV_02
+Guest -- UC_REV_06
 
-Restaurant --> UC_REV_03
+Restaurant -- UC_REV_03
 
-Admin --> UC_REV_05
+Admin -- UC_REV_05
 
 @enduml
 ```
@@ -712,21 +712,21 @@ rectangle "Administration" {
   }
 }
 
-Admin --> UC_ADMIN_01
-Admin --> UC_ADMIN_02
-Admin --> UC_ADMIN_03
-Admin --> UC_ADMIN_04
-Admin --> UC_ADMIN_05
-Admin --> UC_ADMIN_06
-Admin --> UC_ADMIN_07
-Admin --> UC_ADMIN_08
-Admin --> UC_ADMIN_09
-Admin --> UC_ADMIN_10
-Admin --> UC_ADMIN_11
-Admin --> UC_ADMIN_12
-Admin --> UC_ADMIN_13
-Admin --> UC_ADMIN_14
-Admin --> UC_ADMIN_15
+Admin -- UC_ADMIN_01
+Admin -- UC_ADMIN_02
+Admin -- UC_ADMIN_03
+Admin -- UC_ADMIN_04
+Admin -- UC_ADMIN_05
+Admin -- UC_ADMIN_06
+Admin -- UC_ADMIN_07
+Admin -- UC_ADMIN_08
+Admin -- UC_ADMIN_09
+Admin -- UC_ADMIN_10
+Admin -- UC_ADMIN_11
+Admin -- UC_ADMIN_12
+Admin -- UC_ADMIN_13
+Admin -- UC_ADMIN_14
+Admin -- UC_ADMIN_15
 
 UC_ADMIN_05 ..> UC_ADMIN_06 : <<include>>
 
@@ -754,11 +754,11 @@ rectangle "Real-time Tracking" {
   usecase "View Estimated\nArrival Time" as UC_TRACK_04
 }
 
-Customer --> UC_TRACK_01
-Customer --> UC_TRACK_02
-Customer --> UC_TRACK_04
+Customer -- UC_TRACK_01
+Customer -- UC_TRACK_02
+Customer -- UC_TRACK_04
 
-Shipper --> UC_TRACK_03
+Shipper -- UC_TRACK_03
 
 UC_TRACK_02 ..> UC_TRACK_03 : <<include>>
 
@@ -800,13 +800,13 @@ rectangle "Reporting & Monitoring" {
   }
 }
 
-Admin --> UC_RPT_01
-Admin --> UC_RPT_02
-Admin --> UC_RPT_03
-Admin --> UC_RPT_04
-Admin --> UC_RPT_05
-Admin --> UC_RPT_06
-Admin --> UC_RPT_07
+Admin -- UC_RPT_01
+Admin -- UC_RPT_02
+Admin -- UC_RPT_03
+Admin -- UC_RPT_04
+Admin -- UC_RPT_05
+Admin -- UC_RPT_06
+Admin -- UC_RPT_07
 
 @enduml
 ```

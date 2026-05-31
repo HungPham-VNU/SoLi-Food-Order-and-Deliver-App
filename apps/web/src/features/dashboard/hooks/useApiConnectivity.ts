@@ -25,7 +25,7 @@ export function useApiConnectivity(intervalMs = 15_000): ConnectivityState {
   const [state, setState] = useState<ConnectivityState>({
     status: 'connecting',
     pingMs: null,
-    lastSuccessAt: null,
+    lastSuccessAt: null,    
   });
 
   useEffect(() => {

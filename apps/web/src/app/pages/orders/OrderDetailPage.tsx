@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { useOrderDetail, useOrderTimeline } from "@/features/orders/hooks/useOrders";
 import {
@@ -13,6 +14,7 @@ import { OrderDetailPayment } from "@/features/orders/components/OrderDetailPaym
 import { OrderDetailHistory } from "@/features/orders/components/OrderDetailHistory";
 import { OrderDetailMap } from "@/features/orders/components/OrderDetailMap";
 import { OrderDetailNotes } from "@/features/orders/components/OrderDetailNotes";
+import { CancelOrderDialog } from "@/features/orders/components/CancelOrderDialog";
 
 export function OrderDetailPage() {
   const { orderId } = useParams<{ orderId: string }>();
@@ -31,6 +33,8 @@ export function OrderDetailPage() {
     markReady.isPending ||
     cancelOrder.isPending;
 
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground font-body">
@@ -48,10 +52,15 @@ export function OrderDetailPage() {
   const addressStr = [street, district, city].filter(Boolean).join(", ");
   const itemsTotal = order.totalAmount - order.shippingFee;
 
-  const handleCancel = () => {
-    const reason = window.prompt("Reason for cancellation:");
-    if (!reason?.trim()) return;
-    cancelOrder.mutate({ id: order.orderId, reason: reason.trim() });
+  const handleCancel = (reason: string, reasonCode: string) => {
+    cancelOrder.mutate(
+      { id: order.orderId, reason, reasonCode },
+      {
+        onSuccess: () => {
+          setIsCancelDialogOpen(false);
+        },
+      }
+    );
   };
 
   return (
@@ -61,7 +70,7 @@ export function OrderDetailPage() {
         onConfirm={() => confirm.mutate(order.orderId)}
         onStartPreparing={() => startPrepare.mutate(order.orderId)}
         onMarkReady={() => markReady.mutate(order.orderId)}
-        onCancel={handleCancel}
+        onCancel={() => setIsCancelDialogOpen(true)}
         isPending={isPending}
       />
 
@@ -99,6 +108,13 @@ export function OrderDetailPage() {
           {order.note && <OrderDetailNotes notes={order.note} />}
         </div>
       </div>
+
+      <CancelOrderDialog
+        open={isCancelDialogOpen}
+        onOpenChange={setIsCancelDialogOpen}
+        onConfirm={handleCancel}
+        isPending={cancelOrder.isPending}
+      />
     </>
   );
 }

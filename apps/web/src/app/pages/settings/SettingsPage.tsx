@@ -5,6 +5,7 @@ import { SecurityTab } from '@/features/settings/components/SecurityTab';
 import { NotificationsTab } from '@/features/settings/components/NotificationsTab';
 import { DevicesTab } from '@/features/settings/components/DevicesTab';
 import { DangerZoneTab } from '@/features/settings/components/DangerZoneTab';
+import { StoreTab } from '@/features/settings/components/StoreTab';
 import type { SettingsTab } from '@/features/settings/types';
 
 export function SettingsPage() {
@@ -27,6 +28,7 @@ export function SettingsPage() {
 
         <div className="flex-1 w-full min-w-0">
           {tab === 'profile' && <ProfileTab />}
+          {tab === 'store' && <StoreTab />}
           {tab === 'security' && <SecurityTab />}
           {tab === 'notifications' && <NotificationsTab />}
           {tab === 'devices' && <DevicesTab />}

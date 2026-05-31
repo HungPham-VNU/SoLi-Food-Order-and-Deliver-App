@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { signIn, signOut, useSession } from '@/lib/auth-client';
 import { ApiError } from '@/lib/api-client';
 import { identifyUser, trackEvent } from '@/lib/analytics';
-import { setObservabilityUser } from '@/lib/observability';
+import { setObservabilityUser, pushObservabilityEvent } from '@/lib/observability';
 
 export interface SignInInput {
   email: string;
@@ -46,6 +46,7 @@ export function useSignIn() {
       }
 
       trackEvent('login_success', { method: 'email' });
+      pushObservabilityEvent('user.sign_in', { method: 'credentials' });
       if (result.data?.user?.id) {
         identifyUser(result.data.user.id);
         setObservabilityUser(result.data.user.id);

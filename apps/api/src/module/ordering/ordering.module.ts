@@ -4,7 +4,9 @@ import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
 import { OrderLifecycleModule } from './order-lifecycle/order-lifecycle.module';
 import { OrderHistoryModule } from './order-history/order-history.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { AclModule } from './acl/acl.module';
+import { OrderEligibilityModule } from './order-eligibility/order-eligibility.module';
 
 /**
  * OrderingModule — the root of the Ordering bounded context.
@@ -33,6 +35,10 @@ import { AclModule } from './acl/acl.module';
     // swallowed by OrderLifecycleModule's catch-all GET /orders/:id (INCON-2).
     OrderHistoryModule,
     OrderLifecycleModule,
+    AnalyticsModule,
+    // Cross-BC port: ORDER_ELIGIBILITY_PORT is @Global() so it is available
+    // to all modules (e.g. ReviewModule) without explicit imports (ADR-007).
+    OrderEligibilityModule,
   ],
 })
 export class OrderingModule {}

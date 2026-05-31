@@ -246,6 +246,7 @@ export class OrderLifecycleController {
         session.user.id,
         actorRole,
         dto.reason,
+        dto.reasonCode,
       ),
     );
   }
@@ -284,6 +285,7 @@ export class OrderLifecycleController {
         session.user.id,
         'admin',
         dto.reason,
+        dto.reasonCode ?? 'customer_request',
       ),
     );
   }

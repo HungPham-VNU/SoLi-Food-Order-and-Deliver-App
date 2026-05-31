@@ -6,6 +6,7 @@ import {
   useUpdateNotificationPreferences,
 } from '../hooks/useNotificationPreferences';
 import { MUTED_CATEGORY_OPTIONS } from '../types';
+import { useBrowserNotification } from '@/hooks/useBrowserNotification';
 
 const TIMEZONES = [
   { value: 'Asia/Ho_Chi_Minh', label: 'Indochina (UTC+7)' },
@@ -64,6 +65,7 @@ function timeStrToHour(s: string): number {
 export function NotificationsTab() {
   const { data: prefs, isLoading } = useNotificationPreferences();
   const { mutate: updatePrefs, isPending } = useUpdateNotificationPreferences();
+  const { requestPermission } = useBrowserNotification();
 
   // Local state for quiet hours master toggle (synthetic since API uses null = disabled)
   const [quietHoursStaged, setQuietHoursStaged] = useState<{
@@ -84,10 +86,16 @@ export function NotificationsTab() {
   const quietHoursEnabled =
     prefs.quietHoursStart !== null && prefs.quietHoursEnd !== null;
 
-  const handleChannelToggle = (
+  const handleChannelToggle = async (
     key: 'pushEnabled' | 'inAppEnabled' | 'emailEnabled' | 'smsEnabled',
     value: boolean,
   ) => {
+    if (key === 'pushEnabled' && value) {
+      const perm = await requestPermission();
+      if (perm !== 'granted') {
+        return;
+      }
+    }
     updatePrefs({ [key]: value });
   };
 

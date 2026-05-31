@@ -70,6 +70,7 @@ export class OrderTimeoutTask {
                 null, // system actor — no user ID
                 'system',
                 'Order expired — no restaurant confirmation within timeout',
+                'timeout',
               ),
             );
             this.logger.log(

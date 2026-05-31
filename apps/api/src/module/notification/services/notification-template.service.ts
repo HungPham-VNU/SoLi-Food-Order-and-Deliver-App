@@ -122,6 +122,12 @@ export class NotificationTemplateService {
       body: `Bạn có đơn hàng mới #${d.orderId ?? '—'}. Tổng: ${this.formatVnd(d.totalAmount)}. Vui lòng xác nhận sớm.`,
     }),
 
+    // --- Restaurant owner receives new review notification (UC-22) ---
+    new_review: (d) => ({
+      title: 'Đánh giá mới!',
+      body: `Nhà hàng ${d.restaurantName ?? 'của bạn'} vừa nhận được đánh giá ${d.stars ?? '?'} sao cho đơn #${d.orderId ?? '—'}.`,
+    }),
+
     // [RESERVED] — Not yet triggered (Delivery BC shipper)
     pickup_request: (d) => ({
       title: 'Yêu cầu lấy hàng',

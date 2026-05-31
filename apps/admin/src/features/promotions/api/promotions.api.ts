@@ -68,6 +68,37 @@ export type UpdatePromotionDto = Partial<
   Omit<CreatePromotionDto, 'type' | 'scope' | 'trigger'>
 >;
 
+// ---------------------------------------------------------------------------
+// Coupon codes
+// ---------------------------------------------------------------------------
+
+export type CouponStatus = 'active' | 'exhausted' | 'expired' | 'revoked';
+
+export interface CouponCode {
+  id: string;
+  promotionId: string;
+  code: string;
+  status: CouponStatus;
+  maxUses: number | null;
+  currentUses: number;
+  expiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CouponCodeListResponse {
+  items: CouponCode[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface CreateCouponCodesDto {
+  codes: string[];
+  maxUsesPerCode?: number;
+  expiresAt?: string;
+}
+
 export const promotionsApi = {
   list: (params?: {
     status?: PromotionStatus;
@@ -80,14 +111,10 @@ export const promotionsApi = {
       .then((r) => r.data),
 
   get: (id: string) =>
-    apiClient
-      .get<Promotion>(`/api/promotions/admin/${id}`)
-      .then((r) => r.data),
+    apiClient.get<Promotion>(`/api/promotions/admin/${id}`).then((r) => r.data),
 
   create: (dto: CreatePromotionDto) =>
-    apiClient
-      .post<Promotion>('/api/promotions/admin', dto)
-      .then((r) => r.data),
+    apiClient.post<Promotion>('/api/promotions/admin', dto).then((r) => r.data),
 
   update: (id: string, dto: UpdatePromotionDto) =>
     apiClient
@@ -105,5 +132,28 @@ export const promotionsApi = {
   pause: (id: string) =>
     apiClient
       .patch<Promotion>(`/api/promotions/admin/${id}/pause`)
+      .then((r) => r.data),
+
+  // Coupon APIs
+  listCoupons: (
+    promotionId: string,
+    params?: { offset?: number; limit?: number; status?: CouponStatus },
+  ) =>
+    apiClient
+      .get<CouponCodeListResponse>(`/api/promotions/admin/${promotionId}/coupons`, {
+        params,
+      })
+      .then((r) => r.data),
+
+  generateCoupons: (promotionId: string, dto: CreateCouponCodesDto) =>
+    apiClient
+      .post<CouponCode[]>(`/api/promotions/admin/${promotionId}/coupons`, dto)
+      .then((r) => r.data),
+
+  revokeCoupon: (promotionId: string, couponId: string) =>
+    apiClient
+      .patch<CouponCode>(
+        `/api/promotions/admin/${promotionId}/coupons/${couponId}/revoke`,
+      )
       .then((r) => r.data),
 };

@@ -1,77 +1,176 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 import {
   useMyRestaurant,
   useUpdateRestaurant,
 } from '@/features/restaurant/hooks/useRestaurants';
 import { useOrderCounts } from '@/features/dashboard/hooks/useOrderCounts';
-import { useApiConnectivity } from '@/features/dashboard/hooks/useApiConnectivity';
+import { useActiveOrders } from '@/features/orders/hooks/useOrders';
+import { useDashboardRevenue } from '@/features/dashboard/hooks/useDashboardRevenue';
+import type { OrderListItem } from '@/features/orders/types';
 
-const LOAD_BARS = [40, 60, 55, 80, 95, 70, 45, 30];
-
-const STAFF = [
-  {
-    name: 'Marco Rossini',
-    role: 'Head Chef',
-    station: 'STATION A',
-    available: true,
-    avatar:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDlNNtQFc3Cjt5qAySWQn1-iz7e3vnQoxUXHYxUiIg36r5ONHNfaKupmrD44rI_eFNQaK6NEUgbR1Y_ZPWJny4ryabMun_2dhLnYSHOOrlG-ISRcsxi7EvCuh3zRek-tbg1F4oE0_rxl4jq-RPBLex8Uu2zUlKoBuk4HrOekN5Z5pyTIkSg6fjSq9fRbu3BF0XxNZamhRGRvVX_GDawDLy3IMgMAB9wVSzJnl8_-kwVEEVyaek0aYmh9vb5tNh8cVArDJ2d8qz4Hjs',
-  },
-  {
-    name: 'Elena Vance',
-    role: 'Sous Chef',
-    station: 'STATION B',
-    available: true,
-    avatar:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuChIYz8_a3Wj1m6QhFG0kea0-REyCP4UNib18aaJebB_jDo6MbVHxANurc2Gdi46TMifpHDP8-kdnHOIKFV4PurzoPPuNYyeFGbj92mo6ZfoX7wAcrriRNmhniou5MdMFIhfxoLsq65jGGNZsB0hQcwgyIOppCGv4xAK04bmyZvEn1Xb-YuwQ4GBn5DVnbv9WJpsdwTz-uYyY9JJOJAeekdLGx87uZDwy7Q8Ok2SQEKA65ALNK8xfE4LL7k0LEnXI4lsC7F1EVf7jU',
-  },
-  {
-    name: 'Shift Open',
-    role: 'Delivery Prep',
-    station: 'STATION C',
-    available: false,
-    avatar: null,
-  },
+// ---------------------------------------------------------------------------
+// Demo data — replace with analytics API once revenue endpoints land
+// ---------------------------------------------------------------------------
+const CHART_BARS: Array<{ label: string; today: number; avg: number }> = [
+  { label: '8 AM',  today: 45, avg: 30 },
+  { label: '12 PM', today: 65, avg: 50 },
+  { label: '4 PM',  today: 95, avg: 80 },
+  { label: '8 PM',  today: 75, avg: 60 },
 ];
 
 const PAD2 = (n: number) => String(n).padStart(2, '0');
 
+function minutesAgo(isoString: string): number {
+  return Math.floor((Date.now() - new Date(isoString).getTime()) / 60_000);
+}
+
+function isUrgent(order: OrderListItem): boolean {
+  return (
+    (order.status === 'pending' || order.status === 'paid') &&
+    minutesAgo(order.createdAt) >= 10
+  );
+}
+
+function formatAmount(vnd: number): string {
+  if (vnd >= 1_000_000) return `₫${(vnd / 1_000_000).toFixed(1)}M`;
+  return `₫${Math.round(vnd / 1_000)}k`;
+}
+
+function formatRevenue(vnd: number | null): string {
+  if (vnd === null) return '—';
+  if (vnd >= 1_000_000_000) return `₫${(vnd / 1_000_000_000).toFixed(1)}B`;
+  if (vnd >= 1_000_000) return `₫${(vnd / 1_000_000).toFixed(1)}M`;
+  return `₫${Math.round(vnd / 1_000)}k`;
+}
+
+function formatDeltaPct(pct: number | null): string {
+  if (pct === null) return '';
+  const sign = pct >= 0 ? '+' : '';
+  return `${sign}${pct.toFixed(1)}%`;
+}
+
+function formatOrderId(id: string): string {
+  return `#${id.slice(0, 4).toUpperCase()}`;
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function OrderRow({ order }: { order: OrderListItem }) {
+  const urgent = isUrgent(order);
+  const age = minutesAgo(order.createdAt);
+
+  return (
+    <div
+      className={[
+        'p-5 rounded-2xl flex items-center justify-between gap-4 transition-all hover:shadow-md',
+        urgent
+          ? 'bg-[#fffaf9] border border-error/15'
+          : 'bg-surface-container-low border border-outline-variant/30',
+      ].join(' ')}
+    >
+      <div className="space-y-2 min-w-0">
+        <div className="flex items-center gap-3">
+          <span className="font-mono font-bold text-lg text-on-surface">
+            {formatOrderId(order.orderId)}
+          </span>
+          {urgent && (
+            <span className="bg-error text-on-error text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-widest shadow-sm">
+              Urgent
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-4 text-xs font-medium">
+          <span className={`flex items-center gap-1 ${urgent ? 'text-error' : 'text-on-surface-variant'}`}>
+            <span className="material-symbols-outlined text-[14px]">schedule</span>
+            {age === 0 ? 'Just now' : `${age} min ago`}
+          </span>
+          <span className="text-on-surface-variant flex items-center gap-1">
+            <span className="material-symbols-outlined text-[14px]">shopping_bag</span>
+            {order.itemCount} {order.itemCount === 1 ? 'item' : 'items'}
+          </span>
+        </div>
+        <p className="font-body text-sm text-on-surface font-medium leading-relaxed truncate max-w-[200px]">
+          {order.firstItemName}
+        </p>
+      </div>
+
+      <div className="flex flex-col items-end gap-3 shrink-0">
+        <span className="font-mono font-bold text-xl text-on-surface">
+          {formatAmount(order.totalAmount)}
+        </span>
+        <Link
+          to={`/orders/${order.orderId}`}
+          className={[
+            'font-bold text-sm px-5 py-2.5 rounded-xl shadow-sm transition-all active:scale-95',
+            urgent
+              ? 'bg-primary text-on-primary hover:bg-primary/90'
+              : 'border border-primary/20 text-primary hover:bg-primary/5',
+          ].join(' ')}
+        >
+          View Order
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
 export function DashboardPage() {
   const { data: restaurant, isLoading: loadingRestaurant } = useMyRestaurant();
-  const { mutate: updateRestaurant, isPending: updatingStore } =
-    useUpdateRestaurant();
+  const { mutate: updateRestaurant, isPending: updatingStore } = useUpdateRestaurant();
+  const { inProgress, readyForPickup, urgentReady, isLoading: loadingOrders } = useOrderCounts();
+  const { data: activeOrders = [] } = useActiveOrders();
+  const { totalRevenue, avgOrderValue, orderCount, revenueDeltaPct, isLoading: loadingRevenue } =
+    useDashboardRevenue();
 
-  const { inProgress, readyForPickup, urgentReady, isLoading: loadingOrders } =
-    useOrderCounts();
-
-  const { status: apiStatus, pingMs } = useApiConnectivity();
-
-  const [muted, setMuted] = useState(false);
   const [alertDismissed, setAlertDismissed] = useState(false);
 
   const isOpen = restaurant?.isOpen ?? false;
-  const toggleStoreStatus = (next: boolean) => {
-    if (!restaurant) return;
-    if (next === restaurant.isOpen) return;
+  const toggleStore = (next: boolean) => {
+    if (!restaurant || next === restaurant.isOpen) return;
     updateRestaurant({ id: restaurant.id, data: { isOpen: next } });
   };
+
+  // Sort: urgent first, then by createdAt desc
+  const sortedOrders = [...activeOrders]
+    .filter((o) => o.status !== 'ready_for_pickup' && o.status !== 'picked_up' && o.status !== 'delivering' && o.status !== 'delivered')
+    .sort((a, b) => {
+      if (isUrgent(a) && !isUrgent(b)) return -1;
+      if (!isUrgent(a) && isUrgent(b)) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    })
+    .slice(0, 6);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto w-full">
 
-      {/* ── Section 1: Global Control Bar ── */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      {/* Eyebrow */}
+      <div className="flex items-center gap-3 text-on-surface-variant/70">
+        <span className="text-[10px] font-bold tracking-widest uppercase">
+          Operational Hub
+        </span>
+        <div className="h-px bg-outline-variant flex-1" />
+      </div>
 
-        {/* Store Status Toggle */}
-        <div className="lg:col-span-8 bg-surface-container-lowest p-6 rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col sm:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-5">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-3xl">storefront</span>
+      {/* ── Section 1: Global Control Bar ── */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        {/* Store Status */}
+        <div className="lg:col-span-8 bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03),0_2px_8px_-2px_rgba(0,0,0,0.02)] border border-black/[0.04] p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden transition-all hover:shadow-[0_10px_30px_-4px_rgba(0,0,0,0.05),0_4px_12px_-2px_rgba(0,0,0,0.03)] hover:-translate-y-0.5">
+          <div className="absolute -left-6 -top-6 w-24 h-24 bg-primary/5 rounded-full blur-xl" />
+          <div className="flex items-center gap-5 relative z-10">
+            <div className="w-14 h-14 rounded-2xl bg-surface-container border border-outline-variant text-primary flex items-center justify-center shrink-0 shadow-inner">
+              <span className="material-symbols-outlined text-2xl">storefront</span>
             </div>
             <div>
-              <h2 className="text-xl font-extrabold text-on-surface">Store Status</h2>
-              <p className="text-sm text-on-surface-variant">
+              <h2 className="font-headline font-bold text-xl text-on-surface">Store Status</h2>
+              <p className="font-body text-sm text-on-surface-variant mt-1">
                 {loadingRestaurant
                   ? 'Loading…'
                   : isOpen
@@ -80,254 +179,215 @@ export function DashboardPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-1.5 bg-surface-container rounded-full">
+          <div className="bg-surface-container p-1.5 rounded-full flex items-center shrink-0 border border-outline-variant/50 shadow-inner">
             <button
-              onClick={() => toggleStoreStatus(true)}
+              onClick={() => toggleStore(true)}
               disabled={updatingStore || loadingRestaurant}
-              className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all disabled:opacity-50 ${
-                isOpen
-                  ? 'bg-primary text-white shadow-md'
-                  : 'text-on-surface-variant hover:bg-surface-container-high'
-              }`}
+              className={[
+                'px-6 py-2.5 rounded-full font-headline font-semibold text-sm transition-all disabled:opacity-50',
+                isOpen ? 'bg-primary text-on-primary shadow-md' : 'text-on-surface-variant hover:text-on-surface',
+              ].join(' ')}
             >
               Open
             </button>
             <button
-              onClick={() => toggleStoreStatus(false)}
+              onClick={() => toggleStore(false)}
               disabled={updatingStore || loadingRestaurant}
-              className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all disabled:opacity-50 ${
-                !isOpen
-                  ? 'bg-primary text-white shadow-md'
-                  : 'text-on-surface-variant hover:bg-surface-container-high'
-              }`}
+              className={[
+                'px-6 py-2.5 rounded-full font-headline font-semibold text-sm transition-all disabled:opacity-50',
+                !isOpen ? 'bg-primary text-on-primary shadow-md' : 'text-on-surface-variant hover:text-on-surface',
+              ].join(' ')}
             >
               Closed
             </button>
           </div>
         </div>
 
-        {/* Audio Alerts */}
-        <div className="lg:col-span-4 bg-surface-container-lowest p-6 rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-center gap-4">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-bold uppercase tracking-tighter text-on-surface-variant">
-              Audio Alerts
-            </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setMuted(true)}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                  muted
-                    ? 'bg-error-container text-on-error-container'
-                    : 'bg-surface-container text-on-surface-variant'
-                }`}
-              >
-                <span className="material-symbols-outlined text-lg">volume_off</span>
-              </button>
-              <button
-                onClick={() => setMuted(false)}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                  !muted
-                    ? 'bg-primary/10 text-primary'
-                    : 'bg-surface-container text-on-surface-variant'
-                }`}
-              >
-                <span className="material-symbols-outlined text-lg">volume_up</span>
-              </button>
-            </div>
+        {/* Alerts */}
+        <div className="lg:col-span-4 bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] border border-black/[0.04] p-6 flex items-center gap-5 transition-all hover:-translate-y-0.5">
+          <div className="w-14 h-14 rounded-2xl bg-surface-container border border-outline-variant flex items-center justify-center shrink-0 shadow-inner text-on-surface">
+            <span className="material-symbols-outlined text-2xl">volume_up</span>
           </div>
+
           {!alertDismissed && urgentReady > 0 ? (
-            <div className="flex items-center gap-3 px-4 py-3 bg-error-container/20 rounded-2xl border border-error/10">
-              <span className="material-symbols-outlined text-error">campaign</span>
-              <span className="text-sm font-semibold text-error">
-                {urgentReady} order{urgentReady > 1 ? 's' : ''} waiting &gt; 10 min
-              </span>
+            <div className="flex-1 bg-[#fffaf9] border border-error/15 rounded-xl p-4 flex items-center gap-4 shadow-sm">
+              <span className="material-symbols-outlined text-error text-xl shrink-0">warning</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-headline font-bold text-sm text-on-error-container leading-tight">
+                  {urgentReady} Urgent {urgentReady === 1 ? 'Order' : 'Orders'}
+                </p>
+                <p className="font-body text-xs text-on-error-container/70 mt-1">
+                  Waiting &gt; 10 mins
+                </p>
+              </div>
               <button
                 onClick={() => setAlertDismissed(true)}
-                className="ml-auto text-xs font-bold uppercase underline text-error"
+                className="text-error/60 hover:text-error transition-colors shrink-0"
               >
-                Dismiss
+                <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3 px-4 py-3 bg-surface-container rounded-2xl">
-              <span className="material-symbols-outlined text-on-surface-variant text-sm">check_circle</span>
-              <span className="text-sm text-on-surface-variant">No pending alerts</span>
+            <div className="flex-1 bg-surface-container-low border border-outline-variant/30 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+              <span className="material-symbols-outlined text-primary text-xl shrink-0">check_circle</span>
+              <p className="text-sm text-on-surface-variant font-medium">No pending alerts</p>
             </div>
           )}
         </div>
       </section>
 
-      {/* ── Section 2: Operational Bento Grid ── */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* ── Section 2: KPI Grid ── */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
         {/* In Progress */}
-        <div className="bg-primary-container p-6 rounded-3xl relative overflow-hidden flex flex-col justify-between h-48">
-          <div className="z-10 relative">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-on-primary-container/70">
-              In Progress
-            </span>
-            <h3 className="text-4xl font-black text-on-primary-container mt-1">
+        <div className="bg-primary-container rounded-2xl p-6 relative overflow-hidden group shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_-4px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all">
+          <div className="absolute inset-0 opacity-[0.08] mix-blend-overlay bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E')]" />
+          <div className="relative z-10">
+            <p className="font-body text-sm font-medium text-on-primary-container/80 mb-2 flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm">local_dining</span>
+              In Progress (Active)
+            </p>
+            <h3 className="font-mono font-bold text-5xl text-on-primary-container tracking-tight">
               {loadingOrders ? '—' : PAD2(inProgress)}
             </h3>
-            <p className="text-sm font-medium text-on-primary-container/80">Preparing now</p>
           </div>
-          <div className="z-10 relative flex items-center gap-2">
-            <span className="text-xs font-bold py-1 px-3 bg-on-primary-container/10 rounded-full text-on-primary-container">
-              Live count
-            </span>
-          </div>
-          <span className="material-symbols-outlined absolute -right-4 -bottom-4 text-9xl text-on-primary-container/10 rotate-12 pointer-events-none">
-            skillet
-          </span>
+          <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700" />
         </div>
 
-        {/* Ready for Pickup */}
-        <div className="bg-secondary-container p-6 rounded-3xl relative overflow-hidden flex flex-col justify-between h-48">
-          <div className="z-10 relative">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-on-secondary-container/70">
-              Outbound
-            </span>
-            <h3 className="text-4xl font-black text-on-secondary-container mt-1">
+        {/* Outbound */}
+        <div className="bg-secondary-container rounded-2xl p-6 relative overflow-hidden group shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_-4px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all">
+          <div className="absolute inset-0 opacity-[0.05] mix-blend-overlay bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E')]" />
+          <div className="relative z-10">
+            <p className="font-body text-sm font-medium text-on-secondary-container/80 mb-2 flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm">takeout_dining</span>
+              Outbound (Ready)
+            </p>
+            <h3 className="font-mono font-bold text-5xl text-on-secondary-container tracking-tight">
               {loadingOrders ? '—' : PAD2(readyForPickup)}
             </h3>
-            <p className="text-sm font-medium text-on-secondary-container/80">Ready for Pickup</p>
           </div>
-          <div className="z-10 relative flex items-center gap-2">
-            <span className="text-xs font-bold py-1 px-3 bg-on-secondary-container/10 rounded-full text-on-secondary-container">
-              {urgentReady > 0 ? `${urgentReady} urgent` : 'On track'}
-            </span>
-          </div>
-          <span className="material-symbols-outlined absolute -right-4 -bottom-4 text-9xl text-on-secondary-container/10 -rotate-12 pointer-events-none">
-            shopping_bag
-          </span>
+          <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-white/20 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700" />
         </div>
 
-        {/* System Connectivity */}
-        <div className="md:col-span-2 bg-surface-container-lowest p-6 rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] border border-outline-variant/10">
-          <h3 className="font-bold text-on-surface-variant mb-4 flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">hub</span>
-            System Connectivity
+        {/* Today's Revenue */}
+        <div className="bg-surface-container-lowest rounded-2xl p-6 border border-black/[0.04] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_-4px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all group">
+          <p className="font-body text-sm font-medium text-on-surface-variant mb-2 flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm opacity-70">payments</span>
+            Today's Revenue
+          </p>
+          <h3 className={`font-mono font-bold text-4xl text-on-surface tracking-tight ${loadingRevenue ? 'animate-pulse text-on-surface/30' : ''}`}>
+            {formatRevenue(totalRevenue)}
           </h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-surface-container-low rounded-2xl">
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  apiStatus === 'connected'
-                    ? 'bg-primary/10 text-primary'
-                    : apiStatus === 'connecting'
-                    ? 'bg-secondary-container/40 text-on-secondary-container'
-                    : 'bg-error-container/40 text-error'
-                }`}>
-                  <span className="material-symbols-outlined text-sm">
-                    {apiStatus === 'connected' ? 'sync_alt' : apiStatus === 'connecting' ? 'sync' : 'sync_problem'}
-                  </span>
-                </div>
-                <span className="text-sm font-bold">API Server</span>
-              </div>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
-                apiStatus === 'connected'
-                  ? 'bg-primary/10 text-primary'
-                  : apiStatus === 'connecting'
-                  ? 'bg-secondary-container/40 text-on-secondary-container'
-                  : 'bg-error-container/40 text-error'
-              }`}>
-                {apiStatus === 'connected' ? 'CONNECTED' : apiStatus === 'connecting' ? 'CONNECTING…' : 'OFFLINE'}
+          {revenueDeltaPct !== null ? (
+            <p className={`font-body text-xs font-semibold mt-3 inline-flex items-center gap-1 px-2 py-1 rounded-md ${revenueDeltaPct >= 0 ? 'bg-primary/5 text-primary' : 'bg-error-container/40 text-error'}`}>
+              <span className="material-symbols-outlined text-[14px]">
+                {revenueDeltaPct >= 0 ? 'trending_up' : 'trending_down'}
               </span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-surface-container-low rounded-2xl">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-sm">language</span>
-                </div>
-                <span className="text-sm font-bold">Network Latency</span>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-black">
-                {pingMs !== null ? `${pingMs}ms` : '— ms'}
-              </span>
-            </div>
-          </div>
+              {formatDeltaPct(revenueDeltaPct)} vs last week
+            </p>
+          ) : (
+            !loadingRevenue && (
+              <p className="font-body text-xs text-on-surface-variant mt-3">
+                No prior week data
+              </p>
+            )
+          )}
+        </div>
+
+        {/* Avg Order Value */}
+        <div className="bg-surface-container-lowest rounded-2xl p-6 border border-black/[0.04] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_-4px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all group">
+          <p className="font-body text-sm font-medium text-on-surface-variant mb-2 flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm opacity-70">receipt</span>
+            Avg Order Value
+          </p>
+          <h3 className={`font-mono font-bold text-4xl text-on-surface tracking-tight ${loadingRevenue ? 'animate-pulse text-on-surface/30' : ''}`}>
+            {formatRevenue(avgOrderValue)}
+          </h3>
+          <p className="font-body text-xs text-on-surface-variant mt-3 font-medium">
+            {orderCount !== null
+              ? <>Across <span className="font-mono">{orderCount}</span> order{orderCount !== 1 ? 's' : ''} today</>
+              : 'Loading…'}
+          </p>
         </div>
       </section>
 
-      {/* ── Section 3: Visual Data / Order Flow ── */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* ── Section 3: Chart + Orders ── */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-6">
 
-        {/* Active Load Monitor */}
-        <div className="lg:col-span-2 bg-surface-container-lowest rounded-3xl overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
-          <div className="p-6 flex justify-between items-center border-b border-surface-container">
-            <h3 className="text-lg font-extrabold">Active Load Monitor</h3>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
-              Demo data
-            </span>
-          </div>
-          <div className="p-8 aspect-[21/9] bg-gradient-to-b from-primary/5 to-transparent relative flex items-end gap-1">
-            {LOAD_BARS.map((h, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-t-lg transition-all duration-700"
-                style={{
-                  height: `${h}%`,
-                  backgroundColor: `oklch(0.39 0.12 145 / ${h / 100})`,
-                }}
-              />
-            ))}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="px-4 py-2 bg-white/90 backdrop-blur shadow-xl rounded-2xl flex items-center gap-3 border border-primary/20">
-                <span className="material-symbols-outlined text-primary">trending_up</span>
-                <span className="text-sm font-bold">Hourly load — analytics pending</span>
-              </div>
+        {/* Daily Load & Revenue bar chart */}
+        <div className="lg:col-span-7 bg-surface-container-lowest rounded-2xl border border-black/[0.04] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_-4px_rgba(0,0,0,0.05)] transition-all flex flex-col h-[480px] overflow-hidden relative group">
+          <div className="p-8 pb-0 relative z-10 flex justify-between items-start">
+            <div>
+              <h3 className="font-headline font-bold text-xl text-on-surface">Daily Load &amp; Revenue</h3>
+              <p className="font-body text-sm text-on-surface-variant mt-1">
+                Order volume comparison — hourly view
+              </p>
             </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-primary-container inline-block" /> Today
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-surface-container-highest inline-block" /> 7D Avg
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-on-surface-variant/50 bg-surface-container px-2 py-0.5 rounded">Demo</span>
+            </div>
+          </div>
+
+          <div className="flex-1 relative w-full px-8 mt-8 flex items-end justify-between gap-6 pb-12 font-mono text-[10px] text-on-surface-variant">
+            {/* Grid lines */}
+            <div className="absolute inset-0 px-8 pb-12 flex flex-col justify-between z-0 pointer-events-none opacity-20">
+              <div className="border-t border-outline-variant w-full" />
+              <div className="border-t border-outline-variant w-full" />
+              <div className="border-t border-outline-variant w-full" />
+              <div className="border-t border-outline-variant w-full" />
+              <div />
+            </div>
+
+            {CHART_BARS.map((bar) => (
+              <div key={bar.label} className="flex flex-col items-center flex-1 h-full relative z-10">
+                <div className="flex-1 w-full flex items-end justify-center gap-1">
+                  <div
+                    className="w-3 bg-surface-container-highest rounded-t-sm transition-all"
+                    style={{ height: `${bar.avg}%` }}
+                  />
+                  <div
+                    className="w-3 bg-primary-container rounded-t-sm transition-all"
+                    style={{ height: `${bar.today}%` }}
+                  />
+                </div>
+                <span className="mt-4">{bar.label}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Staff Availability */}
-        <div className="bg-surface-container-low rounded-3xl p-6 flex flex-col">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-black uppercase tracking-widest text-on-surface-variant">
-              Staff Availability
+        {/* Urgent & Recent Orders */}
+        <div className="lg:col-span-5 bg-surface-container-lowest rounded-2xl border border-black/[0.04] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex flex-col h-[480px] overflow-hidden">
+          <div className="p-6 pb-4 border-b border-outline-variant/50 shrink-0 bg-surface/50 backdrop-blur-sm">
+            <h3 className="font-headline font-bold text-lg text-on-surface">
+              Urgent &amp; Recent Orders
             </h3>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
-              Demo
-            </span>
+            <p className="font-body text-sm text-on-surface-variant">
+              Managing real-time order flow
+            </p>
           </div>
-          <div className="space-y-4 flex-1">
-            {STAFF.map((member) => (
-              <div
-                key={member.name}
-                className={`flex items-center gap-4 ${!member.available ? 'opacity-50' : ''}`}
-              >
-                {member.avatar ? (
-                  <img
-                    src={member.avatar}
-                    alt={member.name}
-                    className="w-12 h-12 rounded-2xl object-cover"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-2xl bg-surface-container-highest flex items-center justify-center text-on-surface-variant">
-                    <span className="material-symbols-outlined">person</span>
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate">{member.name}</p>
-                  <p className="text-[10px] text-on-surface-variant font-medium">
-                    {member.role} • {member.station}
-                  </p>
-                </div>
-                <div
-                  className={`w-3 h-3 rounded-full shrink-0 ${
-                    member.available ? 'bg-primary' : 'bg-surface-container-highest'
-                  }`}
-                />
+
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 [scrollbar-width:thin]">
+            {sortedOrders.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+                <span className="material-symbols-outlined text-4xl text-on-surface-variant/40">receipt_long</span>
+                <p className="text-sm text-on-surface-variant">No active orders right now.</p>
+                <p className="text-xs text-on-surface-variant/60">New orders will appear here automatically.</p>
               </div>
-            ))}
+            ) : (
+              sortedOrders.map((order) => (
+                <OrderRow key={order.orderId} order={order} />
+              ))
+            )}
           </div>
-          <Button
-            variant="ghost"
-            className="mt-6 w-full py-3 h-auto bg-surface-container-lowest text-primary text-xs font-black uppercase tracking-tighter rounded-2xl hover:bg-white transition-colors"
-            disabled
-          >
-            Assign Station
-          </Button>
         </div>
       </section>
     </div>

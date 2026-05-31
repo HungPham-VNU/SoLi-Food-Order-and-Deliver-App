@@ -22,3 +22,6 @@ export * from '../module/notification/acl/notification-restaurant-snapshot.schem
 
 // Promotion bounded context — Phase PR-1 schemas
 export * from '../module/promotion/domain/promotion.schema';
+
+// Review bounded context — Phase RV-2 schemas
+export * from '../module/review/domain/review.schema';

@@ -12,6 +12,8 @@ export interface Restaurant {
   cuisineType?: string | null;
   logoUrl?: string | null;
   coverImageUrl?: string | null;
+  averageRating?: number;
+  reviewCount?: number;
   createdAt: string;
   updatedAt: string;
 }

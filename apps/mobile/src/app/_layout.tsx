@@ -19,10 +19,7 @@ import {
   useNotificationHandler,
 } from '@/src/features/notification';
 import Toast from 'react-native-toast-message';
-import {
-  initMobileObservability,
-  Sentry,
-} from '@/src/lib/observability';
+import { initMobileObservability, Sentry } from '@/src/lib/observability';
 import {
   identifyMobileUser,
   MobileAnalyticsProvider,

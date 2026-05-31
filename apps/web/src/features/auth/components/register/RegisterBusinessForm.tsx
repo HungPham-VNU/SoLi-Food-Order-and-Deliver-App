@@ -5,8 +5,11 @@ import {
   Phone,
   AtSign,
   MapPin,
+  Search,
 } from 'lucide-react';
+import { useState } from 'react';
 import { useFormContext } from 'react-hook-form';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +19,35 @@ export function RegisterBusinessForm() {
   const {
     register,
     formState: { errors },
+    getValues,
+    setValue,
   } = useFormContext<RestaurantFormValues>();
+  
+  const [isGeocoding, setIsGeocoding] = useState(false);
+
+  const handleGeocodeAddress = async () => {
+    const address = getValues('address');
+    if (!address || address.length < 3) return;
+
+    setIsGeocoding(true);
+    try {
+      const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(address)}&limit=1`);
+      const data = await response.json();
+      
+      if (data.features && data.features.length > 0) {
+        const [lng, lat] = data.features[0].geometry.coordinates;
+        setValue('latitude', lat, { shouldValidate: true, shouldDirty: true });
+        setValue('longitude', lng, { shouldValidate: true, shouldDirty: true });
+      } else {
+        alert('Could not locate this address. Please refine your search or drag the pin manually.');
+      }
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      alert('Error fetching location data.');
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
 
   return (
     <div className="xl:col-span-7 space-y-8">
@@ -164,17 +195,37 @@ export function RegisterBusinessForm() {
               >
                 Full Address
               </Label>
-              <Input
-                id="streetAddress"
-                className="w-full px-4 py-3 h-auto bg-surface-container border border-outline-variant/20 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-surface-container-lowest transition-all"
-                placeholder="123 Nguyen Hue, District 1, Ho Chi Minh City"
-                type="text"
-                {...register('address')}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="streetAddress"
+                  className="w-full px-4 py-3 h-auto bg-surface-container border border-outline-variant/20 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus-visible:bg-surface-container-lowest transition-all"
+                  placeholder="123 Nguyen Hue, District 1, Ho Chi Minh City"
+                  type="text"
+                  {...register('address')}
+                />
+                <Button 
+                  type="button" 
+                  variant="secondary"
+                  onClick={handleGeocodeAddress}
+                  disabled={isGeocoding}
+                  className="h-auto px-6 whitespace-nowrap bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest border border-outline-variant/20 shadow-sm"
+                >
+                  {isGeocoding ? 'Locating...' : (
+                    <>
+                      <Search className="w-4 h-4 mr-2" />
+                      Locate
+                    </>
+                  )}
+                </Button>
+              </div>
               {errors.address && (
                 <p className="text-xs text-destructive ml-1">{errors.address.message}</p>
               )}
             </div>
+            
+            {/* Hidden inputs for location tracking from Map */}
+            <input type="hidden" step="any" {...register('latitude', { valueAsNumber: true })} />
+            <input type="hidden" step="any" {...register('longitude', { valueAsNumber: true })} />
           </CardContent>
         </Card>
       </div>

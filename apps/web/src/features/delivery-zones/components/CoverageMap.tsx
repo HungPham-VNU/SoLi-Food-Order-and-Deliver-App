@@ -1,22 +1,33 @@
 import { useMemo } from 'react';
+import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 import type { DeliveryZone } from '../types';
+
+// Fix for default Leaflet icon missing in React
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 interface CoverageMapProps {
   zones: DeliveryZone[];
+  restaurantLocation?: { lat: number; lng: number } | null;
 }
 
 /**
- * Stylized "map" that renders zones as concentric circles, scaled relative to
- * the largest active radius. Pure CSS — no map library, no API key.
- * Replace with Leaflet/Mapbox later if real maps are needed.
+ * Interactive map rendering zones as concentric circles using Leaflet.
  */
-export function CoverageMap({ zones }: CoverageMapProps) {
+export function CoverageMap({ zones, restaurantLocation }: CoverageMapProps) {
   const activeZones = useMemo(
     () => zones.filter((z) => z.isActive).sort((a, b) => b.radiusKm - a.radiusKm),
     [zones],
   );
 
-  const maxRadius = activeZones[0]?.radiusKm ?? 0;
+  const defaultLocation = { lat: 40.7128, lng: -74.0060 }; // NYC fallback
+  const center = restaurantLocation || defaultLocation;
 
   return (
     <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant/10">
@@ -25,54 +36,54 @@ export function CoverageMap({ zones }: CoverageMapProps) {
         Coverage Map
       </h3>
 
-      <div className="relative aspect-square rounded-xl overflow-hidden mb-4 bg-gradient-to-br from-surface-container to-surface-container-low">
-        {/* Subtle grid pattern */}
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(112,122,108,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(112,122,108,0.15) 1px, transparent 1px)',
-            backgroundSize: '24px 24px',
-          }}
-        />
-
-        {/* Concentric zone circles (largest first so smaller overlap on top) */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          {activeZones.length === 0 && (
-            <div className="text-center text-on-surface-variant">
-              <span className="material-symbols-outlined text-4xl opacity-40">
-                map
-              </span>
-              <p className="text-xs italic mt-2">No active zones yet</p>
+      <div className="relative aspect-square rounded-xl overflow-hidden mb-4 bg-surface-container">
+        {restaurantLocation ? (
+          <MapContainer 
+            center={[center.lat, center.lng]} 
+            zoom={11} 
+            scrollWheelZoom={false}
+            className="w-full h-full z-0"
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <Marker position={[center.lat, center.lng]} />
+            
+            {activeZones.map((zone, idx) => {
+              const opacity = 0.15 + (1 - idx / Math.max(activeZones.length, 1)) * 0.4;
+              return (
+                <Circle
+                  key={zone.id}
+                  center={[center.lat, center.lng]}
+                  radius={zone.radiusKm * 1000} // Leaflet circle radius is in meters
+                  pathOptions={{
+                    color: 'var(--primary)',
+                    fillColor: 'var(--primary)',
+                    fillOpacity: opacity * 0.3,
+                    weight: 2,
+                  }}
+                />
+              );
+            })}
+          </MapContainer>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+            <div>
+              <span className="material-symbols-outlined text-4xl text-on-surface-variant/40 mb-2">location_off</span>
+              <p className="text-sm text-on-surface-variant italic">
+                Set your restaurant location in Settings to view the coverage map.
+              </p>
             </div>
-          )}
-          {activeZones.map((zone, idx) => {
-            const sizePct = maxRadius > 0 ? (zone.radiusKm / maxRadius) * 90 : 0;
-            // Stagger opacity so layered rings stay visible.
-            const opacity = 0.15 + (1 - idx / Math.max(activeZones.length, 1)) * 0.4;
-            return (
-              <div
-                key={zone.id}
-                className="absolute rounded-full border-2 border-primary"
-                style={{
-                  width: `${sizePct}%`,
-                  height: `${sizePct}%`,
-                  backgroundColor: `rgba(0, 73, 14, ${opacity * 0.15})`,
-                  opacity,
-                }}
-              />
-            );
-          })}
+          </div>
+        )}
 
-          {/* Center pin */}
-          {activeZones.length > 0 && (
-            <div className="relative z-10 w-5 h-5 rounded-full bg-primary border-2 border-white shadow-lg" />
-          )}
-        </div>
-
-        <div className="absolute bottom-3 right-3 bg-white/85 backdrop-blur px-3 py-1.5 rounded-lg border border-white/50 text-[10px] font-bold shadow-sm">
-          Your restaurant
-        </div>
+        {/* Floating badge */}
+        {restaurantLocation && (
+          <div className="absolute bottom-3 right-3 z-[1000] bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg border border-white/50 text-[10px] font-bold shadow-sm">
+            Your restaurant
+          </div>
+        )}
       </div>
 
       {/* Legend */}
@@ -83,8 +94,7 @@ export function CoverageMap({ zones }: CoverageMapProps) {
           </p>
         ) : (
           activeZones.map((zone, idx) => {
-            const opacity =
-              0.4 + (1 - idx / Math.max(activeZones.length, 1)) * 0.6;
+            const opacity = 0.4 + (1 - idx / Math.max(activeZones.length, 1)) * 0.6;
             return (
               <div key={zone.id} className="flex items-center gap-3">
                 <div
@@ -101,10 +111,6 @@ export function CoverageMap({ zones }: CoverageMapProps) {
             );
           })
         )}
-        <div className="flex items-center gap-3 pt-1 border-t border-outline-variant/20">
-          <div className="w-3 h-3 rounded-full bg-outline-variant" />
-          <span className="text-xs font-bold text-on-surface">Out of Range</span>
-        </div>
       </div>
     </div>
   );
