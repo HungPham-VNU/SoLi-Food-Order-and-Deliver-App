@@ -3,6 +3,14 @@ import { usersApi, type ListUsersParams, type AppRole } from '../api/users.api';
 
 const LIST_KEY = 'admin-users';
 
+export function useUser(userId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['admin-user', userId],
+    queryFn: () => usersApi.getUser(userId!),
+    enabled: !!userId,
+  });
+}
+
 export function useUsers(params: ListUsersParams = {}) {
   return useQuery({
     queryKey: [LIST_KEY, params],

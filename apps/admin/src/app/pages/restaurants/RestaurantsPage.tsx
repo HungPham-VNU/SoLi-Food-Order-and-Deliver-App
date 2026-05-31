@@ -32,6 +32,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { PageHero } from '@/components/layout/PageHero';
+import { useUser } from '@/features/users/hooks/useUsers';
 
 const PAGE_SIZE = 20;
 
@@ -77,6 +78,33 @@ interface DetailSheetProps {
   onUnapprove: (id: string) => void;
   isApproving: boolean;
   isUnapproving: boolean;
+}
+
+function OwnerInfo({ ownerId }: { ownerId: string }) {
+  const { data: owner, isLoading } = useUser(ownerId);
+
+  const initials = owner?.name
+    ? owner.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+    : 'OW';
+
+  return (
+    <div className="flex items-center gap-3">
+      <Avatar className="h-9 w-9">
+        <AvatarImage src={owner?.image ?? undefined} />
+        <AvatarFallback className="bg-surface-container text-on-surface-variant text-sm font-medium">
+          {initials}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-on-surface truncate">
+          {isLoading ? 'Loading…' : (owner?.name ?? 'Unknown owner')}
+        </p>
+        <p className="text-xs text-muted-foreground truncate">
+          {owner?.email ?? ownerId}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function RestaurantDetailSheet({
@@ -165,21 +193,7 @@ function RestaurantDetailSheet({
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Ownership
                 </h3>
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback className="bg-surface-container text-on-surface-variant text-sm font-medium">
-                      OW
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-on-surface truncate">
-                      Owner ID
-                    </p>
-                    <p className="text-xs text-muted-foreground font-mono truncate">
-                      {restaurant.ownerId}
-                    </p>
-                  </div>
-                </div>
+                <OwnerInfo ownerId={restaurant.ownerId} />
               </div>
 
               <div className="h-px bg-border" />

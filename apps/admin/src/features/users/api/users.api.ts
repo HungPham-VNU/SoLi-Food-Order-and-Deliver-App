@@ -1,4 +1,5 @@
 import { authClient } from '@/lib/auth-client';
+import { apiClient } from '@/lib/api-client';
 
 export type AppRole = 'admin' | 'restaurant' | 'shipper' | 'user';
 
@@ -86,5 +87,12 @@ export const usersApi = {
   removeUser: async (userId: string): Promise<void> => {
     const { error } = await (authClient as any).admin.removeUser({ userId });
     if (error) throw new Error(error.message ?? 'Failed to remove user');
+  },
+
+  getUser: async (userId: string): Promise<AdminUser> => {
+    const res = await apiClient.get<AdminUser>('/api/auth/admin/get-user', {
+      params: { id: userId },
+    });
+    return res.data;
   },
 };

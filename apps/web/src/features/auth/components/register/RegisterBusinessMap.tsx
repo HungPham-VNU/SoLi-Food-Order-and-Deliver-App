@@ -26,20 +26,21 @@ function LocationMarker() {
   const lat = useWatch<RestaurantFormValues, 'latitude'>({ name: 'latitude' });
   const lng = useWatch<RestaurantFormValues, 'longitude'>({ name: 'longitude' });
 
+  const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng);
+
   // Derive position directly from form values — no state needed
-  const position =
-    lat !== undefined && lng !== undefined
-      ? new L.LatLng(lat, lng)
-      : new L.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng);
+  const position = hasValidCoords
+    ? new L.LatLng(lat!, lng!)
+    : new L.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng);
 
   // Side effect only: seed defaults and fly the map when coords change significantly
   useEffect(() => {
-    if (lat === undefined || lng === undefined) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       setValue('latitude', DEFAULT_CENTER.lat);
       setValue('longitude', DEFAULT_CENTER.lng);
       return;
     }
-    const newPos = new L.LatLng(lat, lng);
+    const newPos = new L.LatLng(lat!, lng!);
     if (map.getCenter().distanceTo(newPos) > 500) {
       map.flyTo(newPos, 15);
     }
