@@ -1,4 +1,4 @@
-# Turborepo CI/CD and Render Deployment
+﻿# Turborepo CI/CD and Render Deployment
 
 This document explains how this repository builds, validates, packages, and deploys the UITFood food ordering platform. It covers the GitHub Actions CI/CD workflows, the Turborepo task model, Docker image publication to GitHub Container Registry, Render image deploy hooks, Expo mobile packaging, and the Terraform configuration that manages Render infrastructure.
 
@@ -988,3 +988,143 @@ This guide follows current tool behavior from the official documentation:
 - Terraform automation should use non-interactive flags such as `-input=false`, validate configuration before plan or apply, and can set variables through `TF_VAR_*` environment variables.
 - HCP Terraform CLI integration uses the `cloud` block to map local CLI runs to remote workspaces, with remote plans and applies using workspace variables and remote state.
 - Render organizes deployable resources as services, databases, projects, environments, environment variable groups, health checks, and image-backed web services.
+
+## 24. Diagrams
+
+### CI Pipeline
+
+Triggered by a pull request targeting `master`. All steps run inside a single job with Postgres and Redis service containers.
+
+```mermaid
+flowchart LR
+    PR["Pull Request → master\n(opened / synchronize / reopened / ready_for_review)"]
+    PR --> CIV
+
+    subgraph CIV["ci-validate.yml — job: validate (ubuntu-latest)"]
+        direction LR
+        SVC["🐘 Postgres 18  +  🟥 Redis 7-alpine\n(service containers)"]
+        A["Checkout (fetch-depth=0)"]
+        B["Configure Turbo Affected Range\n(PR base SHA → HEAD)"]
+        C["Setup Environment\npnpm 11.1.2 · Node 22 · frozen install"]
+        D["Restore Turbo Cache (.turbo)"]
+        E["Lint & Typecheck\nturbo --affected"]
+        F["Security Scan\npnpm audit --audit-level high"]
+        G["Unit Tests\nturbo --affected  (Postgres + Redis)"]
+        H["Build\nturbo --affected"]
+        I["DB Migrate\npnpm --filter=api db:push"]
+        J["E2E Tests\nturbo --filter=api  (Postgres + Redis)"]
+
+        SVC --> A --> B --> C --> D --> E --> F --> G --> H --> I --> J
+    end
+
+    J -->|all steps pass| OK["✅ PR can be merged"]
+    J -->|any step fails| FAIL["❌ gh pr comment\n(notify-author job auto-posts\nfailure link to PR author)"]
+```
+
+---
+
+### CD Pipeline
+
+Triggered by a push to `master` (path-filtered per app). Each app has an independent pipeline.
+
+```mermaid
+flowchart LR
+    PUSH["Push to master"]
+
+    PUSH -->|"apps/api/**"| API_P["pipeline-api.yml"]
+    PUSH -->|"apps/web/**"| WEB_P["pipeline-web.yml"]
+    PUSH -->|"apps/admin/**"| ADM_P["pipeline-admin.yml"]
+    PUSH -->|"apps/mobile/**"| MOB_P["pipeline-mobile.yml"]
+    PUSH -->|"infra/render/**\nor workflow files"| IaC_P["pipeline-render-iac.yml"]
+
+    subgraph API["API"]
+        API_P --> API_V["validate\nLint+TC · Audit · Unit Test\nBuild · DB Migrate · E2E\n(Postgres + Redis)"]
+        API_V --> API_D["cd-package-docker.yml\nBuild & push GHCR image\nghcr.io/…/uitfood-api:sha-xxxxxxx"]
+        API_D --> API_R["cd-render-image.yml\nPOST Render deploy hook\n(RENDER_API_DEPLOY_HOOK)"]
+    end
+
+    subgraph WEB["Web"]
+        WEB_P --> WEB_V["validate\nLint+TC · Audit · Unit Test · Build\n(Vite build args baked in)"]
+        WEB_V --> WEB_D["cd-package-docker.yml\nBuild & push GHCR image\nghcr.io/…/uitfood-web:sha-xxxxxxx\n(Grafana Faro sourcemap upload)"]
+        WEB_D --> WEB_R["cd-render-image.yml\nPOST Render deploy hook\n(RENDER_WEB_DEPLOY_HOOK)"]
+    end
+
+    subgraph ADMIN["Admin"]
+        ADM_P --> ADM_V["validate\nLint+TC · Audit · Unit Test · Build\n(Vite build args baked in)"]
+        ADM_V --> ADM_D["cd-package-docker.yml\nBuild & push GHCR image\nghcr.io/…/uitfood-admin:sha-xxxxxxx"]
+        ADM_D --> ADM_R["cd-render-image.yml\nPOST Render deploy hook\n(RENDER_ADMIN_DEPLOY_HOOK)"]
+    end
+
+    subgraph MOBILE["Mobile"]
+        MOB_P --> MOB_V["validate\nLint+TC · Audit · Unit Test · Build\nSentry sourcemaps upload"]
+        MOB_V --> MOB_E["cd-package-mobile.yml\nEAS local Android build\n(Java 17 · eas build --local)"]
+        MOB_E --> MOB_A["Upload artifact\nmobile-production-build / build.apk"]
+    end
+
+    subgraph IaC["Infrastructure (Render Terraform)"]
+        IaC_P --> TF["cd-render-iac.yml\nterraform fmt · init · validate\nterraform plan -out=tfplan\nterraform apply tfplan\n(HCP Terraform remote state)"]
+        TF --> RENDER_INFRA["Render Infrastructure\nAPI service · Web service\nPostgres database"]
+    end
+
+    API_R --> RENDER_API["Render: UITFood API\n(new container deployed)"]
+    WEB_R --> RENDER_WEB["Render: UITFood Web\n(new container deployed)"]
+    ADM_R --> RENDER_ADM["Render: UITFood Admin\n(new container deployed)"]
+```
+
+---
+
+### High-Level CI/CD Overview
+
+End-to-end flow from developer commit to production.
+
+```mermaid
+---
+config:
+  layout: elk
+  flowchart:
+    curve: rounded
+---
+flowchart LR
+    DEV["👨‍💻 Developer"]
+
+    DEV -->|"feature branch push"| PR["Pull Request\n(to master)"]
+
+    subgraph CI["CI  ·  ci-validate.yml"]
+        direction TB
+        C1["Lint & Typecheck\n(turbo --affected)"]
+        C2["Security Audit\n(pnpm audit)"]
+        C3["Unit Tests\n(turbo --affected)"]
+        C4["Build\n(turbo --affected)"]
+        C5["E2E Tests\n(API only)"]
+        C1 --> C2 --> C3 --> C4 --> C5
+    end
+
+    PR -->|"triggers CI"| CI
+    CI -->|"passes + reviewed"| MERGE["Merge to master"]
+    CI -->|"fails"| FB["💬 Automated PR comment\n(failure link → author)"]
+
+    subgraph CD["CD  ·  path-filtered per app (push to master)"]
+        direction TB
+        V["Re-validate\n(lint · typecheck · audit\nunit test · build)"]
+
+        subgraph PKG["Package"]
+            PKG1["Docker → GHCR\napi · web · admin\nsha-xxxxxxx tag"]
+            PKG2["EAS APK artifact\nmobile"]
+        end
+
+        V --> PKG
+
+        PKG1 -->|"api · web · admin"| DEPLOY["Deploy\nRender deploy hook\n→ pull new image → restart"]
+        PKG2 -->|"mobile"| ART["GitHub Actions Artifact\n(APK download)"]
+    end
+
+    MERGE --> CD
+
+    subgraph IaC["IaC  ·  path-filtered (infra/render/**)"]
+        TF["Terraform\nfmt · init · plan → apply\n(HCP Terraform remote state)"]
+    end
+
+    MERGE -->|"infra changes"| IaC
+    IaC --> RENDER_INFRA["Render Infrastructure\n(services · database · scaling)"]
+    DEPLOY --> RENDER_INFRA
+```

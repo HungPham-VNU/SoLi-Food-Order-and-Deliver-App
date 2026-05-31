@@ -1,0 +1,69 @@
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "40px", "fontFamily": "arial"}, "flowchart": {"subGraphTitleMargin": {"top": 60, "bottom": 10}, "nodeSpacing": 80, "rankSpacing": 100}}}%%
+graph TD
+    ROOT["🗂️ uitfood/  (pnpm monorepo · Turborepo)"]
+
+    ROOT --> APPS["📁 apps/"]
+    ROOT --> INFRA["📁 infra/"]
+    ROOT --> DOCS["📁 docs/"]
+    ROOT --> GH["📁 .github/"]
+    ROOT --> CFG_FILES["📄 turbo.json · pnpm-workspace.yaml\ndocker-compose.yml · .env.example"]
+
+    %% ── apps ──────────────────────────────────────────
+    APPS --> API["📁 api/\nNestJS 11 · Node 22\nREST + WebSocket"]
+    APPS --> WEB["📁 web/\nVite + React 19\nRestaurant Portal (SPA)"]
+    APPS --> ADMIN["📁 admin/\nVite + React 19\nAdmin Panel (SPA)"]
+    APPS --> MOBILE["📁 mobile/\nExpo SDK 55 · React Native\nCustomer App"]
+
+    %% ── api internals ─────────────────────────────────
+    API --> SRC["📁 src/"]
+    API --> TEST["📁 test/  (E2E · Supertest)"]
+    API --> DOCKERFILE["📄 Dockerfile  (multi-stage)"]
+
+    SRC --> MAIN["📄 main.ts"]
+    SRC --> TELE["📄 telemetry.ts  (OTel bootstrap)"]
+    SRC --> MODULE["📁 module/"]
+    SRC --> DRIZZLE_DIR["📁 drizzle/\nschema.ts · db.ts\nmigrations · seeds"]
+    SRC --> OBS["📁 observability/\nOpenTelemetry setup"]
+    SRC --> CFG_DIR["📁 config/\ntyped env vars"]
+
+    MODULE --> AUTH_M["📁 auth/\nBetterAuth · RBAC"]
+    MODULE --> ORDERING_M["📁 ordering/  ⬡ Core Domain"]
+    MODULE --> RESTCAT_M["📁 restaurant-catalog/  ⬡ Core Domain"]
+    MODULE --> IMAGE_M["📁 image/\nCloudinary lifecycle"]
+    MODULE --> NOTIF_M["📁 notification/\nFCM · SMTP · retry"]
+    MODULE --> PAY_M["📁 payment/\nVNPay"]
+    MODULE --> PROMO_M["📁 promotion/\nDiscount / coupons"]
+    MODULE --> REV_M["📁 review/\nCustomer reviews"]
+
+    ORDERING_M --> ACL["📁 acl/\nRestaurant & Menu snapshots"]
+    ORDERING_M --> CART["📁 cart/\nRedis-backed"]
+    ORDERING_M --> ORDER["📁 order/\naggregate · commands · queries"]
+    ORDERING_M --> ELIGIBILITY["📁 order-eligibility/"]
+    ORDERING_M --> HISTORY["📁 order-history/"]
+    ORDERING_M --> LIFECYCLE["📁 order-lifecycle/\n10-state machine"]
+
+    RESTCAT_M --> RESTAURANT["📁 restaurant/"]
+    RESTCAT_M --> MENU["📁 menu/\nitems · modifiers"]
+    RESTCAT_M --> SEARCH["📁 search/"]
+
+    %% ── infra ─────────────────────────────────────────
+    INFRA --> RENDER_TF["📁 render/\nTerraform IaC\nPostgres · API · Web services"]
+    INFRA --> GRAFANA_CFG["📁 grafana/\nGrafana Cloud config"]
+
+    %% ── .github ───────────────────────────────────────
+    GH --> WORKFLOWS["📁 workflows/\npipeline-api · pipeline-web\npipeline-mobile · pipeline-main\nci-validate · cd-*"]
+    GH --> ACTIONS["📁 actions/setup-environment/\npnpm + Node composite action"]
+
+    %% ── styles ────────────────────────────────────────
+    style ORDERING_M fill:#fef3c7,stroke:#d97706
+    style RESTCAT_M  fill:#fef3c7,stroke:#d97706
+    style AUTH_M     fill:#dbeafe,stroke:#2563eb
+    style PAY_M      fill:#dbeafe,stroke:#2563eb
+    style IMAGE_M    fill:#dbeafe,stroke:#2563eb
+    style NOTIF_M    fill:#dbeafe,stroke:#2563eb
+    style PROMO_M    fill:#dbeafe,stroke:#2563eb
+    style REV_M      fill:#dbeafe,stroke:#2563eb
+    style DRIZZLE_DIR fill:#f0fdf4,stroke:#16a34a
+    style OBS        fill:#f0fdf4,stroke:#16a34a
+    style RENDER_TF  fill:#f5f3ff,stroke:#7c3aed
+    style WORKFLOWS  fill:#fdf2f8,stroke:#9d174d

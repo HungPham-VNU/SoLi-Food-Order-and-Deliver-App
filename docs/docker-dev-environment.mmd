@@ -1,0 +1,89 @@
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "40px", "fontFamily": "arial"}, "flowchart": {"subGraphTitleMargin": {"top": 60, "bottom": 10}, "nodeSpacing": 80, "rankSpacing": 100}}}%%
+graph TB
+    DEV["👩‍💻 Developer Machine\n(any OS — macOS · Windows · Linux)"]
+
+    subgraph HOST["Host: docker compose -f docker-compose.dev.yml up --build"]
+        direction TB
+
+        subgraph BUILD["Image Build (Dockerfile.dev — same pattern for api / web / admin)"]
+            direction LR
+            BASE["FROM node:22-alpine\n+ libc6-compat\n+ pnpm@11.1.2"]
+            COPY_MANIFESTS["COPY workspace manifests\npackage.json · pnpm-lock.yaml\npnpm-workspace.yaml · turbo.json\napps/*/package.json"]
+            INSTALL["RUN pnpm install\n--frozen-lockfile\n(deps baked into image)"]
+            BASE --> COPY_MANIFESTS --> INSTALL
+        end
+
+        subgraph NETWORK["Docker Internal Network"]
+            direction TB
+
+            subgraph INFRA["Infrastructure Services"]
+                PG["🐘 postgres\nimage: postgres:18\ncontainer: food_order_db\nport 5432\nhealthcheck: pg_isready"]
+                RD["⚡ redis\nimage: redis:7-alpine\ncontainer: food_order_redis\nport 6379\nhealthcheck: redis-cli ping"]
+            end
+
+            subgraph APPS["App Services  (depends_on infra health)"]
+                API_C["🔧 api\ncontainer: food_order_api_dev\nCMD: pnpm --filter api dev\nport 3000\nCHOKIDAR_USEPOLLING=true"]
+                WEB_C["🌐 web\ncontainer: food_order_web_dev\nCMD: pnpm --filter web dev\nport 5173"]
+                ADMIN_C["🖥️ admin\ncontainer: food_order_admin_dev\nCMD: pnpm --filter admin dev\nport 5174"]
+            end
+
+            API_C -- "DATABASE_URL → postgres:5432" --> PG
+            API_C -- "REDIS_HOST=redis:6379" --> RD
+            WEB_C -- "depends_on: api" --> API_C
+            ADMIN_C -- "depends_on: api" --> API_C
+        end
+
+        subgraph VOLUMES["Named Volumes  (node_modules isolation)"]
+            V1["api_nm_root\n/app/node_modules"]
+            V2["api_nm_app\n/app/apps/api/node_modules"]
+            V3["web_nm_root · web_nm_app"]
+            V4["admin_nm_root · admin_nm_app"]
+            V5["food_order_db\nPostgres data"]
+            V6["food_order_redis\nRedis data"]
+        end
+    end
+
+    subgraph BIND["Bind Mount  (.:/app)"]
+        SRC["📂 Repo source code\n(live — edits reflect instantly)"]
+    end
+
+    subgraph PORTS["Published Ports (host → container)"]
+        P1["localhost:3000 → api:3000\n(REST + WebSocket)"]
+        P2["localhost:5173 → web:5173\n(Vite HMR)"]
+        P3["localhost:5174 → admin:5174\n(Vite HMR)"]
+        P4["localhost:5432 → postgres:5432"]
+        P5["localhost:6379 → redis:6379"]
+    end
+
+    DEV -- "docker compose up --build" --> BUILD
+    BUILD -- "image used by" --> API_C
+    BUILD -- "image used by" --> WEB_C
+    BUILD -- "image used by" --> ADMIN_C
+
+    SRC -- ".:/app bind mount\n(host code → container)" --> API_C
+    SRC -- ".:/app bind mount" --> WEB_C
+    SRC -- ".:/app bind mount" --> ADMIN_C
+
+    V1 & V2 -- "shadows bind-mount\n(Docker deps ≠ host deps)" --> API_C
+    V3 -- "shadows bind-mount" --> WEB_C
+    V4 -- "shadows bind-mount" --> ADMIN_C
+    V5 --> PG
+    V6 --> RD
+
+    API_C --> P1
+    WEB_C --> P2
+    ADMIN_C --> P3
+    PG --> P4
+    RD --> P5
+
+    DEV -- "opens browser" --> P1
+    DEV -- "opens browser" --> P2
+    DEV -- "opens browser" --> P3
+
+    style BUILD   fill:#fef9c3,stroke:#ca8a04
+    style INFRA   fill:#f0fdf4,stroke:#16a34a
+    style APPS    fill:#dbeafe,stroke:#2563eb
+    style VOLUMES fill:#f5f3ff,stroke:#7c3aed
+    style BIND    fill:#fff7ed,stroke:#ea580c
+    style PORTS   fill:#fdf2f8,stroke:#9d174d
+    style HOST    fill:#f8fafc,stroke:#475569

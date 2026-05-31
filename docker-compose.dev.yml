@@ -3,9 +3,6 @@
 # Usage:
 #   docker compose -f docker-compose.dev.yml up --build
 #
-# First-time setup:
-#   cp .env.example .env
-#   cp apps/api/.env.example apps/api/.env   # then fill in secrets
 #
 # After changing package.json or pnpm-lock.yaml, rebuild and reset volumes:
 #   docker compose -f docker-compose.dev.yml down -v

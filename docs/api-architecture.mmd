@@ -1,0 +1,86 @@
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "40px", "fontFamily": "arial"}, "flowchart": {"subGraphTitleMargin": {"top": 60, "bottom": 10}, "nodeSpacing": 80, "rankSpacing": 100}}}%%
+graph TB
+    subgraph Clients
+        M[📱 Mobile App<br/>Expo / React Native]
+        W[🌐 Web Portal<br/>Vite + React]
+        A[🖥️ Admin Panel<br/>Vite + React]
+    end
+
+    subgraph API["apps/api — NestJS (Port 3000)"]
+        direction TB
+        MW[Middleware / Guards<br/>BetterAuth · CORS · Validation]
+
+        subgraph Core["Core Domains (ACL Snapshot pattern)"]
+            ORD["🛒 Ordering\n──────────────\ncart · order · order-lifecycle\norder-eligibility · order-history\nacl (Restaurant/Menu snapshots)"]
+            NOTIF["🔔 Notification\n──────────────\nFCM push · SMTP email\nRetry / self-healing"]
+        end
+
+        subgraph Support["Support / Generic Contexts (Public API Port pattern)"]
+            AUTH["🔑 Auth\nBetterAuth · RBAC"]
+            REST_CAT["🍽️ Restaurant Catalog\nrestaurant · menu · search"]
+            PAY["💳 Payment\nVNPay integration"]
+            IMG["🖼️ Image\nCloudinary lifecycle\nownership-verified"]
+            PROMO["🎟️ Promotion\nDiscount / coupons"]
+            REV["⭐ Review\nCustomer reviews"]
+        end
+
+        subgraph Infra["Infrastructure Layer"]
+            DRIZZLE["Drizzle ORM\nschema · migrations"]
+            OTEL["OpenTelemetry\ntraces · metrics · logs"]
+            CFG["Config Module\ntyped env vars"]
+        end
+    end
+
+    subgraph External["External Services"]
+        PG[(PostgreSQL 18)]
+        RD[(Redis 7)]
+        CDN["☁️ Cloudinary\nImage CDN"]
+        FCM["🔥 Firebase FCM\nPush Notifications"]
+        SMTP["📧 SMTP\nEmail"]
+        VNPAY["💰 VNPay\nPayment Gateway"]
+        GC["📊 Grafana Cloud\nOTLP endpoint"]
+    end
+
+    M -- "REST / WebSocket (Socket.IO)" --> MW
+    W -- "REST / WebSocket" --> MW
+    A -- "REST" --> MW
+
+    MW --> AUTH
+    MW --> ORD
+    MW --> REST_CAT
+    MW --> PAY
+    MW --> IMG
+    MW --> PROMO
+    MW --> REV
+    MW --> NOTIF
+
+    ORD -- "ACL snapshot sync" --> REST_CAT
+    ORD -- "events: OrderStatusChanged" --> NOTIF
+    REST_CAT -- "events: MenuItemDeleted" --> IMG
+    PAY -- "payment confirmed" --> ORD
+    PROMO --> ORD
+
+    DRIZZLE --> PG
+    ORD -- "cart (TTL keys)" --> RD
+    NOTIF -- "retry queue" --> RD
+
+    IMG --> CDN
+    NOTIF --> FCM
+    NOTIF --> SMTP
+    PAY --> VNPAY
+    OTEL --> GC
+
+    DRIZZLE -.-> ORD
+    DRIZZLE -.-> REST_CAT
+    DRIZZLE -.-> NOTIF
+    DRIZZLE -.-> PAY
+    DRIZZLE -.-> IMG
+    DRIZZLE -.-> PROMO
+    DRIZZLE -.-> REV
+    DRIZZLE -.-> AUTH
+
+    style Core fill:#fef3c7,stroke:#d97706
+    style Support fill:#dbeafe,stroke:#2563eb
+    style Infra fill:#f0fdf4,stroke:#16a34a
+    style External fill:#f5f3ff,stroke:#7c3aed
+    style API fill:#f8fafc,stroke:#475569

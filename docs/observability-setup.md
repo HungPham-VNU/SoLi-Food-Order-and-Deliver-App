@@ -6,7 +6,7 @@ This repository uses:
 - Grafana Cloud as the backend for API observability through OTLP.
 - Grafana Faro in `apps/web` for browser errors, Web Vitals, sessions, route changes, frontend traces, and source maps.
 - Sentry in `apps/mobile` for mobile client errors, crashes, performance, releases, and source maps.
-- PostHog in `apps/web` and `apps/mobile` for product analytics and feature flags.
+- PostHog in `apps/web` for product analytics.
 
 Backend telemetry is vendor-neutral. The API uses the OpenTelemetry SDK and OTLP HTTP exporters to send traces, metrics, and logs directly to Grafana Cloud when a Grafana Cloud OTLP endpoint and credentials are configured.
 
