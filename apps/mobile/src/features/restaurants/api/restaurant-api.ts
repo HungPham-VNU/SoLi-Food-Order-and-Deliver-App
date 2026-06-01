@@ -296,6 +296,7 @@ export function useMenuItem(id: string) {
 
 export function useMenuItemImage(menuItemId: string) {
   const queryClient = useQueryClient();
+  const initialData = getCachedMenuItemImage(queryClient, menuItemId);
 
   return useQuery({
     queryKey: menuKeys.image(menuItemId),
@@ -307,7 +308,7 @@ export function useMenuItemImage(menuItemId: string) {
       return getMenuItemImageUrl(item);
     },
     enabled: !!menuItemId,
-    initialData: () => getCachedMenuItemImage(queryClient, menuItemId),
+    ...(initialData !== undefined ? { initialData } : {}),
     staleTime: DETAIL_STALE_TIME,
   });
 }
