@@ -659,6 +659,7 @@ describe('PlaceOrderHandler', () => {
       });
       cartRepo.delete.mockImplementation(() => {
         callOrder.push('cartDelete');
+        return Promise.resolve();
       });
 
       const command = new PlaceOrderCommand(
