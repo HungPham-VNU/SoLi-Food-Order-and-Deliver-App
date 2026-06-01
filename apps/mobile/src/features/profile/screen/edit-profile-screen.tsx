@@ -100,7 +100,7 @@ export function EditProfileScreen() {
     if (session?.user) {
       reset({ name: session.user.name, email: session.user.email });
     }
-  }, [session?.user.name, session?.user.email, reset]);
+  }, [session?.user, reset]);
 
   const currentPhone =
     typeof (session?.user as Record<string, unknown>)?.phoneNumber === 'string'
