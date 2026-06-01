@@ -246,6 +246,7 @@ export function useRestaurant(id: string) {
 
 export function useRestaurantImage(restaurantId: string) {
   const queryClient = useQueryClient();
+  const initialData = getCachedRestaurantImage(queryClient, restaurantId);
 
   return useQuery({
     queryKey: restaurantKeys.image(restaurantId),
@@ -257,7 +258,7 @@ export function useRestaurantImage(restaurantId: string) {
       return getRestaurantImageUrl(restaurant);
     },
     enabled: !!restaurantId,
-    initialData: () => getCachedRestaurantImage(queryClient, restaurantId),
+    ...(initialData !== undefined ? { initialData } : {}),
     staleTime: DETAIL_STALE_TIME,
   });
 }
