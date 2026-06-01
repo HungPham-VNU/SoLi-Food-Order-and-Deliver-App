@@ -86,7 +86,8 @@ export class ReviewController {
     description: 'MSG-RATE-03 — duplicate review for this order',
   })
   @ApiUnprocessableEntityResponse({
-    description: 'MSG-RATE-02 — order has not been completed (ready_for_pickup or delivered)',
+    description:
+      'MSG-RATE-02 — order has not been completed (ready_for_pickup or delivered)',
   })
   async submitReview(
     @Body() dto: SubmitReviewDto,

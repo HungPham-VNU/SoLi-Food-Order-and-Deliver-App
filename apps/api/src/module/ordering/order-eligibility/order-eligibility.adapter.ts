@@ -63,7 +63,12 @@ export class OrderEligibilityAdapter implements IOrderEligibilityPort {
     }
 
     // BR-22.6 / BR-22.7 — order must be completed (ready for pickup or delivered)
-    const REVIEWABLE_STATUSES = ['ready_for_pickup', 'picked_up', 'delivering', 'delivered'];
+    const REVIEWABLE_STATUSES = [
+      'ready_for_pickup',
+      'picked_up',
+      'delivering',
+      'delivered',
+    ];
     if (!REVIEWABLE_STATUSES.includes(order.status)) {
       throw new UnprocessableEntityException({
         message: 'You can only review an order that has been completed.',
