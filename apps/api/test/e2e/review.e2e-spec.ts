@@ -32,11 +32,7 @@ import {
   TEST_RESTAURANT_ID,
 } from '../setup/db-setup';
 import { TestAuthManager, TEST_PASSWORD } from '../helpers/test-auth';
-import {
-  noAuthHeaders,
-  ownerHeaders,
-  setAuthManager,
-} from '../helpers/auth';
+import { noAuthHeaders, ownerHeaders, setAuthManager } from '../helpers/auth';
 import { user as userTable } from '../../src/module/auth/auth.schema';
 import { restaurants } from '../../src/module/restaurant-catalog/restaurant/restaurant.schema';
 import { reviews } from '../../src/module/review/domain/review.schema';
@@ -566,7 +562,7 @@ describe('UC-22 Submit Rating & Review E2E', () => {
       expect(created.status).toBe(201);
     });
 
-    it('RV-80 returns the caller\'s review (200)', async () => {
+    it("RV-80 returns the caller's review (200)", async () => {
       const res = await http
         .get(`/api/reviews/my/${myOrderId}`)
         .set(authHeader(customerToken));
