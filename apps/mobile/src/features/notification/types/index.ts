@@ -44,3 +44,15 @@ export interface NotificationInboxResponse {
 export interface UnreadCountResponse {
   count: number;
 }
+
+export interface NotificationPreferenceResponse {
+  pushEnabled: boolean;
+  inAppEnabled: boolean;
+  emailEnabled: boolean;
+  smsEnabled: boolean;
+  quietHoursStart: number | null;
+  quietHoursEnd: number | null;
+  mutedTypes: NotificationType[];
+  email: string | null;
+  timezone: string;
+}

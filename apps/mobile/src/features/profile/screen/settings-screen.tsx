@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -18,6 +19,29 @@ import {
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
+import { notificationApi } from '@/src/features/notification/api';
+import {
+  NotificationPreferenceResponse,
+  NotificationType,
+} from '@/src/features/notification/types';
+
+// All order/payment notification types that map to the "Order Updates" toggle.
+const ORDER_NOTIFICATION_TYPES: NotificationType[] = [
+  'order_placed',
+  'order_confirmed',
+  'order_preparing',
+  'order_ready_for_pickup',
+  'order_picked_up',
+  'order_delivering',
+  'order_delivered',
+  'order_cancelled',
+  'order_refunded',
+  'payment_confirmed',
+  'payment_failed',
+  'refund_initiated',
+  'refund_completed',
+];
+const ORDER_TYPES_SET = new Set<NotificationType>(ORDER_NOTIFICATION_TYPES);
 
 type ToggleItem = {
   kind: 'toggle';
@@ -43,7 +67,7 @@ type SettingsGroup = {
   items: SettingsItem[];
 };
 
-function ToggleRow({ item }: { item: ToggleItem }) {
+function ToggleRow({ item, disabled }: { item: ToggleItem; disabled?: boolean }) {
   return (
     <View className="flex-row items-center justify-between p-5">
       <View className="flex-row items-center gap-4 flex-1 mr-4">
@@ -64,6 +88,7 @@ function ToggleRow({ item }: { item: ToggleItem }) {
       <Switch
         value={item.value}
         onValueChange={item.onToggle}
+        disabled={disabled}
         trackColor={{ false: '#bfcaba', true: '#a3f69c' }}
         thumbColor={item.value ? '#00490e' : '#707a6c'}
       />
@@ -103,11 +128,65 @@ function LinkRow({ item }: { item: LinkItem }) {
 export function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [pushEnabled, setPushEnabled] = React.useState(true);
-  const [orderUpdates, setOrderUpdates] = React.useState(true);
-  const [promotions, setPromotions] = React.useState(false);
+  const [prefs, setPrefs] = React.useState<NotificationPreferenceResponse | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSaving, setIsSaving] = React.useState(false);
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+
+  // Derived toggle values
+  const pushEnabled = prefs?.pushEnabled ?? true;
+  const orderUpdatesEnabled = prefs
+    ? !ORDER_NOTIFICATION_TYPES.every((t) => prefs.mutedTypes.includes(t))
+    : true;
+
+  // Fetch preferences on mount
+  React.useEffect(() => {
+    notificationApi
+      .getPreferences()
+      .then(setPrefs)
+      .catch(() => {
+        // Use defaults silently — non-critical on load failure
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const handlePushToggle = async (value: boolean) => {
+    if (isSaving) return;
+    const prev = prefs;
+    setPrefs((p) => (p ? { ...p, pushEnabled: value } : null));
+    setIsSaving(true);
+    try {
+      const updated = await notificationApi.updatePreferences({ pushEnabled: value });
+      setPrefs(updated);
+    } catch {
+      setPrefs(prev);
+      Alert.alert('Error', 'Failed to save notification settings. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleOrderUpdatesToggle = async (value: boolean) => {
+    if (isSaving || !prefs) return;
+    const prev = prefs;
+    // Preserve any non-order muted types; add/remove all order types as a group
+    const nonOrderMuted = prefs.mutedTypes.filter((t) => !ORDER_TYPES_SET.has(t));
+    const newMuted = value ? nonOrderMuted : [...nonOrderMuted, ...ORDER_NOTIFICATION_TYPES];
+    setPrefs({ ...prefs, mutedTypes: newMuted });
+    setIsSaving(true);
+    try {
+      const updated = await notificationApi.updatePreferences({ mutedTypes: newMuted });
+      setPrefs(updated);
+    } catch {
+      setPrefs(prev);
+      Alert.alert('Error', 'Failed to save notification settings. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const switchesDisabled = isLoading || isSaving;
 
   const groups: SettingsGroup[] = [
     {
@@ -118,23 +197,15 @@ export function SettingsScreen() {
           icon: Bell,
           label: 'Push Notifications',
           value: pushEnabled,
-          onToggle: setPushEnabled,
+          onToggle: handlePushToggle,
         },
         {
           kind: 'toggle',
           icon: Bell,
           label: 'Order Updates',
           subtitle: 'Get notified about your orders',
-          value: orderUpdates,
-          onToggle: setOrderUpdates,
-        },
-        {
-          kind: 'toggle',
-          icon: Bell,
-          label: 'Promotions',
-          subtitle: 'Deals and special offers',
-          value: promotions,
-          onToggle: setPromotions,
+          value: orderUpdatesEnabled,
+          onToggle: handleOrderUpdatesToggle,
         },
       ],
     },
@@ -219,7 +290,7 @@ export function SettingsScreen() {
                     <View className="mx-5 h-px bg-surface-container" />
                   )}
                   {item.kind === 'toggle' ? (
-                    <ToggleRow item={item} />
+                    <ToggleRow item={item} disabled={switchesDisabled} />
                   ) : (
                     <LinkRow item={item} />
                   )}

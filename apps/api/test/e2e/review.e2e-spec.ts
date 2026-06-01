@@ -182,7 +182,7 @@ describe('UC-22 Submit Rating & Review E2E', () => {
 
   // Orders created in beforeAll
   let deliveredOrderId: string; // used by happy-path & projection
-  let readyOrderId: string; // for ineligible-status tests
+  let pendingOrderId: string; // for ineligible-status tests (pending = not yet accepted)
   // Per-test delivered orders created fresh on demand to avoid cross-test interference
   // when a previous test already created a review for the order.
 
@@ -252,9 +252,8 @@ describe('UC-22 Submit Rating & Review E2E', () => {
       shipperToken,
     );
 
-    // Seed one ready order (used by §4 — not yet delivered)
-    readyOrderId = await placeOrder(http, customerToken, menuItemId);
-    await advanceToReady(http, readyOrderId, testAuth.ownerToken);
+    // Seed one pending order (used by §4 — not yet accepted by restaurant)
+    pendingOrderId = await placeOrder(http, customerToken, menuItemId);
   }, 60_000);
 
   afterAll(async () => {
@@ -398,18 +397,18 @@ describe('UC-22 Submit Rating & Review E2E', () => {
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // §4  Order not delivered
+  // §4  Order not completed
   // ──────────────────────────────────────────────────────────────────────────
 
   describe('§4 POST /api/reviews — ineligible order (BR-22.6, BR-22.7)', () => {
-    it('RV-30 ready-for-pickup order returns 422 MSG-RATE-02', async () => {
+    it('RV-30 pending order returns 422 MSG-RATE-02', async () => {
       const res = await http
         .post('/api/reviews')
         .set(authHeader(customerToken))
-        .send({ orderId: readyOrderId, stars: 5 });
+        .send({ orderId: pendingOrderId, stars: 5 });
 
       expect(res.status).toBe(422);
-      expect(res.body.message).toMatch(/delivered/i);
+      expect(res.body.message).toMatch(/completed/i);
       expect(res.body.code).toBe('MSG-RATE-02');
     });
   });

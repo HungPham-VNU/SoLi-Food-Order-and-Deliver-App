@@ -1,7 +1,8 @@
 import { apiFetch } from '@/src/lib/api-client';
-import { 
-  NotificationInboxResponse, 
-  UnreadCountResponse 
+import {
+  NotificationInboxResponse,
+  NotificationPreferenceResponse,
+  UnreadCountResponse,
 } from '../types';
 
 export const notificationApi = {
@@ -38,5 +39,33 @@ export const notificationApi = {
       method: 'DELETE',
       body: JSON.stringify({ token }),
     });
+  },
+
+  getPreferences: () => {
+    return apiFetch<NotificationPreferenceResponse>(
+      '/api/notifications/my/preferences',
+    );
+  },
+
+  updatePreferences: (
+    prefs: Partial<
+      Pick<
+        NotificationPreferenceResponse,
+        | 'pushEnabled'
+        | 'inAppEnabled'
+        | 'emailEnabled'
+        | 'smsEnabled'
+        | 'mutedTypes'
+        | 'quietHoursStart'
+        | 'quietHoursEnd'
+        | 'email'
+        | 'timezone'
+      >
+    >,
+  ) => {
+    return apiFetch<NotificationPreferenceResponse>(
+      '/api/notifications/my/preferences',
+      { method: 'PATCH', body: JSON.stringify(prefs) },
+    );
   },
 };

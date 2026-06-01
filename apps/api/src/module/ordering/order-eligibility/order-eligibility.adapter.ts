@@ -63,6 +63,8 @@ export class OrderEligibilityAdapter implements IOrderEligibilityPort {
     }
 
     // BR-22.6 / BR-22.7 — order must be completed (ready for pickup or delivered)
+    // NOTE: shipper transitions (pickup, en-route, deliver) are not yet available,
+    // so all post-confirmation statuses are considered reviewable for now.
     const REVIEWABLE_STATUSES = [
       'ready_for_pickup',
       'picked_up',
