@@ -10,6 +10,7 @@ import { ArrowLeft, Star } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { formatCurrency } from '@/src/lib/format-utils';
 import { useMyOrderDetail } from '../hooks/use-order-history';
+import { REVIEWABLE_ORDER_STATUSES } from '@/src/features/review/api/review.api';
 
 export function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -164,7 +165,7 @@ export function OrderDetailScreen() {
             </Text>
           </View>
 
-          {(order.status === 'delivered' || order.status === 'ready_for_pickup') && (
+          {(REVIEWABLE_ORDER_STATUSES as readonly string[]).includes(order.status) && (
             <TouchableOpacity
               onPress={() =>
                 router.push(`/(customer)/orders/${order.orderId}/rate`)

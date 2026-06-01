@@ -14,25 +14,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ALLOWED_REVIEW_TAGS,
   ReviewTag,
+  TAG_LABELS,
+  REVIEWABLE_ORDER_STATUSES,
 } from '@/src/features/review/api/review.api';
 import {
   useMyReview,
   useSubmitReview,
 } from '@/src/features/review/hooks/use-review';
 import { useMyOrderDetail } from '@/src/features/orders/hooks/use-order-history';
-
-const TAG_LABELS: Record<ReviewTag, string> = {
-  fast_delivery: 'Fast delivery',
-  good_packaging: 'Good packaging',
-  fresh_food: 'Fresh food',
-  accurate_order: 'Accurate order',
-  friendly_service: 'Friendly service',
-  poor_packaging: 'Poor packaging',
-  late_delivery: 'Late delivery',
-  wrong_order: 'Wrong order',
-  cold_food: 'Cold food',
-  missing_items: 'Missing items',
-};
 
 export function RateOrderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -57,8 +46,7 @@ export function RateOrderScreen() {
   // existing === ReviewResponse → loaded, review exists
   // existing === undefined + isError → failed to load review (block submission)
   const alreadyReviewed = existing != null;
-  const isRateable =
-    order?.status === 'delivered' || order?.status === 'ready_for_pickup';
+  const isRateable = order != null && (REVIEWABLE_ORDER_STATUSES as readonly string[]).includes(order.status);
   const canSubmit =
     stars >= 1 &&
     stars <= 5 &&

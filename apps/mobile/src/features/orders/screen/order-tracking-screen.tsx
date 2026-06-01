@@ -24,6 +24,8 @@ import type { OrderDetail, OrderStatus } from '../types';
 import {
   ALLOWED_REVIEW_TAGS,
   type ReviewTag,
+  TAG_LABELS,
+  REVIEWABLE_ORDER_STATUSES,
 } from '@/src/features/review/api/review.api';
 import {
   useMyReview,
@@ -313,18 +315,6 @@ function TrackStep({
 
 // ─── Inline rating section ────────────────────────────────────────────────────
 
-const TAG_LABELS: Record<ReviewTag, string> = {
-  fast_delivery: 'Fast delivery',
-  good_packaging: 'Good packaging',
-  fresh_food: 'Fresh food',
-  accurate_order: 'Accurate order',
-  friendly_service: 'Friendly service',
-  poor_packaging: 'Poor packaging',
-  late_delivery: 'Late delivery',
-  wrong_order: 'Wrong order',
-  cold_food: 'Cold food',
-  missing_items: 'Missing items',
-};
 
 function RateSection({ orderId }: { orderId: string }) {
   const {
@@ -366,6 +356,9 @@ function RateSection({ orderId }: { orderId: string }) {
         tags: tags.length ? tags : undefined,
       },
       {
+        onSuccess: () => {
+          Alert.alert('Thank you!', 'Your review has been submitted.');
+        },
         onError: (err: unknown) => {
           const msg =
             err instanceof Error
@@ -798,7 +791,7 @@ function OrderTrackingContent({
         </View>
 
         {/* ── Rate & Review section (done/delivered) ── */}
-        {(order.status === 'delivered' || order.status === 'ready_for_pickup') && (
+        {(REVIEWABLE_ORDER_STATUSES as readonly string[]).includes(order.status) && (
           <RateSection orderId={order.orderId} />
         )}
       </View>
