@@ -1479,6 +1479,7 @@ describe('SoLi Full Integration E2E', () => {
           paymentMethod: 'cod',
           totalAmount: expect.any(Number),
           shippingFee: 0,
+          subtotal: expect.any(Number),
           items: expect.arrayContaining([
             expect.objectContaining({ menuItemId: basicItemId }),
           ]),

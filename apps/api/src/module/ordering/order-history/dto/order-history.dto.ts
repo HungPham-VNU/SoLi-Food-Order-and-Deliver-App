@@ -224,6 +224,12 @@ export class OrderDetailDto {
   @ApiProperty({ description: 'Shipping fee' })
   shippingFee!: number;
 
+  @ApiProperty({
+    description:
+      'Items subtotal — sum of all item subtotals, before shipping fee and discounts',
+  })
+  subtotal!: number;
+
   @ApiPropertyOptional({
     description:
       'Estimated delivery minutes (null when coordinates/zone unavailable)',

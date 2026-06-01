@@ -31,7 +31,9 @@ export interface IOrderEligibilityPort {
    * them propagate to the global exception filter):
    *   - NotFoundException        — order not found, or owned by a different customer
    *                                (BR-22.4, BR-22.5 — no info-leak; same 404 for both)
-   *   - UnprocessableEntityException(MSG-RATE-02) — order status ≠ 'delivered'
+   *   - UnprocessableEntityException(MSG-RATE-02) — order status not in
+   *                                REVIEWABLE_STATUSES (ready_for_pickup,
+   *                                picked_up, delivering, delivered)
    *                                (BR-22.6, BR-22.7)
    *
    * @param orderId    UUID of the order to validate

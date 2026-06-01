@@ -99,6 +99,8 @@ function mapOrderToDetail(
   timeline: OrderStatusLog[],
   hasReview: boolean = false,
 ): OrderDetailDto {
+  const mappedItems = items.map(mapItem);
+  const subtotal = mappedItems.reduce((sum, item) => sum + item.subtotal, 0);
   return {
     orderId: order.id,
     status: order.status,
@@ -107,6 +109,7 @@ function mapOrderToDetail(
     paymentMethod: order.paymentMethod,
     totalAmount: Number(order.totalAmount),
     shippingFee: Number(order.shippingFee),
+    subtotal,
     estimatedDeliveryMinutes: order.estimatedDeliveryMinutes ?? null,
     note: order.note ?? null,
     paymentUrl: order.paymentUrl ?? null,
@@ -114,7 +117,7 @@ function mapOrderToDetail(
     shipperId: order.shipperId ?? null,
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
-    items: items.map(mapItem),
+    items: mappedItems,
     timeline: timeline.map(mapStatusLog),
     hasReview,
   };

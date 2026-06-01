@@ -66,12 +66,12 @@ export class ReviewController {
   ) {}
 
   // ---------------------------------------------------------------------------
-  // POST /reviews — submit a review for a delivered order
+  // POST /reviews — submit a review for a completed order
   // ---------------------------------------------------------------------------
   @Post()
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Submit a review for a delivered order (UC-22)' })
+  @ApiOperation({ summary: 'Submit a review for a completed order (UC-22)' })
   @ApiCreatedResponse({
     description: 'Review created',
     type: ReviewResponseDto,
@@ -86,7 +86,7 @@ export class ReviewController {
     description: 'MSG-RATE-03 — duplicate review for this order',
   })
   @ApiUnprocessableEntityResponse({
-    description: 'MSG-RATE-02 — order is not in delivered state',
+    description: 'MSG-RATE-02 — order has not been completed (ready_for_pickup or delivered)',
   })
   async submitReview(
     @Body() dto: SubmitReviewDto,

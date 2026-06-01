@@ -481,10 +481,18 @@ describe('Order History E2E (Phase 7)', () => {
         restaurantId: TEST_RESTAURANT_ID,
         paymentMethod: 'cod',
         totalAmount: expect.any(Number),
+        shippingFee: expect.any(Number),
+        subtotal: expect.any(Number),
         deliveryAddress: expect.any(Object),
         items: expect.any(Array),
         timeline: expect.any(Array),
       });
+      // subtotal must equal the sum of all item subtotals
+      const itemsSubtotal = (res.body.items as Array<{ subtotal: number }>).reduce(
+        (sum, item) => sum + item.subtotal,
+        0,
+      );
+      expect(res.body.subtotal).toBe(itemsSubtotal);
     });
 
     it('OH-11 items array contains the seeded menu item', async () => {

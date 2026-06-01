@@ -23,7 +23,8 @@ import { SubmitReviewCommand } from './submit-review.command';
  *  2. Order eligibility check via ORDER_ELIGIBILITY_PORT
  *     - 404 if missing (MSG-HIST-01)
  *     - 404 if not owned by caller (BR-22.4, BR-22.5)
- *     - 422 if status ≠ 'delivered' (BR-22.6, BR-22.7)
+ *     - 422 if status not in REVIEWABLE_STATUSES (ready_for_pickup,
+ *       picked_up, delivering, delivered) (BR-22.6, BR-22.7)
  *  3. DB transaction:
  *     - INSERT review row
  *     - UPDATE restaurants rating projection using integer ratingSum (BR-22.12)
