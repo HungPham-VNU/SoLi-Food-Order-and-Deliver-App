@@ -356,7 +356,7 @@ export function RestaurantMenuScreen({
           style={{ paddingBottom: Math.max(insets.bottom, 24) }}
         >
           <TouchableOpacity
-            onPress={() => router.push('/(customer)/cart')}
+            onPress={() => router.navigate('/(customer)/cart')}
             activeOpacity={0.9}
           >
             <LinearGradient

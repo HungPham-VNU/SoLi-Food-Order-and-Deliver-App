@@ -237,7 +237,7 @@ export function AddressSelectionScreen() {
 
   const handleEditSaved = (_id: string) => {
     // Navigate to add-location with pre-filled data (future enhancement)
-    router.push('/(customer)/add-location');
+    router.navigate('/(customer)/add-location');
   };
 
   const handleClearRecent = () => {
@@ -469,7 +469,7 @@ export function AddressSelectionScreen() {
           <View className="mt-2 gap-2">
             {/* Add new saved place */}
             <TouchableOpacity
-              onPress={() => router.push('/(customer)/add-location' as any)}
+              onPress={() => router.navigate('/(customer)/add-location' as any)}
               className="flex-row items-center gap-4 rounded-xl border border-transparent p-4 active:border-surface-container-highest active:bg-surface-container-lowest"
             >
               <View className="h-10 w-10 items-center justify-center rounded-full bg-primary-fixed/30">

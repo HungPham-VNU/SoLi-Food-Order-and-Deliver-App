@@ -79,7 +79,7 @@ export function SingleScreenCheckout() {
 
   const handleBrowsePromo = () => {
     if (!cart?.restaurantId) return;
-    router.push({
+    router.navigate({
       pathname: '/(customer)/checkout/promo-picker',
       params: {
         restaurantId: cart.restaurantId,

@@ -226,7 +226,7 @@ export function OrderDetailScreen() {
           {(REVIEWABLE_ORDER_STATUSES as readonly string[]).includes(order.status) && (
             <TouchableOpacity
               onPress={() =>
-                router.push(`/(customer)/orders/${order.orderId}/rate`)
+                router.navigate(`/(customer)/orders/${order.orderId}/rate`)
               }
               className={`flex-row items-center justify-center rounded-2xl py-4 mb-10 ${
                 order.hasReview ? 'bg-surface-container-high' : 'bg-primary'

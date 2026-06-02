@@ -62,7 +62,7 @@ export default function SignInPage() {
   };
 
   const handleSignUp = () => {
-    router.push('/(auth)/sign-up');
+    router.navigate('/(auth)/sign-up');
   };
 
   return (

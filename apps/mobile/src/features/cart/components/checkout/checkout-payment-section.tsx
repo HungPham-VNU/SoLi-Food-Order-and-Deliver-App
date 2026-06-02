@@ -81,7 +81,7 @@ export function CheckoutPaymentSection({
         </Text>
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() => router.push('/(customer)/payment-methods')}
+          onPress={() => router.navigate('/(customer)/payment-methods')}
         >
           <Text
             className="text-primary text-sm"

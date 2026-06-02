@@ -157,7 +157,7 @@ export function CartScreen({
   );
 
   const handleItemPress = useCallback((menuItemId: string) => {
-    router.push({
+    router.navigate({
       pathname: '/restaurant/menu-item/[id]',
       params: { id: menuItemId },
     });
@@ -175,7 +175,7 @@ export function CartScreen({
     if (onContinueShopping) {
       onContinueShopping();
     } else {
-      router.push('/(customer)/(tabs)');
+      router.navigate('/(customer)/(tabs)');
     }
   };
 
@@ -183,7 +183,7 @@ export function CartScreen({
     if (onCheckout) {
       onCheckout();
     } else {
-      router.push('/(customer)/checkout');
+      router.navigate('/(customer)/checkout');
     }
   };
 

@@ -18,7 +18,7 @@ export function NotificationBell({
 
   return (
     <TouchableOpacity
-      onPress={() => router.push('/notifications')}
+      onPress={() => router.navigate('/notifications')}
       className="relative p-2"
     >
       <Bell size={size} color={color} />

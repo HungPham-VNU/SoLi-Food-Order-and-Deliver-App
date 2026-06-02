@@ -87,17 +87,17 @@ export function ProfileScreen() {
         {
           icon: User,
           label: 'Personal Information',
-          onPress: () => router.push('/(customer)/edit-profile' as any),
+          onPress: () => router.navigate('/(customer)/edit-profile' as any),
         },
         {
           icon: MapPin,
           label: 'Saved Addresses',
-          onPress: () => router.push('/(customer)/address-selection'),
+          onPress: () => router.navigate('/(customer)/address-selection'),
         },
         {
           icon: CreditCard,
           label: 'Payment Methods',
-          onPress: () => router.push('/(customer)/payment-methods' as any),
+          onPress: () => router.navigate('/(customer)/payment-methods' as any),
         },
       ],
     },
@@ -107,7 +107,7 @@ export function ProfileScreen() {
         {
           icon: Settings,
           label: 'Settings',
-          onPress: () => router.push('/(customer)/settings' as any),
+          onPress: () => router.navigate('/(customer)/settings' as any),
         },
       ],
     },

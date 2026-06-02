@@ -188,7 +188,7 @@ export function HomeScreen() {
                         <TouchableOpacity
                           key={restaurant.id}
                           onPress={() =>
-                            router.push({
+                            router.navigate({
                               pathname: '/restaurant/[id]',
                               params: { id: restaurant.id },
                             })
@@ -266,7 +266,7 @@ export function HomeScreen() {
                         <TouchableOpacity
                           key={item.id}
                           onPress={() =>
-                            router.push({
+                            router.navigate({
                               pathname: '/restaurant/[id]',
                               params: { id: item.restaurant.id },
                             })
@@ -460,7 +460,7 @@ export function HomeScreen() {
                   <TouchableOpacity
                     key={restaurant.id}
                     onPress={() =>
-                      router.push({
+                      router.navigate({
                         pathname: '/restaurant/[id]',
                         params: { id: restaurant.id },
                       })
