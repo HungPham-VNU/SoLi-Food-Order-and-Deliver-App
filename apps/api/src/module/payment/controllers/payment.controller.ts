@@ -1,4 +1,4 @@
-﻿import {
+import {
   Controller,
   Get,
   HttpCode,
@@ -6,9 +6,10 @@
   Inject,
   Logger,
   Query,
-  Redirect,
+  Res,
 } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
+import type { Response } from 'express';
 import {
   ApiBearerAuth,
   ApiExcludeEndpoint,
@@ -169,7 +170,6 @@ export class PaymentController {
    */
   @Get('vnpay/mobile-return')
   @AllowAnonymous()
-  @Redirect('uitfood://payment/vnpay-return', HttpStatus.FOUND)
   @ApiOperation({
     summary: 'VNPay mobile return URL redirects to the mobile app',
     description:
@@ -178,19 +178,15 @@ export class PaymentController {
   })
   async handleMobileReturn(
     @Query() query: Record<string, string>,
-  ): Promise<{ url: string; statusCode: number }> {
+    @Res() res: Response,
+  ): Promise<void> {
     try {
       const response = await this.resolveReturnUrlResponse(query);
-      return {
-        url: this.buildMobileReturnRedirectUrl(response),
-        statusCode: HttpStatus.FOUND,
-      };
+      res.redirect(HttpStatus.FOUND, this.buildMobileReturnRedirectUrl(response));
     } catch (err) {
       // Defensive fallback: if resolveReturnUrlResponse or buildMobileReturnRedirectUrl
       // throw unexpectedly, redirect to the configured mobile return URL with an error
       // status so the app can display a meaningful screen instead of a blank/broken page.
-      // The @Redirect decorator's hardcoded URL (no params) is intentionally NOT used as
-      // the fallback — it would leave the mobile app without any context.
       this.logger.error(
         `handleMobileReturn: unexpected error — redirecting to error fallback. ${(err as Error).message}`,
         (err as Error).stack,
@@ -198,7 +194,7 @@ export class PaymentController {
       const fallback = new URL(this.config.mobileReturnUrl);
       fallback.searchParams.set('status', 'unknown');
       fallback.searchParams.set('signatureValid', 'false');
-      return { url: fallback.toString(), statusCode: HttpStatus.FOUND };
+      res.redirect(HttpStatus.FOUND, fallback.toString());
     }
   }
 
