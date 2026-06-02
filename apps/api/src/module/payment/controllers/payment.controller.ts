@@ -107,7 +107,7 @@ export class PaymentController {
   /**
    * VNPay return URL endpoint â€” browser redirect after the payment page.
    *
-   * âš ï¸ CRITICAL: This endpoint MUST NOT update the database.
+   * WARNING: This endpoint MUST NOT update the database.
    *
    * This URL is loaded in the customer's browser, meaning the query params
    * could theoretically be tampered with by the customer or a man-in-the-middle.
@@ -182,7 +182,10 @@ export class PaymentController {
   ): Promise<void> {
     try {
       const response = await this.resolveReturnUrlResponse(query);
-      res.redirect(HttpStatus.FOUND, this.buildMobileReturnRedirectUrl(response));
+      res.redirect(
+        HttpStatus.FOUND,
+        this.buildMobileReturnRedirectUrl(response),
+      );
     } catch (err) {
       // Defensive fallback: if resolveReturnUrlResponse or buildMobileReturnRedirectUrl
       // throw unexpectedly, redirect to the configured mobile return URL with an error

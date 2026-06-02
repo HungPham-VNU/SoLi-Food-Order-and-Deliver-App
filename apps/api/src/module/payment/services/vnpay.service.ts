@@ -361,10 +361,13 @@ export class VNPayService implements OnModuleInit {
     // is a no-op, so the result is identical today — but this is correct for any
     // future key that contains special characters.
     return Object.keys(params)
-      .map((key) => [
-        encodeURIComponent(key),
-        encodeURIComponent(params[key]).replace(/%20/g, '+'),
-      ] as const)
+      .map(
+        (key) =>
+          [
+            encodeURIComponent(key),
+            encodeURIComponent(params[key]).replace(/%20/g, '+'),
+          ] as const,
+      )
       .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
       .map(([k, v]) => `${k}=${v}`)
       .join('&');
