@@ -32,7 +32,7 @@ export function OrderSummaryPreview({
               />
             </View>
           ))}
-          {remainingCount && remainingCount > 0 && (
+          {!!remainingCount && remainingCount > 0 && (
             <View
               className="w-10 h-10 rounded-full border-4 border-surface-container-low bg-primary-fixed-dim items-center justify-center"
               style={{ marginLeft: -12 }}

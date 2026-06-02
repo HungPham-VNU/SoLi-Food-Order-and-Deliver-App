@@ -1,5 +1,7 @@
-import { signIn, signUp, signOut, authClient } from "@/src/lib/auth-client";
-import type { SignInFormData, SignUpFormData } from "../types";
+import { signIn, signUp, signOut, authClient } from '@/src/lib/auth-client';
+import type { SignInFormData, SignUpFormData } from '../types';
+
+type SignOutOptions = Parameters<typeof signOut>[0];
 
 export const authApi = {
   signIn: async (data: SignInFormData) => {
@@ -33,11 +35,11 @@ export const authApi = {
 
   signInWithGoogle: async () => {
     return await signIn.social({
-      provider: "google",
+      provider: 'google',
     });
   },
 
-  signOut: async () => {
-    return await signOut();
+  signOut: async (options?: SignOutOptions) => {
+    return await signOut(options);
   },
 };

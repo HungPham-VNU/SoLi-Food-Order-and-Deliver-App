@@ -9,6 +9,7 @@ import {
   Alert,
   Animated,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
@@ -24,11 +25,14 @@ import type { OrderDetail, OrderStatus } from '../types';
 import {
   ALLOWED_REVIEW_TAGS,
   type ReviewTag,
+  TAG_LABELS,
+  REVIEWABLE_ORDER_STATUSES,
 } from '@/src/features/review/api/review.api';
 import {
   useMyReview,
   useSubmitReview,
 } from '@/src/features/review/hooks/use-review';
+import { useMenuItemImage } from '@/src/features/restaurants/api';
 
 // ─── Status rank map ─────────────────────────────────────────────────────────
 
@@ -313,18 +317,6 @@ function TrackStep({
 
 // ─── Inline rating section ────────────────────────────────────────────────────
 
-const TAG_LABELS: Record<ReviewTag, string> = {
-  fast_delivery: 'Fast delivery',
-  good_packaging: 'Good packaging',
-  fresh_food: 'Fresh food',
-  accurate_order: 'Accurate order',
-  friendly_service: 'Friendly service',
-  poor_packaging: 'Poor packaging',
-  late_delivery: 'Late delivery',
-  wrong_order: 'Wrong order',
-  cold_food: 'Cold food',
-  missing_items: 'Missing items',
-};
 
 function RateSection({ orderId }: { orderId: string }) {
   const {
@@ -366,6 +358,9 @@ function RateSection({ orderId }: { orderId: string }) {
         tags: tags.length ? tags : undefined,
       },
       {
+        onSuccess: () => {
+          Alert.alert('Thank you!', 'Your review has been submitted.');
+        },
         onError: (err: unknown) => {
           const msg =
             err instanceof Error
@@ -522,6 +517,75 @@ function RateSection({ orderId }: { orderId: string }) {
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
+function OrderTrackingItemCard({
+  item,
+}: {
+  item: OrderDetail['items'][number];
+}) {
+  const { data: menuItemImageUrl } = useMenuItemImage(item.menuItemId);
+
+  return (
+    <View className="bg-surface-container-lowest flex-row items-start p-4 rounded-3xl gap-4 border border-outline-variant/15">
+      <View className="w-14 h-14 rounded-xl bg-surface-container items-center justify-center flex-shrink-0 overflow-hidden">
+        {menuItemImageUrl ? (
+          <Image
+            source={{ uri: menuItemImageUrl }}
+            className="w-full h-full"
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+          />
+        ) : (
+          <Text
+            className="text-primary text-xl"
+            style={{ fontFamily: 'PlusJakartaSans_800ExtraBold' }}
+          >
+            {item.itemName.charAt(0)}
+          </Text>
+        )}
+      </View>
+
+      <View className="flex-1">
+        <Text
+          className="text-base text-on-surface"
+          style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
+          numberOfLines={2}
+        >
+          {item.itemName}
+        </Text>
+        {item.modifiers.length > 0 && (
+          <View className="mt-1 gap-0.5">
+            {item.modifiers.map((mod) => (
+              <Text
+                key={mod.optionId}
+                className="text-xs text-on-surface-variant"
+                style={{ fontFamily: 'Inter_400Regular' }}
+              >
+                + {mod.optionName}
+              </Text>
+            ))}
+          </View>
+        )}
+      </View>
+
+      <View className="items-end">
+        <Text
+          className="text-base text-primary"
+          style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
+        >
+          {formatCurrency(item.subtotal)}
+        </Text>
+        <Text
+          className="text-xs text-on-surface-variant mt-1"
+          style={{ fontFamily: 'Inter_500Medium' }}
+        >
+          Qty: {item.quantity}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 export function OrderTrackingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
@@ -612,58 +676,7 @@ function OrderTrackingContent({
           </View>
 
           {order.items.map((item) => (
-            <View
-              key={item.orderItemId}
-              className="bg-surface-container-lowest flex-row items-start p-4 rounded-3xl gap-4 border border-outline-variant/15"
-            >
-              {/* Placeholder avatar */}
-              <View className="w-14 h-14 rounded-xl bg-surface-container items-center justify-center flex-shrink-0">
-                <Text
-                  className="text-primary text-xl"
-                  style={{ fontFamily: 'PlusJakartaSans_800ExtraBold' }}
-                >
-                  {item.itemName.charAt(0)}
-                </Text>
-              </View>
-
-              <View className="flex-1">
-                <Text
-                  className="text-base text-on-surface"
-                  style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
-                  numberOfLines={2}
-                >
-                  {item.itemName}
-                </Text>
-                {item.modifiers.length > 0 && (
-                  <View className="mt-1 gap-0.5">
-                    {item.modifiers.map((mod) => (
-                      <Text
-                        key={mod.optionId}
-                        className="text-xs text-on-surface-variant"
-                        style={{ fontFamily: 'Inter_400Regular' }}
-                      >
-                        + {mod.optionName}
-                      </Text>
-                    ))}
-                  </View>
-                )}
-              </View>
-
-              <View className="items-end">
-                <Text
-                  className="text-base text-primary"
-                  style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
-                >
-                  {formatCurrency(item.subtotal)}
-                </Text>
-                <Text
-                  className="text-xs text-on-surface-variant mt-1"
-                  style={{ fontFamily: 'Inter_500Medium' }}
-                >
-                  Qty: {item.quantity}
-                </Text>
-              </View>
-            </View>
+            <OrderTrackingItemCard key={item.orderItemId} item={item} />
           ))}
         </View>
 
@@ -798,7 +811,7 @@ function OrderTrackingContent({
         </View>
 
         {/* ── Rate & Review section (done/delivered) ── */}
-        {(order.status === 'delivered' || order.status === 'ready_for_pickup') && (
+        {(REVIEWABLE_ORDER_STATUSES as readonly string[]).includes(order.status) && (
           <RateSection orderId={order.orderId} />
         )}
       </View>

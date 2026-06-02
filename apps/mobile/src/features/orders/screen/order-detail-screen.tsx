@@ -5,11 +5,59 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Star } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { formatCurrency } from '@/src/lib/format-utils';
 import { useMyOrderDetail } from '../hooks/use-order-history';
+import { REVIEWABLE_ORDER_STATUSES } from '@/src/features/review/api/review.api';
+import {
+  useMenuItemImage,
+  useRestaurantImage,
+} from '@/src/features/restaurants/api';
+import type { OrderItemResponse } from '../types';
+
+function OrderDetailItemRow({ item }: { item: OrderItemResponse }) {
+  const { data: menuItemImageUrl } = useMenuItemImage(item.menuItemId);
+
+  return (
+    <View className="flex-row items-center gap-3 mb-3">
+      <View className="w-12 h-12 rounded-xl bg-surface-container overflow-hidden flex-shrink-0">
+        {menuItemImageUrl ? (
+          <Image
+            source={{ uri: menuItemImageUrl }}
+            className="w-full h-full"
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+          />
+        ) : (
+          <View className="bg-primary/5 w-full h-full items-center justify-center">
+            <Text
+              className="text-primary text-sm"
+              style={{ fontFamily: 'PlusJakartaSans_800ExtraBold' }}
+            >
+              {item.itemName.charAt(0)}
+            </Text>
+          </View>
+        )}
+      </View>
+      <Text
+        className="text-on-surface flex-1"
+        style={{ fontFamily: 'Inter_400Regular' }}
+      >
+        {item.quantity}x {item.itemName}
+      </Text>
+      <Text
+        className="text-on-surface"
+        style={{ fontFamily: 'Inter_600SemiBold' }}
+      >
+        {formatCurrency(item.subtotal)}
+      </Text>
+    </View>
+  );
+}
 
 export function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,6 +65,9 @@ export function OrderDetailScreen() {
   const router = useRouter();
 
   const { data: order, isLoading, isError } = useMyOrderDetail(id || '');
+  const { data: restaurantImageUrl } = useRestaurantImage(
+    order?.restaurantId || '',
+  );
   const subtotal = order?.subtotal ?? 0;
 
   return (
@@ -53,18 +104,42 @@ export function OrderDetailScreen() {
       ) : (
         <ScrollView className="flex-1 px-4 py-6">
           <View className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm mb-6">
-            <Text
-              className="text-on-surface-variant text-sm mb-1"
-              style={{ fontFamily: 'Inter_400Regular' }}
-            >
-              Order #{order.orderId.slice(0, 8).toUpperCase()}
-            </Text>
-            <Text
-              className="text-2xl text-on-surface mb-2"
-              style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
-            >
-              {order.restaurantName}
-            </Text>
+            <View className="flex-row items-center gap-4 mb-3">
+              <View className="w-16 h-16 rounded-2xl bg-surface-container overflow-hidden flex-shrink-0">
+                {restaurantImageUrl ? (
+                  <Image
+                    source={{ uri: restaurantImageUrl }}
+                    className="w-full h-full"
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={200}
+                  />
+                ) : (
+                  <View className="bg-primary/5 w-full h-full items-center justify-center">
+                    <Text
+                      className="text-primary text-xl"
+                      style={{ fontFamily: 'PlusJakartaSans_800ExtraBold' }}
+                    >
+                      {order.restaurantName.charAt(0)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <View className="flex-1">
+                <Text
+                  className="text-on-surface-variant text-sm mb-1"
+                  style={{ fontFamily: 'Inter_400Regular' }}
+                >
+                  Order #{order.orderId.slice(0, 8).toUpperCase()}
+                </Text>
+                <Text
+                  className="text-2xl text-on-surface mb-2"
+                  style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
+                >
+                  {order.restaurantName}
+                </Text>
+              </View>
+            </View>
             <View className="bg-primary/10 self-start px-3 py-1 rounded-full">
               <Text
                 className="text-primary text-xs"
@@ -83,23 +158,7 @@ export function OrderDetailScreen() {
               Items
             </Text>
             {order.items.map((item) => (
-              <View
-                key={item.orderItemId}
-                className="flex-row justify-between mb-3"
-              >
-                <Text
-                  className="text-on-surface flex-1"
-                  style={{ fontFamily: 'Inter_400Regular' }}
-                >
-                  {item.quantity}x {item.itemName}
-                </Text>
-                <Text
-                  className="text-on-surface"
-                  style={{ fontFamily: 'Inter_600SemiBold' }}
-                >
-                  {formatCurrency(item.subtotal)}
-                </Text>
-              </View>
+              <OrderDetailItemRow key={item.orderItemId} item={item} />
             ))}
             <View className="border-t border-surface-container mt-2 pt-4">
               <View className="flex-row justify-between mb-2">
@@ -164,7 +223,7 @@ export function OrderDetailScreen() {
             </Text>
           </View>
 
-          {(order.status === 'delivered' || order.status === 'ready_for_pickup') && (
+          {(REVIEWABLE_ORDER_STATUSES as readonly string[]).includes(order.status) && (
             <TouchableOpacity
               onPress={() =>
                 router.push(`/(customer)/orders/${order.orderId}/rate`)

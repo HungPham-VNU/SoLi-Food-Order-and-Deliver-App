@@ -6,6 +6,7 @@ import {
   ReviewResponse,
 } from '../api/review.api';
 import { orderKeys } from '@/src/features/orders/hooks/use-order-history';
+import { restaurantKeys } from '@/src/features/restaurants/api/restaurant-api';
 
 export const reviewKeys = {
   all: ['reviews'] as const,
@@ -45,6 +46,9 @@ export const useSubmitReview = () => {
       // Refresh order detail (hasReview flag) and all order list queries.
       qc.invalidateQueries({ queryKey: orderKeys.detail(variables.orderId) });
       qc.invalidateQueries({ queryKey: orderKeys.lists() });
+      // Refresh restaurant rating/reviewCount projection displayed across the app.
+      qc.invalidateQueries({ queryKey: restaurantKeys.detail(data.restaurantId) });
+      qc.invalidateQueries({ queryKey: restaurantKeys.lists() });
     },
   });
 };

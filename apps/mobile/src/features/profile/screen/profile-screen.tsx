@@ -31,14 +31,29 @@ export function ProfileScreen() {
   const router = useRouter();
   const { data: session } = useSession();
   const { pushToken, setPushToken } = useNotificationStore();
+  const [isSigningOut, setIsSigningOut] = React.useState(false);
 
   const handleSignOut = () => {
+    if (isSigningOut) return;
+
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
+          if (isSigningOut) return;
+
+          setIsSigningOut(true);
+          let didFinish = false;
+
+          const finishOnce = () => {
+            if (didFinish) return;
+            didFinish = true;
+            setPushToken(null);
+            router.replace('/(auth)');
+          };
+
           try {
             if (pushToken) {
               try {
@@ -48,11 +63,17 @@ export function ProfileScreen() {
                 console.warn('[Profile] Failed to deregister push token:', err);
               }
             }
-            await authApi.signOut();
-            router.replace('/(auth)');
+
+            await authApi.signOut({
+              fetchOptions: {
+                onSuccess: finishOnce,
+              },
+            });
           } catch (err) {
-            Alert.alert('Error', 'Failed to sign out. Please try again.');
-            console.error(err);
+            console.error('[Profile] Failed to sign out:', err);
+          } finally {
+            finishOnce();
+            setIsSigningOut(false);
           }
         },
       },
@@ -186,13 +207,14 @@ export function ProfileScreen() {
       >
         <TouchableOpacity
           onPress={handleSignOut}
-          className="w-full items-center rounded-2xl bg-error-container/20 py-4"
+          disabled={isSigningOut}
+          className="w-full items-center rounded-2xl bg-error-container/20 py-4 disabled:opacity-60"
           activeOpacity={0.8}
           accessibilityRole="button"
           accessibilityLabel="Log out"
         >
           <Text className="font-jakarta-sans text-base font-bold text-error">
-            Log Out
+            {isSigningOut ? 'Logging Out...' : 'Log Out'}
           </Text>
         </TouchableOpacity>
       </View>

@@ -28,11 +28,9 @@ import {
 export function SingleScreenCheckout() {
   const {
     insets,
-    session,
     isLoading,
     isError,
     estimate,
-    selectedAddress,
     selectedPaymentMethod,
     cartItems,
     summary,
@@ -143,8 +141,6 @@ export function SingleScreenCheckout() {
         showsVerticalScrollIndicator={false}
       >
         <CheckoutDeliverySection
-          userName={session?.user.name || 'User'}
-          address={selectedAddress}
           estimatedMinutes={estimate?.estimatedMinutes}
         />
 

@@ -83,6 +83,8 @@ jobs:
   publish:
     name: Publish Mobile Build
     needs: validate
+    permissions:
+      contents: write
     uses: ./.github/workflows/cd-package-mobile.yml
     secrets:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
