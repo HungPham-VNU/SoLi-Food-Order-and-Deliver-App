@@ -62,6 +62,7 @@ services:
     environment:
       # Override localhost references so the API reaches the compose services.
       DATABASE_URL: postgresql://${POSTGRES_USER:-food_order}:${POSTGRES_PASSWORD:-foodordersecret}@postgres:5432/${POSTGRES_DB:-food_order_db}
+      REDIS_URL: redis://redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
       # Enable polling-based file watching for reliable hot-reload inside Docker
