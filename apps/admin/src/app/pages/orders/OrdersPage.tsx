@@ -106,14 +106,6 @@ export function OrdersPage() {
     };
   }, [orders]);
 
-  // Per-status counts shown in the pills.
-  const statusCounts = useMemo(() => {
-    const counts = new Map<OrderStatus, number>();
-    for (const o of orders) {
-      counts.set(o.status, (counts.get(o.status) ?? 0) + 1);
-    }
-    return counts;
-  }, [orders]);
 
   const fromIndex = page * PAGE_SIZE + 1;
   const toIndex = Math.min(fromIndex + filtered.length - 1, total);
@@ -189,10 +181,6 @@ export function OrdersPage() {
       <div className="flex flex-wrap items-center gap-2">
         {STATUS_PILLS.map((pill) => {
           const active = statusFilter === pill.id;
-          const count =
-            pill.id === 'all'
-              ? orders.length
-              : statusCounts.get(pill.id as OrderStatus) ?? 0;
           return (
             <button
               key={pill.id}
@@ -207,15 +195,11 @@ export function OrdersPage() {
               }`}
             >
               <span>{pill.label}</span>
-              <span
-                className={`inline-flex items-center justify-center min-w-[1.5rem] h-5 rounded-full text-xs font-semibold ${
-                  active
-                    ? 'bg-primary-foreground/20 text-primary-foreground'
-                    : 'bg-surface-container text-muted-foreground'
-                }`}
-              >
-                {count}
-              </span>
+              {active && (
+                <span className="inline-flex items-center justify-center min-w-[1.5rem] h-5 rounded-full text-xs font-semibold bg-primary-foreground/20 text-primary-foreground">
+                  {total.toLocaleString()}
+                </span>
+              )}
             </button>
           );
         })}

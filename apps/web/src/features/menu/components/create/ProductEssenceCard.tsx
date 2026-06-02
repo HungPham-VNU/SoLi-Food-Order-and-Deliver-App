@@ -14,6 +14,8 @@ import {
 import type { MenuCategory } from '@/features/menu/types';
 import type { CreateMenuItemFormValues } from '@/features/menu/schemas/menu.schema';
 import { useCreateCategory } from '@/features/menu/hooks/useMenuMutations';
+import { Controller } from 'react-hook-form';
+import { PriceInput } from '@/components/ui/price-input';
 
 interface ProductEssenceCardProps {
   categories?: MenuCategory[];
@@ -21,7 +23,7 @@ interface ProductEssenceCardProps {
 }
 
 export function ProductEssenceCard({ categories = [], restaurantId }: ProductEssenceCardProps) {
-  const { register, setValue, watch, formState: { errors } } = useFormContext<CreateMenuItemFormValues>();
+  const { register, control, setValue, watch, formState: { errors } } = useFormContext<CreateMenuItemFormValues>();
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
 
@@ -145,12 +147,19 @@ export function ProductEssenceCard({ categories = [], restaurantId }: ProductEss
             </Label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">₫</span>
-              <Input
-                id="price"
-                type="number"
-                placeholder="35000"
-                className="w-full h-12 bg-surface-container border-none rounded-xl pl-8 pr-4 focus:ring-2 focus:ring-primary/30 focus:bg-card transition-all outline-none"
-                {...register('price', { valueAsNumber: true })}
+              <Controller
+                control={control}
+                name="price"
+                render={({ field: { value, onChange, ref, ...field } }) => (
+                  <PriceInput
+                    id="price"
+                    placeholder="35,000"
+                    className="w-full h-12 bg-surface-container border-none rounded-xl pl-8 pr-4 focus:ring-2 focus:ring-primary/30 focus:bg-card transition-all outline-none"
+                    value={value}
+                    onChange={onChange}
+                    {...field}
+                  />
+                )}
               />
             </div>
             {errors.price && <p className="text-xs text-destructive">{errors.price.message}</p>}

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { PriceInput } from '@/components/ui/price-input';
 import { useCreateModifierGroup, useUpdateModifierGroup, useCreateModifierOption, useDeleteModifierOption } from '@/features/menu/hooks/useMenuMutations';
 import type { ModifierGroup } from '@/features/menu/types';
 
@@ -289,10 +290,9 @@ export function ModifierGroupDialog({
                   className="w-full px-3 py-2 rounded-lg border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
                 />
                 <div className="flex gap-2">
-                  <input
-                    type="number"
+                  <PriceInput
                     value={newOptionInput.price}
-                    onChange={(e) => setNewOptionInput({ ...newOptionInput, price: parseFloat(e.target.value) || 0 })}
+                    onChange={(val) => setNewOptionInput({ ...newOptionInput, price: val || 0 })}
                     placeholder="Price adjustment"
                     min={0}
                     className="flex-1 px-3 py-2 rounded-lg border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"

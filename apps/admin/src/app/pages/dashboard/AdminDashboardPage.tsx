@@ -19,7 +19,7 @@ import {
 import { PlatformLoadChart } from '@/features/dashboard/components/PlatformLoadChart';
 import { LiveOrderMap } from '@/features/dashboard/components/LiveOrderMap';
 import { usePlatformAnalytics } from '@/features/dashboard/hooks/usePlatformAnalytics';
-import { PENDING_PAYOUTS, formatVND } from '@/features/dashboard/mockData';
+import { formatVND } from '@/features/dashboard/mockData';
 import type { AnalyticsRange } from '@/features/dashboard/api/platformAnalytics.api';
 import type {
   PlatformKpis,
@@ -326,7 +326,7 @@ export function AdminDashboardPage() {
           {isLoading ? (
             <Skeleton className="h-64 w-full rounded-xl" />
           ) : (
-            <PlatformLoadChart data={data?.hourlyLoad ?? []} />
+            <PlatformLoadChart data={data?.hourlyLoad ?? []} range={range} />
           )}
         </div>
 
@@ -407,35 +407,7 @@ export function AdminDashboardPage() {
             )}
           </div>
 
-          <div className="h-px bg-outline-variant/30" />
 
-          {/* Pending payouts — still mock until payout BC is built */}
-          <div>
-            <SectionHeader
-              title="Pending Payouts"
-              subtitle="Week 21 — mock data"
-              action={<Banknote className="h-4 w-4 text-on-surface-variant" />}
-            />
-            <div className="space-y-2">
-              {PENDING_PAYOUTS.map((p) => (
-                <div key={p.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-low">
-                  <CalendarClock className="h-4 w-4 text-on-surface-variant shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-on-surface truncate">{p.name}</p>
-                    <p className="font-mono text-xs text-primary font-bold">{formatVND(p.amount)}</p>
-                  </div>
-                  <span className={[
-                    'px-2 py-0.5 rounded-full text-[10px] font-bold border',
-                    p.status === 'ready'
-                      ? 'bg-primary/10 text-primary border-primary/20'
-                      : 'bg-surface-container text-on-surface-variant border-outline-variant',
-                  ].join(' ')}>
-                    {p.status === 'ready' ? 'Ready' : 'Processing'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </section>
     </div>

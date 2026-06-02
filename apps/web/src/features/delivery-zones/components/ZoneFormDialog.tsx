@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
+import { PriceInput } from '@/components/ui/price-input';
 import type { DeliveryZone } from '../types';
 import {
   useCreateDeliveryZone,
@@ -198,11 +199,17 @@ export function ZoneFormDialog({
                 <label className="font-label font-bold text-sm text-on-surface-variant ml-1">
                   Base Fee (₫)
                 </label>
-                <input
-                  type="number"
-                  step={1000}
-                  {...register('baseFee', { valueAsNumber: true })}
-                  className="w-full bg-surface-container-high border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-lowest transition-all outline-none"
+                <Controller
+                  name="baseFee"
+                  control={control}
+                  render={({ field: { value, onChange, ref, ...field } }) => (
+                    <PriceInput
+                      {...field}
+                      value={value}
+                      onChange={onChange}
+                      className="w-full bg-surface-container-high border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-lowest transition-all outline-none"
+                    />
+                  )}
                 />
                 {errors.baseFee && (
                   <p className="text-xs text-error ml-1">{errors.baseFee.message}</p>
@@ -212,11 +219,17 @@ export function ZoneFormDialog({
                 <label className="font-label font-bold text-sm text-on-surface-variant ml-1">
                   Per-Kilometer Rate (₫/km)
                 </label>
-                <input
-                  type="number"
-                  step={1000}
-                  {...register('perKmRate', { valueAsNumber: true })}
-                  className="w-full bg-surface-container-high border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-lowest transition-all outline-none"
+                <Controller
+                  name="perKmRate"
+                  control={control}
+                  render={({ field: { value, onChange, ref, ...field } }) => (
+                    <PriceInput
+                      {...field}
+                      value={value}
+                      onChange={onChange}
+                      className="w-full bg-surface-container-high border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-lowest transition-all outline-none"
+                    />
+                  )}
                 />
                 {errors.perKmRate && (
                   <p className="text-xs text-error ml-1">

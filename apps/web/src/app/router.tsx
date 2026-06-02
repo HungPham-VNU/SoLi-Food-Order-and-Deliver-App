@@ -18,9 +18,9 @@ import { SettingsPage } from '@/app/pages/settings/SettingsPage';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 import { RequireRestaurantAccess } from '@/components/auth/RequireRestaurantAccess';
-import { RootRedirect } from '@/components/auth/RootRedirect';
 import { PromotionsPage } from '@/app/pages/promotions/PromotionsPage';
 import { PromotionFormPage } from '@/app/pages/promotions/PromotionFormPage';
+import { LandingPage } from '@/app/pages/landing/LandingPage';
 
 function PageErrorFallback() {
   return (
@@ -32,6 +32,12 @@ function PageErrorFallback() {
 }
 
 export const router = withFaroRouterInstrumentation(createBrowserRouter([
+  {
+    // Public marketing landing. Logged-in visitors are forwarded to their
+    // workspace by RootRedirect, which LandingPage renders when a session exists.
+    path: '/',
+    element: <LandingPage />,
+  },
   {
     path: '/auth/register',
     element: <RegisterPage />,
@@ -51,12 +57,6 @@ export const router = withFaroRouterInstrumentation(createBrowserRouter([
   {
     element: <RequireAuth />,
     children: [
-      // Root redirect — decides where a logged-in user should land. Lives
-      // OUTSIDE RequireRestaurantAccess so role='user' can still reach it
-      // (and get routed to /auth/register/business when they don't own a
-      // restaurant yet — first-time Google sign-in flow).
-      { path: '/', element: <RootRedirect /> },
-
       // Pending approval — accessible to any authenticated non-restaurant user.
       {
         path: 'pending-approval',

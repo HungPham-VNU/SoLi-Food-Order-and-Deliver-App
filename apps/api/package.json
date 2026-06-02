@@ -25,7 +25,8 @@
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/drizzle/seeds/seed.ts",
-    "db:seed:rich": "tsx src/drizzle/seeds/rich-catalog.seed.ts"
+    "db:seed:rich": "tsx src/drizzle/seeds/rich-catalog.seed.ts",
+    "db:seed:adong": "tsx src/drizzle/seeds/restaurant-adong.seed.ts"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.6.11",

@@ -1,17 +1,20 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MenuItemCard } from '@/features/menu/components/MenuItemCard';
 import { MenuSidebar } from '@/features/menu/components/MenuSidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useMenuItems, useMenuCategories } from '@/features/menu/hooks/useMenu';
-import { useDeleteMenuItem, useUpdateMenuItem } from '@/features/menu/hooks/useMenuMutations';
+import { useDeleteMenuItem, useUpdateMenuItem, useCreateCategory } from '@/features/menu/hooks/useMenuMutations';
 import { useMyRestaurant, useUpdateRestaurant } from '@/features/restaurant/hooks/useRestaurants';
 import type { MenuItem } from '@/features/menu/types';
 
 export function MenuManagementPage() {
   const navigate = useNavigate();
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const categoryInputRef = useRef<HTMLInputElement>(null);
 
   const { data: restaurant } = useMyRestaurant();
   const restaurantId = restaurant?.id;
@@ -22,6 +25,7 @@ export function MenuManagementPage() {
 
   const deleteItem = useDeleteMenuItem(restaurantId ?? '');
   const updateItem = useUpdateMenuItem(restaurantId ?? '');
+  const createCategory = useCreateCategory(restaurantId ?? '');
   const updateRestaurant = useUpdateRestaurant();
 
   const allItems = itemsResponse?.data ?? [];
@@ -42,6 +46,26 @@ export function MenuManagementPage() {
   };
 
   const handleAddItem = () => navigate('/menu/create');
+
+  const handleOpenAddCategory = () => {
+    setNewCategoryName('');
+    setAddingCategory(true);
+    setTimeout(() => categoryInputRef.current?.focus(), 0);
+  };
+
+  const handleSubmitCategory = () => {
+    const name = newCategoryName.trim();
+    if (!name || !restaurantId) { setAddingCategory(false); return; }
+    createCategory.mutate(
+      { restaurantId, name, displayOrder: categories.length },
+      { onSuccess: () => { setAddingCategory(false); setNewCategoryName(''); } },
+    );
+  };
+
+  const handleCancelCategory = () => {
+    setAddingCategory(false);
+    setNewCategoryName('');
+  };
 
   const handleDelete = (id: string) => {
     if (confirm('Delete this menu item?')) {
@@ -149,14 +173,42 @@ export function MenuManagementPage() {
                 </Button>
               ))}
 
-              <Button
-                type="button"
-                onClick={handleAddItem}
-                variant="ghost"
-                className="h-auto flex-shrink-0 p-3 bg-surface-container-lowest text-primary rounded-full hover:bg-surface-container transition-colors"
-              >
-                <span className="material-symbols-outlined">add</span>
-              </Button>
+              {addingCategory ? (
+                <div className="flex items-center gap-2 flex-shrink-0 bg-surface-container-lowest border border-primary/30 rounded-full px-4 py-2">
+                  <input
+                    ref={categoryInputRef}
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSubmitCategory();
+                      if (e.key === 'Escape') handleCancelCategory();
+                    }}
+                    placeholder="Category name…"
+                    className="bg-transparent text-sm font-semibold text-on-surface placeholder:text-on-surface-variant/50 outline-none w-36"
+                    disabled={createCategory.isPending}
+                  />
+                  <button
+                    onClick={handleSubmitCategory}
+                    disabled={!newCategoryName.trim() || createCategory.isPending}
+                    className="text-primary disabled:opacity-40 hover:opacity-70 transition-opacity"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">check</span>
+                  </button>
+                  <button onClick={handleCancelCategory} className="text-on-surface-variant hover:opacity-70 transition-opacity">
+                    <span className="material-symbols-outlined text-[18px]">close</span>
+                  </button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleOpenAddCategory}
+                  variant="ghost"
+                  className="h-auto flex-shrink-0 p-3 bg-surface-container-lowest text-primary rounded-full hover:bg-surface-container transition-colors"
+                  title="Add category"
+                >
+                  <span className="material-symbols-outlined">add</span>
+                </Button>
+              )}
             </div>
 
             {/* Items List */}

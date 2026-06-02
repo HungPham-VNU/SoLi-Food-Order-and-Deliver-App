@@ -9,16 +9,6 @@ import { useActiveOrders } from '@/features/orders/hooks/useOrders';
 import { useDashboardRevenue } from '@/features/dashboard/hooks/useDashboardRevenue';
 import type { OrderListItem } from '@/features/orders/types';
 
-// ---------------------------------------------------------------------------
-// Demo data — replace with analytics API once revenue endpoints land
-// ---------------------------------------------------------------------------
-const CHART_BARS: Array<{ label: string; today: number; avg: number }> = [
-  { label: '8 AM',  today: 45, avg: 30 },
-  { label: '12 PM', today: 65, avg: 50 },
-  { label: '4 PM',  today: 95, avg: 80 },
-  { label: '8 PM',  today: 75, avg: 60 },
-];
-
 const PAD2 = (n: number) => String(n).padStart(2, '0');
 
 function minutesAgo(isoString: string): number {
@@ -128,7 +118,6 @@ export function DashboardPage() {
   const { data: activeOrders = [] } = useActiveOrders();
   const { totalRevenue, avgOrderValue, orderCount, revenueDeltaPct, isLoading: loadingRevenue } =
     useDashboardRevenue();
-
   const [alertDismissed, setAlertDismissed] = useState(false);
 
   const isOpen = restaurant?.isOpen ?? false;
@@ -145,7 +134,7 @@ export function DashboardPage() {
       if (!isUrgent(a) && isUrgent(b)) return 1;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     })
-    .slice(0, 6);
+    .slice(0, 8);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto w-full">
@@ -204,11 +193,7 @@ export function DashboardPage() {
         </div>
 
         {/* Alerts */}
-        <div className="lg:col-span-4 bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] border border-black/[0.04] p-6 flex items-center gap-5 transition-all hover:-translate-y-0.5">
-          <div className="w-14 h-14 rounded-2xl bg-surface-container border border-outline-variant flex items-center justify-center shrink-0 shadow-inner text-on-surface">
-            <span className="material-symbols-outlined text-2xl">volume_up</span>
-          </div>
-
+        <div className="lg:col-span-4 bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] border border-black/[0.04] p-6 flex items-center transition-all hover:-translate-y-0.5">
           {!alertDismissed && urgentReady > 0 ? (
             <div className="flex-1 bg-[#fffaf9] border border-error/15 rounded-xl p-4 flex items-center gap-4 shadow-sm">
               <span className="material-symbols-outlined text-error text-xl shrink-0">warning</span>
@@ -311,62 +296,10 @@ export function DashboardPage() {
         </div>
       </section>
 
-      {/* ── Section 3: Chart + Orders ── */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-6">
-
-        {/* Daily Load & Revenue bar chart */}
-        <div className="lg:col-span-7 bg-surface-container-lowest rounded-2xl border border-black/[0.04] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_-4px_rgba(0,0,0,0.05)] transition-all flex flex-col h-[480px] overflow-hidden relative group">
-          <div className="p-8 pb-0 relative z-10 flex justify-between items-start">
-            <div>
-              <h3 className="font-headline font-bold text-xl text-on-surface">Daily Load &amp; Revenue</h3>
-              <p className="font-body text-sm text-on-surface-variant mt-1">
-                Order volume comparison — hourly view
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-4 text-[10px] font-mono font-bold uppercase tracking-wider text-on-surface-variant">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-primary-container inline-block" /> Today
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-surface-container-highest inline-block" /> 7D Avg
-                </span>
-              </div>
-              <span className="text-[10px] font-mono text-on-surface-variant/50 bg-surface-container px-2 py-0.5 rounded">Demo</span>
-            </div>
-          </div>
-
-          <div className="flex-1 relative w-full px-8 mt-8 flex items-end justify-between gap-6 pb-12 font-mono text-[10px] text-on-surface-variant">
-            {/* Grid lines */}
-            <div className="absolute inset-0 px-8 pb-12 flex flex-col justify-between z-0 pointer-events-none opacity-20">
-              <div className="border-t border-outline-variant w-full" />
-              <div className="border-t border-outline-variant w-full" />
-              <div className="border-t border-outline-variant w-full" />
-              <div className="border-t border-outline-variant w-full" />
-              <div />
-            </div>
-
-            {CHART_BARS.map((bar) => (
-              <div key={bar.label} className="flex flex-col items-center flex-1 h-full relative z-10">
-                <div className="flex-1 w-full flex items-end justify-center gap-1">
-                  <div
-                    className="w-3 bg-surface-container-highest rounded-t-sm transition-all"
-                    style={{ height: `${bar.avg}%` }}
-                  />
-                  <div
-                    className="w-3 bg-primary-container rounded-t-sm transition-all"
-                    style={{ height: `${bar.today}%` }}
-                  />
-                </div>
-                <span className="mt-4">{bar.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Urgent & Recent Orders */}
-        <div className="lg:col-span-5 bg-surface-container-lowest rounded-2xl border border-black/[0.04] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex flex-col h-[480px] overflow-hidden">
-          <div className="p-6 pb-4 border-b border-outline-variant/50 shrink-0 bg-surface/50 backdrop-blur-sm">
+      {/* ── Section 3: Active Orders ── */}
+      <section className="pb-8">
+        <div className="bg-surface-container-lowest rounded-2xl border border-black/[0.04] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] overflow-hidden">
+          <div className="p-6 pb-4 border-b border-outline-variant/50 bg-surface/50 backdrop-blur-sm">
             <h3 className="font-headline font-bold text-lg text-on-surface">
               Urgent &amp; Recent Orders
             </h3>
@@ -375,17 +308,19 @@ export function DashboardPage() {
             </p>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 [scrollbar-width:thin]">
+          <div className="p-6">
             {sortedOrders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
                 <span className="material-symbols-outlined text-4xl text-on-surface-variant/40">receipt_long</span>
                 <p className="text-sm text-on-surface-variant">No active orders right now.</p>
                 <p className="text-xs text-on-surface-variant/60">New orders will appear here automatically.</p>
               </div>
             ) : (
-              sortedOrders.map((order) => (
-                <OrderRow key={order.orderId} order={order} />
-              ))
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {sortedOrders.map((order) => (
+                  <OrderRow key={order.orderId} order={order} />
+                ))}
+              </div>
             )}
           </div>
         </div>

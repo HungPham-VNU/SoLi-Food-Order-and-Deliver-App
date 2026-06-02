@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PriceInput } from '@/components/ui/price-input';
 import { Label } from '@/components/ui/label';
 import {
   useCreatePromotion,
@@ -120,14 +121,14 @@ function PromotionFormContent({
   const [stackingMode, setStackingMode] = useState<StackingMode>(
     existing?.stackingMode ?? 'non_stackable',
   );
-  const [discountValue, setDiscountValue] = useState<string>(
-    existing ? String(existing.discountValue) : '',
+  const [discountValue, setDiscountValue] = useState<number | undefined>(
+    existing?.discountValue,
   );
-  const [minOrderAmount, setMinOrderAmount] = useState<string>(
-    existing?.minOrderAmount ? String(existing.minOrderAmount) : '',
+  const [minOrderAmount, setMinOrderAmount] = useState<number | undefined>(
+    existing?.minOrderAmount ?? undefined,
   );
-  const [maxDiscountAmount, setMaxDiscountAmount] = useState<string>(
-    existing?.maxDiscountAmount ? String(existing.maxDiscountAmount) : '',
+  const [maxDiscountAmount, setMaxDiscountAmount] = useState<number | undefined>(
+    existing?.maxDiscountAmount ?? undefined,
   );
   const [maxTotalUses, setMaxTotalUses] = useState<string>(
     existing?.maxTotalUses ? String(existing.maxTotalUses) : '',
@@ -155,9 +156,9 @@ function PromotionFormContent({
   function buildDto(): CreatePromotionDto | null {
     if (name.trim().length < 2) return setValidationError('Name must be at least 2 characters'), null;
 
-    const value = parseInt(discountValue, 10);
+    const value = discountValue;
     if (showDiscountField) {
-      if (!Number.isFinite(value) || value < 1) {
+      if (value === undefined || value === null || !Number.isFinite(value) || value < 1) {
         return setValidationError('Discount value is required'), null;
       }
       if (isPercentage && (value < 1 || value > 100)) {
@@ -184,10 +185,10 @@ function PromotionFormContent({
       restaurantId: restaurantId,
       trigger,
       stackingMode,
-      discountValue: showDiscountField ? value : 0,
-      ...(minOrderAmount && { minOrderAmount: parseInt(minOrderAmount, 10) }),
-      ...(isPercentage && maxDiscountAmount && {
-        maxDiscountAmount: parseInt(maxDiscountAmount, 10),
+      discountValue: showDiscountField ? (value as number) : 0,
+      ...(minOrderAmount !== undefined && { minOrderAmount }),
+      ...(isPercentage && maxDiscountAmount !== undefined && {
+        maxDiscountAmount,
       }),
       ...(maxTotalUses && { maxTotalUses: parseInt(maxTotalUses, 10) }),
       ...(maxUsesPerUser && { maxUsesPerUser: parseInt(maxUsesPerUser, 10) }),
@@ -351,14 +352,12 @@ function PromotionFormContent({
                   : 'VND amount — must be a multiple of 1,000.'
               }
             >
-              <Input
-                type="number"
+              <PriceInput
                 value={discountValue}
-                onChange={(e) => setDiscountValue(e.target.value)}
-                placeholder={isPercentage ? '15' : '50000'}
+                onChange={setDiscountValue}
+                placeholder={isPercentage ? '15' : '50,000'}
                 min={1}
                 max={isPercentage ? 100 : undefined}
-                step={usesVNDValue ? 1000 : 1}
                 required
               />
             </Field>
@@ -368,13 +367,11 @@ function PromotionFormContent({
                 label="Max discount cap (₫)"
                 hint="Optional. Caps the discount for high-value orders. Multiple of 1,000."
               >
-                <Input
-                  type="number"
+                <PriceInput
                   value={maxDiscountAmount}
-                  onChange={(e) => setMaxDiscountAmount(e.target.value)}
-                  placeholder="50000"
+                  onChange={setMaxDiscountAmount}
+                  placeholder="50,000"
                   min={0}
-                  step={1000}
                 />
               </Field>
             )}
@@ -387,13 +384,11 @@ function PromotionFormContent({
             label="Minimum order amount (₫)"
             hint="Optional. Order subtotal must be at least this much. Multiple of 1,000."
           >
-            <Input
-              type="number"
+            <PriceInput
               value={minOrderAmount}
-              onChange={(e) => setMinOrderAmount(e.target.value)}
-              placeholder="100000"
+              onChange={setMinOrderAmount}
+              placeholder="100,000"
               min={0}
-              step={1000}
             />
           </Field>
 

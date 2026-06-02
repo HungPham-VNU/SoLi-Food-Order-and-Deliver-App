@@ -8,7 +8,7 @@ import {
   CartesianGrid,
   type TooltipProps,
 } from 'recharts';
-import type { HourlyLoadPoint } from '../api/platformAnalytics.api';
+import type { AnalyticsRange, HourlyLoadPoint } from '../api/platformAnalytics.api';
 
 function CustomTooltip({ active, payload, label }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
@@ -25,22 +25,47 @@ function CustomTooltip({ active, payload, label }: TooltipProps<number, string>)
   );
 }
 
-function formatHour(iso: string): string {
-  try { return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }); }
-  catch { return iso; }
+const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function formatHour(iso: string, range: AnalyticsRange): string {
+  try {
+    const d = new Date(iso);
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    if (range === '7d') {
+      return `${DAY_SHORT[d.getDay()]} ${hh}:${mm}`;
+    }
+    return `${hh}:${mm}`;
+  } catch {
+    return iso;
+  }
 }
 
-interface Props { data: HourlyLoadPoint[] }
+interface Props { data: HourlyLoadPoint[]; range: AnalyticsRange }
 
-export function PlatformLoadChart({ data }: Props) {
-  const chartData = data.map((p) => ({ ...p, hour: formatHour(p.hour), revenue: Math.round(p.revenue / 1_000_000) }));
+export function PlatformLoadChart({ data, range }: Props) {
+  // For 7d, tick every 12 hours (~14 visible ticks across 168 points).
+  // For today/yesterday, tick every 4 hours (~6 ticks across ≤24 points).
+  const tickInterval = range === '7d' ? 11 : 3;
+
+  const chartData = data.map((p) => ({ ...p, hour: formatHour(p.hour, range), revenue: Math.round(p.revenue / 1_000_000) }));
+
+  if (chartData.length === 0) {
+    return (
+      <div className="h-64 w-full flex flex-col items-center justify-center gap-2 text-center rounded-xl bg-surface-container/40 border border-dashed border-outline-variant/30">
+        <span className="material-symbols-outlined text-3xl text-on-surface-variant/30">bar_chart</span>
+        <p className="text-sm font-medium text-on-surface-variant">No orders in this window</p>
+        <p className="text-xs text-on-surface-variant/60">Load data will appear once orders are placed</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={chartData}
-          margin={{ top: 4, right: 4, left: -24, bottom: 0 }}
+          margin={{ top: 4, right: 52, left: 8, bottom: 0 }}
         >
           <defs>
             <linearGradient id="ordersGradient" x1="0" y1="0" x2="0" y2="1">
@@ -64,19 +89,35 @@ export function PlatformLoadChart({ data }: Props) {
             tick={{ fontSize: 10, fill: 'var(--on-surface-variant)', fontFamily: 'var(--font-mono, monospace)' }}
             tickLine={false}
             axisLine={false}
-            interval={3}
+            interval={tickInterval}
           />
 
+          {/* Left axis — order count */}
           <YAxis
-            tick={{ fontSize: 10, fill: 'var(--on-surface-variant)', fontFamily: 'var(--font-mono, monospace)' }}
+            yAxisId="orders"
+            orientation="left"
+            tick={{ fontSize: 10, fill: '#0d631b', fontFamily: 'var(--font-mono, monospace)' }}
             tickLine={false}
             axisLine={false}
-            width={36}
+            width={32}
+            allowDecimals={false}
+          />
+
+          {/* Right axis — revenue in ₫M */}
+          <YAxis
+            yAxisId="revenue"
+            orientation="right"
+            tick={{ fontSize: 10, fill: '#ff9800', fontFamily: 'var(--font-mono, monospace)' }}
+            tickLine={false}
+            axisLine={false}
+            width={44}
+            tickFormatter={(v: number) => `₫${v}M`}
           />
 
           <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--outline-variant)', strokeWidth: 1 }} />
 
           <Area
+            yAxisId="orders"
             type="monotone"
             dataKey="orders"
             stroke="#0d631b"
@@ -87,6 +128,7 @@ export function PlatformLoadChart({ data }: Props) {
           />
 
           <Area
+            yAxisId="revenue"
             type="monotone"
             dataKey="revenue"
             stroke="#ff9800"
