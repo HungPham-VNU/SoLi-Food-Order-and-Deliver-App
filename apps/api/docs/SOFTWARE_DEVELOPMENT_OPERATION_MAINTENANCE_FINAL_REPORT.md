@@ -1663,39 +1663,39 @@ The maintainability claims in the architecture design document are expressed thr
 
 ##### QA-MA-01 - Bounded-Context Boundary Enforcement [Implemented]
 
-| Element          | Description                                                                                                                  |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Stimulus         | A developer attempts to import a Payment or Promotion concrete class into Ordering                                           |
-| Stimulus Source  | Pull request                                                                                                                 |
-| Environment      | Development                                                                                                                  |
-| Artifact         | `PAYMENT_INITIATION_PORT`, `PROMOTION_APPLICATION_PORT`, ACL snapshot tables                                                 |
-| Response         | Only the port symbol is imported across the boundary; concrete cross-context imports are treated as architectural violations |
-| Response Measure | Zero concrete Payment or Promotion imports inside Ordering                                                                   |
+| Element          | Description                                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Stimulus         | A developer attempts to import a Payment / Promotion concrete class into Ordering                                              |
+| Stimulus Source  | Pull request                                                                                                                   |
+| Environment      | Development                                                                                                                    |
+| Artifact         | Ports (`PAYMENT_INITIATION_PORT`, `PROMOTION_APPLICATION_PORT`); ACL snapshot tables                                           |
+| Response         | The compiler permits it, but architectural reviews / planned ESLint boundary rules forbid it; only the port symbol is imported |
+| Response Measure | Zero cross-BC concrete imports in `module/ordering`                                                                            |
 
 ##### QA-MA-02 - Schema Evolution via Drizzle Migrations [Implemented]
 
-| Element          | Description                                                                                                       |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Stimulus         | A new table or column is added                                                                                    |
-| Stimulus Source  | Developer                                                                                                         |
-| Environment      | Development to staging to production                                                                              |
-| Artifact         | Drizzle Kit migrations and Drizzle configuration                                                                  |
-| Response         | The schema change is introduced through a generated migration so data evolution remains controlled and reviewable |
-| Response Measure | Migrations remain forward-compatible unless a coordinated release explicitly manages destructive change           |
+| Element          | Description                                                                               |
+| ---------------- | ----------------------------------------------------------------------------------------- |
+| Stimulus         | New table / column added                                                                  |
+| Stimulus Source  | Developer                                                                                 |
+| Environment      | Development → staging → production                                                        |
+| Artifact         | Drizzle Kit migrations; `drizzle.config.ts`                                               |
+| Response         | Generated migration file applied; existing data preserved                                 |
+| Response Measure | Migrations are forward-compatible (no destructive rewrites without a coordinated release) |
 
 ## 3.13 Quality Attribute: Testability
 
 ##### QA-T-01 - Deterministic Order Placement Tests [Implemented]
 
-| Element               | Description                                                                                                                                            |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Stimulus              | A new lifecycle or pricing rule is added                                                                                                               |
-| Stimulus Source       | Developer                                                                                                                                              |
-| Environment           | CI                                                                                                                                                     |
-| Artifact              | Jest unit tests, API E2E tests, payment E2E scenario                                                                                                   |
-| Response              | Tests execute deterministically against ephemeral PostgreSQL, Redis, and stubbed providers                                                             |
-| Response Measure      | Existing automated tests exercise payment, order, cart, ACL, promotion, and notification paths, even though formal coverage thresholds are not defined |
-| Architectural Tactics | Provider abstractions permit stub email and push behavior; injectable Redis services permit deterministic mocking                                      |
+| Element               | Description                                                                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Stimulus              | A new lifecycle / pricing rule is added                                                                                                   |
+| Stimulus Source       | Developer                                                                                                                                 |
+| Environment           | CI                                                                                                                                        |
+| Artifact              | Jest unit + e2e tests; payment e2e ([test/payment.e2e-spec.ts](../../../test/payment.e2e-spec.ts))                                        |
+| Response              | Tests pass deterministically against ephemeral DB + Redis + stub providers                                                                |
+| Response Measure      | Existing e2e/spec coverage exercises payment, order, cart, ACL, promotion, and notification paths; coverage thresholds are not formalized |
+| Architectural Tactics | Provider abstractions allow `NoopEmailProvider` / `StubPushProvider` in tests; injectable `RedisService` permits mocking                  |
 
 ## 3.14 Quality Attribute: Reliability
 
@@ -1732,7 +1732,19 @@ The maintainability claims in the architecture design document are expressed thr
 | Response         | Disallowed transitions are rejected; allowed transitions commit atomically and append an audit record              |
 | Response Measure | Invalid transitions are rejected and committed transitions are always logged                                       |
 
-##### QA-R-06 - Payment Timeout Recovery [Implemented]
+##### QA-R-04 — Single-Restaurant Cart Invariant _[Implemented]_
+
+| Element               | Description                                                                                         |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| Stimulus              | Customer adds an item from Restaurant B to a cart already containing items from Restaurant A        |
+| Stimulus Source       | Customer client                                                                                     |
+| Environment           | Normal                                                                                              |
+| Artifact              | [CartService](../../../src/module/ordering/cart/cart.service.ts)                                    |
+| Response              | Request rejected with a structured error (`CART_RESTAURANT_CONFLICT`); existing cart left unchanged |
+| Response Measure      | 100 % rejection in unit / e2e tests; cart store remains consistent                                  |
+| Architectural Tactics | BR-2 enforcement in service before Redis write                                                      |
+
+##### QA-R-05 - Payment Timeout Recovery [Implemented]
 
 | Element          | Description                                                                                                                    |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -1743,7 +1755,7 @@ The maintainability claims in the architecture design document are expressed thr
 | Response         | Expired payments are transitioned to failed and the associated order is cancelled through the same command path used elsewhere |
 | Response Measure | Expired transactions are swept on schedule and terminal-state protection prevents duplicate processing                         |
 
-##### QA-R-07 - Restaurant Acceptance Timeout [Implemented]
+##### QA-R-06 - Restaurant Acceptance Timeout [Implemented]
 
 | Element          | Description                                                                                                                     |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -1754,7 +1766,7 @@ The maintainability claims in the architecture design document are expressed thr
 | Response         | Eligible orders are auto-cancelled through the normal CQRS lifecycle path and paid orders trigger refund behavior automatically |
 | Response Measure | Eligible expired orders are scanned every minute and routed through the same transition logic as manual operations              |
 
-##### QA-R-08 - Refund and Promotion Compensation Reliability [Partial]
+##### QA-R-07 - Refund and Promotion Compensation Reliability [Partial]
 
 | Element          | Description                                                                                                        |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -1769,7 +1781,7 @@ The maintainability claims in the architecture design document are expressed thr
 
 The architecture design document does not group manageability into a standalone ADD subsection. Instead, the approved governance and monitoring requirements express this concern across administrative workflows and deployment controls.
 
-##### MG-01 - Immediate Administrative Approval Propagation [Partial]
+##### QA-MG-01 - Immediate Administrative Approval Propagation [Partial]
 
 | Element                | Description                                                                                                                                      |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -1779,7 +1791,7 @@ The architecture design document does not group manageability into a standalone 
 | Architectural Response | Approval takes effect immediately in the source database and synchronously refreshes dependent ACL projections used by Ordering and Notification |
 | Current Status         | Partial, because the broader partner-governance workflow and audit-management surface are not yet complete                                       |
 
-##### MG-02 - Filterable Platform Monitoring [Partial]
+##### QA-MG-02 - Filterable Platform Monitoring [Partial]
 
 | Element                | Description                                                                                                                                                                                                                  |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1848,22 +1860,11 @@ The architecture design document does not group manageability into a standalone 
 | Response         | Handler failures are logged with contextual event information; notification and refund flows absorb failures while some projectors still rethrow after failed writes |
 | Response Measure | Handler failures are visible through logs, although centralized correlation and active alerting are still incomplete                                                 |
 
-##### QA-SUP-03 - Stuck-Order Diagnostics [Planned]
-
-| Element          | Description                                                                           |
-| ---------------- | ------------------------------------------------------------------------------------- |
-| Stimulus         | An order remains non-terminal beyond an allowed threshold                             |
-| Stimulus Source  | Scheduler and administrative monitoring                                               |
-| Environment      | Production                                                                            |
-| Artifact         | Planned diagnostic task and administrative monitoring surface                         |
-| Response         | The order should be flagged and surfaced with a reason code for operational follow-up |
-| Response Measure | Detection target is within one minute of the threshold breach                         |
-
 ## 3.18 Quality Attribute: Operability
 
 The approved architectural set expresses operability mainly through the deployment view, CI/CD controls, and supportability mechanisms rather than through a separate ADD scenario block.
 
-##### OP-01 - Validated Release Promotion [Implemented]
+##### QA-OP-01 - Validated Release Promotion [Implemented]
 
 | Element                | Description                                                                                                                                                                                |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -1873,7 +1874,7 @@ The approved architectural set expresses operability mainly through the deployme
 | Architectural Response | API, web, admin, and mobile pipelines validate lint, typecheck, audit, test, and build concerns before image publication or mobile packaging; Render deploy hooks promote validated images |
 | Current Status         | Implemented as the baseline release mechanism                                                                                                                                              |
 
-##### OP-02 - Runtime Health and Incident Detection [Partial]
+##### QA-OP-02 - Runtime Health and Incident Detection [Partial]
 
 | Element                | Description                                                                                                              |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |
