@@ -1,17 +1,21 @@
 /**
- * Seed for Ẩm thực Á Đông (ID: 6e02e5d6-3e27-4656-bb4d-3b6509dfbab6)
+ * Seed for Ẩm thực Á Đông
  *
  * Run:  pnpm db:seed:adong
  *
- * Additive — does NOT wipe existing data. Safe to re-run; catalog inserts use
- * onConflictDoNothing and snapshot upserts overwrite stale data.
+ * Self-contained — creates the restaurant (isApproved=true, isOpen=true) and
+ * its owner user on every run. All inserts use onConflictDoNothing so it is
+ * safe to re-run. Snapshot upserts overwrite stale data.
  *
  * Shipper is resolved at runtime from the first user with role='shipper'.
  *
  * Fixed IDs (ad-namespace — no collision with main seed):
  * ─────────────────────────────────────────────────────────────────────────────
+ *  OWNER USER
+ *    Á Đông Owner : ad000020-0000-4000-8000-000000000001
+ *
  *  RESTAURANT
- *    Ẩm thực Á Đông : 6e02e5d6-3e27-4656-bb4d-3b6509dfbab6
+ *    Ẩm thực Á Đông : ad000000-0000-4000-8000-000000000001
  *
  *  DELIVERY ZONES
  *    Nội thành (3 km) : ad000010-0000-4000-8000-000000000001
@@ -46,7 +50,8 @@ import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { eq, sql } from 'drizzle-orm';
 
-import { user } from '../../module/auth/auth.schema';
+import { hashPassword } from 'better-auth/crypto';
+import { user, account } from '../../module/auth/auth.schema';
 import {
   deliveryZones,
   restaurants,
@@ -76,8 +81,26 @@ const db = drizzle(process.env.DATABASE_URL!);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const RESTAURANT_ID = '6e02e5d6-3e27-4656-bb4d-3b6509dfbab6';
+const OWNER_USER_ID = 'ad000020-0000-4000-8000-000000000001';
+const OWNER_ACCOUNT_ID = 'ad000021-0000-4000-8000-000000000001';
+const OWNER_PASSWORD = 'password1234';
+const RESTAURANT_ID = 'ad000000-0000-4000-8000-000000000001';
 const RESTAURANT_NAME = 'Ẩm thực Á Đông';
+
+const RESTAURANT_DATA = {
+  id: RESTAURANT_ID,
+  ownerId: OWNER_USER_ID,
+  name: RESTAURANT_NAME,
+  description:
+    'Nhà hàng chuyên các món Á Đông — Trung, Nhật, Việt, Thái giao thoa tinh tế.',
+  address: '15 Đinh Tiên Hoàng, Quận 1, TP.HCM',
+  phone: '+84-28-3822-1234',
+  cuisineType: 'Á Đông',
+  latitude: 10.7769,
+  longitude: 106.7009,
+  isOpen: true,
+  isApproved: true,
+};
 const CUSTOMER_ID = '22222222-2222-4222-8222-222222222222';
 
 // ─── Fixed IDs ────────────────────────────────────────────────────────────────
@@ -2302,27 +2325,41 @@ async function seedPaymentTransactions(
 async function main() {
   console.log(`\n🍜 Seeding Ẩm thực Á Đông (${RESTAURANT_ID})\n`);
 
-  // Resolve restaurant row
-  const restaurantRows = await db
-    .select({
-      name: restaurants.name,
-      address: restaurants.address,
-      cuisineType: restaurants.cuisineType,
-      latitude: restaurants.latitude,
-      longitude: restaurants.longitude,
-      isOpen: restaurants.isOpen,
-      isApproved: restaurants.isApproved,
-      ownerId: restaurants.ownerId,
+  // Create owner user + credential account
+  const now = new Date();
+  await db
+    .insert(user)
+    .values({
+      id: OWNER_USER_ID,
+      name: 'Á Đông Owner',
+      email: 'owner.adong@soli.dev',
+      emailVerified: true,
+      role: 'restaurant',
+      createdAt: now,
+      updatedAt: now,
     })
-    .from(restaurants)
-    .where(eq(restaurants.id, RESTAURANT_ID))
-    .limit(1);
+    .onConflictDoNothing();
+  const passwordHash = await hashPassword(OWNER_PASSWORD);
+  await db
+    .insert(account)
+    .values({
+      id: OWNER_ACCOUNT_ID,
+      accountId: OWNER_USER_ID,
+      providerId: 'credential',
+      userId: OWNER_USER_ID,
+      password: passwordHash,
+      createdAt: now,
+    })
+    .onConflictDoNothing();
+  console.log(`   Owner user: owner.adong@soli.dev / ${OWNER_PASSWORD}`);
 
-  if (!restaurantRows.length) {
-    throw new Error(`Restaurant ${RESTAURANT_ID} not found in DB. Aborting.`);
-  }
-  const restaurantRow = restaurantRows[0];
-  console.log(`   Found: ${restaurantRow.name}`);
+  // Create restaurant (approved + open)
+  await db.insert(restaurants).values(RESTAURANT_DATA).onConflictDoNothing();
+  console.log(
+    `   Restaurant: ${RESTAURANT_NAME} (isApproved=true, isOpen=true)`,
+  );
+
+  const restaurantRow = RESTAURANT_DATA;
 
   // Resolve shipper
   const shipperRows = await db
