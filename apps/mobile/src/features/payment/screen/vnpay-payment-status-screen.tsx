@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -25,6 +25,7 @@ import type { OrderStatus } from '@/src/features/orders/types';
 import {
   buildVNPayStatusRouteParams,
   openVNPayPaymentSession,
+  VNPAY_STATUS_ROUTE,
 } from '../utils/vnpay-payment-session';
 
 const SUCCESS_STATUSES: OrderStatus[] = [
@@ -205,7 +206,7 @@ export function VNPayPaymentStatusScreen() {
     try {
       const session = await openVNPayPaymentSession(order.paymentUrl);
       router.replace({
-        pathname: '/payment/vnpay-return' as any,
+        pathname: VNPAY_STATUS_ROUTE as any,
         params: buildVNPayStatusRouteParams({
           orderId: order.orderId,
           paymentUrl: order.paymentUrl,
