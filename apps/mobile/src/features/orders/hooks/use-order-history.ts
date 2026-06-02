@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
 import { getMyOrderDetail, getMyOrders, getReorderItems } from '../api/order-history';
-import { OrderHistoryFilters } from '../types';
+import { OrderDetail, OrderHistoryFilters } from '../types';
 
 export const orderKeys = {
   all: ['orders'] as const,
@@ -18,11 +18,22 @@ export const useMyOrders = (filters: OrderHistoryFilters = {}) => {
   });
 };
 
-export const useMyOrderDetail = (orderId: string) => {
+type OrderDetailQueryKey = ReturnType<typeof orderKeys.detail>;
+type OrderDetailQueryOptions = Pick<
+  UseQueryOptions<OrderDetail, Error, OrderDetail, OrderDetailQueryKey>,
+  'enabled' | 'refetchInterval' | 'refetchIntervalInBackground'
+>;
+
+export const useMyOrderDetail = (
+  orderId: string,
+  options: OrderDetailQueryOptions = {},
+) => {
   return useQuery({
     queryKey: orderKeys.detail(orderId),
     queryFn: () => getMyOrderDetail(orderId),
-    enabled: !!orderId,
+    enabled: !!orderId && (options.enabled ?? true),
+    refetchInterval: options.refetchInterval,
+    refetchIntervalInBackground: options.refetchIntervalInBackground,
   });
 };
 

@@ -7,14 +7,34 @@ jest.mock('../acl/notification-restaurant-acl.repository', () => ({
 }));
 
 import { OrderPlacedEvent } from '@/shared/events/order-placed.event';
+import type { NotificationRestaurantSnapshot } from '../acl/notification-restaurant-snapshot.schema';
+import type { NotificationRestaurantAclRepository } from '../acl/notification-restaurant-acl.repository';
+import type {
+  NotificationService,
+  SendFromEventParams,
+} from '../services/notification.service';
 import { OrderPlacedNotificationHandler } from './order-placed.handler';
 
+type NotificationServiceMock = {
+  sendFromEvent: jest.Mock<Promise<number>, [SendFromEventParams]>;
+};
+
+type RestaurantAclRepoMock = {
+  findByRestaurantId: jest.Mock<
+    Promise<NotificationRestaurantSnapshot | null>,
+    [string]
+  >;
+};
+
 describe('OrderPlacedNotificationHandler', () => {
-  const notificationService = {
-    sendFromEvent: jest.fn(),
+  const notificationService: NotificationServiceMock = {
+    sendFromEvent: jest.fn<Promise<number>, [SendFromEventParams]>(),
   };
-  const restaurantAclRepo = {
-    findByRestaurantId: jest.fn(),
+  const restaurantAclRepo: RestaurantAclRepoMock = {
+    findByRestaurantId: jest.fn<
+      Promise<NotificationRestaurantSnapshot | null>,
+      [string]
+    >(),
   };
 
   let handler: OrderPlacedNotificationHandler;
@@ -22,12 +42,14 @@ describe('OrderPlacedNotificationHandler', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     restaurantAclRepo.findByRestaurantId.mockResolvedValue({
+      restaurantId: '33333333-3333-4333-8333-333333333333',
       ownerId: '22222222-2222-4222-8222-222222222222',
       name: 'Test Restaurant',
+      lastSyncedAt: new Date('2026-01-01T00:00:00.000Z'),
     });
     handler = new OrderPlacedNotificationHandler(
-      notificationService as any,
-      restaurantAclRepo as any,
+      notificationService as unknown as NotificationService,
+      restaurantAclRepo as unknown as NotificationRestaurantAclRepository,
     );
   });
 

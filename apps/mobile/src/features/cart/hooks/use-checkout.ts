@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+﻿import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMyCart } from './use-cart';
 import { useSession } from '@/src/lib/auth-client';
@@ -8,12 +8,17 @@ import { useDeliveryEstimate } from '@/src/features/restaurants/api/restaurant-a
 import { usePreviewDiscount } from '@/src/features/promotions/hooks/use-preview-discount';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { checkoutCart } from '../api/cart-api';
+import { orderKeys } from '@/src/features/orders/hooks/use-order-history';
 import Toast from 'react-native-toast-message';
-import * as Linking from 'expo-linking';
 import * as Crypto from 'expo-crypto';
 import type { CheckoutSummary, CartItem, CheckoutDto } from '../types';
 import { trackMobileEvent } from '@/src/lib/analytics';
-import { Sentry } from '@/src/lib/observability';
+import { captureMobileException, Sentry } from '@/src/lib/observability';
+import {
+  buildVNPayStatusRouteParams,
+  openVNPayPaymentSession,
+  type VNPayPaymentSessionResult,
+} from '@/src/features/payment';
 
 const DEFAULT_DELIVERY_FEE = 15000; // 15k VND
 
@@ -60,25 +65,6 @@ export function useCheckout() {
   const checkoutMutation = useMutation({
     mutationFn: (data: { dto: CheckoutDto; idempotencyKey?: string }) =>
       checkoutCart(data.dto, data.idempotencyKey),
-    onSuccess: (data) => {
-      trackMobileEvent('order_created', {
-        order_id: data.orderId,
-        payment_method: data.paymentMethod,
-        total_amount: data.totalAmount,
-        item_count: cartItems.length,
-        discount_amount: data.discountAmount,
-      });
-      queryClient.invalidateQueries({ queryKey: ['cart'] });
-      if (data.paymentMethod === 'vnpay' && data.paymentUrl) {
-        Linking.openURL(data.paymentUrl);
-      }
-      Toast.show({
-        type: 'success',
-        text1: 'Order placed successfully!',
-      });
-      router.dismissAll();
-      router.replace('/(customer)/(tabs)');
-    },
     onError: (error: any) => {
       trackMobileEvent('order_create_failed', {
         code: 'CHECKOUT_ERROR',
@@ -104,10 +90,20 @@ export function useCheckout() {
       Toast.show({ type: 'error', text1: 'Payment method is required' });
       return;
     }
+    // Guard: selectedAddress may be set without coordinates (e.g. manual text entry).
+    // The API requires valid lat/lng - reject early with a clear message.
+    if (latitude == null || longitude == null) {
+      Toast.show({
+        type: 'error',
+        text1: 'Could not determine delivery coordinates',
+        text2: 'Please re-select your address.',
+      });
+      return;
+    }
     const dto: CheckoutDto = {
       deliveryAddress: {
-        latitude: latitude ?? undefined,
-        longitude: longitude ?? undefined,
+        latitude,
+        longitude,
       },
       paymentMethod: selectedPaymentMethod.id === 'vnpay' ? 'vnpay' : 'cod',
       note: '',
@@ -133,7 +129,67 @@ export function useCheckout() {
         },
       },
       async () => {
-        await checkoutMutation.mutateAsync({ dto, idempotencyKey });
+        const data = await checkoutMutation.mutateAsync({
+          dto,
+          idempotencyKey,
+        });
+
+        trackMobileEvent('order_created', {
+          order_id: data.orderId,
+          payment_method: data.paymentMethod,
+          total_amount: data.totalAmount,
+          item_count: cartItems.length,
+          discount_amount: data.discountAmount,
+        });
+
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['cart'] }),
+          queryClient.invalidateQueries({ queryKey: orderKeys.all }),
+        ]);
+
+        if (data.paymentMethod === 'vnpay') {
+          let session: VNPayPaymentSessionResult | undefined;
+
+          if (data.paymentUrl) {
+            try {
+              session = await openVNPayPaymentSession(data.paymentUrl);
+            } catch (error) {
+              captureMobileException(error, {
+                source: 'checkout_vnpay_open_session',
+                orderId: data.orderId,
+              });
+              Toast.show({
+                type: 'error',
+                text1: 'Could not open VNPay',
+                text2: 'You can continue payment from the status screen.',
+              });
+              session = {
+                type: 'error',
+                params: {},
+              };
+            }
+          }
+
+          router.dismissAll();
+          router.replace({
+            pathname: '/payment/vnpay-return' as any,
+            params: buildVNPayStatusRouteParams({
+              orderId: data.orderId,
+              paymentUrl: data.paymentUrl,
+              fallbackStatus: data.status,
+              session,
+              browserResult: data.paymentUrl ? undefined : 'missing_payment_url',
+            }),
+          });
+          return;
+        }
+
+        Toast.show({
+          type: 'success',
+          text1: 'Order placed successfully!',
+        });
+        router.dismissAll();
+        router.replace('/(customer)/(tabs)');
       },
     );
   };
@@ -159,7 +215,6 @@ export function useCheckout() {
 
   return {
     insets,
-    session,
     cart,
     isLoading,
     isError,
