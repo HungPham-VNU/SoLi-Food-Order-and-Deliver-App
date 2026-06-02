@@ -438,6 +438,49 @@ describe('Payment Phase 8 E2E', () => {
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('unknown');
     });
+
+    it('P-09a mobile return redirects to the app deep link with status params', async () => {
+      const returnParams = buildReturnParams(txnRef, 15000, hashSecret, '00');
+
+      const res = await http
+        .get('/api/payments/vnpay/mobile-return')
+        .query(returnParams)
+        .redirects(0);
+
+      expect(res.status).toBe(302);
+
+      const location = res.headers.location as string;
+      expect(location).toBeTruthy();
+      expect(location).toContain('uitfood://payment/vnpay-return');
+
+      const redirectUrl = new URL(location);
+      expect(redirectUrl.searchParams.get('txnRef')).toBe(txnRef);
+      expect(redirectUrl.searchParams.get('status')).toBe('awaiting_ipn');
+      expect(redirectUrl.searchParams.get('signatureValid')).toBe('true');
+      expect(redirectUrl.searchParams.get('vnpResponseCode')).toBe('00');
+      expect(redirectUrl.searchParams.get('orderId')).toBeTruthy();
+    });
+
+    it('P-09b mobile return redirects with signatureValid=false for tampered params', async () => {
+      const returnParams = buildReturnParams(txnRef, 15000, hashSecret, '00');
+      returnParams['vnp_Amount'] = '9999';
+
+      const res = await http
+        .get('/api/payments/vnpay/mobile-return')
+        .query(returnParams)
+        .redirects(0);
+
+      expect(res.status).toBe(302);
+
+      const redirectUrl = new URL(res.headers.location as string);
+      expect(redirectUrl.searchParams.get('txnRef')).toBe(txnRef);
+      expect(redirectUrl.searchParams.get('status')).toBe('awaiting_ipn');
+      expect(redirectUrl.searchParams.get('signatureValid')).toBe('false');
+
+      const txn = await getPaymentTransaction(txnRef);
+      expect(txn.status).toBe('awaiting_ipn');
+      expect(txn.paidAt).toBeNull();
+    });
   });
 
   // ──────────────────────────────────────────────────────────────────────────

@@ -33,6 +33,12 @@ export const vnpayConfig = registerAs('vnpay', () => ({
   returnUrl: process.env['VNPAY_RETURN_URL']!,
 
   /**
+   * App deep link used by the mobile return endpoint after it verifies and
+   * reads the VNPay browser return state.
+   */
+  mobileReturnUrl: process.env['MOBILE_PAYMENT_RETURN_URL']!,
+
+  /**
    * Payment session timeout in seconds (default 1800 = 30 min).
    * Used for both vnp_ExpireDate and PaymentTransaction.expiresAt.
    */

@@ -5,6 +5,17 @@ const baseConfig = {
 };
 
 describe('environment schema observability settings', () => {
+  it('accepts the mobile payment return deep link', () => {
+    const env = validate({
+      ...baseConfig,
+      MOBILE_PAYMENT_RETURN_URL: 'uitfood://payment/vnpay-return',
+    });
+
+    expect(env.MOBILE_PAYMENT_RETURN_URL).toBe(
+      'uitfood://payment/vnpay-return',
+    );
+  });
+
   it('accepts Grafana Cloud direct OTLP settings', () => {
     const env = validate({
       ...baseConfig,

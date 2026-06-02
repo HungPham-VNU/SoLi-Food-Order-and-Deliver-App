@@ -78,6 +78,12 @@ const baseEnvSchema = z.object({
       'VNPAY_RETURN_URL must be a valid URL (e.g. http://localhost:3000/api/payments/vnpay/return)',
     )
     .default('http://localhost:3000/api/payments/vnpay/return'),
+  MOBILE_PAYMENT_RETURN_URL: z
+    .string()
+    .url(
+      'MOBILE_PAYMENT_RETURN_URL must be a valid URL (e.g. uitfood://payment/vnpay-return)',
+    )
+    .default('uitfood://payment/vnpay-return'),
 
   // ---------------------------------------------------------------------------
   // Cloudinary — required for signed uploads

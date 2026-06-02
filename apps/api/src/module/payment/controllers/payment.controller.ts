@@ -3,9 +3,12 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Logger,
   Query,
+  Redirect,
 } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
 import {
   ApiBearerAuth,
   ApiExcludeEndpoint,
@@ -26,6 +29,7 @@ import { PaymentTransactionRepository } from '../repositories/payment-transactio
 import { PaymentService } from '../services/payment.service';
 import type { IpnResponse } from '../commands/process-ipn.handler';
 import type { PaymentStatus } from '../domain/payment-transaction.schema';
+import { vnpayConfig } from '@/config/vnpay.config';
 
 /**
  * PaymentController
@@ -56,6 +60,8 @@ export class PaymentController {
     private readonly vnpayService: VNPayService,
     private readonly txnRepo: PaymentTransactionRepository,
     private readonly paymentService: PaymentService,
+    @Inject(vnpayConfig.KEY)
+    private readonly config: ConfigType<typeof vnpayConfig>,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -151,6 +157,39 @@ export class PaymentController {
   async handleReturn(
     @Query() query: Record<string, string>,
   ): Promise<ReturnUrlResponse> {
+    return this.resolveReturnUrlResponse(query);
+  }
+
+  /**
+   * Mobile return endpoint: browser-facing redirect back into the Expo app.
+   *
+   * VNPay can only redirect to an HTTPS merchant URL. For mobile, the merchant
+   * URL lands here first, then this endpoint performs the same read-only return
+   * verification/status lookup as /vnpay/return and redirects to the app scheme.
+   */
+  @Get('vnpay/mobile-return')
+  @AllowAnonymous()
+  @Redirect('uitfood://payment/vnpay-return', HttpStatus.FOUND)
+  @ApiOperation({
+    summary: 'VNPay mobile return URL redirects to the mobile app',
+    description:
+      'Called by the customer browser after VNPay. Reads current payment status ' +
+      'without mutating state, then redirects to the configured mobile deep link.',
+  })
+  async handleMobileReturn(
+    @Query() query: Record<string, string>,
+  ): Promise<{ url: string; statusCode: number }> {
+    const response = await this.resolveReturnUrlResponse(query);
+
+    return {
+      url: this.buildMobileReturnRedirectUrl(response),
+      statusCode: HttpStatus.FOUND,
+    };
+  }
+
+  private async resolveReturnUrlResponse(
+    query: Record<string, string>,
+  ): Promise<ReturnUrlResponse> {
     const txnRef = query['vnp_TxnRef'];
 
     // -------------------------------------------------------------------------
@@ -229,6 +268,21 @@ export class PaymentController {
       signatureValid,
       vnpResponseCode: txn.vnpResponseCode ?? query['vnp_ResponseCode'] ?? null,
     };
+  }
+
+  private buildMobileReturnRedirectUrl(response: ReturnUrlResponse): string {
+    const url = new URL(this.config.mobileReturnUrl);
+
+    url.searchParams.set('txnRef', response.txnRef);
+    url.searchParams.set('orderId', response.orderId);
+    url.searchParams.set('status', response.status);
+    url.searchParams.set('signatureValid', String(response.signatureValid));
+
+    if (response.vnpResponseCode) {
+      url.searchParams.set('vnpResponseCode', response.vnpResponseCode);
+    }
+
+    return url.toString();
   }
 
   // ---------------------------------------------------------------------------
