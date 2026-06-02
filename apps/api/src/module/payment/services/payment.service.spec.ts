@@ -1,4 +1,5 @@
-import { ConfigService } from '@nestjs/config';
+import type { ConfigType } from '@nestjs/config';
+import { vnpayConfig } from '@/config/vnpay.config';
 import { PaymentService } from './payment.service';
 import { VNPayService } from './vnpay.service';
 import { PaymentTransactionRepository } from '../repositories/payment-transaction.repository';
@@ -34,7 +35,7 @@ function makeTxn(
   } as unknown as PaymentTransaction;
 }
 
-function buildService(timeoutSec = '1800') {
+function buildService(timeoutSec = 1800) {
   const vnpayService = {
     buildPaymentUrl: jest
       .fn()
@@ -49,9 +50,14 @@ function buildService(timeoutSec = '1800') {
     findByCustomerId: jest.fn().mockResolvedValue([]),
   } as unknown as PaymentTransactionRepository;
 
-  const config = {
-    get: jest.fn().mockReturnValue(timeoutSec),
-  } as unknown as ConfigService;
+  const config: ConfigType<typeof vnpayConfig> = {
+    tmnCode: 'STUB_TMN',
+    hashSecret: 'STUB_SECRET',
+    url: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
+    returnUrl: 'http://localhost:3000/api/payments/vnpay/return',
+    mobileReturnUrl: 'uitfood://payment/vnpay-return',
+    sessionTimeoutSeconds: timeoutSec,
+  };
 
   const service = new PaymentService(vnpayService, txnRepo, config);
 
@@ -172,7 +178,7 @@ describe('PaymentService', () => {
     });
 
     it('uses PAYMENT_SESSION_TIMEOUT_SECONDS from config to compute expiresAt', async () => {
-      const { service, txnRepo } = buildService('3600');
+      const { service, txnRepo } = buildService(3600);
       const before = Date.now();
       let capturedExpiresAt: Date | null = null;
       (txnRepo.create as jest.Mock).mockImplementation(
