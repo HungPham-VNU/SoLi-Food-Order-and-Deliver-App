@@ -152,6 +152,12 @@ export class VNPayService implements OnModuleInit {
    * @returns Full VNPay redirect URL including vnp_SecureHash
    */
   buildPaymentUrl(params: VNPayUrlParams): string {
+    if (!Number.isInteger(params.amount) || params.amount <= 0) {
+      throw new Error(
+        'VNPay payment amount must be a positive integer VND value.',
+      );
+    }
+
     const now = new Date();
     const expiresAt = new Date(now.getTime() + this.sessionTimeoutMs);
 

@@ -97,6 +97,16 @@ describe('VNPayService', () => {
       });
       expect(url).toContain('vnp_IpAddr=8.8.8.8');
     });
+
+    it('rejects non-positive payment amounts', () => {
+      expect(() =>
+        service.buildPaymentUrl({
+          txnRef: 'tx-zero',
+          amount: 0,
+          ipAddr: '1.2.3.4',
+        }),
+      ).toThrow('positive integer VND');
+    });
   });
 
   describe('verifyIpn', () => {

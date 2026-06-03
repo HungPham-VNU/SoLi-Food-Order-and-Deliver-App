@@ -92,9 +92,11 @@ export interface Restaurant {
   coverImageUrl?: string | null;
   createdAt: string;
   updatedAt: string;
+  averageRating?: number;
+  ratingSum?: number;
+  reviewCount?: number;
   // UI-specific extensions (may not be in API yet)
   rating?: number;
-  reviewCount?: number;
   deliveryTime?: string;
   deliveryFee?: number;
 }
@@ -120,9 +122,11 @@ export interface RestaurantSearchResult {
   score?: number;
   createdAt: string;
   updatedAt: string;
+  averageRating?: number;
+  ratingSum?: number;
+  reviewCount?: number;
   // UI-specific extensions (may not be in API yet)
   rating?: number;
-  reviewCount?: number;
   deliveryTime?: string;
   deliveryFee?: number;
 }

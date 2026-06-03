@@ -5,6 +5,7 @@ import {
   UnprocessableEntityException,
   BadRequestException,
   InternalServerErrorException,
+  ServiceUnavailableException,
   Inject,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
@@ -389,6 +390,51 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     // -------------------------------------------------------------------------
     const totalAmount = Math.max(0, itemsTotal + shippingFee - discountAmount);
 
+    let paymentUrl: string | null = null;
+    let paymentTxnId: string | null = null;
+
+    if (paymentMethod === 'vnpay') {
+      if (totalAmount <= 0) {
+        if (discountReservation.reserved) {
+          await this.promotionPort.rollbackReservations(preGeneratedOrderId);
+          this.logger.warn(
+            `Promotion reservation rolled back after zero-payable VNPay rejection: orderId=${preGeneratedOrderId}`,
+          );
+        }
+
+        throw new UnprocessableEntityException(
+          'VNPay requires a payable amount greater than 0 VND. Please choose Cash on Delivery for fully discounted orders.',
+        );
+      }
+
+      try {
+        const payment = await this.paymentPort.initiateVNPayPayment(
+          preGeneratedOrderId,
+          customerId,
+          totalAmount,
+          ipAddr ?? '127.0.0.1',
+        );
+        paymentUrl = payment.paymentUrl;
+        paymentTxnId = payment.txnId;
+      } catch (err) {
+        if (discountReservation.reserved) {
+          await this.promotionPort.rollbackReservations(preGeneratedOrderId);
+          this.logger.warn(
+            `Promotion reservation rolled back after VNPay initiation failure: orderId=${preGeneratedOrderId}`,
+          );
+        }
+
+        this.logger.error(
+          `VNPay initiation failed before order persistence for orderId=${preGeneratedOrderId}: ${(err as Error).message}`,
+          (err as Error).stack,
+        );
+
+        throw new ServiceUnavailableException(
+          'Could not initialize VNPay payment. Please try again.',
+        );
+      }
+    }
+
     // -------------------------------------------------------------------------
     // Step 9 — Determine order expiry (for restaurant accept timeout)
     // -------------------------------------------------------------------------
@@ -428,9 +474,24 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
         deliveryAddress,
         note,
         expiresAt,
+        paymentUrl,
         items: snapshotedItems,
       });
     } catch (err) {
+      if (paymentTxnId) {
+        await this.paymentPort
+          .markPaymentAttemptFailed(
+            paymentTxnId,
+            'Order persistence failed after VNPay payment session was created',
+          )
+          .catch((markErr: Error) => {
+            this.logger.error(
+              `Failed to mark VNPay transaction ${paymentTxnId} as failed after order persistence failure: ${markErr.message}`,
+              markErr.stack,
+            );
+          });
+      }
+
       // Rollback promotion reservation before re-throwing.
       // rollbackReservations is idempotent and never throws.
       if (discountReservation.reserved) {
@@ -453,50 +514,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     // -------------------------------------------------------------------------
     await this.promotionPort.confirmReservations(order.id);
 
-    // -------------------------------------------------------------------------
-    // Step 10b — Two-phase VNPay write (Phase 8 integration).
-    //
-    // For VNPay orders only:
-    //   a) PaymentService creates a PaymentTransaction + builds the redirect URL.
-    //   b) We update orders.payment_url so the client receives it in the response.
-    //
-    // Design rationale (D-P5 / DIP):
-    //   PlaceOrderHandler depends on PAYMENT_INITIATION_PORT (interface), NOT on
-    //   PaymentService directly. PaymentModule is @Global() — no OrderModule import.
-    //
-    // Failure handling:
-    //   If VNPay URL generation fails, we log and continue WITHOUT a paymentUrl.
-    //   The order was already persisted (step 10) and must not be rolled back.
-    //   PaymentTimeoutTask (Phase 8.5) will expire the 'pending' PaymentTransaction
-    //   and publish PaymentFailedEvent → Ordering BC cancels the order (T-03).
-    //   This gives the customer a clean error UX via push notification without
-    //   leaving an uncancelled order in the system.
-    // -------------------------------------------------------------------------
-    let finalOrder = order;
-    if (paymentMethod === 'vnpay') {
-      try {
-        const { paymentUrl } = await this.paymentPort.initiateVNPayPayment(
-          order.id,
-          customerId,
-          order.totalAmount,
-          ipAddr ?? '127.0.0.1',
-        );
-        // Update the order row so the client response includes the redirect URL.
-        await this.db
-          .update(orders)
-          .set({ paymentUrl })
-          .where(eq(orders.id, order.id));
-        finalOrder = { ...order, paymentUrl };
-        this.logger.log(`VNPay payment URL attached to order ${order.id}`);
-      } catch (err) {
-        // Log and continue — order stands, timeout task handles cleanup.
-        this.logger.error(
-          `VNPay URL generation failed for order ${order.id}: ${(err as Error).message}`,
-          (err as Error).stack,
-        );
-      }
-    }
-
+    const finalOrder = order;
     // -------------------------------------------------------------------------
     // Step 11 — C-1 FIX: Save idempotency result BEFORE any cleanup.
     //
@@ -909,6 +927,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     deliveryAddress: DeliveryAddress;
     note: string | undefined;
     expiresAt: Date;
+    paymentUrl: string | null;
     items: Array<{
       menuItemId: string;
       itemName: string;
@@ -933,6 +952,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
       deliveryAddress,
       note,
       expiresAt,
+      paymentUrl,
       items,
     } = params;
 
@@ -954,6 +974,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
           deliveryAddress,
           note: note ?? null,
           expiresAt,
+          paymentUrl,
         };
 
         const [insertedOrder] = await tx

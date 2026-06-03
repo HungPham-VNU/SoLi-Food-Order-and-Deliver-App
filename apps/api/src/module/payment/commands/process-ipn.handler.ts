@@ -5,6 +5,7 @@ import { VNPayService } from '../services/vnpay.service';
 import { PaymentTransactionRepository } from '../repositories/payment-transaction.repository';
 import { PaymentConfirmedEvent } from '@/shared/events/payment-confirmed.event';
 import { PaymentFailedEvent } from '@/shared/events/payment-failed.event';
+import { OrderCancelledAfterPaymentEvent } from '@/shared/events/order-cancelled-after-payment.event';
 import type { PaymentTransaction } from '../domain/payment-transaction.schema';
 import { runObserved } from '@/observability/trace';
 import { recordPaymentFailure } from '@/observability/domain-metrics';
@@ -140,9 +141,20 @@ export class ProcessIpnHandler implements ICommandHandler<ProcessIpnCommand> {
         // from VNPay (they retry until they receive RspCode='00'). Acknowledge
         // immediately without re-processing to prevent double event publishing.
         //
-        // Terminal states: completed, failed, refund_pending, refunded.
-        // Non-terminal (still processable): pending, awaiting_ipn.
+        // Terminal states: completed, refund_pending, refunded.
+        // A failed transaction can still receive a late paid IPN and be routed
+        // to refund processing.
         // -------------------------------------------------------------------------
+        if (txn.status === 'failed' && !responsePaid) {
+          this.logger.log(
+            `IPN for txnRef=${txnRef} already failed and response is unpaid - acknowledging retry.`,
+          );
+          return {
+            RspCode: IPN_RSP_SUCCESS,
+            Message: 'Transaction already failed',
+          };
+        }
+
         if (this.isTerminalStatus(txn.status)) {
           this.logger.log(
             `IPN for txnRef=${txnRef} already in terminal status=${txn.status} — ` +
@@ -166,19 +178,21 @@ export class ProcessIpnHandler implements ICommandHandler<ProcessIpnCommand> {
               `expected=${txn.amount} received=${ipnAmount} (delta=${Math.abs(ipnAmount - txn.amount)})`,
           );
 
-          // Only publish if this handler won the optimistic lock — prevents duplicate events
-          // when VNPay retries concurrently and two handlers race on the same transaction.
-          const mismatchFailed = await this.markFailed(
-            txn,
-            command.query,
-            providerTxnId,
-          );
-          if (mismatchFailed) {
-            recordPaymentFailure({ reason: 'amount_mismatch' });
-            this.publishPaymentFailed(
+          if (txn.status !== 'failed') {
+            // Only publish if this handler won the optimistic lock - prevents duplicate events
+            // when VNPay retries concurrently and two handlers race on the same transaction.
+            const mismatchFailed = await this.markFailed(
               txn,
-              `IPN amount mismatch: expected ${txn.amount}, got ${ipnAmount}`,
+              command.query,
+              providerTxnId,
             );
+            if (mismatchFailed) {
+              recordPaymentFailure({ reason: 'amount_mismatch' });
+              this.publishPaymentFailed(
+                txn,
+                `IPN amount mismatch: expected ${txn.amount}, got ${ipnAmount}`,
+              );
+            }
           }
 
           return {
@@ -194,6 +208,15 @@ export class ProcessIpnHandler implements ICommandHandler<ProcessIpnCommand> {
         //                        Bank approved the charge.
         // responsePaid = false → Any other code (bank declined, user cancelled, etc.)
         // -------------------------------------------------------------------------
+        if (responsePaid && txn.status === 'failed') {
+          return this.handleLatePaidAfterFailure(
+            txn,
+            command.query,
+            providerTxnId,
+            ipnAmount,
+          );
+        }
+
         if (responsePaid) {
           return this.handleSuccess(
             txn,
@@ -291,6 +314,72 @@ export class ProcessIpnHandler implements ICommandHandler<ProcessIpnCommand> {
     );
 
     return { RspCode: IPN_RSP_SUCCESS, Message: 'Confirmed' };
+  }
+
+  /**
+   * VNPay can deliver a successful IPN after our timeout task has already
+   * failed the attempt and cancelled the order. In that case the order must
+   * not become successful; we persist the charge and route it to refund.
+   */
+  private async handleLatePaidAfterFailure(
+    txn: PaymentTransaction,
+    rawQuery: Record<string, string>,
+    providerTxnId: string,
+    paidAmount: number,
+  ): Promise<IpnResponse> {
+    const now = new Date();
+
+    const updated = await this.txnRepo.updateStatus(
+      txn.id,
+      'completed',
+      txn.version,
+      {
+        providerTxnId: providerTxnId || null,
+        vnpResponseCode: rawQuery['vnp_ResponseCode'] ?? null,
+        rawIpnPayload: { ...rawQuery },
+        ipnReceivedAt: now,
+        paidAt: now,
+      },
+    );
+
+    if (!updated) {
+      this.logger.warn(
+        `Late paid IPN: optimistic lock lost for failed txn=${txn.id}. Re-reading for terminal check.`,
+      );
+
+      const current = await this.txnRepo.findById(txn.id);
+      if (current && this.isTerminalStatus(current.status)) {
+        return {
+          RspCode: IPN_RSP_SUCCESS,
+          Message: 'Late payment already reconciled',
+        };
+      }
+
+      return {
+        RspCode: IPN_RSP_UNKNOWN_ERROR,
+        Message: 'Concurrent processing conflict',
+      };
+    }
+
+    this.logger.warn(
+      `Late VNPay payment received after failure: txn=${txn.id} order=${txn.orderId} amount=${paidAmount}. Queuing refund.`,
+    );
+
+    this.eventBus.publish(
+      new OrderCancelledAfterPaymentEvent(
+        txn.orderId,
+        txn.customerId,
+        'vnpay',
+        paidAmount,
+        now,
+        'system',
+      ),
+    );
+
+    return {
+      RspCode: IPN_RSP_SUCCESS,
+      Message: 'Late paid transaction queued for refund',
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -393,7 +482,6 @@ export class ProcessIpnHandler implements ICommandHandler<ProcessIpnCommand> {
   private isTerminalStatus(status: PaymentTransaction['status']): boolean {
     return (
       status === 'completed' ||
-      status === 'failed' ||
       status === 'refund_pending' ||
       status === 'refunded'
     );

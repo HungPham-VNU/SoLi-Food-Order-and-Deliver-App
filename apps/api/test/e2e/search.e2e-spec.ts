@@ -115,6 +115,9 @@ async function seedSearchTestData(ownerId: string): Promise<void> {
       cuisineType: 'Vietnamese',
       latitude: 10.762622,
       longitude: 106.660172,
+      averageRating: 4.5,
+      ratingSum: 18,
+      reviewCount: 4,
     },
     // ── R2: Permanently closed — exclusion edge case ───────────────────────────
     {
@@ -393,6 +396,26 @@ describe('Search API (E2E)', () => {
       expect(res.body.items).toEqual([]);
       expect(res.body.total.items).toBe(0);
     });
+
+    it('B-04: restaurant results include rating projection fields', async () => {
+      const res = await http.get('/api/search').set(noAuthHeaders());
+
+      expect(res.status).toBe(200);
+      const phoRestaurant = (
+        res.body.restaurants as {
+          id: string;
+          averageRating: number;
+          ratingSum: number;
+          reviewCount: number;
+        }[]
+      ).find((restaurant) => restaurant.id === S.R1);
+
+      expect(phoRestaurant).toMatchObject({
+        averageRating: 4.5,
+        ratingSum: 18,
+        reviewCount: 4,
+      });
+    });
   });
 
   // ── § 2 Full-text search (?q=) ────────────────────────────────────────────────
@@ -407,6 +430,22 @@ describe('Search API (E2E)', () => {
       );
       expect(restaurantIds).toContain(S.R1); // "Phở Bắc" name matches
       expect(restaurantIds).not.toContain(S.R2); // closed
+
+      const phoItem = (
+        res.body.items as {
+          id: string;
+          restaurant: {
+            averageRating: number;
+            ratingSum: number;
+            reviewCount: number;
+          };
+        }[]
+      ).find((item) => item.id === S.r1Pho1);
+      expect(phoItem?.restaurant).toMatchObject({
+        averageRating: 4.5,
+        ratingSum: 18,
+        reviewCount: 4,
+      });
 
       const itemIds = (res.body.items as { id: string }[]).map((i) => i.id);
       expect(itemIds).toContain(S.r1Pho1); // Phở Bò Tái Nạm
