@@ -5,13 +5,21 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { useState } from 'react';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Star } from 'lucide-react-native';
+import { ArrowLeft, CreditCard, Star } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { formatCurrency } from '@/src/lib/format-utils';
 import { useMyOrderDetail } from '../hooks/use-order-history';
 import { REVIEWABLE_ORDER_STATUSES } from '@/src/features/review/api/review.api';
+import Toast from 'react-native-toast-message';
+import { captureMobileException } from '@/src/lib/observability';
+import {
+  buildVNPayStatusRouteParams,
+  openVNPayPaymentSession,
+  VNPAY_STATUS_ROUTE,
+} from '@/src/features/payment';
 import {
   useMenuItemImage,
   useRestaurantImage,
@@ -63,12 +71,47 @@ export function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [isOpeningPayment, setIsOpeningPayment] = useState(false);
 
   const { data: order, isLoading, isError } = useMyOrderDetail(id || '');
   const { data: restaurantImageUrl } = useRestaurantImage(
     order?.restaurantId || '',
   );
   const subtotal = order?.subtotal ?? 0;
+  const canContinueVNPayPayment =
+    order?.paymentMethod === 'vnpay' &&
+    order.status === 'pending' &&
+    !!order.paymentUrl;
+
+  const handleContinueVNPayPayment = async () => {
+    if (!order?.paymentUrl || isOpeningPayment) return;
+
+    setIsOpeningPayment(true);
+    try {
+      const session = await openVNPayPaymentSession(order.paymentUrl);
+      router.replace({
+        pathname: VNPAY_STATUS_ROUTE as any,
+        params: buildVNPayStatusRouteParams({
+          orderId: order.orderId,
+          paymentUrl: order.paymentUrl,
+          fallbackStatus: order.status,
+          session,
+        }),
+      });
+    } catch (error) {
+      captureMobileException(error, {
+        source: 'order_detail_vnpay_continue_payment',
+        orderId: order.orderId,
+      });
+      Toast.show({
+        type: 'error',
+        text1: 'Could not open VNPay',
+        text2: 'Please try again.',
+      });
+    } finally {
+      setIsOpeningPayment(false);
+    }
+  };
 
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
@@ -150,6 +193,30 @@ export function OrderDetailScreen() {
             </View>
           </View>
 
+          {canContinueVNPayPayment && (
+            <TouchableOpacity
+              onPress={handleContinueVNPayPayment}
+              disabled={isOpeningPayment}
+              className={`flex-row items-center justify-center rounded-2xl py-4 mb-6 bg-primary ${
+                isOpeningPayment ? 'opacity-60' : ''
+              }`}
+            >
+              {isOpeningPayment ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <CreditCard size={20} color="#ffffff" />
+              )}
+              <Text
+                className="text-on-primary ml-2"
+                style={{ fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16 }}
+              >
+                {isOpeningPayment
+                  ? 'Opening VNPay...'
+                  : 'Continue VNPay Payment'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <View className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm mb-6">
             <Text
               className="text-on-surface text-lg mb-4"
@@ -223,7 +290,9 @@ export function OrderDetailScreen() {
             </Text>
           </View>
 
-          {(REVIEWABLE_ORDER_STATUSES as readonly string[]).includes(order.status) && (
+          {(REVIEWABLE_ORDER_STATUSES as readonly string[]).includes(
+            order.status,
+          ) && (
             <TouchableOpacity
               onPress={() =>
                 router.navigate(`/(customer)/orders/${order.orderId}/rate`)

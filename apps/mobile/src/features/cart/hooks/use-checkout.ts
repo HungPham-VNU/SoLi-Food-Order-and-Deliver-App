@@ -22,6 +22,13 @@ import {
 
 const DEFAULT_DELIVERY_FEE = 15000; // 15k VND
 
+async function createCheckoutIdempotencyKey(): Promise<string> {
+  const randomBytes = await Crypto.getRandomBytesAsync(16);
+  return Array.from(randomBytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 function computeOrderSummary(
   subtotal: number,
   deliveryFee: number = DEFAULT_DELIVERY_FEE,
@@ -50,7 +57,13 @@ export function useCheckout() {
     longitude,
   );
 
-  const { selectedPaymentMethod, appliedCouponCode } = useCheckoutStore();
+  const {
+    selectedPaymentMethod,
+    appliedCouponCode,
+    checkoutIdempotencyKey,
+    setCheckoutIdempotencyKey,
+    clearCheckoutIdempotencyKey,
+  } = useCheckoutStore();
 
   const deliveryFee = estimate?.deliveryFee ?? DEFAULT_DELIVERY_FEE;
 
@@ -113,10 +126,12 @@ export function useCheckout() {
       couponCode: appliedCouponCode ?? undefined,
     };
 
-    const randomBytes = await Crypto.getRandomBytesAsync(16);
-    const idempotencyKey = Array.from(randomBytes)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
+    const idempotencyKey =
+      checkoutIdempotencyKey ?? (await createCheckoutIdempotencyKey());
+    if (!checkoutIdempotencyKey) {
+      setCheckoutIdempotencyKey(idempotencyKey);
+    }
+
     trackMobileEvent('checkout_submitted', {
       payment_method: dto.paymentMethod,
       item_count: cartItems.length,
@@ -136,6 +151,7 @@ export function useCheckout() {
           dto,
           idempotencyKey,
         });
+        clearCheckoutIdempotencyKey();
 
         trackMobileEvent('order_created', {
           order_id: data.orderId,
@@ -180,7 +196,9 @@ export function useCheckout() {
               paymentUrl: data.paymentUrl,
               fallbackStatus: data.status,
               session,
-              browserResult: data.paymentUrl ? undefined : 'missing_payment_url',
+              browserResult: data.paymentUrl
+                ? undefined
+                : 'missing_payment_url',
             }),
           });
           return;

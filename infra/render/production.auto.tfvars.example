@@ -30,7 +30,9 @@ api_env_vars = {
   VNPAY_TMN_CODE    = "replace-me"
   VNPAY_HASH_SECRET = "replace-me"
   VNPAY_URL         = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
-  VNPAY_RETURN_URL  = "https://api.example.com/payments/vnpay/return"
+  VNPAY_RETURN_URL  = "https://api.example.com/payments/vnpay/mobile-return"
+  MOBILE_PAYMENT_RETURN_URL = "uitfood://payment/vnpay-return"
+  PAYMENT_SESSION_TIMEOUT_SECONDS = "1800"
 
   APP_ENV                    = "production"
   APP_VERSION                = "1.0.0"
