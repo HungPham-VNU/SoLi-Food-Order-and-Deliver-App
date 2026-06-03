@@ -11,10 +11,7 @@ import { Tag } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useCheckout } from '../hooks';
 import { useCheckoutStore } from '../store/checkout-store';
-import {
-  useValidateCoupon,
-  useActivePromotions,
-} from '@/src/features/promotions';
+import { useValidateCoupon } from '@/src/features/promotions';
 import {
   CheckoutHeader,
   CheckoutDeliverySection,
@@ -42,14 +39,16 @@ export function SingleScreenCheckout() {
     isPlacingOrder,
   } = useCheckout();
 
-  const { setAppliedCouponCode } = useCheckoutStore();
+  const { selectedPromotion, setAppliedCouponCode } = useCheckoutStore();
 
   const validateCouponMutation = useValidateCoupon();
-  const { data: activePromotions } = useActivePromotions(cart?.restaurantId);
-
-  const autoApplyPromotions = activePromotions?.filter(
-    (p) => p.trigger === 'auto_apply',
-  );
+  const selectedPromotionForCart =
+    cart?.restaurantId && selectedPromotion?.restaurantId === cart.restaurantId
+      ? selectedPromotion
+      : null;
+  const selectedPromotions = selectedPromotionForCart
+    ? [selectedPromotionForCart]
+    : [];
 
   const handleApplyPromo = (code: string) => {
     if (!cart?.restaurantId) return;
@@ -151,8 +150,7 @@ export function SingleScreenCheckout() {
           appliedCouponCode={appliedCouponCode}
         />
 
-        {/* Auto-apply promotions banner */}
-        {autoApplyPromotions && autoApplyPromotions.length > 0 && (
+        {selectedPromotionForCart && (
           <View className="bg-primary/8 rounded-2xl p-4 gap-2 border border-primary/20">
             <View className="flex-row items-center gap-2">
               <Tag size={16} color="#0d631b" />
@@ -160,10 +158,10 @@ export function SingleScreenCheckout() {
                 className="text-primary text-sm"
                 style={{ fontFamily: 'Inter_600SemiBold' }}
               >
-                Active Deals
+                Selected Deal
               </Text>
             </View>
-            {autoApplyPromotions.map((promo) => (
+            {selectedPromotions.map((promo) => (
               <Text
                 key={promo.id}
                 className="text-on-surface text-xs"

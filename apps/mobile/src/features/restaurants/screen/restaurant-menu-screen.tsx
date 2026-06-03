@@ -22,10 +22,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { formatCurrency } from '@/src/lib/format-utils';
 import {
-  TAG_LABELS,
   useRestaurantReviews,
   type PublicReviewItem,
-  type ReviewTag,
 } from '@/src/features/review';
 import { type Restaurant, RestaurantMenuScreenProps } from '../types';
 import {
@@ -38,39 +36,6 @@ import { useRouter } from 'expo-router';
 
 const REVIEW_PAGE_SIZE = 3;
 const STAR_VALUES = [1, 2, 3, 4, 5] as const;
-const REVIEW_AVATAR_TONES = [
-  { background: '#e7f6e5', text: '#0d631b' },
-  { background: '#ffeedf', text: '#8b5000' },
-  { background: '#ffe8ef', text: '#741a41' },
-];
-
-function getReviewTagLabel(tag: string) {
-  return TAG_LABELS[tag as ReviewTag] ?? tag.replace(/_/g, ' ');
-}
-
-function formatReviewDate(value: string) {
-  const createdAt = new Date(value);
-  const timestamp = createdAt.getTime();
-
-  if (Number.isNaN(timestamp)) {
-    return '';
-  }
-
-  const diffMs = Date.now() - timestamp;
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffMinutes < 1) return 'Just now';
-  if (diffMinutes < 60) return `${diffMinutes} min ago`;
-  if (diffHours < 24) return `${diffHours} hr ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
-
-  return createdAt.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-}
 
 function formatReviewCount(count: number) {
   if (count <= 0) return 'No reviews yet';
@@ -140,61 +105,22 @@ function RatingStars({ rating, size = 16 }: { rating: number; size?: number }) {
   );
 }
 
-function CustomerReviewCard({
-  review,
-  index,
-}: {
-  review: PublicReviewItem;
-  index: number;
-}) {
-  const tone = REVIEW_AVATAR_TONES[index % REVIEW_AVATAR_TONES.length];
-  const tags = (review.tags ?? []).filter(Boolean).slice(0, 3);
+function CustomerReviewCard({ review }: { review: PublicReviewItem }) {
   const comment = review.comment?.trim();
 
   return (
     <View className="bg-surface-container-lowest rounded-3xl p-5 gap-3">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-row items-center gap-3 flex-1">
-          <View
-            className="w-10 h-10 rounded-full items-center justify-center"
-            style={{ backgroundColor: tone.background }}
-          >
-            <Text
-              className="font-jakarta-sans font-bold text-sm"
-              style={{ color: tone.text }}
-            >
-              VC
-            </Text>
-          </View>
-          <View className="flex-1">
-            <Text className="font-jakarta-sans font-bold text-on-surface">
-              Verified Customer
-            </Text>
-            <RatingStars rating={review.stars} size={13} />
-          </View>
-        </View>
-        <Text className="font-inter text-xs font-medium text-on-surface-variant">
-          {formatReviewDate(review.createdAt)}
-        </Text>
-      </View>
+      <RatingStars rating={review.stars} size={15} />
 
       {comment ? (
         <Text className="font-inter text-sm leading-5 text-on-surface-variant">
           {comment}
         </Text>
-      ) : null}
-
-      {tags.length > 0 ? (
-        <View className="flex-row flex-wrap gap-2">
-          {tags.map((tag) => (
-            <View key={tag} className="bg-surface-container-high rounded-full px-3 py-1">
-              <Text className="font-inter text-xs font-semibold text-on-surface-variant">
-                {getReviewTagLabel(tag)}
-              </Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
+      ) : (
+        <Text className="font-inter text-sm leading-5 text-on-surface-variant">
+          No comment provided.
+        </Text>
+      )}
     </View>
   );
 }
@@ -274,11 +200,10 @@ function CustomerReviewsSection({ restaurant }: { restaurant: Restaurant }) {
         </View>
       ) : reviews.length > 0 ? (
         <View className="gap-4">
-          {reviews.map((review, index) => (
+          {reviews.map((review) => (
             <CustomerReviewCard
               key={review.id}
               review={review}
-              index={index}
             />
           ))}
         </View>
