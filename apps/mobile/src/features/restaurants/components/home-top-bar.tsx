@@ -27,7 +27,7 @@ export function HomeTopBar({ insetsTop }: HomeTopBarProps) {
       <View className="flex-row items-center px-6 gap-2 w-full max-w-md mx-auto">
         <TouchableOpacity 
           className="text-on-background p-2 -ml-2 rounded-full active:bg-surface-variant"
-          onPress={() => router.push('/(customer)/(tabs)/profile')}
+          onPress={() => router.navigate('/(customer)/(tabs)/profile')}
         >
           <Menu size={24} color="#1a1c1c" />
         </TouchableOpacity>
@@ -38,7 +38,7 @@ export function HomeTopBar({ insetsTop }: HomeTopBarProps) {
           </Text>
           <TouchableOpacity
             className="flex-row items-center gap-1"
-            onPress={() => router.push('/(customer)/address-selection')}
+            onPress={() => router.navigate('/(customer)/address-selection')}
           >
             <Text 
               numberOfLines={1}
@@ -54,7 +54,7 @@ export function HomeTopBar({ insetsTop }: HomeTopBarProps) {
 
         <TouchableOpacity 
           className="w-10 h-10 rounded-full bg-surface-container overflow-hidden ring-2 ring-primary/20 shadow-sm items-center justify-center"
-          onPress={() => router.push('/(customer)/(tabs)/profile')}
+          onPress={() => router.navigate('/(customer)/(tabs)/profile')}
         >
           {avatarUrl ? (
             <Image

@@ -24,7 +24,7 @@ export function FloatingCartButton() {
       <TouchableOpacity
         className="bg-primary-container w-14 h-14 rounded-2xl items-center justify-center shadow-lg shadow-black/30 elevation-8"
         activeOpacity={0.8}
-        onPress={() => router.push('/(customer)/cart')}
+        onPress={() => router.navigate('/(customer)/cart')}
         accessibilityRole="button"
         accessible={true}
         accessibilityLabel={`Cart, ${itemCount} items`}

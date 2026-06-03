@@ -1,4 +1,4 @@
-﻿import * as WebBrowser from 'expo-web-browser';
+import * as WebBrowser from 'expo-web-browser';
 
 /**
  * The deep-link path that both the API's /payments/vnpay/mobile-return endpoint
@@ -14,6 +14,7 @@
  * Expo Go registers the uitfood:// scheme on the device via app.json.
  */
 const VNPAY_RETURN_DEEP_LINK = 'uitfood://payment/vnpay-return';
+export const VNPAY_STATUS_ROUTE = '/(customer)/payment/vnpay-return';
 
 export interface VNPayPaymentSessionResult {
   type: string;

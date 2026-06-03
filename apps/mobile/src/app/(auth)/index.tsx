@@ -5,11 +5,11 @@ export default function WelcomePage() {
   const router = useRouter();
 
   const handleGetStarted = () => {
-    router.push("/(auth)/sign-up");
+    router.navigate("/(auth)/sign-up");
   };
 
   const handleSignIn = () => {
-    router.push("/(auth)/sign-in");
+    router.navigate("/(auth)/sign-in");
   };
 
   const handleGoogleSignIn = () => {

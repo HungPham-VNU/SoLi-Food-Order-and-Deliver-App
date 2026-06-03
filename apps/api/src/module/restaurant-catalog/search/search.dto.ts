@@ -29,6 +29,24 @@ export class RestaurantSummaryDto {
   @ApiPropertyOptional({ example: 'https://cdn.example.com/cover.jpg' })
   coverImageUrl?: string | null;
 
+  @ApiProperty({
+    description: 'Average visible review rating for this restaurant',
+    example: 4.5,
+  })
+  averageRating!: number;
+
+  @ApiProperty({
+    description: 'Sum of visible review star ratings',
+    example: 18,
+  })
+  ratingSum!: number;
+
+  @ApiProperty({
+    description: 'Number of visible reviews included in the rating projection',
+    example: 4,
+  })
+  reviewCount!: number;
+
   @ApiPropertyOptional({ example: 10.762622 })
   latitude?: number | null;
 

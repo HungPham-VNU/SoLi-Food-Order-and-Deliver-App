@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   Heart,
   Star,
+  StarHalf,
   Clock,
   Truck,
   Plus,
@@ -20,7 +21,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { formatCurrency } from '@/src/lib/format-utils';
-import { RestaurantMenuScreenProps } from '../types';
+import {
+  TAG_LABELS,
+  useRestaurantReviews,
+  type PublicReviewItem,
+  type ReviewTag,
+} from '@/src/features/review';
+import { type Restaurant, RestaurantMenuScreenProps } from '../types';
 import {
   useRestaurant,
   useRestaurantCategories,
@@ -28,6 +35,281 @@ import {
 } from '../api';
 import { useMyCart } from '@/src/features/cart';
 import { useRouter } from 'expo-router';
+
+const REVIEW_PAGE_SIZE = 3;
+const STAR_VALUES = [1, 2, 3, 4, 5] as const;
+const REVIEW_AVATAR_TONES = [
+  { background: '#e7f6e5', text: '#0d631b' },
+  { background: '#ffeedf', text: '#8b5000' },
+  { background: '#ffe8ef', text: '#741a41' },
+];
+
+function getReviewTagLabel(tag: string) {
+  return TAG_LABELS[tag as ReviewTag] ?? tag.replace(/_/g, ' ');
+}
+
+function formatReviewDate(value: string) {
+  const createdAt = new Date(value);
+  const timestamp = createdAt.getTime();
+
+  if (Number.isNaN(timestamp)) {
+    return '';
+  }
+
+  const diffMs = Date.now() - timestamp;
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes} min ago`;
+  if (diffHours < 24) return `${diffHours} hr ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+
+  return createdAt.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function formatReviewCount(count: number) {
+  if (count <= 0) return 'No reviews yet';
+  if (count === 1) return 'Based on 1 review';
+  return `Based on ${count.toLocaleString('en-US')} reviews`;
+}
+
+function getDisplayRating(
+  restaurant: Restaurant,
+  reviews: PublicReviewItem[],
+) {
+  const projectedRating =
+    typeof restaurant.averageRating === 'number' && restaurant.averageRating > 0
+      ? restaurant.averageRating
+      : restaurant.rating;
+
+  if (typeof projectedRating === 'number' && projectedRating > 0) {
+    return projectedRating;
+  }
+
+  if (reviews.length === 0) {
+    return null;
+  }
+
+  return (
+    reviews.reduce((total, review) => total + review.stars, 0) / reviews.length
+  );
+}
+
+function RatingStars({ rating, size = 16 }: { rating: number; size?: number }) {
+  const cappedRating = Math.max(0, Math.min(5, rating));
+  const fullStars = Math.floor(cappedRating);
+  const remainder = cappedRating - fullStars;
+  const roundedFullStars = fullStars + (remainder >= 0.75 ? 1 : 0);
+  const hasHalfStar = remainder >= 0.25 && remainder < 0.75;
+
+  return (
+    <View className="flex-row items-center gap-0.5">
+      {STAR_VALUES.map((value) => {
+        if (value <= roundedFullStars) {
+          return (
+            <Star key={value} size={size} color="#ffb05f" fill="#ffb05f" />
+          );
+        }
+
+        if (hasHalfStar && value === fullStars + 1) {
+          return (
+            <StarHalf
+              key={value}
+              size={size}
+              color="#ffb05f"
+              fill="#ffb05f"
+            />
+          );
+        }
+
+        return (
+          <Star
+            key={value}
+            size={size}
+            color="#bfcaba"
+            fill="transparent"
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+function CustomerReviewCard({
+  review,
+  index,
+}: {
+  review: PublicReviewItem;
+  index: number;
+}) {
+  const tone = REVIEW_AVATAR_TONES[index % REVIEW_AVATAR_TONES.length];
+  const tags = (review.tags ?? []).filter(Boolean).slice(0, 3);
+  const comment = review.comment?.trim();
+
+  return (
+    <View className="bg-surface-container-lowest rounded-3xl p-5 gap-3">
+      <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-row items-center gap-3 flex-1">
+          <View
+            className="w-10 h-10 rounded-full items-center justify-center"
+            style={{ backgroundColor: tone.background }}
+          >
+            <Text
+              className="font-jakarta-sans font-bold text-sm"
+              style={{ color: tone.text }}
+            >
+              VC
+            </Text>
+          </View>
+          <View className="flex-1">
+            <Text className="font-jakarta-sans font-bold text-on-surface">
+              Verified Customer
+            </Text>
+            <RatingStars rating={review.stars} size={13} />
+          </View>
+        </View>
+        <Text className="font-inter text-xs font-medium text-on-surface-variant">
+          {formatReviewDate(review.createdAt)}
+        </Text>
+      </View>
+
+      {comment ? (
+        <Text className="font-inter text-sm leading-5 text-on-surface-variant">
+          {comment}
+        </Text>
+      ) : null}
+
+      {tags.length > 0 ? (
+        <View className="flex-row flex-wrap gap-2">
+          {tags.map((tag) => (
+            <View key={tag} className="bg-surface-container-high rounded-full px-3 py-1">
+              <Text className="font-inter text-xs font-semibold text-on-surface-variant">
+                {getReviewTagLabel(tag)}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function CustomerReviewsSection({ restaurant }: { restaurant: Restaurant }) {
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isError,
+    isFetchingNextPage,
+    isLoading,
+    refetch,
+  } = useRestaurantReviews(restaurant.id, REVIEW_PAGE_SIZE);
+
+  const reviews = useMemo(
+    () => data?.pages.flatMap((page) => page.data) ?? [],
+    [data?.pages],
+  );
+  const totalReviews = data?.pages[0]?.total ?? restaurant.reviewCount ?? 0;
+  const displayRating = getDisplayRating(restaurant, reviews);
+
+  return (
+    <View className="px-6 pb-4 gap-6">
+      <Text className="font-jakarta-sans text-2xl font-bold text-on-surface">
+        Customer Reviews
+      </Text>
+
+      <View className="bg-surface-container-low rounded-3xl p-6 flex-row items-center justify-between gap-4">
+        <View className="flex-1">
+          <View className="flex-row items-baseline gap-2">
+            <Text className="font-jakarta-sans text-4xl font-extrabold text-on-surface">
+              {displayRating ? displayRating.toFixed(1) : 'New'}
+            </Text>
+            {displayRating ? (
+              <Text className="font-inter text-on-surface-variant font-medium">
+                / 5.0
+              </Text>
+            ) : null}
+          </View>
+          {displayRating ? (
+            <View className="mt-1">
+              <RatingStars rating={displayRating} size={20} />
+            </View>
+          ) : null}
+          <Text className="font-inter text-sm text-on-surface-variant mt-2">
+            {formatReviewCount(totalReviews)}
+          </Text>
+        </View>
+        <View className="bg-primary-fixed rounded-2xl px-4 py-3 items-center min-w-20">
+          <Text className="font-jakarta-sans text-xl font-extrabold text-primary">
+            {totalReviews.toLocaleString('en-US')}
+          </Text>
+          <Text className="font-inter text-xs font-semibold text-primary">
+            reviews
+          </Text>
+        </View>
+      </View>
+
+      {isLoading ? (
+        <View className="bg-surface-container-lowest rounded-3xl p-6 items-center">
+          <ActivityIndicator size="small" color="#0d631b" />
+        </View>
+      ) : isError ? (
+        <View className="bg-error-container rounded-3xl p-6 gap-4">
+          <Text className="font-inter text-sm font-semibold text-on-error-container">
+            Reviews are unavailable right now.
+          </Text>
+          <TouchableOpacity
+            onPress={() => void refetch()}
+            className="self-start bg-primary rounded-full px-5 py-2.5"
+          >
+            <Text className="font-jakarta-sans font-bold text-on-primary">
+              Retry
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : reviews.length > 0 ? (
+        <View className="gap-4">
+          {reviews.map((review, index) => (
+            <CustomerReviewCard
+              key={review.id}
+              review={review}
+              index={index}
+            />
+          ))}
+        </View>
+      ) : (
+        <View className="bg-surface-container-lowest rounded-3xl p-6">
+          <Text className="font-inter text-sm text-on-surface-variant">
+            No customer reviews yet.
+          </Text>
+        </View>
+      )}
+
+      {hasNextPage ? (
+        <TouchableOpacity
+          onPress={() => void fetchNextPage()}
+          disabled={isFetchingNextPage}
+          className="w-full py-3 rounded-3xl border-2 border-primary/20 items-center active:scale-95"
+        >
+          {isFetchingNextPage ? (
+            <ActivityIndicator size="small" color="#0d631b" />
+          ) : (
+            <Text className="font-jakarta-sans font-bold text-primary">
+              {reviews.length <= REVIEW_PAGE_SIZE
+                ? 'View All Reviews'
+                : 'Load More Reviews'}
+            </Text>
+          )}
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
 
 export function RestaurantMenuScreen({
   restaurantId,
@@ -132,6 +414,11 @@ export function RestaurantMenuScreen({
   const itemCount =
     cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
   const restaurantImageUrl = restaurant.coverImageUrl || restaurant.logoUrl;
+  const restaurantRating =
+    typeof restaurant.averageRating === 'number' && restaurant.averageRating > 0
+      ? restaurant.averageRating
+      : restaurant.rating;
+  const restaurantReviewCount = restaurant.reviewCount ?? 0;
 
   return (
     <View className="flex-1 bg-surface">
@@ -198,8 +485,8 @@ export function RestaurantMenuScreen({
               <View className="flex-row items-center gap-1">
                 <Star size={14} color="#ffb05f" fill="#ffb05f" />
                 <Text className="text-white text-sm font-medium">
-                  {restaurant.rating ? restaurant.rating.toFixed(1) : 'New'} (
-                  {restaurant.reviewCount || '0'}+)
+                  {restaurantRating ? restaurantRating.toFixed(1) : 'New'} (
+                  {restaurantReviewCount}+)
                 </Text>
               </View>
               <View className="flex-row items-center gap-1">
@@ -345,6 +632,8 @@ export function RestaurantMenuScreen({
           </View>
         </View>
 
+        <CustomerReviewsSection restaurant={restaurant} />
+
         {/* Spacer for bottom nav */}
         <View style={{ height: insets.bottom + 100 }} />
       </ScrollView>
@@ -356,7 +645,7 @@ export function RestaurantMenuScreen({
           style={{ paddingBottom: Math.max(insets.bottom, 24) }}
         >
           <TouchableOpacity
-            onPress={() => router.push('/(customer)/cart')}
+            onPress={() => router.navigate('/(customer)/cart')}
             activeOpacity={0.9}
           >
             <LinearGradient

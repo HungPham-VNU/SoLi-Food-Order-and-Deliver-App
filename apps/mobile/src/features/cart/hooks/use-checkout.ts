@@ -1,7 +1,6 @@
-﻿import { router } from 'expo-router';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMyCart } from './use-cart';
-import { useSession } from '@/src/lib/auth-client';
 import { useAddressStore } from '@/src/features/location/store/address-store';
 import { useCheckoutStore } from '../store/checkout-store';
 import { useDeliveryEstimate } from '@/src/features/restaurants/api/restaurant-api';
@@ -17,10 +16,18 @@ import { captureMobileException, Sentry } from '@/src/lib/observability';
 import {
   buildVNPayStatusRouteParams,
   openVNPayPaymentSession,
+  VNPAY_STATUS_ROUTE,
   type VNPayPaymentSessionResult,
 } from '@/src/features/payment';
 
 const DEFAULT_DELIVERY_FEE = 15000; // 15k VND
+
+async function createCheckoutIdempotencyKey(): Promise<string> {
+  const randomBytes = await Crypto.getRandomBytesAsync(16);
+  return Array.from(randomBytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 function computeOrderSummary(
   subtotal: number,
@@ -42,7 +49,6 @@ export function useCheckout() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { selectedAddress, latitude, longitude } = useAddressStore();
-  const { data: session } = useSession();
   const { data: cart, isLoading, isError } = useMyCart();
 
   const { data: estimate } = useDeliveryEstimate(
@@ -51,7 +57,13 @@ export function useCheckout() {
     longitude,
   );
 
-  const { selectedPaymentMethod, appliedCouponCode } = useCheckoutStore();
+  const {
+    selectedPaymentMethod,
+    appliedCouponCode,
+    checkoutIdempotencyKey,
+    setCheckoutIdempotencyKey,
+    clearCheckoutIdempotencyKey,
+  } = useCheckoutStore();
 
   const deliveryFee = estimate?.deliveryFee ?? DEFAULT_DELIVERY_FEE;
 
@@ -82,6 +94,10 @@ export function useCheckout() {
   };
 
   const handlePlaceOrder = async () => {
+    if (cartItems.length === 0) {
+      Toast.show({ type: 'error', text1: 'Your cart is empty' });
+      return;
+    }
     if (!selectedAddress) {
       Toast.show({ type: 'error', text1: 'Delivery address is required' });
       return;
@@ -110,10 +126,12 @@ export function useCheckout() {
       couponCode: appliedCouponCode ?? undefined,
     };
 
-    const randomBytes = await Crypto.getRandomBytesAsync(16);
-    const idempotencyKey = Array.from(randomBytes)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
+    const idempotencyKey =
+      checkoutIdempotencyKey ?? (await createCheckoutIdempotencyKey());
+    if (!checkoutIdempotencyKey) {
+      setCheckoutIdempotencyKey(idempotencyKey);
+    }
+
     trackMobileEvent('checkout_submitted', {
       payment_method: dto.paymentMethod,
       item_count: cartItems.length,
@@ -133,6 +151,7 @@ export function useCheckout() {
           dto,
           idempotencyKey,
         });
+        clearCheckoutIdempotencyKey();
 
         trackMobileEvent('order_created', {
           order_id: data.orderId,
@@ -170,15 +189,16 @@ export function useCheckout() {
             }
           }
 
-          router.dismissAll();
           router.replace({
-            pathname: '/payment/vnpay-return' as any,
+            pathname: VNPAY_STATUS_ROUTE as any,
             params: buildVNPayStatusRouteParams({
               orderId: data.orderId,
               paymentUrl: data.paymentUrl,
               fallbackStatus: data.status,
               session,
-              browserResult: data.paymentUrl ? undefined : 'missing_payment_url',
+              browserResult: data.paymentUrl
+                ? undefined
+                : 'missing_payment_url',
             }),
           });
           return;
@@ -194,16 +214,15 @@ export function useCheckout() {
     );
   };
 
-  const cartItems: CartItem[] =
-    cart?.items.map((item) => ({
-      id: item.cartItemId,
-      menuItemId: item.menuItemId,
-      name: item.itemName,
-      price: item.unitPrice,
-      quantity: item.quantity,
-      imageUrl: item.imageUrl ?? '',
-      selectedModifiers: item.selectedModifiers,
-    })) || [];
+  const cartItems: CartItem[] = (cart?.items ?? []).map((item) => ({
+    id: item.cartItemId,
+    menuItemId: item.menuItemId,
+    name: item.itemName,
+    price: item.unitPrice,
+    quantity: item.quantity,
+    imageUrl: item.imageUrl ?? '',
+    selectedModifiers: item.selectedModifiers ?? [],
+  }));
 
   const discountAmount = discountPreview?.discountAmount ?? 0;
   const summary = computeOrderSummary(

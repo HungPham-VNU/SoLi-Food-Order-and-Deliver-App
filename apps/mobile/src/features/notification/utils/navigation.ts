@@ -23,22 +23,22 @@ export function useNotificationNavigation() {
       case 'refund_initiated':
         if (data.orderId) {
           // Navigate to order detail
-          router.push(`/(customer)/orders/${data.orderId}`);
+          router.navigate(`/(customer)/orders/${data.orderId}`);
         } else {
-          router.push('/(customer)/(tabs)/orders');
+          router.navigate('/(customer)/(tabs)/orders');
         }
         break;
 
       case 'new_order_received':
         if (data.orderId) {
-          router.push(`/(restaurant)/orders/${data.orderId}` as any);
+          router.navigate(`/(restaurant)/orders/${data.orderId}` as any);
         } else {
-          router.push('/(restaurant)/(tabs)/orders' as any);
+          router.navigate('/(restaurant)/(tabs)/orders' as any);
         }
         break;
 
       default:
-        router.push('/notifications');
+        router.navigate('/notifications');
     }
   };
 

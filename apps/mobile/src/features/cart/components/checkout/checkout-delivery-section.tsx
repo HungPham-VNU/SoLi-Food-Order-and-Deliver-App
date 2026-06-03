@@ -17,7 +17,7 @@ export function CheckoutDeliverySection({
     <View className="bg-surface-container-lowest rounded-2xl p-4 gap-4 overflow-hidden border border-outline-variant/15">
       <TouchableOpacity
         activeOpacity={0.7}
-        onPress={() => router.push('/(customer)/address-selection')}
+        onPress={() => router.navigate('/(customer)/address-selection')}
         className="flex-col items-start gap-0.5"
       >
         <Text

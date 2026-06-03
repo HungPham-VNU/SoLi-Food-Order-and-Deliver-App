@@ -62,7 +62,7 @@ export default function RestaurantMenuPage() {
   };
 
   const handleItemPress = (itemId: string) => {
-    router.push({ pathname: '/restaurant/menu-item/[id]', params: { id: itemId } });
+    router.navigate({ pathname: '/restaurant/menu-item/[id]', params: { id: itemId } });
   };
 
   const handleAddItem = (itemId: string) => {

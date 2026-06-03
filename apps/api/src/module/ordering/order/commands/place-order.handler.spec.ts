@@ -17,6 +17,7 @@ jest.mock('@/observability/domain-metrics', () => ({
 import {
   BadRequestException,
   ConflictException,
+  ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { PlaceOrderHandler } from './place-order.handler';
@@ -221,9 +222,11 @@ function buildHandler({
   };
 
   const paymentPort = {
-    initiateVNPayPayment: jest
-      .fn()
-      .mockResolvedValue({ paymentUrl: 'https://vnpay.vn/pay?token=abc' }),
+    initiateVNPayPayment: jest.fn().mockResolvedValue({
+      txnId: 'txn-1',
+      paymentUrl: 'https://vnpay.vn/pay?token=abc',
+    }),
+    markPaymentAttemptFailed: jest.fn().mockResolvedValue(undefined),
   };
 
   const promotionPort = {
@@ -547,9 +550,13 @@ describe('PlaceOrderHandler', () => {
   // -------------------------------------------------------------------------
   describe('happy path VNPay', () => {
     it('returns order with paymentUrl attached', async () => {
-      const order = makePersistedOrder({ paymentMethod: 'vnpay' });
+      const order = makePersistedOrder({
+        paymentMethod: 'vnpay',
+        paymentUrl: 'https://vnpay.vn/pay?token=xyz',
+      });
       const { handler, paymentPort } = buildHandler({ persistedOrder: order });
       paymentPort.initiateVNPayPayment.mockResolvedValue({
+        txnId: 'txn-xyz',
         paymentUrl: 'https://vnpay.vn/pay?token=xyz',
       });
 
@@ -563,9 +570,11 @@ describe('PlaceOrderHandler', () => {
       expect(result.paymentUrl).toBe('https://vnpay.vn/pay?token=xyz');
     });
 
-    it('still returns order when VNPay URL generation fails (resilient)', async () => {
+    it('rejects checkout when VNPay URL generation fails before order persistence', async () => {
       const order = makePersistedOrder({ paymentMethod: 'vnpay' });
-      const { handler, paymentPort } = buildHandler({ persistedOrder: order });
+      const { handler, paymentPort, db, cartRepo } = buildHandler({
+        persistedOrder: order,
+      });
       paymentPort.initiateVNPayPayment.mockRejectedValue(
         new Error('VNPay gateway timeout'),
       );
@@ -575,11 +584,55 @@ describe('PlaceOrderHandler', () => {
         deliveryAddress,
         'vnpay',
       );
-      const result = await handler.execute(command);
 
-      // Order returned without paymentUrl
-      expect(result).toBeDefined();
-      expect(result.id).toBe(order.id);
+      await expect(handler.execute(command)).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+      expect(db.transaction).not.toHaveBeenCalled();
+      expect(cartRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('rejects zero-payable VNPay orders and rolls back a reserved promotion', async () => {
+      const { handler, paymentPort, promotionPort, db } = buildHandler();
+      promotionPort.computeAndReserveDiscount.mockResolvedValue({
+        reserved: true,
+        discountAmount: 85000,
+        usageId: 'usage-1',
+      });
+
+      const command = new PlaceOrderCommand(
+        CUSTOMER_ID,
+        deliveryAddress,
+        'vnpay',
+      );
+
+      await expect(handler.execute(command)).rejects.toBeInstanceOf(
+        UnprocessableEntityException,
+      );
+      expect(paymentPort.initiateVNPayPayment).not.toHaveBeenCalled();
+      expect(db.transaction).not.toHaveBeenCalled();
+      expect(promotionPort.rollbackReservations).toHaveBeenCalled();
+    });
+
+    it('marks the VNPay payment attempt failed when order persistence fails after session creation', async () => {
+      const { handler, paymentPort, db } = buildHandler();
+      paymentPort.initiateVNPayPayment.mockResolvedValue({
+        txnId: 'txn-created',
+        paymentUrl: 'https://vnpay.vn/pay?token=created',
+      });
+      db.transaction.mockRejectedValue(new Error('DB failure'));
+
+      const command = new PlaceOrderCommand(
+        CUSTOMER_ID,
+        deliveryAddress,
+        'vnpay',
+      );
+
+      await expect(handler.execute(command)).rejects.toThrow();
+      expect(paymentPort.markPaymentAttemptFailed).toHaveBeenCalledWith(
+        'txn-created',
+        'Order persistence failed after VNPay payment session was created',
+      );
     });
   });
 

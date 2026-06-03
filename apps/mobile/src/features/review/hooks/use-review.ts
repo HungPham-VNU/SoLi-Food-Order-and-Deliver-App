@@ -1,5 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import {
+  getRestaurantReviews,
   getMyReview,
   submitReview,
   SubmitReviewPayload,
@@ -12,6 +18,10 @@ export const reviewKeys = {
   all: ['reviews'] as const,
   myByOrder: (orderId: string) =>
     [...reviewKeys.all, 'my', orderId] as const,
+  restaurant: (restaurantId: string) =>
+    [...reviewKeys.all, 'restaurant', restaurantId] as const,
+  restaurantList: (restaurantId: string, limit: number) =>
+    [...reviewKeys.restaurant(restaurantId), { limit }] as const,
 };
 
 // Returns null when the user has not yet reviewed the order (404),
@@ -35,6 +45,22 @@ export const useMyReview = (orderId: string, enabled = true) => {
   });
 };
 
+export const useRestaurantReviews = (restaurantId: string, limit = 3) => {
+  return useInfiniteQuery({
+    queryKey: reviewKeys.restaurantList(restaurantId, limit),
+    queryFn: ({ pageParam }) =>
+      getRestaurantReviews(restaurantId, Number(pageParam), limit),
+    enabled: !!restaurantId,
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const loadedCount = lastPage.page * lastPage.limit;
+      return loadedCount < lastPage.total ? lastPage.page + 1 : undefined;
+    },
+    retry: false,
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
 export const useSubmitReview = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -49,6 +75,7 @@ export const useSubmitReview = () => {
       // Refresh restaurant rating/reviewCount projection displayed across the app.
       qc.invalidateQueries({ queryKey: restaurantKeys.detail(data.restaurantId) });
       qc.invalidateQueries({ queryKey: restaurantKeys.lists() });
+      qc.invalidateQueries({ queryKey: reviewKeys.restaurant(data.restaurantId) });
     },
   });
 };

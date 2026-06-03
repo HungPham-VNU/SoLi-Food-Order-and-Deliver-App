@@ -56,6 +56,21 @@ export interface ReviewResponse {
   message?: string;
 }
 
+export interface PublicReviewItem {
+  id: string;
+  stars: number;
+  comment?: string | null;
+  tags?: string[] | null;
+  createdAt: string;
+}
+
+export interface PublicReviewListResponse {
+  data: PublicReviewItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export const submitReview = async (
   payload: SubmitReviewPayload,
 ): Promise<ReviewResponse> => {
@@ -69,4 +84,16 @@ export const getMyReview = async (
   orderId: string,
 ): Promise<ReviewResponse> => {
   return apiFetch<ReviewResponse>(`/api/reviews/my/${orderId}`);
+};
+
+export const getRestaurantReviews = async (
+  restaurantId: string,
+  page = 1,
+  limit = 3,
+): Promise<PublicReviewListResponse> => {
+  return apiFetch<PublicReviewListResponse>(
+    `/api/reviews/restaurant/${encodeURIComponent(
+      restaurantId,
+    )}?page=${page}&limit=${limit}`,
+  );
 };

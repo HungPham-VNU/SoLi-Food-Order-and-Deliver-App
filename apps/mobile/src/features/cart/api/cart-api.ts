@@ -1,11 +1,49 @@
 import { apiFetch } from '@/src/lib/api-client';
-import {
+import type {
   AddItemToCartRequest,
+  CartItemResponse,
   CartResponse,
   UpdateCartItemQuantityRequest,
 } from '../types';
 
-export const getMyCart = () => apiFetch<CartResponse | null>('/api/carts/my');
+function normalizeCartResponse(cart: CartResponse | null): CartResponse | null {
+  if (!cart) {
+    return null;
+  }
+
+  const items = Array.isArray(cart.items) ? cart.items : [];
+  const normalizedItems: CartItemResponse[] = items.map((item) => {
+    const selectedModifiers = Array.isArray(item.selectedModifiers)
+      ? item.selectedModifiers
+      : [];
+    const modifierTotal = selectedModifiers.reduce(
+      (sum, modifier) => sum + modifier.price,
+      0,
+    );
+    const subtotal =
+      typeof item.subtotal === 'number'
+        ? item.subtotal
+        : (item.unitPrice + modifierTotal) * item.quantity;
+
+    return {
+      ...item,
+      selectedModifiers,
+      subtotal,
+    };
+  });
+
+  return {
+    ...cart,
+    items: normalizedItems,
+    totalAmount:
+      typeof cart.totalAmount === 'number'
+        ? cart.totalAmount
+        : normalizedItems.reduce((sum, item) => sum + item.subtotal, 0),
+  };
+}
+
+export const getMyCart = async () =>
+  normalizeCartResponse(await apiFetch<CartResponse | null>('/api/carts/my'));
 
 export const addItemToCart = (data: AddItemToCartRequest) => {
   const { optimisticSelectedModifiers, ...requestBody } = data;
@@ -13,7 +51,7 @@ export const addItemToCart = (data: AddItemToCartRequest) => {
   return apiFetch<CartResponse>('/api/carts/my/items', {
     method: 'POST',
     body: JSON.stringify(requestBody),
-  });
+  }).then((cart) => normalizeCartResponse(cart)!);
 };
 
 export const updateCartItemQuantity = async (
@@ -28,7 +66,7 @@ export const updateCartItemQuantity = async (
     },
   );
 
-  return response || null;
+  return normalizeCartResponse(response || null);
 };
 
 export const removeCartItem = async (cartItemId: string) => {
@@ -39,7 +77,7 @@ export const removeCartItem = async (cartItemId: string) => {
     },
   );
 
-  return response || null;
+  return normalizeCartResponse(response || null);
 };
 
 export const clearCart = () =>

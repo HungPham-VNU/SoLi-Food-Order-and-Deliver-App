@@ -1,5 +1,6 @@
 import type { ConfigType } from '@nestjs/config';
 import { vnpayConfig } from '@/config/vnpay.config';
+import { PaymentInitiationFailedError } from '@/shared/ports/payment-initiation.port';
 import { PaymentService } from './payment.service';
 import { VNPayService } from './vnpay.service';
 import { PaymentTransactionRepository } from '../repositories/payment-transaction.repository';
@@ -47,6 +48,8 @@ function buildService(timeoutSec = 1800) {
     updateToAwaitingIpn: jest
       .fn()
       .mockResolvedValue(makeTxn({ status: 'awaiting_ipn' })),
+    findById: jest.fn().mockResolvedValue(makeTxn()),
+    updateStatus: jest.fn().mockResolvedValue(makeTxn({ status: 'failed' })),
     findByCustomerId: jest.fn().mockResolvedValue([]),
   } as unknown as PaymentTransactionRepository;
 
@@ -174,7 +177,42 @@ describe('PaymentService', () => {
 
       await expect(
         service.initiateVNPayPayment('o1', 'c1', 100000, '1.2.3.4'),
-      ).rejects.toThrow('DB error');
+      ).rejects.toMatchObject({
+        phase: 'transaction_create',
+      });
+      await expect(
+        service.initiateVNPayPayment('o1', 'c1', 100000, '1.2.3.4'),
+      ).rejects.toBeInstanceOf(PaymentInitiationFailedError);
+    });
+
+    it('marks the transaction failed when VNPay URL generation throws', async () => {
+      const { service, vnpayService, txnRepo } = buildService();
+      (vnpayService.buildPaymentUrl as jest.Mock).mockImplementation(() => {
+        throw new Error('bad VNPay config');
+      });
+
+      await expect(
+        service.initiateVNPayPayment('o1', 'c1', 100000, '1.2.3.4'),
+      ).rejects.toMatchObject({
+        phase: 'url_generation',
+      });
+
+      expect(txnRepo.updateStatus).toHaveBeenCalledWith('txn-1', 'failed', 0);
+    });
+
+    it('marks the transaction failed when awaiting_ipn update throws', async () => {
+      const { service, txnRepo } = buildService();
+      (txnRepo.updateToAwaitingIpn as jest.Mock).mockRejectedValue(
+        new Error('update failed'),
+      );
+
+      await expect(
+        service.initiateVNPayPayment('o1', 'c1', 100000, '1.2.3.4'),
+      ).rejects.toMatchObject({
+        phase: 'transaction_update',
+      });
+
+      expect(txnRepo.updateStatus).toHaveBeenCalledWith('txn-1', 'failed', 0);
     });
 
     it('uses PAYMENT_SESSION_TIMEOUT_SECONDS from config to compute expiresAt', async () => {

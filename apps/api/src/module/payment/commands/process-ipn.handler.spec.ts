@@ -5,6 +5,7 @@ import { VNPayService } from '../services/vnpay.service';
 import { PaymentTransactionRepository } from '../repositories/payment-transaction.repository';
 import { PaymentConfirmedEvent } from '@/shared/events/payment-confirmed.event';
 import { PaymentFailedEvent } from '@/shared/events/payment-failed.event';
+import { OrderCancelledAfterPaymentEvent } from '@/shared/events/order-cancelled-after-payment.event';
 import type { PaymentTransaction } from '../domain/payment-transaction.schema';
 
 // ---------------------------------------------------------------------------
@@ -134,12 +135,7 @@ describe('ProcessIpnHandler', () => {
   // Step 3: Idempotency (terminal state)
   // -------------------------------------------------------------------------
   describe('idempotency', () => {
-    it.each([
-      ['completed'],
-      ['failed'],
-      ['refund_pending'],
-      ['refunded'],
-    ] as const)(
+    it.each([['completed'], ['refund_pending'], ['refunded']] as const)(
       'returns RspCode 00 immediately when transaction is already %s',
       async (status) => {
         const { handler, vnpayService, txnRepo, eventBus } = buildHandler();
@@ -155,6 +151,27 @@ describe('ProcessIpnHandler', () => {
         expect(eventBus.publish).not.toHaveBeenCalled();
       },
     );
+
+    it('returns RspCode 00 immediately when transaction is already failed and IPN is unpaid', async () => {
+      const { handler, vnpayService, txnRepo, eventBus } = buildHandler();
+      (vnpayService.verifyIpn as jest.Mock).mockReturnValue(
+        makeSuccessVerification({ responsePaid: false }),
+      );
+      (txnRepo.findById as jest.Mock).mockResolvedValue(
+        makeTxn({ status: 'failed' }),
+      );
+
+      const result = await handler.execute(
+        makeCommand({
+          vnp_ResponseCode: '24',
+          vnp_TransactionStatus: '02',
+        }),
+      );
+
+      expect(result.RspCode).toBe('00');
+      expect(txnRepo.updateStatus).not.toHaveBeenCalled();
+      expect(eventBus.publish).not.toHaveBeenCalled();
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -305,6 +322,40 @@ describe('ProcessIpnHandler', () => {
       const result = await handler.execute(makeCommand());
 
       expect(result.RspCode).toBe('00');
+    });
+
+    it('queues refund instead of confirming the order when a paid IPN arrives after failure', async () => {
+      const { handler, vnpayService, txnRepo, eventBus } = buildHandler();
+      (vnpayService.verifyIpn as jest.Mock).mockReturnValue(
+        makeSuccessVerification({ amount: 150000, responsePaid: true }),
+      );
+      (txnRepo.findById as jest.Mock).mockResolvedValue(
+        makeTxn({
+          status: 'failed',
+          orderId: 'order-late-paid',
+          customerId: 'cust-late-paid',
+          amount: 150000,
+        }),
+      );
+      (txnRepo.updateStatus as jest.Mock).mockResolvedValue(
+        makeTxn({ status: 'completed' }),
+      );
+
+      const result = await handler.execute(makeCommand());
+
+      expect(result.RspCode).toBe('00');
+      expect(txnRepo.updateStatus).toHaveBeenCalledWith(
+        'txn-1',
+        'completed',
+        0,
+        expect.any(Object),
+      );
+      expect(eventBus.publish).toHaveBeenCalledWith(
+        expect.any(OrderCancelledAfterPaymentEvent),
+      );
+      expect(eventBus.publish).not.toHaveBeenCalledWith(
+        expect.any(PaymentConfirmedEvent),
+      );
     });
   });
 

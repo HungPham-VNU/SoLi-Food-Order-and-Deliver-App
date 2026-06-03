@@ -1,7 +1,10 @@
 ﻿import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { randomUUID } from 'crypto';
-import { IPaymentInitiationPort } from '@/shared/ports/payment-initiation.port';
+import {
+  IPaymentInitiationPort,
+  PaymentInitiationFailedError,
+} from '@/shared/ports/payment-initiation.port';
 import { VNPayService } from './vnpay.service';
 import { PaymentTransactionRepository } from '../repositories/payment-transaction.repository';
 import type { PaymentTransaction } from '../domain/payment-transaction.schema';
@@ -22,13 +25,10 @@ import { vnpayConfig } from '@/config/vnpay.config';
  *   4. Return { txnId, paymentUrl } to PlaceOrderHandler.
  *
  * Failure handling:
- *   - If step 1 fails: DB error is propagated. PlaceOrderHandler will catch and
- *     decide whether to let the order stand with no paymentUrl.
- *   - If step 2/3 fails: PaymentTransaction stays at 'pending'. The caller
- *     (PlaceOrderHandler) logs the error and returns the order without a URL.
- *     PaymentTimeoutTask (Phase 8.5) will expire the 'pending' transaction and
- *     publish PaymentFailedEvent â†’ Ordering BC cancels the order (T-03).
- *     This means the order will self-heal without manual intervention.
+ *   - If step 1 fails: a typed PaymentInitiationFailedError is propagated.
+ *   - If step 2/3 fails: the PaymentTransaction is marked failed before the
+ *     typed error is propagated. Ordering rejects VNPay checkout when initiation
+ *     fails, so successful VNPay order placement always has a payment session.
  *
  * This class does NOT:
  *   - Call any Ordering BC service or repository.
@@ -88,15 +88,23 @@ export class PaymentService implements IPaymentInitiationPort {
     //   - If this fails, we don't waste a VNPay session.
     //   - The record serves as the idempotency anchor for the entire flow.
     // -------------------------------------------------------------------------
-    await this.txnRepo.create({
-      id: txnId,
-      orderId,
-      customerId,
-      amount,
-      status: 'pending',
-      expiresAt,
-      version: 0,
-    });
+    try {
+      await this.txnRepo.create({
+        id: txnId,
+        orderId,
+        customerId,
+        amount,
+        status: 'pending',
+        expiresAt,
+        version: 0,
+      });
+    } catch (err) {
+      throw new PaymentInitiationFailedError(
+        'Failed to create VNPay payment transaction.',
+        'transaction_create',
+        err,
+      );
+    }
 
     this.logger.log(
       `PaymentTransaction ${txnId} created (pending) for order=${orderId} amount=${amount}`,
@@ -109,11 +117,24 @@ export class PaymentService implements IPaymentInitiationPort {
     // config is misconfigured (caught at startup in onModuleInit) or the
     // input params are invalid.
     // -------------------------------------------------------------------------
-    const paymentUrl = this.vnpayService.buildPaymentUrl({
-      txnRef: txnId,
-      amount,
-      ipAddr,
-    });
+    let paymentUrl: string;
+    try {
+      paymentUrl = this.vnpayService.buildPaymentUrl({
+        txnRef: txnId,
+        amount,
+        ipAddr,
+      });
+    } catch (err) {
+      await this.markPaymentAttemptFailed(
+        txnId,
+        'VNPay payment URL generation failed',
+      );
+      throw new PaymentInitiationFailedError(
+        'Failed to build VNPay payment URL.',
+        'url_generation',
+        err,
+      );
+    }
 
     // -------------------------------------------------------------------------
     // Step 3: Transition to 'awaiting_ipn' and store the URL.
@@ -123,11 +144,20 @@ export class PaymentService implements IPaymentInitiationPort {
     // If this write fails, the record stays in 'pending'. PaymentTimeoutTask
     // handles recovery automatically (fail-safe, not fail-secure).
     // -------------------------------------------------------------------------
-    const updated = await this.txnRepo.updateToAwaitingIpn(
-      txnId,
-      paymentUrl,
-      0,
-    );
+    let updated: PaymentTransaction | null;
+    try {
+      updated = await this.txnRepo.updateToAwaitingIpn(txnId, paymentUrl, 0);
+    } catch (err) {
+      await this.markPaymentAttemptFailed(
+        txnId,
+        'VNPay payment transaction update failed after URL generation',
+      );
+      throw new PaymentInitiationFailedError(
+        'Failed to update VNPay payment transaction.',
+        'transaction_update',
+        err,
+      );
+    }
 
     if (!updated) {
       // Log but don't throw: VNPay URL was already generated.
@@ -156,5 +186,40 @@ export class PaymentService implements IPaymentInitiationPort {
    */
   async getMyPayments(customerId: string): Promise<PaymentTransaction[]> {
     return this.txnRepo.findByCustomerId(customerId);
+  }
+
+  async markPaymentAttemptFailed(txnId: string, reason: string): Promise<void> {
+    try {
+      const txn = await this.txnRepo.findById(txnId);
+      if (!txn) {
+        this.logger.warn(
+          `markPaymentAttemptFailed: txn=${txnId} not found. reason=${reason}`,
+        );
+        return;
+      }
+
+      if (
+        txn.status === 'completed' ||
+        txn.status === 'failed' ||
+        txn.status === 'refund_pending' ||
+        txn.status === 'refunded'
+      ) {
+        this.logger.log(
+          `markPaymentAttemptFailed: txn=${txnId} already terminal (${txn.status}). reason=${reason}`,
+        );
+        return;
+      }
+
+      await this.txnRepo.updateStatus(txn.id, 'failed', txn.version);
+      this.logger.warn(
+        `PaymentTransaction ${txnId} marked failed. reason=${reason}`,
+      );
+    } catch (err) {
+      throw new PaymentInitiationFailedError(
+        `Failed to mark VNPay payment transaction ${txnId} as failed.`,
+        'transaction_fail',
+        err,
+      );
+    }
   }
 }
