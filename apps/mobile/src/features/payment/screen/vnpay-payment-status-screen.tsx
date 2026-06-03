@@ -14,7 +14,7 @@ import {
   CheckCircle2,
   Clock3,
   CreditCard,
-  RefreshCcw,
+  Home,
   XCircle,
 } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
@@ -198,6 +198,10 @@ export function VNPayPaymentStatusScreen() {
   );
   const tone = getToneClasses(copy.tone);
   const Icon = copy.icon;
+  const goHome = () => {
+    router.dismissAll();
+    router.replace('/(customer)/(tabs)');
+  };
 
   const handleContinuePayment = async () => {
     if (!order?.paymentUrl || isOpeningPayment) return;
@@ -238,11 +242,11 @@ export function VNPayPaymentStatusScreen() {
 
       <View className="h-16 flex-row items-center border-b border-outline-variant/15 bg-surface/90 px-4">
         <TouchableOpacity
-          onPress={() => router.replace('/(customer)/(tabs)/orders')}
+          onPress={goHome}
           className="h-10 w-10 items-center justify-center rounded-full active:bg-surface-container-low"
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="Back to orders"
+          accessibilityLabel="Back to home"
         >
           <ArrowLeft size={24} color="#0d631b" />
         </TouchableOpacity>
@@ -400,19 +404,15 @@ export function VNPayPaymentStatusScreen() {
           )}
 
           <TouchableOpacity
-            onPress={() => router.replace('/(customer)/(tabs)/orders')}
+            onPress={goHome}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel="Back to orders"
+            accessibilityLabel="Back to home"
             className="h-12 flex-row items-center justify-center gap-2 rounded-full"
           >
-            {isRefetching ? (
-              <ActivityIndicator color="#0d631b" />
-            ) : (
-              <RefreshCcw size={16} color="#0d631b" />
-            )}
+            <Home size={16} color="#0d631b" />
             <Text className="font-inter text-sm font-semibold text-primary">
-              Back to orders
+              Back to home
             </Text>
           </TouchableOpacity>
 

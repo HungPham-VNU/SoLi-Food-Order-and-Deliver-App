@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
@@ -64,6 +65,27 @@ const SPECIAL_OFFERS = [
   },
 ];
 
+type RestaurantRatingSource = {
+  averageRating?: number | null;
+  rating?: number | null;
+  reviewCount?: number | null;
+};
+
+function getRestaurantRating(restaurant: RestaurantRatingSource) {
+  if (
+    typeof restaurant.averageRating === 'number' &&
+    restaurant.averageRating > 0
+  ) {
+    return restaurant.averageRating;
+  }
+
+  if (typeof restaurant.rating === 'number' && restaurant.rating > 0) {
+    return restaurant.rating;
+  }
+
+  return null;
+}
+
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -84,6 +106,8 @@ export function HomeScreen() {
     data: restaurantsData,
     isLoading,
     error,
+    refetch: refetchNearby,
+    isRefetching: isRefetchingNearby,
   } = useNearbyRestaurants({
     latitude,
     longitude,
@@ -93,6 +117,8 @@ export function HomeScreen() {
     data: searchData,
     isLoading: isSearchLoading,
     error: searchError,
+    refetch: refetchSearch,
+    isRefetching: isRefetchingSearch,
   } = useUnifiedSearch({
     q: debouncedQuery,
     latitude,
@@ -117,6 +143,13 @@ export function HomeScreen() {
   const searchItems = searchData?.items ?? [];
   const hasSearchResults = searchRestaurants.length > 0 || searchItems.length > 0;
 
+  const onRefresh = React.useCallback(() => {
+    refetchNearby();
+    refetchSearch();
+  }, [refetchNearby, refetchSearch]);
+  
+  const refreshing = isRefetchingNearby || isRefetchingSearch;
+
   return (
     <View className="flex-1 bg-background font-inter text-on-surface">
       <HomeTopBar insetsTop={insets.top} />
@@ -128,6 +161,14 @@ export function HomeScreen() {
           paddingBottom: insets.bottom + 80,
         }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#00490e']}
+            tintColor="#00490e"
+          />
+        }
       >
         {/* Search Section */}
         <View className="px-4 mb-6">
@@ -184,73 +225,98 @@ export function HomeScreen() {
                       Restaurants ({searchData?.total.restaurants})
                     </Text>
                     <View className="gap-4">
-                      {searchRestaurants.map((restaurant) => (
-                        <TouchableOpacity
-                          key={restaurant.id}
-                          onPress={() =>
-                            router.navigate({
-                              pathname: '/restaurant/[id]',
-                              params: { id: restaurant.id },
-                            })
-                          }
-                          className="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm active:scale-[0.98] border border-surface-variant/20 flex-row"
-                        >
-                          <View className="w-24 h-24 flex-shrink-0">
-                            {restaurant.coverImageUrl ?? restaurant.logoUrl ? (
-                              <Image
-                                source={{
-                                  uri:
-                                    (restaurant.coverImageUrl ??
-                                      restaurant.logoUrl) as string,
-                                }}
-                                className="w-full h-full"
-                                contentFit="cover"
-                                transition={200}
-                                cachePolicy="memory-disk"
-                              />
-                            ) : (
-                              <View className="w-full h-full bg-surface-container items-center justify-center">
-                                <Utensils size={28} color="#707a6c" />
-                              </View>
-                            )}
-                          </View>
-                          <View className="flex-1 p-3 justify-center gap-1">
-                            <View className="flex-row items-center justify-between">
-                              <Text
-                                className="font-jakarta-sans font-bold text-base text-on-background flex-1 mr-2"
-                                numberOfLines={1}
-                              >
-                                {restaurant.name}
-                              </Text>
-                              <View
-                                className={`px-2 py-0.5 rounded-full ${restaurant.isOpen ? 'bg-primary/10' : 'bg-error/10'}`}
-                              >
+                      {searchRestaurants.map((restaurant) => {
+                        const rating = getRestaurantRating(restaurant);
+                        const reviewCount = restaurant.reviewCount ?? 0;
+
+                        return (
+                          <TouchableOpacity
+                            key={restaurant.id}
+                            onPress={() =>
+                              router.navigate({
+                                pathname: '/restaurant/[id]',
+                                params: { id: restaurant.id },
+                              })
+                            }
+                            className="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm active:scale-[0.98] border border-surface-variant/20 flex-row"
+                          >
+                            <View className="w-24 h-24 flex-shrink-0">
+                              {restaurant.coverImageUrl ?? restaurant.logoUrl ? (
+                                <Image
+                                  source={{
+                                    uri:
+                                      (restaurant.coverImageUrl ??
+                                        restaurant.logoUrl) as string,
+                                  }}
+                                  className="w-full h-full"
+                                  contentFit="cover"
+                                  transition={200}
+                                  cachePolicy="memory-disk"
+                                />
+                              ) : (
+                                <View className="w-full h-full bg-surface-container items-center justify-center">
+                                  <Utensils size={28} color="#707a6c" />
+                                </View>
+                              )}
+                            </View>
+                            <View className="flex-1 p-3 justify-center gap-1">
+                              <View className="flex-row items-center justify-between">
                                 <Text
-                                  className={`font-inter text-xs font-semibold ${restaurant.isOpen ? 'text-primary' : 'text-error'}`}
+                                  className="font-jakarta-sans font-bold text-base text-on-background flex-1 mr-2"
+                                  numberOfLines={1}
                                 >
-                                  {restaurant.isOpen ? 'Open' : 'Closed'}
+                                  {restaurant.name}
+                                </Text>
+                                <View
+                                  className={`px-2 py-0.5 rounded-full ${restaurant.isOpen ? 'bg-primary/10' : 'bg-error/10'}`}
+                                >
+                                  <Text
+                                    className={`font-inter text-xs font-semibold ${restaurant.isOpen ? 'text-primary' : 'text-error'}`}
+                                  >
+                                    {restaurant.isOpen ? 'Open' : 'Closed'}
+                                  </Text>
+                                </View>
+                              </View>
+                              <View className="flex-row items-center gap-2">
+                                {restaurant.cuisineType && (
+                                  <Text
+                                    className="font-inter text-xs text-on-surface-variant flex-shrink"
+                                    numberOfLines={1}
+                                  >
+                                    {restaurant.cuisineType}
+                                  </Text>
+                                )}
+                                <View className="flex-row items-center gap-1">
+                                  <Star
+                                    size={12}
+                                    color="#8b5000"
+                                    fill="#8b5000"
+                                  />
+                                  <Text className="font-inter text-xs font-semibold text-on-surface">
+                                    {rating ? rating.toFixed(1) : 'New'}
+                                  </Text>
+                                  {reviewCount > 0 && (
+                                    <Text className="font-inter text-xs text-on-surface-variant">
+                                      ({reviewCount}+)
+                                    </Text>
+                                  )}
+                                </View>
+                              </View>
+                              <View className="flex-row items-center gap-1">
+                                <MapPin size={12} color="#707a6c" />
+                                <Text
+                                  className="font-inter text-xs text-on-surface-variant flex-1"
+                                  numberOfLines={1}
+                                >
+                                  {restaurant.distanceKm != null
+                                    ? `${restaurant.distanceKm.toFixed(1)} km away`
+                                    : restaurant.address}
                                 </Text>
                               </View>
                             </View>
-                            {restaurant.cuisineType && (
-                              <Text className="font-inter text-xs text-on-surface-variant">
-                                {restaurant.cuisineType}
-                              </Text>
-                            )}
-                            <View className="flex-row items-center gap-1">
-                              <MapPin size={12} color="#707a6c" />
-                              <Text
-                                className="font-inter text-xs text-on-surface-variant flex-1"
-                                numberOfLines={1}
-                              >
-                                {restaurant.distanceKm != null
-                                  ? `${restaurant.distanceKm.toFixed(1)} km away`
-                                  : restaurant.address}
-                              </Text>
-                            </View>
-                          </View>
-                        </TouchableOpacity>
-                      ))}
+                          </TouchableOpacity>
+                        );
+                      })}
                     </View>
                   </View>
                 )}
@@ -267,8 +333,8 @@ export function HomeScreen() {
                           key={item.id}
                           onPress={() =>
                             router.navigate({
-                              pathname: '/restaurant/[id]',
-                              params: { id: item.restaurant.id },
+                              pathname: '/product/[id]',
+                              params: { id: item.id },
                             })
                           }
                           className="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm active:scale-[0.98] border border-surface-variant/20 flex-row"
@@ -434,6 +500,8 @@ export function HomeScreen() {
               {restaurants.map((restaurant, index) => {
                 const imageUrl =
                   restaurant.coverImageUrl ?? restaurant.logoUrl ?? undefined;
+                const rating = getRestaurantRating(restaurant);
+                const reviewCount = restaurant.reviewCount ?? 0;
                 const deliveryEstimateQuery = deliveryEstimateResults[index];
                 const deliveryEstimate = deliveryEstimateQuery?.data;
                 const isDeliveryEstimateLoading =
@@ -484,13 +552,13 @@ export function HomeScreen() {
                       <View className="absolute top-3 right-3 bg-surface-container-lowest/95 px-2.5 py-1 rounded-full flex-row items-center gap-1 shadow-md">
                         <Star size={16} color="#8b5000" fill="#8b5000" />
                         <Text className="font-jakarta-sans text-sm font-bold text-on-background">
-                          {restaurant.rating
-                            ? restaurant.rating.toFixed(1)
-                            : 'New'}
+                          {rating ? rating.toFixed(1) : 'New'}
                         </Text>
-                        <Text className="font-inter text-xs text-on-surface-variant">
-                          ({restaurant.reviewCount || 0}+)
-                        </Text>
+                        {reviewCount > 0 && (
+                          <Text className="font-inter text-xs text-on-surface-variant">
+                            ({reviewCount}+)
+                          </Text>
+                        )}
                       </View>
                       {isFreeDelivery && (
                         <View className="absolute top-3 left-3 bg-primary px-2.5 py-1 rounded-lg shadow-md">
@@ -512,7 +580,7 @@ export function HomeScreen() {
                       </View>
                       <Text className="font-inter text-sm text-on-surface-variant mb-3">
                         {restaurant.cuisineType || 'Cuisine'}
-                        {restaurant.rating && restaurant.rating >= 4.5 ? ' • Gourmet' : ''}
+                        {rating && rating >= 4.5 ? ' • Gourmet' : ''}
                       </Text>
 
                       <View className="flex-row items-center gap-3">

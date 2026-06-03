@@ -189,7 +189,8 @@ export function useCheckout() {
             }
           }
 
-          router.replace({
+          router.dismissAll();
+          router.navigate({
             pathname: VNPAY_STATUS_ROUTE as any,
             params: buildVNPayStatusRouteParams({
               orderId: data.orderId,

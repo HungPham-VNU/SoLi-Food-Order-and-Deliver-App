@@ -14,6 +14,7 @@ import { useActivePromotions } from '@/src/features/promotions';
 import type { PromotionResponseDto } from '@/src/features/promotions';
 import { formatCurrency } from '@/src/lib/format-utils';
 import { CheckoutHeader } from '../components';
+import { useCheckoutStore } from '../store/checkout-store';
 
 function getDiscountLabel(promo: PromotionResponseDto): string {
   switch (promo.type) {
@@ -61,8 +62,16 @@ export function PromoPickerScreen() {
   const subtotal = cartSubtotal ? parseFloat(cartSubtotal) : 0;
 
   const { data: promotions, isLoading } = useActivePromotions(restaurantId);
+  const { selectedPromotion, setSelectedPromotion } = useCheckoutStore();
 
   const handleSelect = (promo: PromotionResponseDto) => {
+    if (!restaurantId) return;
+    setSelectedPromotion({
+      id: promo.id,
+      restaurantId,
+      name: promo.name,
+      description: promo.description,
+    });
     router.back();
   };
 
@@ -101,6 +110,7 @@ export function PromoPickerScreen() {
           promotions.map((promo) => {
             const applicable = isApplicable(promo, subtotal);
             const isCouponCode = promo.trigger === 'coupon_code';
+            const isSelected = selectedPromotion?.id === promo.id;
 
             return (
               <TouchableOpacity
@@ -109,7 +119,9 @@ export function PromoPickerScreen() {
                 disabled={!applicable || isCouponCode}
                 onPress={() => handleSelect(promo)}
                 className={`bg-surface-container-lowest rounded-2xl p-4 border ${
-                  applicable && !isCouponCode
+                  isSelected
+                    ? 'border-primary'
+                    : applicable && !isCouponCode
                     ? 'border-primary/30'
                     : 'border-outline-variant/15'
                 } ${!applicable ? 'opacity-50' : ''}`}
@@ -189,7 +201,7 @@ export function PromoPickerScreen() {
                         className="text-primary text-xs"
                         style={{ fontFamily: 'Inter_500Medium' }}
                       >
-                        Auto-applied
+                        {isSelected ? 'Selected' : 'Select'}
                       </Text>
                     </View>
                   )}

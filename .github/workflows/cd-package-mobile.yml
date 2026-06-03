@@ -36,7 +36,7 @@ jobs:
 
       - name: Package (Local Android Build)
         working-directory: apps/mobile
-        run: eas build --platform android --profile development --local --non-interactive --output build.apk
+        run: eas build --platform android --profile production --local --non-interactive --output build.apk
         env:
           EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
           EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
@@ -62,13 +62,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SHORT_SHA: ${{ github.sha }}
         run: |
-          APK_NAME="uitfood-dev-${SHORT_SHA}.apk"
+          APK_NAME="uitfood-prod-${SHORT_SHA}.apk"
           cp build.apk "$APK_NAME"
-          if gh release view dev-latest >/dev/null 2>&1; then
-            gh release delete dev-latest --yes --cleanup-tag
+          if gh release view prod-latest >/dev/null 2>&1; then
+            gh release delete prod-latest --yes --cleanup-tag
           fi
-          gh release create dev-latest "$APK_NAME" \
-            --title "Development Build (Latest)" \
+          gh release create prod-latest "$APK_NAME" \
+            --title "Production Build (Latest)" \
             --notes "Built from commit \`${SHORT_SHA}\`" \
             --prerelease \
             --target "${SHORT_SHA}"
