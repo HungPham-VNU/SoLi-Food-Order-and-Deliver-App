@@ -1339,7 +1339,7 @@ skinparam sequenceArrowThickness 1.5
 skinparam ParticipantPadding 20
 skinparam BoxPadding 10
 
-title SD-8: UC-8 - Place Order
+title Place Order
 
 actor "Customer" as Actor
 boundary "Checkout Page" as UI
@@ -1460,7 +1460,7 @@ skinparam sequenceArrowThickness 1.5
 skinparam ParticipantPadding 20
 skinparam BoxPadding 10
 
-title SD-9: UC-9 - Make Online Payment (VNPay)
+title Make Online Payment (VNPay)
 
 actor "Customer" as Actor
 boundary "VNPay Gateway" as VNPay
@@ -1575,7 +1575,7 @@ skinparam sequenceArrowThickness 1.5
 skinparam ParticipantPadding 20
 skinparam BoxPadding 10
 
-title SD-22: UC-22 - Submit Rating & Review
+title Submit Rating & Review
 
 actor "Customer" as Actor
 boundary "Delivered Order Screen" as UI
