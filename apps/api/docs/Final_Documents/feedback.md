@@ -1,50 +1,52 @@
 # ROLE
 
-Bạn là một Principal Software Architect, Principal Business Analyst, Technical Writer và Software Engineering Reviewer.
+Bạn là một Principal Software Architect, Principal Software Engineer, Principal Business Analyst và Technical Reviewer.
 
 Bạn có kinh nghiệm xây dựng:
 
+- Enterprise Software Architecture
 - BRD
 - SRS
 - ASR
 - ADD
 - ADR
 - SAD
-- Enterprise Architecture Documentation
 - Graduation Thesis Report
 - Capstone Project Report
 
-Ngoài vai trò viết báo cáo, bạn còn đóng vai trò reviewer kỹ thuật có nhiệm vụ kiểm tra tính nhất quán, tính đầy đủ và chất lượng học thuật của tài liệu.
+Ngoài vai trò viết báo cáo, bạn còn chịu trách nhiệm review chất lượng tài liệu ở góc độ kiến trúc phần mềm và báo cáo học thuật.
 
 ---
 
 # GOAL
 
-Refactor trực tiếp file:
+Đọc lại toàn bộ codebase, toàn bộ tài liệu dự án và file báo cáo hiện tại để hiểu đầy đủ context hệ thống.
+
+Sau đó cập nhật trực tiếp:
 
 ```text
 @DA1_report.md
 ```
 
+theo đúng các feedback mới nhất.
+
 KHÔNG tạo file mới.
 
-Mục tiêu:
+KHÔNG viết tài liệu bổ sung.
 
-- Nâng chất lượng báo cáo lên mức đồ án/capstone chuyên nghiệp.
-- Đạt quy mô khoảng 100–120 trang.
-- Đảm bảo báo cáo có thể được đọc độc lập.
-- Giữ nhất quán với toàn bộ hệ thống tài liệu và source code.
-- Thể hiện đầy đủ chiều sâu phân tích nghiệp vụ, kiến trúc và kỹ thuật.
+CHỈ chỉnh sửa trực tiếp:
+
+```text
+@DA1_report.md
+```
 
 ---
 
 # MANDATORY READING PHASE
 
-Trước khi sửa báo cáo, phải đọc và phân tích lại toàn bộ các nguồn sau.
+Trước khi chỉnh sửa báo cáo phải đọc lại toàn bộ các nguồn sau.
 
 ## 1. Báo cáo hiện tại
-
-Đọc toàn bộ:
 
 ```text
 @DA1_report.md
@@ -53,15 +55,12 @@ Trước khi sửa báo cáo, phải đọc và phân tích lại toàn bộ cá
 Mục tiêu:
 
 - Hiểu cấu trúc hiện tại.
-- Xác định các phần cần refactor.
-- Xác định nội dung nào đã tốt và nên giữ lại.
-- Xác định nội dung nào cần mở rộng.
+- Xác định những phần đã tốt.
+- Xác định những phần cần chỉnh sửa.
 
 ---
 
 ## 2. Template báo cáo
-
-Đọc:
 
 ```text
 @NoiDung Bao Cao Đồ án 1,2.md
@@ -69,13 +68,11 @@ Mục tiêu:
 
 Mục tiêu:
 
-- Đảm bảo không lệch yêu cầu của môn học.
+- Đảm bảo báo cáo không lệch yêu cầu môn học.
 
 ---
 
 ## 3. Tài liệu nghiệp vụ
-
-Đọc toàn bộ:
 
 ```text
 @Food_Delivery_Vision_and_Scope.md
@@ -89,8 +86,6 @@ Mục tiêu:
 
 ## 4. Tài liệu yêu cầu
 
-Đọc toàn bộ:
-
 ```text
 @SRS_FoodDelivery.md
 
@@ -103,8 +98,6 @@ Mục tiêu:
 
 ## 5. Tài liệu mô hình hóa
 
-Đọc:
-
 ```text
 @SRS_SequenceDiagrams.md
 ```
@@ -112,8 +105,6 @@ Mục tiêu:
 ---
 
 ## 6. Tài liệu chất lượng
-
-Đọc:
 
 ```text
 @Utility_Tree.md
@@ -125,8 +116,6 @@ Mục tiêu:
 ---
 
 ## 7. Tài liệu kiến trúc
-
-Đọc toàn bộ:
 
 ```text
 @ASR_FoodDelivery.md
@@ -144,285 +133,236 @@ Mục tiêu:
 
 ## 8. Tài liệu AI
 
-Đọc:
-
 ```text
 @Proposal_Multimodel.md
 ```
 
 ---
 
-## 9. SOURCE CODE ANALYSIS (BẮT BUỘC)
+## 9. Source Code Analysis (BẮT BUỘC)
 
-Không được bỏ qua bước này.
+Không được bỏ qua.
 
-Phải duyệt toàn bộ codebase.
+Phải duyệt toàn bộ repository.
 
 Phân tích:
 
-### Kiến trúc
+### Architecture
 
-- modules
-- bounded contexts
-- layers
-- dependencies
+- Modules
+- Bounded Contexts
+- Layers
+- Dependencies
 
 ### Database
 
-- schema
-- migrations
-- relationships
-- entities
+- Schema
+- Entities
+- Migrations
+- Relationships
 
 ### API
 
-- endpoints
-- controllers
-- services
+- Controllers
+- Services
+- Endpoints
 
-### Authentication
+### Runtime Components
 
-### Payment
-
-### Notifications
-
-### Reviews
-
-### Promotion
-
-### AI Integration (nếu có)
-
-### Folder Structure
-
-### Test Structure
-
-### DevOps
-
-### Observability
-
-### Validation
-
-### Documentation
-
----
-
-# SOURCE OF TRUTH PRIORITY
-
-## Ưu tiên tài liệu
-
-Các nội dung sau phải lấy từ tài liệu:
-
-```text
-Business Objectives
-
-Success Metrics
-
-Business Rules
-
-ASR
-
-ADR
-
-Use Cases
-
-Quality Attributes
-```
-
----
-
-## Ưu tiên source code
-
-Các nội dung sau phải lấy từ @codebase:
-
-```text
-Tech Stack
-
-Database Schema
-
-Folder Structure
-
-Implemented Features
-
-Test Suites
-
-API Design
-
-UI hiện có
-```
-
----
-
-# REFACTOR REQUIREMENTS
-
-Thực hiện toàn bộ các thay đổi dưới đây.
-
----
-
-# 1. CHƯƠNG 1
-
-## Giảm cảm giác Technical Specification
-
-Không đi quá sâu vào:
-
-- internal states
-- idempotency
-- implementation details
-
-Các nội dung kỹ thuật sâu nên chuyển xuống Chương 3.
-
----
-
-## Mở rộng mục 1.4.4
-
-Không chỉ:
-
-```text
-Performance
-
-Availability
-
-Reliability
-
-Security
-
-Scalability
-```
-
-Mà phải trình bày đầy đủ các Quality Attributes đã phân tích trong ADD_FoodDelivery.md.
-
-Bao gồm:
-
-- Performance
-- Availability
-- Reliability
-- Security
-- Scalability
-- Modifiability
-- Observability
-- Maintainability
-
-và các quality goals liên quan.
-
----
-
-# 2. CHƯƠNG 2
-
-## Rà soát lại toàn bộ Tech Stack
-
-Phân tích codebase.
-
-Kiểm tra xem còn thiếu:
-
-### Observability
-
-Ví dụ:
-
-- OpenTelemetry
-- Prometheus
-- Grafana
-- Winston
-- Pino
+- EventBus
+- Redis
+- ACL
+- Payment
+- Notification
 
 ### Testing
 
-- Jest
-- Supertest
+- Unit Tests
+- Integration Tests
+- E2E Tests
+
+### Observability
+
+- OpenTelemetry
+- Logging
+- Metrics
+- Monitoring
 
 ### DevOps
 
 - Docker
 - GitHub Actions
 - GHCR
+- Terraform
 
-### API Documentation
+### Folder Structure
 
-- Swagger/OpenAPI
-
-### Validation
-
-- Zod
-- class-validator
-
-hoặc bất kỳ công nghệ nào khác xuất hiện trong source code.
-
-Nếu có phải bổ sung vào Chương 2.
+### UI hiện có
 
 ---
 
-## Phần công nghệ
+# TASK 1 — EXPAND ARCHITECTURAL DECISIONS
 
-Giữ format:
+Mở rộng:
 
 ```text
-Giới thiệu
+3.1.6 Architectural Decisions
+```
 
-Ưu điểm
+Hiện tại phần này còn quá ngắn.
 
-Nhược điểm
+---
 
-Lý do lựa chọn
+Bao gồm:
+
+```text
+ADR-001 — Adopt Modular Monolith Architecture
+
+ADR-002 — Use Database per BC Ownership
+
+ADR-003 — Use In-process EventBus Communication
+
+ADR-004 — Adopt ACL Snapshot Pattern
+
+ADR-005 — Use Redis Runtime Layer
+
+ADR-006 — Use Ports and Adapters Integration Pattern
+
+ADR-007 — Adopt Drizzle Type-safe Persistence Layer
 ```
 
 ---
 
-### Lưu ý cực kỳ quan trọng
-
-KHÔNG viết:
+Giữ nguyên tinh thần của:
 
 ```text
-Source code xác nhận...
-
-ASR yêu cầu...
-
-ADR quyết định...
+@ADR_FoodDelivery.md
 ```
 
 ---
 
-Thay vào đó:
-
-Giải thích:
-
-- tại sao công nghệ phù hợp với bài toán
-- lợi ích công nghệ mang lại
-- giá trị công nghệ tạo ra cho hệ thống
-
----
-
-## Phần AI
-
-Không được đi thẳng vào:
+KHÔNG được chỉ viết:
 
 ```text
-ConvNeXt
+Decision
 
-XLM-RoBERTa
-
-Fusion Layer
+Rationale
 ```
 
 ---
 
-Bổ sung trước:
+Mỗi ADR phải có:
 
-### Bài toán
+### Bối cảnh
 
-### Động lực áp dụng AI
+### Các phương án được xem xét
 
-### Hạn chế của ảnh đơn lẻ
-
-### Hạn chế của văn bản đơn lẻ
-
-### Lý do cần Multimodal AI
-
-Flow:
+Ví dụ:
 
 ```text
-Business Problem
+Candidate A
+
+Candidate B
+
+Candidate C
+```
+
+---
+
+### So sánh và đánh đổi
+
+Có bảng trade-off.
+
+---
+
+### Quyết định
+
+---
+
+### Lý do lựa chọn
+
+---
+
+### Tác động
+
+---
+
+Viết ngắn gọn hơn ADR gốc.
+
+Mỗi ADR khoảng:
+
+```text
+0.5 - 1 trang
+```
+
+Mục tiêu:
+
+Người đọc nhìn thấy:
+
+```text
+Problem
+
 ↓
-AI Problem
+
+Alternatives
+
 ↓
-Multimodal Solution
+
+Trade-offs
+
+↓
+
+Decision
+
+↓
+
+Consequences
+```
+
+---
+
+# TASK 2 — TÍCH HỢP AI VÀO KIẾN TRÚC HỆ THỐNG
+
+Hiện tại phần AI đang có cảm giác là một đề tài riêng ghép vào hệ thống.
+
+Cần chỉnh sửa để AI trở thành một phần của kiến trúc SoLi.
+
+---
+
+Bổ sung một subsection mới trong phần AI.
+
+Ví dụ:
+
+```text
+2.2.x Tích hợp AI vào hệ thống SoLi
+```
+
+---
+
+Phải giải thích rõ:
+
+### AI nằm ở đâu trong hệ thống
+
+### Module nào sử dụng AI
+
+### Dữ liệu nào đi vào AI
+
+### Kết quả AI được sử dụng ở đâu
+
+### Vai trò của Review BC
+
+### Vai trò của Dashboard
+
+---
+
+Bổ sung flow kiến trúc:
+
+```text
+Customer Review
+↓
+Review BC
+↓
+AI Quality Analysis Pipeline
 ↓
 ConvNeXt
 ↓
@@ -433,286 +373,145 @@ Fusion Layer
 Explainable AI
 ↓
 AI Agent
+↓
+Quality Report
+↓
+Restaurant Dashboard
 ```
 
 ---
 
-# 3. CHƯƠNG 3.1
+Mục tiêu:
 
-## Chèn hình kiến trúc
-
-Bắt buộc sử dụng hình từ:
+Người đọc hiểu rằng:
 
 ```text
-ADD_FoodDelivery.md
+AI là một phần mở rộng của hệ thống
 
-SAD_FoodDelivery.md
+không phải một đề tài AI tách rời
 ```
 
-Không tự vẽ lại.
-
 ---
 
-Phải có:
+# TASK 3 — REFACTOR RUNTIME VIEW
 
-### 3.1.1 Logical View
-
-### 3.1.2 Runtime View
-
-### 3.1.3 Implementation View
-
-### 3.1.4 Data View
-
-### 3.1.5 Deployment View
-
-Mỗi mục:
-
-- chèn hình
-- giải thích
-
----
-
-# 4. CHƯƠNG 3.1.6
-
-Bổ sung:
+Hiện tại Runtime View đang trình bày theo dạng:
 
 ```text
-3.1.6 Architectural Decisions
+Diagram
+
+Diagram
+
+Diagram
+
+Diagram
+
+↓
+
+Giải thích
 ```
 
-Bao gồm:
+Cách này giống tài liệu ADD.
+
+Không phù hợp với báo cáo đồ án.
+
+---
+
+Refactor lại theo dạng:
 
 ```text
-ADR-001 — Adopt Modular Monolith Architecture
+Diagram
 
-ADR-003 — Use Database per BC Ownership
+↓
 
-ADR-004 — Use In-process EventBus Communication
+Giải thích
 
-ADR-005 — Adopt ACL Snapshot Pattern
+↓
 
-ADR-006 — Use Redis Runtime Layer
+Diagram
 
-ADR-007 — Use Ports and Adapters Integration Pattern
+↓
 
-ADR-008 — Adopt Drizzle Type-safe Persistence Layer
+Giải thích
 ```
 
 ---
-
-## Format ADR
-
-Giữ nguyên tinh thần của ADR_FoodDelivery.md.
-
-KHÔNG được bỏ các phần:
-
-### Bối cảnh
-
-### Các phương án được xem xét
-
-### So sánh và đánh đổi
-
-### Quyết định
-
-### Lý do lựa chọn
-
-### Tác động
-
----
-
-Viết ngắn gọn hơn ADR gốc.
-
-Không copy nguyên ADR.
-
----
-
-# 5. CHƯƠNG 3.2
-
-Nguồn duy nhất:
-
-```text
-USE_CASE_SPECIFICATION.md
-```
-
----
-
-KHÔNG:
-
-- Rewrite
-- Tóm tắt
-- Rút gọn
-- Diễn giải
-
----
-
-Mỗi UC Domain phải giữ nguyên bảng đặc tả.
-
-Bao gồm:
-
-```text
-Use Case ID
-
-Use Case Name
-
-Actors
-
-Description
-
-Preconditions
-
-Postconditions
-
-Priority
-
-Frequency of Use
-
-Normal Course of Events
-
-Alternative Courses
-
-Exceptions
-
-Includes
-
-Extends
-
-Special Requirements
-
-Assumptions
-
-Notes & Issues
-```
-
----
-
-Giữ nguyên cấu trúc bảng như USE_CASE_SPECIFICATION.md.
-
----
-
-# 6. CHƯƠNG 3.3
-
-Refactor hoàn toàn.
-
----
-
-## 3.3.1 ERD tổng thể
-
-- Chèn ERD
-- Giải thích
-
----
-
-## 3.3.2 Auth BC Data Model
-
-## 3.3.3 Restaurant Catalog BC Data Model
-
-## 3.3.4 Ordering BC Data Model
-
-## 3.3.5 Payment BC Data Model
-
-## 3.3.6 Promotion BC Data Model
-
-## 3.3.7 Notification BC Data Model
-
-## 3.3.8 Review BC Data Model
-
----
-
-Mỗi BC phải gồm:
-
-### Mô tả BC
-
-### Danh sách bảng
-
-### Data Dictionary
-
-### Quan hệ
-
-### Ý nghĩa nghiệp vụ
-
----
-
-Không chỉ trình bày vài bảng tiêu biểu.
-
-Phải trình bày toàn bộ bảng thuộc BC đó.
-
----
-
-# 7. CHƯƠNG 4
-
-Mở rộng phần kiểm thử.
-
----
-
-### 4.3.1 Testing Strategy
-
-- Testing Pyramid
-- Testing Scope
-
----
-
-### 4.3.2 Unit Testing
-
-- Framework
-- Structure
-- Example Tests
-- Coverage (nếu có)
-
----
-
-### 4.3.3 Integration Testing
-
-- API Integration
-- Database Integration
-
----
-
-### 4.3.4 End-to-End Testing
 
 Ví dụ:
 
-```text
-Login
-↓
-Add Cart
-↓
-Checkout
-↓
-Payment
-↓
-Tracking
-```
+### 3.1.2.1 Order Placement Runtime
+
+(Hình)
+
+Sau hình phải giải thích ngay:
+
+- Mục tiêu
+- Luồng xử lý
+- Vai trò EventBus
+- Vai trò Redis
+- Vai trò Idempotency
+- Kết luận
 
 ---
 
-### 4.3.5 Non-functional Testing
+### 3.1.2.2 Event & ACL Synchronization Runtime
 
-- Performance
-- Reliability
-- Security
-- Availability
+(Hình)
+
+Sau hình phải giải thích ngay:
+
+- Mục tiêu
+- Vai trò ACL Snapshot
+- Eventual Consistency
+- Kết luận
 
 ---
 
-Nếu codebase có:
+### 3.1.2.3 Payment & Compensation Runtime
+
+(Hình)
+
+Sau hình phải giải thích ngay:
+
+- Payment Success
+- Payment Failure
+- Compensation Flow
+- Kết luận
+
+---
+
+### 3.1.2.4 Delivery & Review Runtime
+
+(Hình)
+
+Sau hình phải giải thích ngay:
+
+- Delivery Lifecycle
+- Review Eligibility
+- Future AI Integration
+- Kết luận
+
+---
+
+Mục tiêu:
+
+Biến Runtime View từ:
 
 ```text
-Jest
-
-Supertest
-
-e2e
-
-test suites
+Architecture Document
 ```
 
-thì phải đưa vào báo cáo.
+thành:
+
+```text
+Capstone Report
+```
 
 ---
 
 # WRITING RULES
 
-## Không được viết
+Không được viết:
 
 ```text
 Theo ASR...
@@ -730,80 +529,70 @@ Source code xác nhận...
 
 ---
 
-## Không được viết như tài liệu traceability
+Không được viết như tài liệu traceability.
 
 ---
 
-## Phải viết như một báo cáo học thuật độc lập
-
----
-
-## Văn phong
-
-- Chuyên nghiệp
-- Học thuật
-- Chỉnh chu
-- Dễ đọc
-- Phù hợp báo cáo tốt nghiệp
+Phải viết như báo cáo học thuật độc lập.
 
 ---
 
 # MANDATORY REVIEW PHASE
 
-Sau khi hoàn thành việc refactor DA1_report.md.
+Sau khi cập nhật xong:
 
-KHÔNG được xuất kết quả ngay.
+```text
+@DA1_report.md
+```
 
-Phải review tối thiểu 3 vòng.
+KHÔNG được kết thúc ngay.
+
+Phải review tối thiểu 2 vòng.
 
 ---
 
-## Review Pass 1 — Consistency Review
+## Review Pass 1 — ADR Review
 
 Kiểm tra:
 
-- Có còn trace tài liệu không.
-- Có còn văn phong kiểu ASR/SAD không.
-- Có phần nào mâu thuẫn với docs không.
+- Có đủ 7 ADR không.
+- Có đủ Candidate không.
+- Có đủ Trade-off không.
+- Có đủ Decision không.
+- Có đủ Consequences không.
 
-Nếu có:
+Nếu thiếu:
 
 Sửa ngay.
 
 ---
 
-## Review Pass 2 — Completeness Review
+## Review Pass 2 — AI Integration Review
 
 Kiểm tra:
 
-- Có thiếu chương nào không.
-- Có thiếu ADR nào không.
-- Có thiếu hình nào không.
-- Có thiếu bảng Use Case nào không.
-- Có thiếu BC Data Model nào không.
-- Có thiếu công nghệ nào từ codebase không.
-- Có thiếu phần testing không.
+- AI có còn bị tách khỏi hệ thống không.
+- Đã mô tả rõ Review BC chưa.
+- Đã mô tả rõ Dashboard chưa.
+- Đã mô tả rõ AI Pipeline chưa.
 
-Nếu có:
+Nếu chưa:
 
-Bổ sung ngay.
+Sửa ngay.
 
 ---
 
-## Review Pass 3 — Quality Review
+## Review Pass 3 — Runtime View Review
 
 Kiểm tra:
 
-- Văn phong học thuật.
-- Chính tả.
-- Thuật ngữ.
-- Định dạng Markdown.
-- Tính mạch lạc.
-- Chất lượng trình bày.
+- Có phải mỗi diagram đều được giải thích ngay bên dưới không.
+- Có phải Runtime View được trình bày theo luồng đọc tự nhiên không.
+- Có còn tình trạng nhiều diagram liên tiếp rồi mới giải thích không.
 
-Nếu phát hiện điểm chưa hợp lý:
+Nếu có:
 
-Sửa ngay.
+Refactor lại.
 
 ---
 
@@ -812,7 +601,7 @@ Sửa ngay.
 Chỉnh sửa trực tiếp:
 
 ```text
-DA1_report.md
+@DA1_report.md
 ```
 
 Không tạo file mới.
@@ -826,7 +615,7 @@ Không xuất review notes.
 Chỉ giữ lại phiên bản cuối cùng của:
 
 ```text
-DA1_report.md
+@DA1_report.md
 ```
 
-sau khi đã hoàn thành toàn bộ quá trình review và chỉnh sửa.
+sau khi hoàn thành toàn bộ quá trình cập nhật và review.

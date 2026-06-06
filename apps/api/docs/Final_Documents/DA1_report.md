@@ -709,11 +709,57 @@ AI Agent là lớp diễn giải kết quả mô hình thành ngôn ngữ tự n
 
 Vai trò của AI Agent là biến output kỹ thuật thành insight có thể dùng được cho nhà hàng, quản trị viên và người dùng cuối.
 
-### 2.2.11 Quy trình áp dụng AI vào hệ thống
+### 2.2.11 Tích hợp AI vào hệ thống SoLi
+
+Trong kiến trúc mở rộng của SoLi, AI không đứng ngoài nền tảng mà được đặt như một năng lực phân tích hậu giao hàng xoay quanh Review BC. Backend NestJS vẫn là điểm tiếp nhận nghiệp vụ chính: khách hàng gửi review qua mobile app, Review BC kiểm tra điều kiện đánh giá, lưu review, cập nhật rating projection của nhà hàng và phát sự kiện sau commit. Từ đây, lớp AI được kích hoạt như một pipeline phân tích bất đồng bộ, giúp hệ thống biến phản hồi thô thành báo cáo chất lượng có thể hành động.
+
+Vị trí hợp lý của AI là một dịch vụ phân tích độc lập nhưng nằm trong biên kiến trúc SoLi, kết nối với backend thông qua integration boundary rõ ràng. Cách bố trí này giữ cho Ordering, Review và Dashboard không phải mang logic machine learning bên trong business module, đồng thời cho phép thay đổi mô hình, chiến lược inference hay hạ tầng GPU mà không làm biến động lõi nghiệp vụ của nền tảng.
+
+Những module tham gia trực tiếp vào luồng này gồm:
+
+- Review BC: nguồn dữ liệu nghiệp vụ chính của AI, sở hữu `reviews`, kiểm soát eligibility và phát sinh sự kiện sau khi review được ghi nhận hợp lệ.
+- Ordering BC: cung cấp ngữ cảnh đơn hàng và trạng thái đã giao để bảo đảm dữ liệu đầu vào là phản hồi sau trải nghiệm thực tế.
+- Restaurant Catalog BC: nhận rating projection đã được cập nhật và tiếp tục dùng kết quả đó trong discovery/search.
+- Image BC: có thể mở rộng để quản lý metadata ảnh review khi hệ thống bổ sung `review_images` hoặc cơ chế liên kết review với media asset.
+- Dashboard tầng restaurant/admin: là nơi tiêu thụ kết quả AI dưới dạng quality score, factor score, xu hướng suy giảm chất lượng, cảnh báo theo món hoặc theo nhà hàng.
+
+Dữ liệu đầu vào của AI không chỉ là ảnh và bình luận. Một bản ghi phân tích hoàn chỉnh nên bao gồm điểm sao, comment, tag, thời điểm review, nhà hàng, món/đơn liên quan, trạng thái giao hàng, cùng metadata ảnh nếu khách hàng gửi ảnh minh họa. Điều này giúp mô hình không chỉ dự đoán cảm xúc tổng quát mà còn liên kết chất lượng cảm nhận với bối cảnh vận hành thực tế.
+
+Kết quả đầu ra của AI được sử dụng ở hai lớp. Lớp thứ nhất là restaurant dashboard, nơi chủ nhà hàng cần xem quality report, nguyên nhân chính làm giảm điểm và nhóm món cần cải thiện. Lớp thứ hai là admin dashboard, nơi đội ngũ vận hành quan sát xu hướng chất lượng, phát hiện cụm review bất thường, hỗ trợ moderation và ưu tiên kiểm tra các nhà hàng có tín hiệu suy giảm liên tục.
+
+Vai trò của Review BC trong kiến trúc này là giữ vai trò source of truth của feedback sau giao hàng. AI không thay thế review, mà đọc review để tạo lớp diễn giải sâu hơn. Vai trò của dashboard là tiêu thụ kết quả phân tích thay vì tự suy luận. Nhờ đó, chuỗi giá trị dữ liệu được giữ mạch lạc: dữ liệu phát sinh ở giao dịch, được xác thực ở domain, được phân tích ở lớp AI, rồi quay trở lại hỗ trợ quyết định vận hành.
+
+Flow kiến trúc tích hợp được mô tả như sau:
+
+```text
+Customer Review
+↓
+Review BC
+↓
+AI Quality Analysis Pipeline
+↓
+ConvNeXt
+↓
+XLM-RoBERTa
+↓
+Fusion Layer
+↓
+Explainable AI
+↓
+AI Agent
+↓
+Quality Report
+↓
+Restaurant Dashboard
+```
+
+Ở góc nhìn kiến trúc, AI vì vậy nên được hiểu là một phần mở rộng của hệ thống SoLi ở giai đoạn sau giao hàng. Nó bắt đầu từ dữ liệu nghiệp vụ thật do nền tảng tạo ra, quay lại phục vụ dashboard, moderation và cải thiện chất lượng nhà hàng. Cách đặt này giúp đề tài AI gắn tự nhiên với bài toán food delivery thay vì trở thành một phụ lục tách rời.
+
+### 2.2.12 Quy trình áp dụng AI vào hệ thống
 
 ```text
 Review Image
-+
+và
 Review Text
 ↓
 Image Preprocessing + Text Preprocessing
@@ -733,9 +779,9 @@ AI Agent Explanation
 Quality Report
 ```
 
-Quy trình này có thể tích hợp vào Review BC trong tương lai. Khi khách hàng gửi review kèm ảnh và text, hệ thống lưu review trước, sau đó một pipeline AI bất đồng bộ xử lý dữ liệu, sinh quality score, factor scores và explanation. Kết quả được dùng cho dashboard chất lượng, moderation hoặc gợi ý cải thiện cho nhà hàng.
+Trong chuỗi xử lý này, Review BC đóng vai trò điểm khởi phát nghiệp vụ, còn AI pipeline là tầng phân tích chuyên sâu hoạt động sau khi dữ liệu đã được xác nhận và lưu bền vững. Cách xử lý bất đồng bộ làm giảm ảnh hưởng của inference time lên trải nghiệm gửi review, đồng thời cho phép dashboard chỉ đọc kết quả phân tích đã sẵn sàng thay vì chờ mô hình xử lý trực tiếp trên request của người dùng.
 
-### 2.2.12 Training và Evaluation
+### 2.2.13 Training và Evaluation
 
 Dữ liệu huấn luyện gồm ảnh sản phẩm/món ăn và review text. Dữ liệu cần được làm sạch do có nhiễu, ngôn ngữ không chuẩn, ảnh chất lượng thấp, nhãn không đồng đều và phản hồi chủ quan.
 
@@ -940,9 +986,11 @@ Giải thích:
 
 ### 3.1.2 Runtime View
 
-Runtime View tập trung vào hành vi động của các luồng có ý nghĩa kiến trúc: đặt đơn, đồng bộ snapshot ACL, bù trừ thanh toán và luồng giao hàng đến review. Các luồng này cần được thiết kế kỹ vì chúng ảnh hưởng trực tiếp đến tính đúng đắn của đơn hàng, thanh toán, khuyến mãi, thông báo và trải nghiệm người dùng.
+Runtime View mô tả các luồng động có ảnh hưởng lớn nhất đến tính đúng đắn của hệ thống: tạo đơn, đồng bộ dữ liệu xuyên bounded context, xử lý thanh toán và bù trừ, cùng vòng đời giao hàng đến review. Cách trình bày dưới đây đặt mỗi sơ đồ ngay trước phần giải thích tương ứng để người đọc theo dõi thuận theo luồng nghiệp vụ thay vì phải ghép nhiều hình rồi mới suy diễn.
 
-**Hình 3.2. Runtime View**
+#### 3.1.2.1 Order Placement Runtime
+
+**Hình 3.2.1. Order Placement Runtime**
 
 ```plantuml
 @startuml SoLi_Order_Placement_Runtime
@@ -1053,6 +1101,17 @@ end
 @enduml
 ```
 
+- `Mục tiêu`: biến giỏ hàng tạm thời thành một order bền vững, đúng giá, đúng vùng giao và không bị tạo lặp.
+- `Luồng xử lý`: checkout đọc cart từ Redis, lấy snapshot nhà hàng và menu ở Ordering BC, kiểm tra điều kiện giao hàng, áp dụng khuyến mãi, ghi order cùng order items vào PostgreSQL, sau đó mới khởi tạo các tác vụ phụ như thanh toán VNPay và thông báo.
+- `Vai trò EventBus`: EventBus tách phần “tạo đơn” khỏi các phản ứng sau commit như notification, giúp luồng đặt đơn giữ trọng tâm vào transaction chính thay vì gọi chồng nhiều service phụ thuộc trực tiếp.
+- `Vai trò Redis`: Redis giữ cart, khóa checkout và kết quả idempotency. Nhờ vậy request retry hoặc double-tap ở giao diện không làm phát sinh nhiều order khác nhau cho cùng một cart.
+- `Vai trò Idempotency`: idempotency key là lớp bảo vệ ở cạnh request, còn `UNIQUE(cart_id)` là lớp bảo vệ ở cạnh persistence. Hai lớp này kết hợp để giảm rủi ro trùng đơn khi mạng chập chờn hoặc người dùng gửi lại yêu cầu.
+- `Kết luận`: runtime packet này thể hiện rõ triết lý của SoLi ở luồng trọng yếu nhất: dữ liệu runtime ở Redis, dữ liệu nghiệp vụ bền vững ở PostgreSQL, còn side effects được trì hoãn đến sau khi order đã ổn định.
+
+#### 3.1.2.2 Event & ACL Synchronization Runtime
+
+**Hình 3.2.2. Event & ACL Synchronization Runtime**
+
 ```plantuml
 @startuml SoLi_Event_ACL_Synchronization_Runtime
 skinparam shadowing false
@@ -1118,6 +1177,16 @@ deactivate CatalogController
 UI --> Actor : (8) Show saved state
 @enduml
 ```
+
+- `Mục tiêu`: bảo đảm Ordering và Notification có dữ liệu cục bộ đủ dùng cho các quyết định runtime mà không phải phụ thuộc trực tiếp vào bảng của Restaurant Catalog.
+- `Luồng xử lý`: sau khi Catalog lưu thay đổi của restaurant, menu hoặc delivery zone, hệ thống phát domain event; các projector trong Ordering và Notification nhận sự kiện rồi cập nhật snapshot nội bộ của chính bounded context đó.
+- `Vai trò ACL Snapshot`: snapshot là lớp read model cục bộ, chỉ giữ đúng phần dữ liệu downstream cần. Ordering cần tên nhà hàng, trạng thái mở/đóng, menu item và delivery zone để checkout; Notification cần owner routing data để chuyển đúng thông báo.
+- `Eventual Consistency`: dữ liệu giữa source context và consumer context không đồng bộ tuyệt đối từng mili giây, nhưng được đồng bộ đủ nhanh cho các luồng nghiệp vụ. Đổi lại, checkout không cần cross-BC join và notification không phải gọi ngược về Catalog trong thời điểm phát sinh sự kiện.
+- `Kết luận`: runtime packet này cho thấy SoLi ưu tiên ranh giới domain và độ ổn định của checkout hơn việc truy cập trực tiếp dữ liệu nguồn ở mọi nơi.
+
+#### 3.1.2.3 Payment & Compensation Runtime
+
+**Hình 3.2.3. Payment & Compensation Runtime**
 
 ```plantuml
 @startuml SoLi_Payment_Compensation_Runtime
@@ -1209,6 +1278,16 @@ end
 @enduml
 ```
 
+- `Mục tiêu`: giữ cho trạng thái order, payment transaction, promotion usage và notification không bị lệch nhau khi thanh toán thất bại, hết hạn hoặc đơn đã thanh toán bị hủy.
+- `Payment Success`: khi VNPay callback hợp lệ và transaction được xác minh thành công, Payment BC cập nhật transaction sang trạng thái hoàn tất, sau đó luồng Ordering có thể chuyển order VNPay từ chờ thanh toán sang đã thanh toán để tiếp tục vòng đời xử lý.
+- `Payment Failure`: nhánh đầu của sơ đồ cho thấy callback thất bại hoặc timeout không dừng ở Payment BC. Sau khi transaction bị đánh dấu failed/expired, hệ thống phát sự kiện để Ordering hủy đơn liên quan, tránh giữ lại một order chờ xử lý nhưng không còn khả năng thanh toán hợp lệ.
+- `Compensation Flow`: nếu một đơn đã thanh toán bị hủy về sau, hệ thống kích hoạt hoàn tác gồm refund state ở Payment BC, rollback reservation ở Promotion BC và thông báo cho các bên liên quan. Đây là phần quan trọng để giữ cho dữ liệu tài chính và ưu đãi không bị “mắc kẹt” sau một quyết định hủy đơn.
+- `Kết luận`: runtime packet này thể hiện tư duy thiết kế bù trừ của SoLi: không cố ép mọi thứ vào một transaction xuyên module, mà dùng state machine cộng với sự kiện hậu xử lý để đạt tính nhất quán nghiệp vụ.
+
+#### 3.1.2.4 Delivery & Review Runtime
+
+**Hình 3.2.4. Delivery & Review Runtime**
+
 ```plantuml
 @startuml SoLi_Delivery_Review_Runtime
 skinparam shadowing false
@@ -1230,9 +1309,11 @@ control "TransitionOrderHandler" as TransitionHandler
 database "Ordering Repository" as OrderRepo
 control "Event Bus" as EventBus
 control "Notification Service" as Notification
-control "Review Service\n[Target UC-22]" as ReviewService
-database "Review Repository\n[Target]" as ReviewRepo
-control "Restaurant Catalog\nRating Projection [Target]" as Catalog
+control "Review Controller / Service" as ReviewService
+control "Order Eligibility Port" as ReviewEligibility
+database "Review Repository" as ReviewRepo
+control "Catalog Rating Projection" as Catalog
+control "AI Quality Pipeline\n[Future Extension]" as AIPipeline
 
 autonumber stop
 
@@ -1261,39 +1342,44 @@ ShipUI --> Shipper : (6) Show delivery complete
 Notification --> CustUI : in-app / push / email
 CustUI --> Customer : (7) Show delivered status
 
-opt Target Review & Rating flow when UC-22 is implemented
+opt Review submission
   Customer -> CustUI : (8) Submit rating and review
-  CustUI -> ReviewService : POST /reviews\n(orderId, stars, comment?)
+  CustUI -> ReviewService : POST /reviews\n(orderId, stars, comment?, tags?)
   activate ReviewService
-  ReviewService -> OrderRepo : (9) Verify delivered order ownership
+  ReviewService -> ReviewEligibility : (9) Check delivered-order eligibility
+  activate ReviewEligibility
+  ReviewEligibility -> OrderRepo : Read ownership and reviewable status
   activate OrderRepo
-  OrderRepo --> ReviewService : eligible order facts
+  OrderRepo --> ReviewEligibility : eligible order facts
   deactivate OrderRepo
+  ReviewEligibility --> ReviewService : restaurantId
+  deactivate ReviewEligibility
   ReviewService -> ReviewRepo : (10) Insert review with uniqueness guard
   activate ReviewRepo
   ReviewRepo --> ReviewService : review persisted
   deactivate ReviewRepo
-  ReviewService -> EventBus : (11) Publish rating-changed event
-  activate EventBus
-  EventBus -> Catalog : Update restaurant rating projection
+  ReviewService -> Catalog : (11) Update rating projection
   activate Catalog
-  Catalog --> EventBus : projection updated
+  Catalog --> ReviewService : projection updated
   deactivate Catalog
+  ReviewService -> EventBus : (12) Publish ReviewSubmittedEvent
+  activate EventBus
+  EventBus -> Notification : Notify restaurant owner
+  EventBus -> AIPipeline : Trigger quality analysis job
   EventBus --> ReviewService : published
   deactivate EventBus
   ReviewService --> CustUI : review accepted
   deactivate ReviewService
-  CustUI --> Customer : (12) Show submitted review
+  CustUI --> Customer : (13) Show submitted review
 end
 @enduml
 ```
 
-Giải thích:
-
-- Order placement bắt đầu từ mobile checkout, đọc cart trong Redis, kiểm tra idempotency, xác thực snapshot catalog/delivery zone, áp dụng promotion, lưu order và phát event.
-- Event and ACL synchronization giúp Ordering và Notification có local snapshot của restaurant/menu/delivery zone, tránh phụ thuộc trực tiếp vào bảng thuộc Catalog khi xử lý checkout hoặc routing thông báo.
-- Payment compensation bảo đảm payment failure, timeout, cancellation và refund không làm sai trạng thái order hoặc promotion usage.
-- Delivery to Review cho thấy trạng thái giao hàng hoàn tất có thể kích hoạt thông báo cho customer và tạo điều kiện để gửi review.
+- `Mục tiêu`: nối trạng thái giao hàng hoàn tất với vòng phản hồi sau giao hàng, để review trở thành một phần của lifecycle dịch vụ chứ không chỉ là tính năng bổ sung ở giao diện.
+- `Delivery Lifecycle`: shipper xác nhận giao thành công, Ordering cập nhật trạng thái bằng optimistic locking, ghi order status log và phát sự kiện để Notification thông báo cho khách hàng. Nhờ đó, cột mốc `delivered` được ghi nhận rõ ràng trước khi hệ thống mở quyền đánh giá.
+- `Review Eligibility`: Review BC không tự đọc tùy ý toàn bộ nghiệp vụ Ordering mà đi qua một contract kiểm tra eligibility. Contract này xác nhận order tồn tại, thuộc về đúng customer và đã đi đến trạng thái cho phép review trước khi Review BC chấp nhận ghi nhận phản hồi.
+- `Future AI Integration`: sau khi review được lưu và rating projection được cập nhật, `ReviewSubmittedEvent` là điểm móc tự nhiên để kích hoạt AI Quality Pipeline. Pipeline này có thể đọc comment, stars, tags và ảnh review mở rộng trong tương lai, sinh quality report rồi đẩy về dashboard cho nhà hàng và quản trị viên.
+- `Kết luận`: runtime packet cuối cùng cho thấy SoLi khép kín vòng phản hồi dịch vụ: từ giao hàng, thông báo, đánh giá đến phân tích chất lượng. Đây là nền tảng tốt để AI gắn vào hệ thống như một lớp tăng cường giá trị sau giao dịch.
 
 ### 3.1.3 Implementation View
 
@@ -2171,101 +2257,241 @@ Giải thích:
 
 #### ADR-001 — Adopt Modular Monolith Architecture
 
-**Bối cảnh:** Hệ thống có nhiều miền nghiệp vụ nhưng nhóm phát triển và hạ tầng vận hành ở quy mô đồ án. Kiến trúc cần đủ rõ để bảo trì, nhưng không nên tạo chi phí phân tán quá sớm.
+**Bối cảnh**
 
-**Các phương án được xem xét:** layered monolith, microservices và modular monolith.
+SoLi là nền tảng nhiều vai trò với các miền nghiệp vụ thay đổi vì những lý do khác nhau: xác thực người dùng, catalog nhà hàng, giỏ hàng, đặt đơn, thanh toán, khuyến mãi, thông báo, review và quản trị vận hành. Bài toán đặt ra là phải giữ ranh giới nghiệp vụ rõ ràng nhưng vẫn bảo đảm triển khai đơn giản, dễ chạy local, dễ kiểm thử và phù hợp với nguồn lực ở quy mô đồ án/capstone.
 
-**So sánh và đánh đổi:** layered monolith đơn giản nhưng dễ trộn domain; microservices tách biệt mạnh nhưng tốn chi phí vận hành, deployment và consistency; modular monolith giữ một runtime nhưng tách domain ở mức module.
+**Các phương án được xem xét**
 
-**Quyết định:** Sử dụng modular monolith cho backend.
+- `Candidate A`: layered monolith, tổ chức code chủ yếu theo controller, service, repository và utility chung.
+- `Candidate B`: microservices, tách Ordering, Payment, Promotion, Notification, Catalog và Review thành các service triển khai độc lập.
+- `Candidate C`: modular monolith, giữ một backend deployable nhưng phân tách chặt theo bounded context và contract nội bộ.
 
-**Lý do lựa chọn:** Cách tiếp cận này phù hợp với quy mô nhóm, giữ deployment đơn giản, đồng thời tạo ranh giới nghiệp vụ rõ cho từng bounded context.
+**So sánh và đánh đổi**
 
-**Tác động:** Tất cả module chạy chung process; lỗi process có thể ảnh hưởng toàn bộ backend. Đổi lại, hệ thống dễ chạy local, dễ test và đủ nền tảng để tách service trong tương lai nếu cần.
+| Tiêu chí | Candidate A | Candidate B | Candidate C |
+| --- | --- | --- | --- |
+| Ranh giới domain | Yếu, dễ trộn business logic | Rất mạnh do tách process | Mạnh ở mức module và contract |
+| Chi phí vận hành | Thấp | Cao nhất | Thấp đến trung bình |
+| Độ phức tạp checkout | Dễ bắt đầu nhưng dễ rối về sau | Cao do phân tán transaction và communication | Cân bằng giữa rõ domain và đơn giản runtime |
+| Kiểm thử end-to-end | Dễ chạy nhưng khó cô lập domain | Khó hơn do nhiều service phụ thuộc | Dễ chạy và vẫn test được theo BC |
+| Khả năng mở rộng tương lai | Bị giới hạn bởi cấu trúc layer | Tốt nhưng tốn chi phí sớm | Có đường tách service về sau |
+
+**Quyết định**
+
+Backend được tổ chức theo modular monolith.
+
+**Lý do lựa chọn**
+
+Phương án này giữ được một runtime duy nhất cho các luồng nhạy cảm như checkout và payment, đồng thời vẫn thể hiện rõ ownership của Auth, Restaurant Catalog, Ordering, Payment, Promotion, Notification và Review. Cách tổ chức này cũng phù hợp với thực tế monorepo hiện tại, nơi mobile app, web portal và admin portal cùng dựa vào một backend trung tâm.
+
+**Tác động**
+
+Hệ thống chỉ cần một pipeline triển khai backend và một môi trường local tương đối gọn. Đổi lại, các ranh giới không được cưỡng chế bằng hạ tầng nên nhóm phát triển phải giữ kỷ luật module, tránh import chéo tùy tiện và tránh để các truy vấn/reporting làm xói mòn boundary. Khi quy mô vận hành tăng lên, kiến trúc hiện tại vẫn cho phép tách dần các miền có nhu cầu riêng như Notification hoặc AI service.
 
 #### ADR-002 — Use Database per BC Ownership
 
-**Bối cảnh:** Hệ thống dùng một PostgreSQL vật lý nhưng có nhiều miền nghiệp vụ khác nhau. Nếu mọi module truy cập tùy ý mọi bảng, coupling dữ liệu sẽ tăng nhanh.
+**Bối cảnh**
 
-**Các phương án được xem xét:** database dùng chung không kiểm soát, database vật lý riêng cho từng context, hoặc một database vật lý với ownership logic theo bounded context.
+SoLi lưu trữ nhiều nhóm dữ liệu khác nhau: user/session, restaurant/menu, image metadata, order, payment transaction, promotion usage, notification log và review. Một PostgreSQL duy nhất giúp hệ thống triển khai gọn, nhưng nếu mọi module có thể đọc ghi tự do mọi bảng thì data coupling sẽ phá vỡ toàn bộ ranh giới kiến trúc.
 
-**So sánh và đánh đổi:** database dùng chung dễ làm nhanh nhưng khó bảo trì; database riêng sạch hơn nhưng quá nặng cho đồ án; ownership logic giữ cân bằng giữa tính đơn giản và kỷ luật kiến trúc.
+**Các phương án được xem xét**
 
-**Quyết định:** Dùng một PostgreSQL nhưng nhóm bảng theo owner bounded context.
+- `Candidate A`: shared database không kiểm soát, cho phép join và mutate xuyên module theo nhu cầu chức năng.
+- `Candidate B`: tách vật lý thành database riêng cho từng bounded context.
+- `Candidate C`: dùng một PostgreSQL vật lý nhưng ownership của bảng thuộc về từng bounded context.
 
-**Lý do lựa chọn:** Cách này phù hợp với modular monolith, giảm chi phí vận hành và vẫn giữ được nguyên tắc data ownership.
+**So sánh và đánh đổi**
 
-**Tác động:** Developer phải tôn trọng boundary khi viết repository. Các tham chiếu xuyên context cần dùng UUID logic, snapshot hoặc contract thay vì foreign key tùy tiện.
+| Tiêu chí | Candidate A | Candidate B | Candidate C |
+| --- | --- | --- | --- |
+| Tốc độ triển khai ban đầu | Cao | Thấp | Cao |
+| Kỷ luật ownership | Thấp | Rất cao | Cao |
+| Độ phức tạp vận hành | Thấp | Cao | Thấp |
+| Hỗ trợ transaction local | Tốt | Kém hơn do phân tán | Tốt |
+| Khả năng service extraction | Thấp do phụ thuộc chéo | Cao | Khá tốt |
+
+**Quyết định**
+
+SoLi dùng một PostgreSQL nhưng phân chia quyền sở hữu bảng theo bounded context.
+
+**Lý do lựa chọn**
+
+Phương án này cân bằng giữa tính thực dụng và chất lượng kiến trúc. Ordering có thể ghi `orders`, `order_items`, `order_status_logs` trong một transaction cục bộ; Payment sở hữu `payment_transactions`; Review sở hữu `reviews`; Notification sở hữu `notifications`, `device_tokens`, `notification_preferences` và `notification_delivery_logs`. Các liên kết xuyên context được biểu diễn bằng UUID logic hoặc snapshot, thay vì dựa vào việc một module truy cập trực tiếp bảng của module khác.
+
+**Tác động**
+
+Mỗi bounded context phải duy trì schema, repository và migration theo phần dữ liệu của mình. Các nhu cầu đọc xuyên context phải đi qua snapshot, projection hoặc contract ổn định. Nhược điểm là vẫn cần kỷ luật ở mức code review vì PostgreSQL vật lý vẫn là một điểm dùng chung; ưu điểm là luồng dữ liệu nghiệp vụ được tách bạch mà không phải chấp nhận chi phí của distributed persistence quá sớm.
 
 #### ADR-003 — Use In-process EventBus Communication
 
-**Bối cảnh:** Các module cần phản ứng với sự kiện như order placed, payment confirmed, order status changed, restaurant updated hoặc menu item updated.
+**Bối cảnh**
 
-**Các phương án được xem xét:** gọi service trực tiếp giữa module, message broker bên ngoài, hoặc EventBus nội tiến trình.
+Nhiều hành vi trong SoLi có bản chất “một module phát sinh trạng thái, module khác cần phản ứng sau đó”. Ví dụ restaurant cập nhật menu thì Ordering phải đồng bộ snapshot; order được tạo thì Notification cần gửi thông báo; payment được xác nhận thì Ordering phải tiếp tục state machine; review được gửi thì nhà hàng cần nhận thông báo và dashboard có thể tiếp nhận phân tích mới.
 
-**So sánh và đánh đổi:** direct call dễ tạo coupling; broker bên ngoài mạnh nhưng tăng chi phí triển khai; in-process EventBus phù hợp với một runtime modular monolith.
+**Các phương án được xem xét**
 
-**Quyết định:** Dùng EventBus nội tiến trình để phối hợp event giữa bounded context.
+- `Candidate A`: gọi service trực tiếp giữa các module ngay trong luồng nghiệp vụ.
+- `Candidate B`: dùng message broker bên ngoài cho toàn bộ domain event.
+- `Candidate C`: dùng EventBus nội tiến trình trong một backend modular monolith.
 
-**Lý do lựa chọn:** EventBus giữ business flow rõ ràng, giúp module phát sự kiện mà không cần biết chi tiết consumer, trong khi vẫn dễ triển khai và kiểm thử.
+**So sánh và đánh đổi**
 
-**Tác động:** Khi scale nhiều instance, event chỉ sống trong process hiện tại. Nếu tách service hoặc cần event durable, hệ thống phải bổ sung broker/outbox.
+| Tiêu chí | Candidate A | Candidate B | Candidate C |
+| --- | --- | --- | --- |
+| Coupling giữa module | Cao | Thấp | Thấp đến trung bình |
+| Chi phí hạ tầng | Thấp | Cao | Thấp |
+| Độ bền của event | Phụ thuộc call chain | Cao | Thấp hơn broker |
+| Tốc độ phản ứng nội bộ | Cao | Trung bình | Cao |
+| Phù hợp giai đoạn hiện tại | Trung bình | Thấp | Cao |
+
+**Quyết định**
+
+SoLi dùng EventBus nội tiến trình để truyền domain event giữa các bounded context.
+
+**Lý do lựa chọn**
+
+In-process EventBus giúp Catalog, Ordering, Payment, Notification và Review phối hợp mà không biến mỗi use case thành một chuỗi service call chặt khớp. Đây là lựa chọn hợp lý cho một modular monolith vì publisher và subscriber cùng sống trong một runtime, không cần thêm broker, consumer group hay cơ chế vận hành message queue. Đồng thời, code vẫn giữ được ngôn ngữ nghiệp vụ rõ: `OrderPlacedEvent`, `PaymentFailedEvent`, `ReviewSubmittedEvent`, `RestaurantUpdatedEvent`.
+
+**Tác động**
+
+Ưu điểm là business flow dễ đọc, dễ kiểm thử và dễ thêm subscriber mới. Nhược điểm là event không bền vững như broker và bị giới hạn trong phạm vi process hiện tại. Khi hệ thống cần multi-runtime event delivery hoặc cần durability chặt hơn, SoLi sẽ phải tiến thêm một bước với outbox và external broker. Tuy nhiên ở giai đoạn hiện tại, EventBus nội tiến trình là điểm cân bằng hợp lý giữa độ tách rời và độ đơn giản.
 
 #### ADR-004 — Adopt ACL Snapshot Pattern
 
-**Bối cảnh:** Ordering cần biết trạng thái restaurant, menu item, delivery zone và modifier khi checkout. Notification cần biết owner của restaurant để route thông báo. Nếu đọc trực tiếp bảng Catalog, boundary giữa context bị phá vỡ.
+**Bối cảnh**
 
-**Các phương án được xem xét:** cross-BC join trực tiếp, gọi service runtime sang Catalog, hoặc dùng local snapshot theo Anti-Corruption Layer.
+Checkout là luồng nhạy cảm nhất của SoLi, nhưng Ordering lại cần dữ liệu thuộc Restaurant Catalog như trạng thái mở cửa, menu item, modifier và delivery zone. Notification cũng cần dữ liệu tối thiểu của restaurant để xác định chủ nhà hàng khi phát thông báo. Nếu hai module này đọc trực tiếp bảng Catalog, ranh giới data ownership sẽ bị phá vỡ ngay tại các luồng quan trọng nhất.
 
-**So sánh và đánh đổi:** join trực tiếp nhanh nhưng coupling cao; runtime service call làm checkout phụ thuộc availability của context khác; snapshot tăng complexity nhưng giúp local read nhanh và boundary rõ.
+**Các phương án được xem xét**
 
-**Quyết định:** Dùng ACL snapshot cho dữ liệu cần đọc cục bộ trong Ordering và Notification.
+- `Candidate A`: join trực tiếp sang bảng của Restaurant Catalog khi cần.
+- `Candidate B`: gọi runtime service sang Restaurant Catalog để lấy dữ liệu hiện thời.
+- `Candidate C`: duy trì local snapshot theo Anti-Corruption Layer trong Ordering và Notification.
 
-**Lý do lựa chọn:** Checkout cần độ tin cậy và hiệu năng cao. Snapshot giúp Ordering tự đọc dữ liệu cần thiết mà không truy cập schema owner khác.
+**So sánh và đánh đổi**
 
-**Tác động:** Hệ thống cần projector và event cập nhật snapshot. Cần xử lý độ trễ đồng bộ, replay và trường hợp snapshot cũ.
+| Tiêu chí | Candidate A | Candidate B | Candidate C |
+| --- | --- | --- | --- |
+| Tốc độ đọc trong checkout | Cao | Trung bình | Cao |
+| Độ phụ thuộc vào module nguồn | Rất cao | Cao | Thấp |
+| Khả năng bảo vệ boundary | Thấp | Trung bình | Cao |
+| Độ phức tạp triển khai | Thấp | Trung bình | Trung bình |
+| Rủi ro inconsistency ngắn hạn | Thấp | Thấp | Có, do eventual consistency |
+
+**Quyết định**
+
+SoLi áp dụng ACL Snapshot Pattern cho các nhu cầu đọc xuyên bounded context ở Ordering và Notification.
+
+**Lý do lựa chọn**
+
+Snapshot cho phép consumer context đọc dữ liệu cục bộ với cấu trúc đúng nhu cầu của mình mà không cần biết chi tiết bên trong schema nguồn. Ordering có thể xác thực checkout bằng `ordering_*_snapshots`; Notification có thể định tuyến thông báo cho chủ nhà hàng bằng `notification_restaurant_snapshots`. Nhờ vậy, business rule của checkout được xử lý cục bộ, nhanh và ít phụ thuộc hơn.
+
+**Tác động**
+
+Đổi lại, hệ thống phải duy trì projector, upsert logic và cơ chế chịu đựng eventual consistency. Snapshot có thể chậm một nhịp so với dữ liệu nguồn, nên các projector phải đủ idempotent và dễ quan sát khi lỗi. Dù vậy, cái giá này hợp lý vì nó đổi lấy boundary sạch hơn, checkout ổn định hơn và một đường phát triển rõ ràng nếu sau này các bounded context được tách thành service độc lập.
 
 #### ADR-005 — Use Redis Runtime Layer
 
-**Bối cảnh:** Cart, lock, idempotency key và presence là dữ liệu runtime cần TTL và truy cập nhanh. Đưa toàn bộ vào PostgreSQL sẽ tạo thêm chi phí query và cleanup.
+**Bối cảnh**
 
-**Các phương án được xem xét:** chỉ dùng PostgreSQL, in-memory process state hoặc Redis runtime layer.
+Không phải mọi dữ liệu trong SoLi đều có cùng đặc tính. Cart, checkout lock, idempotency key, WebSocket presence và một số cửa sổ rate limit là dữ liệu sống ngắn, cần TTL, đọc ghi nhanh và không nên gánh cùng cách xử lý với order hay payment transaction trong PostgreSQL.
 
-**So sánh và đánh đổi:** PostgreSQL bền vững nhưng không tối ưu TTL; in-memory đơn giản nhưng không scale qua nhiều instance; Redis nhanh, hỗ trợ TTL và chia sẻ state.
+**Các phương án được xem xét**
 
-**Quyết định:** Dùng Redis cho state runtime.
+- `Candidate A`: chỉ dùng PostgreSQL cho cả business state lẫn runtime coordination.
+- `Candidate B`: giữ state tạm hoàn toàn trong memory của process.
+- `Candidate C`: dùng Redis làm runtime layer, còn PostgreSQL tiếp tục giữ durable business state.
 
-**Lý do lựa chọn:** Redis phù hợp với cart, checkout idempotency, lock và WebSocket presence, đồng thời hỗ trợ scale API instance tốt hơn.
+**So sánh và đánh đổi**
 
-**Tác động:** Hệ thống cần quản lý key naming, TTL, reconnect, fallback và quan sát lỗi Redis. Dữ liệu nghiệp vụ cuối cùng vẫn phải được ghi vào PostgreSQL.
+| Tiêu chí | Candidate A | Candidate B | Candidate C |
+| --- | --- | --- | --- |
+| TTL và cleanup | Không tự nhiên | Tự nhiên | Rất phù hợp |
+| Chia sẻ state giữa nhiều instance | Có | Không | Có |
+| Hiệu năng thao tác key/value | Trung bình | Rất cao | Rất cao |
+| Độ bền dữ liệu | Cao | Thấp | Trung bình |
+| Phù hợp cho cart/presence/lock | Trung bình | Chỉ hợp single-instance | Cao |
+
+**Quyết định**
+
+SoLi dùng Redis làm lớp runtime state cho cart, lock, idempotency, presence và các nhu cầu coordination tốc độ cao.
+
+**Lý do lựa chọn**
+
+Redis khớp rất tự nhiên với các bài toán key-based và TTL-based của food delivery. Cart có thể hết hạn, checkout lock cần tự giải phóng, idempotency key cần tồn tại trong một khoảng retry window, còn WebSocket presence cần heartbeat và reference counting. Những đặc tính này nếu ép vào PostgreSQL sẽ làm tăng chi phí đọc ghi và cleanup không cần thiết.
+
+**Tác động**
+
+Hệ thống phải đặt quy ước rõ cho key naming, TTL, reconnect policy và cách fallback khi Redis gặp lỗi. Redis cũng trở thành một thành phần vận hành quan trọng đối với trải nghiệm checkout và notification realtime. Tuy nhiên, vì dữ liệu nghiệp vụ cuối cùng vẫn được ghi vào PostgreSQL, Redis chỉ đóng vai trò tăng tốc và điều phối runtime, không thay thế system of record.
 
 #### ADR-006 — Use Ports and Adapters Integration Pattern
 
-**Bối cảnh:** Ordering cần khởi tạo payment và áp dụng promotion nhưng không nên phụ thuộc trực tiếp vào VNPay service hoặc Promotion service cụ thể.
+**Bối cảnh**
 
-**Các phương án được xem xét:** import trực tiếp SDK/provider vào business logic, shared integration service, hoặc ports and adapters.
+SoLi tích hợp với nhiều capability có khả năng thay đổi: thanh toán VNPay, promotion engine, Cloudinary, Firebase Cloud Messaging, SMTP và về sau có thể thêm AI service. Nếu business logic import trực tiếp SDK hoặc concrete service ở khắp nơi, lõi nghiệp vụ sẽ nhanh chóng bị trộn với chi tiết hạ tầng và provider protocol.
 
-**So sánh và đánh đổi:** import trực tiếp nhanh nhưng coupling cao; shared integration dễ thành God service; ports/adapters tách contract khỏi implementation nhưng cần thêm abstraction.
+**Các phương án được xem xét**
 
-**Quyết định:** Dùng ports and adapters cho tích hợp có khả năng thay đổi.
+- `Candidate A`: import trực tiếp provider SDK hoặc concrete service vào business module.
+- `Candidate B`: gom mọi tích hợp vào một số shared integration service dùng chung toàn hệ thống.
+- `Candidate C`: định nghĩa port ở ranh giới nghiệp vụ và gắn adapter cụ thể ở module sở hữu tích hợp.
 
-**Lý do lựa chọn:** Pattern này giúp Ordering định nghĩa nhu cầu nghiệp vụ, còn Payment/Promotion/Image/Notification cung cấp implementation cụ thể.
+**So sánh và đánh đổi**
 
-**Tác động:** Code có thêm interface/adapter, nhưng đổi provider như thêm MoMo, đổi push provider hoặc thay media storage sẽ ít ảnh hưởng core flow.
+| Tiêu chí | Candidate A | Candidate B | Candidate C |
+| --- | --- | --- | --- |
+| Coupling với provider | Cao | Trung bình | Thấp |
+| Độ rõ ownership | Thấp | Trung bình | Cao |
+| Khả năng thay provider | Thấp | Trung bình | Cao |
+| Số lượng abstraction | Thấp | Trung bình | Cao hơn |
+| Testability | Trung bình | Trung bình | Cao |
+
+**Quyết định**
+
+SoLi áp dụng Ports and Adapters cho các tích hợp xuyên context và tích hợp với hệ thống bên ngoài.
+
+**Lý do lựa chọn**
+
+Ordering chỉ cần “khởi tạo thanh toán” và “áp dụng/rollback khuyến mãi”, không cần biết chi tiết VNPay signing hay promotion repository. Tương tự, Notification cần một channel abstraction thay vì gắn chặt với FCM hay SMTP, còn AI service trong tương lai cũng nên xuất hiện như một capability phân tích thay vì một SDK bị gọi rải rác trong dashboard hoặc Review BC. Pattern này giữ cho các module nghiệp vụ chỉ phụ thuộc vào contract ổn định.
+
+**Tác động**
+
+Codebase sẽ có thêm interface, DI token và binding logic ở module composition. Đó là chi phí chấp nhận được để đổi lấy khả năng thay provider, viết test double và giữ business flow sạch hơn. Khi hệ thống mở rộng sang MoMo, nhà cung cấp push khác hoặc AI analysis service riêng, phần thay đổi chủ yếu nằm ở adapter thay vì lan vào Ordering hay Review.
 
 #### ADR-007 — Adopt Drizzle Type-safe Persistence Layer
 
-**Bối cảnh:** Hệ thống cần schema database rõ, type-safe và gần SQL để kiểm soát transaction, enum, constraint và migration.
+**Bối cảnh**
 
-**Các phương án được xem xét:** raw SQL với pg, Prisma hoặc Drizzle ORM/Drizzle Kit.
+SoLi cần một persistence layer vừa type-safe, vừa đủ gần SQL để kiểm soát transaction, constraint, enum, optimistic locking và migration cho các luồng có độ nhạy cao như checkout, payment lifecycle, notification delivery log và review uniqueness. Công nghệ persistence vì vậy không chỉ là lựa chọn coding style, mà còn ảnh hưởng trực tiếp đến chất lượng dữ liệu của toàn hệ thống.
 
-**So sánh và đánh đổi:** raw SQL kiểm soát cao nhưng thiếu type-level safety; Prisma tiện lợi nhưng abstraction cao hơn; Drizzle cân bằng giữa typed schema và tư duy SQL.
+**Các phương án được xem xét**
 
-**Quyết định:** Sử dụng Drizzle ORM và Drizzle Kit.
+- `Candidate A`: dùng `pg` và raw SQL cho toàn bộ repository.
+- `Candidate B`: dùng một high-level ORM như Prisma.
+- `Candidate C`: dùng Drizzle ORM kết hợp Drizzle Kit.
 
-**Lý do lựa chọn:** Drizzle phù hợp với TypeScript, giúp mô tả bảng theo bounded context, giữ query explicit và hỗ trợ schema evolution.
+**So sánh và đánh đổi**
 
-**Tác động:** Developer cần hiểu SQL và PostgreSQL. Một số migration nâng cao cần can thiệp thủ công, nhưng đổi lại data model minh bạch và dễ review.
+| Tiêu chí | Candidate A | Candidate B | Candidate C |
+| --- | --- | --- | --- |
+| Kiểm soát SQL | Rất cao | Trung bình | Cao |
+| Type safety | Thấp đến trung bình | Cao | Cao |
+| Độ minh bạch của query | Cao | Trung bình | Cao |
+| Mức độ phù hợp với module-local schema | Trung bình | Thấp đến trung bình | Cao |
+| Chi phí viết repository | Cao | Thấp | Trung bình |
+
+**Quyết định**
+
+SoLi dùng Drizzle ORM và Drizzle Kit làm type-safe persistence layer cho PostgreSQL.
+
+**Lý do lựa chọn**
+
+Drizzle phù hợp với kiến trúc modular monolith vì schema có thể sống gần bounded context sở hữu nó, trong khi query vẫn đủ tường minh để kiểm soát constraint, index, JSONB snapshot, uniqueness và transaction boundary. Nó cũng phù hợp với hệ sinh thái TypeScript của backend hiện tại, đồng thời hỗ trợ tốt cho Better Auth và workflow migration của repository.
+
+**Tác động**
+
+Nhóm phát triển cần hiểu rõ PostgreSQL và cách Drizzle biểu diễn query, chứ không thể xem ORM như một lớp che hoàn toàn database. Một số migration phức tạp vẫn đòi hỏi rà soát thủ công. Bù lại, data model trở nên minh bạch hơn, dễ review hơn và phù hợp với định hướng giữ ownership dữ liệu theo bounded context trong toàn bộ SoLi.
 
 ## 3.2 Thiết kế Use Case
 
@@ -3262,7 +3488,7 @@ Each domain specification follows the same template:
 | **Actors**                  | Primary: System Administrator.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | **Description**             | This domain provides cross-cutting platform governance, operational oversight, configuration management, and monitoring capabilities. It encompasses restaurant and shipper approval workflows, partner suspension management, full-platform order oversight with composable filters, order-state override authority, dispute refunds on delivered orders, user account administration and suspension control, configuration of application settings and commission rates, audit-log inspection, promotion-performance monitoring, and revenue-report access.                                                                                                                                                        |
 | **Preconditions**           | The actor is authenticated as administrator.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| **Postconditions**          | The selected administrative action is applied. Partner approval and suspension states, user states, order states, refunds, and configuration values are persisted. Notifications are dispatched where business-relevant, and audit-log entries are recorded for traceability.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Postconditions**          | The selected administrative action is applied. Partner approval and suspension states, user states, order states, refunds, and configuration values are persisted. Notifications are dispatched where business-relevant, and audit-log entries are recorded for auditability.                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | **Priority**                | P1 — Must                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | **Frequency of Use**        | Continuous — administration is a daily activity.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | **Normal Course of Events** | 1. The administrator signs in to the web portal. <br> 2. The administrator reviews pending restaurant registrations and approves eligible partners. <br> 3. The administrator monitors active orders across the platform using composable filters (status, date, restaurant, customer). <br> 4. The administrator inspects order detail and, where required, overrides order state (e.g., force-cancel an unresponsive order). <br> 5. The administrator approves a dispute refund on a delivered order. <br> 6. The administrator manages user accounts — search, role assignment, ban / unban. <br> 7. The administrator reviews and updates application settings such as timeout thresholds and commission rates. |
@@ -3331,8 +3557,6 @@ Each domain specification follows the same template:
 ---
 
 _End of Use Case Specification v1.0_
-
-_Subsequent artefacts: Software Requirements Specification (SRS), System Architecture Document, API Specification, Test Plan. Use Case identifiers in this document are stable anchors for traceability._
 
 ## 3.3 Thiết kế CSDL
 
