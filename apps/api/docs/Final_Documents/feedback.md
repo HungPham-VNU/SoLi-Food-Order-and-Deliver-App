@@ -1,78 +1,110 @@
 # ROLE
 
-Bạn là một Principal Software Architect, Principal Software Engineer, Principal Business Analyst và Technical Reviewer.
+Bạn là một hội đồng review gồm:
 
-Bạn có kinh nghiệm xây dựng:
+- Principal Software Architect
+- Principal Software Engineer
+- Principal Technical Writer
+- Principal Business Analyst
+- Software Maintenance Expert
+- Capstone Thesis Reviewer
 
-- Enterprise Software Architecture
-- BRD
-- SRS
-- ASR
-- ADD
-- ADR
-- SAD
-- Graduation Thesis Report
-- Capstone Project Report
+Bạn có kinh nghiệm đánh giá:
 
-Ngoài vai trò viết báo cáo, bạn còn chịu trách nhiệm review chất lượng tài liệu ở góc độ kiến trúc phần mềm và báo cáo học thuật.
+- Capstone Project
+- Graduation Thesis
+- Software Engineering Report
+- Architecture Documentation
+- Software Maintenance Documentation
+- Enterprise Software Design
+
+Bạn đánh giá báo cáo dưới góc nhìn của:
+
+- Giảng viên hướng dẫn
+- Hội đồng phản biện
+- Software Architect
+- Senior Engineer
 
 ---
 
 # GOAL
 
-Đọc lại toàn bộ codebase, toàn bộ tài liệu dự án và file báo cáo hiện tại để hiểu đầy đủ context hệ thống.
-
-Sau đó cập nhật trực tiếp:
+Thực hiện một đợt review toàn diện đối với:
 
 ```text
 @DA1_report.md
 ```
 
-theo đúng các feedback mới nhất.
+và sửa trực tiếp file này cho đến khi đạt chất lượng của một báo cáo đồ án/capstone chuyên nghiệp.
 
-KHÔNG tạo file mới.
-
-KHÔNG viết tài liệu bổ sung.
-
-CHỈ chỉnh sửa trực tiếp:
+Mục tiêu cuối cùng:
 
 ```text
 @DA1_report.md
 ```
+
+phải có chất lượng đủ tốt để:
+
+- Nộp cho giảng viên.
+- Dùng làm tài liệu bảo vệ đồ án.
+- Được đọc độc lập mà không cần mở các tài liệu khác.
+- Thể hiện được chiều sâu nghiệp vụ, kiến trúc, kỹ thuật và bảo trì phần mềm.
+
+---
+
+# CONTEXT
+
+Hệ thống:
+
+```text
+SoLi Food Delivery Platform
+```
+
+được xây dựng theo:
+
+```text
+Modular Monolith Architecture
+```
+
+với các bounded context:
+
+- Auth BC
+- Restaurant Catalog BC
+- Image BC
+- Ordering BC
+- Payment BC
+- Promotion BC
+- Notification BC
+- Review BC
+- Governance/Admin BC
+
+---
+
+Báo cáo hiện tại:
+
+```text
+DA1_report.md
+```
+
+đã trải qua nhiều vòng chỉnh sửa.
+
+Tuy nhiên cần thực hiện một vòng audit cuối cùng trước khi nộp.
 
 ---
 
 # MANDATORY READING PHASE
 
-Trước khi chỉnh sửa báo cáo phải đọc lại toàn bộ các nguồn sau.
+Trước khi review phải đọc lại toàn bộ:
 
-## 1. Báo cáo hiện tại
+## Current Report
 
 ```text
 @DA1_report.md
 ```
 
-Mục tiêu:
-
-- Hiểu cấu trúc hiện tại.
-- Xác định những phần đã tốt.
-- Xác định những phần cần chỉnh sửa.
-
 ---
 
-## 2. Template báo cáo
-
-```text
-@NoiDung Bao Cao Đồ án 1,2.md
-```
-
-Mục tiêu:
-
-- Đảm bảo báo cáo không lệch yêu cầu môn học.
-
----
-
-## 3. Tài liệu nghiệp vụ
+## Business Documents
 
 ```text
 @Food_Delivery_Vision_and_Scope.md
@@ -84,7 +116,7 @@ Mục tiêu:
 
 ---
 
-## 4. Tài liệu yêu cầu
+## Requirements Documents
 
 ```text
 @SRS_FoodDelivery.md
@@ -96,29 +128,12 @@ Mục tiêu:
 
 ---
 
-## 5. Tài liệu mô hình hóa
-
-```text
-@SRS_SequenceDiagrams.md
-```
-
----
-
-## 6. Tài liệu chất lượng
-
-```text
-@Utility_Tree.md
-
-@14 Quality Attribute.md
-
-```
-
----
-
-## 7. Tài liệu kiến trúc
+## Architecture Documents
 
 ```text
 @ASR_FoodDelivery.md
+
+@Utility_Tree.md
 
 @ADD_FoodDelivery.md
 
@@ -131,7 +146,7 @@ Mục tiêu:
 
 ---
 
-## 8. Tài liệu AI
+## AI Proposal
 
 ```text
 @Proposal_Multimodel.md
@@ -139,165 +154,151 @@ Mục tiêu:
 
 ---
 
-## 9. Source Code Analysis (BẮT BUỘC)
-
-Không được bỏ qua.
-
-Phải duyệt toàn bộ repository.
-
-Phân tích:
-
-### Architecture
-
-- Modules
-- Bounded Contexts
-- Layers
-- Dependencies
-
-### Database
-
-- Schema
-- Entities
-- Migrations
-- Relationships
-
-### API
-
-- Controllers
-- Services
-- Endpoints
-
-### Runtime Components
-
-- EventBus
-- Redis
-- ACL
-- Payment
-- Notification
-
-### Testing
-
-- Unit Tests
-- Integration Tests
-- E2E Tests
-
-### Observability
-
-- OpenTelemetry
-- Logging
-- Metrics
-- Monitoring
-
-### DevOps
-
-- Docker
-- GitHub Actions
-- GHCR
-- Terraform
-
-### Folder Structure
-
-### UI hiện có
-
----
-
-# TASK 1 — EXPAND ARCHITECTURAL DECISIONS
-
-Mở rộng:
+## Design Pattern Audit
 
 ```text
-3.1.6 Architectural Decisions
-```
-
-Hiện tại phần này còn quá ngắn.
-
----
-
-Bao gồm:
-
-```text
-ADR-001 — Adopt Modular Monolith Architecture
-
-ADR-002 — Use Database per BC Ownership
-
-ADR-003 — Use In-process EventBus Communication
-
-ADR-004 — Adopt ACL Snapshot Pattern
-
-ADR-005 — Use Redis Runtime Layer
-
-ADR-006 — Use Ports and Adapters Integration Pattern
-
-ADR-007 — Adopt Drizzle Type-safe Persistence Layer
+@gof-design-pattern-audit-report.md
 ```
 
 ---
 
-Giữ nguyên tinh thần của:
+## Source Code
+
+BẮT BUỘC đọc lại toàn bộ codebase.
+
+Đây là source of truth cao nhất.
+
+Nếu:
 
 ```text
-@ADR_FoodDelivery.md
+@DA1_report.md
+```
+
+mâu thuẫn với codebase:
+
+```text
+Ưu tiên codebase
 ```
 
 ---
 
-KHÔNG được chỉ viết:
+# REQUIREMENTS
+
+## 1. Architecture Consistency Review
+
+Kiểm tra:
+
+### Logical View
+
+- Có đúng với codebase không.
+- Có đang copy ADD quá nhiều không.
+- Có giải thích ở mức báo cáo hay không.
+
+---
+
+### Runtime View
+
+Kiểm tra:
+
+- Có đang giải thích lại từng mũi tên sequence diagram không.
+- Có quá kỹ thuật không.
+- Có phù hợp với người đọc báo cáo không.
+
+Mỗi runtime packet nên tập trung vào:
 
 ```text
-Decision
+Mục tiêu
 
-Rationale
+Các thành phần tham gia
+
+Ý nghĩa kiến trúc
+
+Giá trị nghiệp vụ
+```
+
+Không nên diễn giải từng bước implementation.
+
+---
+
+### Implementation View
+
+Kiểm tra:
+
+- Mapping kiến trúc ↔ source code.
+- Có đúng module structure thực tế không.
+
+---
+
+### Data View
+
+Kiểm tra:
+
+- Có phản ánh đúng ownership của từng BC không.
+- Có đúng database schema thực tế không.
+
+---
+
+### Deployment View
+
+Kiểm tra:
+
+- Có đúng hạ tầng hiện tại không.
+- Có phản ánh Render, GHCR, Docker, PostgreSQL, Redis và Mobile App đúng không.
+
+---
+
+## 2. ADR Review
+
+Kiểm tra các ADR:
+
+```text
+ADR-001
+
+ADR-002
+
+ADR-003
+
+ADR-004
+
+ADR-005
+
+ADR-006
+
+ADR-007
 ```
 
 ---
 
 Mỗi ADR phải có:
 
-### Bối cảnh
+- Context
+- Alternatives
+- Trade-offs
+- Decision
+- Rationale
+- Consequences
 
-### Các phương án được xem xét
+---
 
-Ví dụ:
+Không được:
 
 ```text
-Candidate A
-
-Candidate B
-
-Candidate C
+Copy nguyên @ADR_FoodDelivery.md
 ```
 
 ---
 
-### So sánh và đánh đổi
-
-Có bảng trade-off.
-
----
-
-### Quyết định
-
----
-
-### Lý do lựa chọn
-
----
-
-### Tác động
-
----
-
-Viết ngắn gọn hơn ADR gốc.
-
-Mỗi ADR khoảng:
+Không được:
 
 ```text
-0.5 - 1 trang
+Quá ngắn khiến mất ý nghĩa kiến trúc
 ```
+
+---
 
 Mục tiêu:
 
-Người đọc nhìn thấy:
+Giảng viên phải nhìn thấy:
 
 ```text
 Problem
@@ -321,301 +322,505 @@ Consequences
 
 ---
 
-# TASK 2 — TÍCH HỢP AI VÀO KIẾN TRÚC HỆ THỐNG
+## 3. Database Design Review
 
-Hiện tại phần AI đang có cảm giác là một đề tài riêng ghép vào hệ thống.
+Đây là phần ưu tiên cao.
 
-Cần chỉnh sửa để AI trở thành một phần của kiến trúc SoLi.
-
----
-
-Bổ sung một subsection mới trong phần AI.
-
-Ví dụ:
+Kiểm tra:
 
 ```text
-2.2.x Tích hợp AI vào hệ thống SoLi
+3.3 Database Design
 ```
 
 ---
 
-Phải giải thích rõ:
+Phải bảo đảm:
 
-### AI nằm ở đâu trong hệ thống
+### 3.3.1 ERD tổng thể
 
-### Module nào sử dụng AI
-
-### Dữ liệu nào đi vào AI
-
-### Kết quả AI được sử dụng ở đâu
-
-### Vai trò của Review BC
-
-### Vai trò của Dashboard
+Có đầy đủ.
 
 ---
 
-Bổ sung flow kiến trúc:
+### Auth BC Data Model
+
+### Restaurant Catalog BC Data Model
+
+### Ordering BC Data Model
+
+### Payment BC Data Model
+
+### Promotion BC Data Model
+
+### Notification BC Data Model
+
+### Review BC Data Model
+
+---
+
+Mỗi BC nên có:
 
 ```text
-Customer Review
+Mô tả BC
+
+Danh sách bảng
+
+Quan hệ
+
+Data Dictionary
+
+Ý nghĩa nghiệp vụ
+```
+
+---
+
+Không được:
+
+```text
+Chỉ liệt kê bảng
+```
+
+---
+
+Không được:
+
+```text
+Mô tả sơ sài
+```
+
+---
+
+## 4. AI Section Review
+
+Kiểm tra:
+
+```text
+2.2 AI Models
+```
+
+---
+
+AI phải:
+
+```text
+Gắn với Review BC
+```
+
+---
+
+Không được:
+
+```text
+Tách rời khỏi hệ thống
+```
+
+---
+
+Kiểm tra:
+
+```text
+Business Problem
+
 ↓
-Review BC
+
+AI Problem
+
 ↓
-AI Quality Analysis Pipeline
+
+Multimodal Motivation
+
 ↓
+
 ConvNeXt
+
 ↓
-XLM-RoBERTa
+
+XLM-R
+
 ↓
-Fusion Layer
+
+Fusion
+
 ↓
-Explainable AI
+
+XAI
+
 ↓
+
 AI Agent
+
 ↓
-Quality Report
-↓
+
 Restaurant Dashboard
 ```
 
 ---
 
-Mục tiêu:
+Đảm bảo:
 
-Người đọc hiểu rằng:
+AI được trình bày như một phần mở rộng của SoLi.
+
+Không phải một đề tài AI độc lập.
+
+---
+
+## 5. Testing Review
+
+Kiểm tra lại codebase.
+
+---
+
+Nếu tồn tại:
+
+- Unit Tests
+- Integration Tests
+- E2E Tests
+
+thì phải được phản ánh trong:
 
 ```text
-AI là một phần mở rộng của hệ thống
-
-không phải một đề tài AI tách rời
+4.3 Testing
 ```
 
 ---
 
-# TASK 3 — REFACTOR RUNTIME VIEW
+Kiểm tra:
 
-Hiện tại Runtime View đang trình bày theo dạng:
-
-```text
-Diagram
-
-Diagram
-
-Diagram
-
-Diagram
-
-↓
-
-Giải thích
-```
-
-Cách này giống tài liệu ADD.
-
-Không phù hợp với báo cáo đồ án.
+- Test Strategy
+- Test Architecture
+- Ví dụ test cases
+- Công cụ sử dụng
+- Kết quả kiểm thử
 
 ---
 
-Refactor lại theo dạng:
+Không được:
 
 ```text
-Diagram
-
-↓
-
-Giải thích
-
-↓
-
-Diagram
-
-↓
-
-Giải thích
+Chỉ mô tả lý thuyết testing
 ```
 
 ---
+
+## 6. Observability Review
+
+Kiểm tra:
+
+```text
+3.1.7 Observability & Operational Monitoring
+```
+
+---
+
+Xác minh bằng codebase.
+
+---
+
+Kiểm tra:
+
+- OpenTelemetry
+- Structured Logging
+- Grafana Faro
+- PostHog
+- Sentry
+
+---
+
+Không chỉ liệt kê công nghệ.
+
+Phải giải thích:
+
+```text
+Thu thập gì
+
+Dùng làm gì
+
+Ai sử dụng dữ liệu đó
+
+Mang lại lợi ích gì
+```
+
+---
+
+## 7. Design Pattern Review
+
+Đọc:
+
+```text
+gof-design-pattern-audit-report.md
+```
+
+---
+
+Đối chiếu với source code.
+
+---
+
+Chỉ giữ các pattern:
+
+có bằng chứng trong codebase.
+
+---
+
+Không được:
+
+```text
+Tự suy diễn pattern
+```
+
+---
+
+Không được:
+
+```text
+Gắn pattern chỉ vì tên class giống
+```
+
+---
+
+## 8. Technical Stack Review
+
+Rà soát lại codebase.
+
+---
+
+Kiểm tra xem Chương 2 còn thiếu công nghệ nào không.
 
 Ví dụ:
 
-### 3.1.2.1 Order Placement Runtime
+- OpenTelemetry
+- Swagger
+- Scalar
+- PostHog
+- Sentry
+- Grafana Faro
+- Docker
+- GitHub Actions
+- GHCR
+- Terraform
+- Jest
+- Supertest
+- Zod
+- class-validator
 
-(Hình)
-
-Sau hình phải giải thích ngay:
-
-- Mục tiêu
-- Luồng xử lý
-- Vai trò EventBus
-- Vai trò Redis
-- Vai trò Idempotency
-- Kết luận
-
----
-
-### 3.1.2.2 Event & ACL Synchronization Runtime
-
-(Hình)
-
-Sau hình phải giải thích ngay:
-
-- Mục tiêu
-- Vai trò ACL Snapshot
-- Eventual Consistency
-- Kết luận
+hoặc các công nghệ khác đang tồn tại trong source code.
 
 ---
 
-### 3.1.2.3 Payment & Compensation Runtime
+Nếu còn thiếu:
 
-(Hình)
-
-Sau hình phải giải thích ngay:
-
-- Payment Success
-- Payment Failure
-- Compensation Flow
-- Kết luận
+```text
+Bổ sung vào Chương 2
+```
 
 ---
 
-### 3.1.2.4 Delivery & Review Runtime
+## 9. Report Quality Review
 
-(Hình)
+Kiểm tra toàn bộ:
 
-Sau hình phải giải thích ngay:
+```text
+DA1_report.md
+```
 
-- Delivery Lifecycle
-- Review Eligibility
-- Future AI Integration
-- Kết luận
+---
+
+Phát hiện:
+
+- Nội dung trùng lặp.
+- Nội dung quá giống SRS.
+- Nội dung quá giống ADD.
+- Nội dung quá giống ADR.
+- Nội dung quá giống Proposal.
 
 ---
 
 Mục tiêu:
 
-Biến Runtime View từ:
-
 ```text
-Architecture Document
-```
-
-thành:
-
-```text
-Capstone Report
+Báo cáo phải mang văn phong của một báo cáo đồ án.
 ```
 
 ---
 
-# WRITING RULES
-
-Không được viết:
+Không phải:
 
 ```text
-Theo ASR...
-
-Theo ADR...
-
-Theo ADD...
-
-Theo BR-4...
-
-Theo Utility Tree...
-
-Source code xác nhận...
+Bản ghép của nhiều tài liệu khác nhau.
 ```
 
 ---
 
-Không được viết như tài liệu traceability.
+## 10. Presentation & Formatting Review
+
+Review format trình bày.
+
+Kiểm tra:
+
+### Heading hierarchy
+
+Ví dụ:
+
+```text
+Chương
+
+1.1
+
+1.1.1
+
+1.1.1.1
+```
 
 ---
 
-Phải viết như báo cáo học thuật độc lập.
+### Caption
+
+Mọi hình phải có:
+
+```text
+Hình x.y
+```
 
 ---
 
-# MANDATORY REVIEW PHASE
+Mọi bảng phải có:
 
-Sau khi cập nhật xong:
+```text
+Bảng x.y
+```
+
+---
+
+### Consistency
+
+Kiểm tra:
+
+- Font style trong markdown.
+- Table style.
+- Bullet style.
+- Numbering style.
+- Caption style.
+
+---
+
+### Academic Writing
+
+Chỉnh sửa các đoạn:
+
+- Quá dài.
+- Khó đọc.
+- Mang tính kỹ thuật implementation quá mức.
+- Thiếu tính học thuật.
+
+---
+
+# OPTIONAL IMPROVEMENT
+
+Nếu phù hợp với codebase và tài liệu:
+
+có thể bổ sung:
+
+```text
+3.1.10 Architectural Traceability Matrix
+```
+
+Ví dụ:
+
+| Business Problem     | Architectural Solution |
+| -------------------- | ---------------------- |
+| Duplicate Checkout   | Idempotency Key        |
+| Cross-BC Dependency  | ACL Snapshot           |
+| Runtime State        | Redis                  |
+| Payment Integration  | Ports & Adapters       |
+| Provider Replacement | Strategy Pattern       |
+| Future Scalability   | BC Separation          |
+
+---
+
+Chỉ bổ sung nếu thực sự nâng cao chất lượng báo cáo.
+
+Không thêm cho đủ số lượng.
+
+---
+
+# CONSTRAINTS
+
+Không tạo file mới.
+
+Không xuất review notes.
+
+Không xuất reasoning.
+
+Không tạo report review riêng.
+
+Không tạo TODO list.
+
+Không tạo CHANGELOG.
+
+---
+
+Chỉ chỉnh sửa trực tiếp:
 
 ```text
 @DA1_report.md
 ```
 
-KHÔNG được kết thúc ngay.
+---
 
-Phải review tối thiểu 2 vòng.
+# QUALITY GATE
+
+Sau khi hoàn thành phải tự review tối thiểu 5 vòng:
+
+### Pass 1
+
+Kiểm tra tính đúng đắn với source code.
+
+### Pass 2
+
+Kiểm tra tính nhất quán với tài liệu.
+
+### Pass 3
+
+Kiểm tra chất lượng kiến trúc.
+
+### Pass 4
+
+Kiểm tra chất lượng học thuật.
+
+### Pass 5
+
+Kiểm tra format trình bày.
 
 ---
 
-## Review Pass 1 — ADR Review
+Nếu vẫn còn vấn đề:
 
-Kiểm tra:
+```text
+Tiếp tục sửa trực tiếp DA1_report.md
+```
 
-- Có đủ 7 ADR không.
-- Có đủ Candidate không.
-- Có đủ Trade-off không.
-- Có đủ Decision không.
-- Có đủ Consequences không.
-
-Nếu thiếu:
-
-Sửa ngay.
-
----
-
-## Review Pass 2 — AI Integration Review
-
-Kiểm tra:
-
-- AI có còn bị tách khỏi hệ thống không.
-- Đã mô tả rõ Review BC chưa.
-- Đã mô tả rõ Dashboard chưa.
-- Đã mô tả rõ AI Pipeline chưa.
-
-Nếu chưa:
-
-Sửa ngay.
-
----
-
-## Review Pass 3 — Runtime View Review
-
-Kiểm tra:
-
-- Có phải mỗi diagram đều được giải thích ngay bên dưới không.
-- Có phải Runtime View được trình bày theo luồng đọc tự nhiên không.
-- Có còn tình trạng nhiều diagram liên tiếp rồi mới giải thích không.
-
-Nếu có:
-
-Refactor lại.
+cho đến khi không còn lỗi đáng kể.
 
 ---
 
 # OUTPUT
 
-Chỉnh sửa trực tiếp:
+Chỉ cập nhật:
 
 ```text
 @DA1_report.md
 ```
 
-Không tạo file mới.
+Không tạo bất kỳ file nào khác.
 
-Không xuất reasoning.
+Không in ra báo cáo review.
 
-Không xuất checklist.
+Không in ra danh sách lỗi.
 
-Không xuất review notes.
+Không giải thích.
 
-Chỉ giữ lại phiên bản cuối cùng của:
+Chỉ giữ lại phiên bản cuối cùng đã được review và tối ưu hóa hoàn chỉnh của:
 
 ```text
 @DA1_report.md
 ```
-
-sau khi hoàn thành toàn bộ quá trình cập nhật và review.
