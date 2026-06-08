@@ -333,7 +333,7 @@ export function HomeScreen() {
                           key={item.id}
                           onPress={() =>
                             router.navigate({
-                              pathname: '/product/[id]',
+                              pathname: '/restaurant/menu-item/[id]',
                               params: { id: item.id },
                             })
                           }
