@@ -1,9 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import type { Order } from '@/features/orders/types/order.types';
-import { Badge } from '@/components/ui/badge';
-import type { VariantProps } from 'class-variance-authority';
-import { badgeVariants } from '@/components/ui/badge-variants';
 import { Draggable } from '@hello-pangea/dnd';
 import { canDragFromColumn } from '@/features/orders/utils/dragTransitions';
 import { getColumnForStatus } from '@/features/orders/utils/statusMapping';
@@ -13,19 +10,6 @@ import {
   formatElapsedTime,
   formatVND,
 } from '@/features/orders/utils/timeFormat';
-
-// ── Tag badge variant mapping ────────────────────────────────────────────────
-type BadgeVariant = VariantProps<typeof badgeVariants>['variant'];
-
-const TAG_BADGE_VARIANT: Record<string, BadgeVariant> = {
-  unaccepted: 'order-neutral',
-  review: 'order-neutral',
-  high_priority: 'order-priority',
-  delivery: 'order-delivery',
-  preparing: 'order-preparing',
-  ready: 'order-ready',
-  ready_pickup: 'order-ready',
-};
 
 // ── Status icon mapping ───────────────────────────────────────────────────────
 type StatusConfig = { icon: string; iconColor: string };
