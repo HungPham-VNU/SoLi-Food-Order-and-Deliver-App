@@ -21,7 +21,10 @@ export default function CustomerLayout() {
       <Stack.Screen name="settings" />
       <Stack.Screen name="edit-profile" />
       <Stack.Screen name="payment-methods" />
-      <Stack.Screen name="payment/vnpay-return" />
+      <Stack.Screen
+        name="payment/vnpay-return"
+        options={{ gestureEnabled: false }}
+      />
     </Stack>
   );
 }

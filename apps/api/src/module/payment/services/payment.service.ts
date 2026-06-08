@@ -1,4 +1,12 @@
-﻿import { Injectable, Inject, Logger } from '@nestjs/common';
+﻿import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Inject,
+  Logger,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import {
@@ -186,6 +194,61 @@ export class PaymentService implements IPaymentInitiationPort {
    */
   async getMyPayments(customerId: string): Promise<PaymentTransaction[]> {
     return this.txnRepo.findByCustomerId(customerId);
+  }
+
+  async cancelPendingVNPayPaymentForOrder(
+    orderId: string,
+    customerId: string,
+    reason = 'Customer cancelled VNPay payment',
+  ): Promise<PaymentTransaction> {
+    const txn = await this.txnRepo.findByOrderId(orderId);
+
+    if (!txn) {
+      throw new NotFoundException(
+        `VNPay payment transaction for order ${orderId} not found.`,
+      );
+    }
+
+    if (txn.customerId !== customerId) {
+      throw new ForbiddenException(
+        'You can only cancel your own VNPay payments.',
+      );
+    }
+
+    if (txn.status === 'failed') {
+      this.logger.log(
+        `cancelPendingVNPayPaymentForOrder: txn=${txn.id} already failed. reason=${reason}`,
+      );
+      return txn;
+    }
+
+    if (
+      txn.status === 'completed' ||
+      txn.status === 'refund_pending' ||
+      txn.status === 'refunded'
+    ) {
+      throw new UnprocessableEntityException(
+        'This VNPay payment has already completed and cannot be cancelled.',
+      );
+    }
+
+    const updated = await this.txnRepo.updateStatus(
+      txn.id,
+      'failed',
+      txn.version,
+    );
+
+    if (!updated) {
+      throw new ConflictException(
+        'Payment status changed while cancellation was being processed. Please refresh and try again.',
+      );
+    }
+
+    this.logger.warn(
+      `PaymentTransaction ${txn.id} manually cancelled for order=${orderId}. reason=${reason}`,
+    );
+
+    return updated;
   }
 
   async markPaymentAttemptFailed(txnId: string, reason: string): Promise<void> {

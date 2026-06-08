@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   ScrollView,
   StatusBar,
   Text,
@@ -9,19 +10,26 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   CheckCircle2,
   Clock3,
   CreditCard,
-  Home,
   XCircle,
 } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { formatCurrency } from '@/src/lib/format-utils';
 import { captureMobileException } from '@/src/lib/observability';
-import { useMyOrderDetail } from '@/src/features/orders/hooks/use-order-history';
-import type { OrderStatus } from '@/src/features/orders/types';
+import {
+  orderKeys,
+  useMyOrderDetail,
+} from '@/src/features/orders/hooks/use-order-history';
+import type { OrderDetail, OrderStatus } from '@/src/features/orders/types';
+import { addItemToCart, clearCart } from '@/src/features/cart/api/cart-api';
+import { cartKeys } from '@/src/features/cart/hooks/use-cart';
+import type { CartResponse } from '@/src/features/cart/types';
+import { cancelVNPayPayment } from '../api/payment-api';
 import {
   buildVNPayStatusRouteParams,
   openVNPayPaymentSession,
@@ -75,7 +83,10 @@ function getStatusCopy(input: {
   if (isTerminalStatus(input.orderStatus)) {
     return {
       tone: 'failed' as const,
-      title: input.orderStatus === 'refunded' ? 'Payment refunded' : 'Order cancelled',
+      title:
+        input.orderStatus === 'refunded'
+          ? 'Payment refunded'
+          : 'Order cancelled',
       message:
         input.orderStatus === 'refunded'
           ? 'The payment was refunded for this order.'
@@ -97,7 +108,8 @@ function getStatusCopy(input: {
     return {
       tone: 'pending' as const,
       title: 'Finalizing order',
-      message: 'VNPay has returned successfully. We are waiting for the order status to update.',
+      message:
+        'VNPay has returned successfully. We are waiting for the order status to update.',
       icon: Clock3,
     };
   }
@@ -146,6 +158,44 @@ function getToneClasses(tone: 'success' | 'pending' | 'failed') {
   };
 }
 
+async function restoreCheckoutCartFromOrder(
+  order: OrderDetail,
+): Promise<CartResponse | null> {
+  await clearCart();
+
+  let restoredCart: CartResponse | null = null;
+
+  for (const item of order.items) {
+    try {
+      restoredCart = await addItemToCart({
+        menuItemId: item.menuItemId,
+        restaurantId: order.restaurantId,
+        restaurantName: order.restaurantName,
+        itemName: item.itemName,
+        unitPrice: item.unitPrice,
+        quantity: item.quantity,
+        selectedModifiers: item.modifiers.map((modifier) => ({
+          groupId: modifier.groupId,
+          optionId: modifier.optionId,
+        })),
+        optimisticSelectedModifiers: item.modifiers.map((modifier) => ({
+          groupId: modifier.groupId,
+          groupName: modifier.groupName,
+          optionId: modifier.optionId,
+          optionName: modifier.optionName,
+          price: modifier.price,
+        })),
+      });
+    } catch (err) {
+      throw new Error(
+        `Failed to restore cart item "${item.itemName}": ${(err as Error).message}`,
+      );
+    }
+  }
+
+  return restoredCart;
+}
+
 export function VNPayPaymentStatusScreen() {
   const params = useLocalSearchParams<{
     orderId?: string;
@@ -157,7 +207,9 @@ export function VNPayPaymentStatusScreen() {
   }>();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isOpeningPayment, setIsOpeningPayment] = useState(false);
+  const [isCancellingPayment, setIsCancellingPayment] = useState(false);
 
   const orderId = firstParam(params.orderId);
   const txnRef = firstParam(params.txnRef);
@@ -203,6 +255,66 @@ export function VNPayPaymentStatusScreen() {
     router.replace('/(customer)/(tabs)');
   };
 
+  const handleCancelPayment = async () => {
+    if (!order || isCancellingPayment) return;
+
+    setIsCancellingPayment(true);
+
+    // --- Step 1: Cancel the VNPay payment transaction and pending order ---
+    try {
+      await cancelVNPayPayment(order.orderId);
+    } catch (error) {
+      captureMobileException(error, {
+        source: 'vnpay_status_cancel_payment',
+        orderId: order.orderId,
+      });
+      Toast.show({
+        type: 'error',
+        text1: 'Could not cancel payment',
+        text2: 'Please refresh and try again.',
+      });
+      void refetch();
+      setIsCancellingPayment(false);
+      return;
+    }
+
+    // --- Step 2: Restore cart and navigate to checkout ---
+    try {
+      const restoredCart = await restoreCheckoutCartFromOrder(order);
+      queryClient.setQueryData<CartResponse | null>(
+        cartKeys.myCart(),
+        restoredCart,
+      );
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: cartKeys.all }),
+        queryClient.invalidateQueries({ queryKey: orderKeys.all }),
+      ]);
+
+      Toast.show({
+        type: 'success',
+        text1: 'Payment cancelled',
+        text2: 'Your checkout details were restored.',
+      });
+
+      router.dismissAll();
+      router.replace('/(customer)/checkout');
+    } catch (error) {
+      captureMobileException(error, {
+        source: 'vnpay_status_restore_checkout',
+        orderId: order.orderId,
+      });
+      await queryClient.invalidateQueries({ queryKey: cartKeys.all });
+      Toast.show({
+        type: 'error',
+        text1: 'Payment cancelled',
+        text2: 'Could not restore checkout details.',
+      });
+    } finally {
+      setIsCancellingPayment(false);
+    }
+  };
+
   const handleContinuePayment = async () => {
     if (!order?.paymentUrl || isOpeningPayment) return;
 
@@ -233,23 +345,52 @@ export function VNPayPaymentStatusScreen() {
     }
   };
 
+  const hasSuccessfulVNPayReturn =
+    returnStatus === 'completed' || vnpResponseCode === '00';
   const canContinuePayment =
-    order?.status === 'pending' && !!order.paymentUrl && !isOpeningPayment;
+    order?.status === 'pending' &&
+    !!order.paymentUrl &&
+    !hasSuccessfulVNPayReturn &&
+    !isOpeningPayment &&
+    !isCancellingPayment;
+  const canCancelPayment =
+    order?.paymentMethod === 'vnpay' &&
+    order?.status === 'pending' &&
+    !hasSuccessfulVNPayReturn &&
+    !isOpeningPayment;
+  const shouldBlockExit =
+    (order?.paymentMethod === 'vnpay' && order?.status === 'pending') ||
+    (!!orderId && !order && !isError && returnStatus !== 'completed');
+
+  useEffect(() => {
+    if (!shouldBlockExit) return;
+
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => true,
+    );
+
+    return () => subscription.remove();
+  }, [shouldBlockExit]);
 
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
       <StatusBar barStyle="dark-content" />
 
       <View className="h-16 flex-row items-center border-b border-outline-variant/15 bg-surface/90 px-4">
-        <TouchableOpacity
-          onPress={goHome}
-          className="h-10 w-10 items-center justify-center rounded-full active:bg-surface-container-low"
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Back to home"
-        >
-          <ArrowLeft size={24} color="#0d631b" />
-        </TouchableOpacity>
+        {shouldBlockExit ? (
+          <View className="h-10 w-10" />
+        ) : (
+          <TouchableOpacity
+            onPress={goHome}
+            className="h-10 w-10 items-center justify-center rounded-full active:bg-surface-container-low"
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <ArrowLeft size={24} color="#0d631b" />
+          </TouchableOpacity>
+        )}
         <Text className="flex-1 pr-10 text-center font-jakarta-sans text-lg font-bold text-primary-container">
           Payment
         </Text>
@@ -387,34 +528,29 @@ export function VNPayPaymentStatusScreen() {
             </TouchableOpacity>
           )}
 
-          {!!orderId && (
+          {canCancelPayment && (
             <TouchableOpacity
-              onPress={() =>
-                router.replace(`/(customer)/orders/${orderId}/track`)
-              }
+              onPress={handleCancelPayment}
+              disabled={isCancellingPayment}
               activeOpacity={0.86}
               accessibilityRole="button"
-              accessibilityLabel="Track order"
-              className="h-14 items-center justify-center rounded-full bg-surface-container-high"
+              accessibilityLabel="Cancel payment"
+              className={`h-14 flex-row items-center justify-center gap-2 rounded-full bg-error ${
+                isCancellingPayment ? 'opacity-70' : ''
+              }`}
             >
-              <Text className="font-inter text-base font-bold text-primary">
-                Track order
-              </Text>
+              {isCancellingPayment ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <>
+                  <XCircle size={20} color="#ffffff" />
+                  <Text className="font-inter text-base font-bold text-white">
+                    Cancel payment
+                  </Text>
+                </>
+              )}
             </TouchableOpacity>
           )}
-
-          <TouchableOpacity
-            onPress={goHome}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel="Back to home"
-            className="h-12 flex-row items-center justify-center gap-2 rounded-full"
-          >
-            <Home size={16} color="#0d631b" />
-            <Text className="font-inter text-sm font-semibold text-primary">
-              Back to home
-            </Text>
-          </TouchableOpacity>
 
           {shouldPoll(order?.status) && !!orderId && (
             <TouchableOpacity
