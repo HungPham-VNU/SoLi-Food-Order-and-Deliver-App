@@ -17,11 +17,8 @@ type StatusConfig = { icon: string; iconColor: string };
 function getStatusConfig(order: Order): StatusConfig {
   if (order.status === 'requesting')
     return { icon: 'pending', iconColor: 'text-outline' };
-  if (order.status === 'todo') {
-    return order.tag.variant === 'high_priority'
-      ? { icon: 'error', iconColor: 'text-primary' }
-      : { icon: 'radio_button_unchecked', iconColor: 'text-outline' };
-  }
+  if (order.status === 'todo')
+    return { icon: 'radio_button_unchecked', iconColor: 'text-outline' };
   if (order.status === 'in_progress')
     return { icon: 'schedule', iconColor: 'text-blue-500' };
   return { icon: 'check_circle', iconColor: 'text-primary' };
