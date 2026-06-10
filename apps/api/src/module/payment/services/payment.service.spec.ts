@@ -51,6 +51,7 @@ function buildService(timeoutSec = 1800) {
     findById: jest.fn().mockResolvedValue(makeTxn()),
     updateStatus: jest.fn().mockResolvedValue(makeTxn({ status: 'failed' })),
     findByCustomerId: jest.fn().mockResolvedValue([]),
+    findByOrderId: jest.fn().mockResolvedValue(makeTxn()),
   } as unknown as PaymentTransactionRepository;
 
   const config: ConfigType<typeof vnpayConfig> = {
@@ -263,6 +264,95 @@ describe('PaymentService', () => {
       const result = await service.getMyPayments('cust-1');
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('cancelPendingVNPayPaymentForOrder', () => {
+    it('marks the caller-owned pending VNPay transaction failed', async () => {
+      const { service, txnRepo } = buildService();
+      const txn = makeTxn({
+        id: 'txn-cancel',
+        orderId: 'order-cancel',
+        customerId: 'cust-1',
+        status: 'awaiting_ipn',
+        version: 4,
+      });
+      const failed = makeTxn({ ...txn, status: 'failed', version: 5 });
+      (txnRepo.findByOrderId as jest.Mock).mockResolvedValue(txn);
+      (txnRepo.updateStatus as jest.Mock).mockResolvedValue(failed);
+
+      const result = await service.cancelPendingVNPayPaymentForOrder(
+        'order-cancel',
+        'cust-1',
+      );
+
+      expect(txnRepo.findByOrderId).toHaveBeenCalledWith('order-cancel');
+      expect(txnRepo.updateStatus).toHaveBeenCalledWith(
+        'txn-cancel',
+        'failed',
+        4,
+      );
+      expect(result.status).toBe('failed');
+    });
+
+    it('is idempotent when the payment transaction is already failed', async () => {
+      const { service, txnRepo } = buildService();
+      const failed = makeTxn({ status: 'failed' });
+      (txnRepo.findByOrderId as jest.Mock).mockResolvedValue(failed);
+
+      const result = await service.cancelPendingVNPayPaymentForOrder(
+        'order-1',
+        'cust-1',
+      );
+
+      expect(result).toBe(failed);
+      expect(txnRepo.updateStatus).not.toHaveBeenCalled();
+    });
+
+    it('rejects cancellation when the transaction belongs to another customer', async () => {
+      const { service, txnRepo } = buildService();
+      (txnRepo.findByOrderId as jest.Mock).mockResolvedValue(
+        makeTxn({ customerId: 'other-customer' }),
+      );
+
+      await expect(
+        service.cancelPendingVNPayPaymentForOrder('order-1', 'cust-1'),
+      ).rejects.toThrow('You can only cancel your own VNPay payments.');
+      expect(txnRepo.updateStatus).not.toHaveBeenCalled();
+    });
+
+    it('rejects cancellation after VNPay payment completed', async () => {
+      const { service, txnRepo } = buildService();
+      (txnRepo.findByOrderId as jest.Mock).mockResolvedValue(
+        makeTxn({ status: 'completed' }),
+      );
+
+      await expect(
+        service.cancelPendingVNPayPaymentForOrder('order-1', 'cust-1'),
+      ).rejects.toThrow('already completed');
+      expect(txnRepo.updateStatus).not.toHaveBeenCalled();
+    });
+
+    it('rejects when no VNPay transaction exists for the order', async () => {
+      const { service, txnRepo } = buildService();
+      (txnRepo.findByOrderId as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        service.cancelPendingVNPayPaymentForOrder('missing-order', 'cust-1'),
+      ).rejects.toThrow('not found');
+      expect(txnRepo.updateStatus).not.toHaveBeenCalled();
+    });
+
+    it('rejects when optimistic locking loses the payment status update', async () => {
+      const { service, txnRepo } = buildService();
+      (txnRepo.findByOrderId as jest.Mock).mockResolvedValue(
+        makeTxn({ status: 'awaiting_ipn' }),
+      );
+      (txnRepo.updateStatus as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        service.cancelPendingVNPayPaymentForOrder('order-1', 'cust-1'),
+      ).rejects.toThrow('Payment status changed');
     });
   });
 });

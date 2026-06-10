@@ -95,6 +95,9 @@ export class OrderHistoryRepository {
   ): Promise<{ data: OrderListRow[]; total: number }> {
     const where = and(
       eq(orders.customerId, customerId),
+      // VNPay orders are not actionable history until payment confirms.
+      // Pending COD remains visible because restaurants can accept it immediately.
+      or(ne(orders.status, 'pending'), eq(orders.paymentMethod, 'cod')),
       ...this.buildDateAndStatusConditions(filters),
     );
     return this.paginatedListQuery(where, filters);

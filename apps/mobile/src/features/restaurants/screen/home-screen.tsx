@@ -1,106 +1,34 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  RefreshControl,
-} from 'react-native';
-import { Image } from 'expo-image';
-import {
-  Search,
-  Star,
-  Clock,
-  Truck,
-  Pizza,
-  Soup,
-  Leaf,
-  Croissant,
-  Utensils,
-  Heart,
-  X,
-  MapPin,
-} from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useMemo, useState } from 'react';
+import { Alert, RefreshControl, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FloatingCartButton } from '@/src/features/cart';
 import { useAddressStore } from '@/src/features/location';
-import { HomeTopBar } from '../components';
+import {
+  CategoryRail,
+  FeaturedRestaurantsSection,
+  HomeSearchBar,
+  HomeSearchResults,
+  HomeTopBar,
+  SpecialOffersCarousel,
+} from '../components';
 import {
   useDeliveryEstimates,
   useNearbyRestaurants,
   useUnifiedSearch,
-} from '../api/restaurant-api';
-import { FloatingCartButton } from '@/src/features/cart';
-import { formatCurrency, formatPrice } from '@/src/lib/format-utils';
-
-const CATEGORIES = [
-  { id: 'all', name: 'All', Icon: Utensils },
-  { id: 'italian', name: 'Italian', Icon: Pizza },
-  { id: 'asian', name: 'Asian', Icon: Soup },
-  { id: 'healthy', name: 'Healthy', Icon: Leaf },
-  { id: 'bakery', name: 'Bakery', Icon: Croissant },
-];
-
-const SPECIAL_OFFERS = [
-  {
-    id: '1',
-    title: '50% Off First Order',
-    code: 'TASTY50',
-    tag: 'Limited Time',
-    tagBg: 'bg-primary',
-    imageUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDwlt7N_i3aWRp2VHbLgQmZ6k6gj96k-SslATcMloH8nym9v2Yix9HPc6kpFLatV7Li6BYTIFlz379nAENGr5h_ft3GEd5uPMNjkhjk0K0ZSrcaq-n5d9Ywt_0pbaeu72cLYCJOLoCaAi-OeGD4-6mfpcrt5AFTOm6iQSaX-gYFy-mzS1fCZMFNQXX4IxTYejhgv5Sds8DcCvua6PlcKoO_Jc8b6iiHogp9s-tIewrSensPEdNrOic8AhpvXiwHgIrgMXjOjqO6sL-z',
-  },
-  {
-    id: '2',
-    title: 'Top Rated Bowls',
-    code: 'Healthy & Delicious',
-    tag: 'Trending',
-    tagBg: 'bg-secondary',
-    imageUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDPE2kvoWKkyBMIdyp4KqLer9OI7B_ZZa1GlQjw8e_8jGaRxZLiSi2IYdtJdkg3mjshv8V0VzXqOrTPow-FLGxnUDfWTlOKpBFle-9Q5CKJyYdn4AJ4XWIUN5cHItF59-Fj3V2lsr4oKaQ2sU7u0rAMXaejNmqNL-2G-kuQN0mce1J6gpyJFPfQVOtXhy1VC0odLDXzuO-hAhVlCA3cHRhR0oU91RNM_5UQO4vfU1z235ZekNO0MsTIEkh27oKYECOS8SLM7sMtdEJC',
-  },
-];
-
-type RestaurantRatingSource = {
-  averageRating?: number | null;
-  rating?: number | null;
-  reviewCount?: number | null;
-};
-
-function getRestaurantRating(restaurant: RestaurantRatingSource) {
-  if (
-    typeof restaurant.averageRating === 'number' &&
-    restaurant.averageRating > 0
-  ) {
-    return restaurant.averageRating;
-  }
-
-  if (typeof restaurant.rating === 'number' && restaurant.rating > 0) {
-    return restaurant.rating;
-  }
-
-  return null;
-}
+} from '../api';
+import { useDebouncedValue } from '../hooks';
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const debouncedQuery = useDebouncedValue(searchQuery, 400).trim();
   const { latitude, longitude } = useAddressStore();
 
   const hasCoordinates = latitude != null && longitude != null;
   const isSearchActive = debouncedQuery.length > 0;
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   const {
     data: restaurantsData,
@@ -133,21 +61,41 @@ export function HomeScreen() {
     () => restaurants.map((restaurant) => restaurant.id),
     [restaurants],
   );
-  const deliveryEstimateResults = useDeliveryEstimates(
+  const deliveryEstimateMap = useDeliveryEstimates(
     restaurantIds,
     latitude,
     longitude,
   );
 
-  const searchRestaurants = searchData?.restaurants ?? [];
-  const searchItems = searchData?.items ?? [];
-  const hasSearchResults = searchRestaurants.length > 0 || searchItems.length > 0;
-
   const onRefresh = React.useCallback(() => {
-    refetchNearby();
-    refetchSearch();
+    void refetchNearby();
+    void refetchSearch();
   }, [refetchNearby, refetchSearch]);
-  
+
+  const handleRestaurantPress = React.useCallback(
+    (restaurantId: string) => {
+      router.navigate({
+        pathname: '/restaurant/[id]',
+        params: { id: restaurantId },
+      });
+    },
+    [router],
+  );
+
+  const handleMenuItemPress = React.useCallback(
+    (itemId: string) => {
+      router.navigate({
+        pathname: '/restaurant/menu-item/[id]',
+        params: { id: itemId },
+      });
+    },
+    [router],
+  );
+
+  const handleOfferPress = React.useCallback((offerTitle: string) => {
+    Alert.alert('Offer', `Offer clicked: ${offerTitle}`);
+  }, []);
+
   const refreshing = isRefetchingNearby || isRefetchingSearch;
 
   return (
@@ -170,460 +118,38 @@ export function HomeScreen() {
           />
         }
       >
-        {/* Search Section */}
-        <View className="px-4 mb-6">
-          <View className="relative justify-center">
-            <View className="absolute left-4 z-10 pointer-events-none">
-              <Search size={20} color="#40493d" />
-            </View>
-            <TextInput
-              className="w-full h-14 pl-12 pr-12 bg-surface-container-lowest border border-surface-variant rounded-full font-inter text-sm text-on-surface shadow-sm"
-              placeholder="Search restaurants, dishes..."
-              placeholderTextColor="#40493d"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              returnKeyType="search"
-              clearButtonMode="never"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                onPress={() => setSearchQuery('')}
-                className="absolute right-4 z-10"
-              >
-                <X size={18} color="#40493d" />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+        <HomeSearchBar query={searchQuery} onChangeQuery={setSearchQuery} />
 
         {isSearchActive ? (
-          /* ── Search Results ── */
-          <View className="px-4 pb-6">
-            <Text className="font-jakarta-sans text-lg font-bold text-on-surface-variant mb-4">
-              Results for &ldquo;{debouncedQuery}&rdquo;
-            </Text>
-
-            {isSearchLoading ? (
-              <ActivityIndicator size="large" color="#00490e" />
-            ) : searchError ? (
-              <Text className="text-error text-center my-4">
-                Error loading search results
-              </Text>
-            ) : !hasSearchResults ? (
-              <View className="items-center justify-center my-10 gap-3">
-                <Search size={48} color="#707a6c" />
-                <Text className="text-on-surface-variant font-medium text-center">
-                  No results found for &ldquo;{debouncedQuery}&rdquo;
-                </Text>
-              </View>
-            ) : (
-              <View className="gap-6">
-                {/* Restaurants Results */}
-                {searchRestaurants.length > 0 && (
-                  <View>
-                    <Text className="font-jakarta-sans text-xl font-extrabold text-on-background mb-3">
-                      Restaurants ({searchData?.total.restaurants})
-                    </Text>
-                    <View className="gap-4">
-                      {searchRestaurants.map((restaurant) => {
-                        const rating = getRestaurantRating(restaurant);
-                        const reviewCount = restaurant.reviewCount ?? 0;
-
-                        return (
-                          <TouchableOpacity
-                            key={restaurant.id}
-                            onPress={() =>
-                              router.navigate({
-                                pathname: '/restaurant/[id]',
-                                params: { id: restaurant.id },
-                              })
-                            }
-                            className="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm active:scale-[0.98] border border-surface-variant/20 flex-row"
-                          >
-                            <View className="w-24 h-24 flex-shrink-0">
-                              {restaurant.coverImageUrl ?? restaurant.logoUrl ? (
-                                <Image
-                                  source={{
-                                    uri:
-                                      (restaurant.coverImageUrl ??
-                                        restaurant.logoUrl) as string,
-                                  }}
-                                  className="w-full h-full"
-                                  contentFit="cover"
-                                  transition={200}
-                                  cachePolicy="memory-disk"
-                                />
-                              ) : (
-                                <View className="w-full h-full bg-surface-container items-center justify-center">
-                                  <Utensils size={28} color="#707a6c" />
-                                </View>
-                              )}
-                            </View>
-                            <View className="flex-1 p-3 justify-center gap-1">
-                              <View className="flex-row items-center justify-between">
-                                <Text
-                                  className="font-jakarta-sans font-bold text-base text-on-background flex-1 mr-2"
-                                  numberOfLines={1}
-                                >
-                                  {restaurant.name}
-                                </Text>
-                                <View
-                                  className={`px-2 py-0.5 rounded-full ${restaurant.isOpen ? 'bg-primary/10' : 'bg-error/10'}`}
-                                >
-                                  <Text
-                                    className={`font-inter text-xs font-semibold ${restaurant.isOpen ? 'text-primary' : 'text-error'}`}
-                                  >
-                                    {restaurant.isOpen ? 'Open' : 'Closed'}
-                                  </Text>
-                                </View>
-                              </View>
-                              <View className="flex-row items-center gap-2">
-                                {restaurant.cuisineType && (
-                                  <Text
-                                    className="font-inter text-xs text-on-surface-variant flex-shrink"
-                                    numberOfLines={1}
-                                  >
-                                    {restaurant.cuisineType}
-                                  </Text>
-                                )}
-                                <View className="flex-row items-center gap-1">
-                                  <Star
-                                    size={12}
-                                    color="#8b5000"
-                                    fill="#8b5000"
-                                  />
-                                  <Text className="font-inter text-xs font-semibold text-on-surface">
-                                    {rating ? rating.toFixed(1) : 'New'}
-                                  </Text>
-                                  {reviewCount > 0 && (
-                                    <Text className="font-inter text-xs text-on-surface-variant">
-                                      ({reviewCount}+)
-                                    </Text>
-                                  )}
-                                </View>
-                              </View>
-                              <View className="flex-row items-center gap-1">
-                                <MapPin size={12} color="#707a6c" />
-                                <Text
-                                  className="font-inter text-xs text-on-surface-variant flex-1"
-                                  numberOfLines={1}
-                                >
-                                  {restaurant.distanceKm != null
-                                    ? `${restaurant.distanceKm.toFixed(1)} km away`
-                                    : restaurant.address}
-                                </Text>
-                              </View>
-                            </View>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-                )}
-
-                {/* Food Items Results */}
-                {searchItems.length > 0 && (
-                  <View>
-                    <Text className="font-jakarta-sans text-xl font-extrabold text-on-background mb-3">
-                      Food Items ({searchData?.total.items})
-                    </Text>
-                    <View className="gap-3">
-                      {searchItems.map((item) => (
-                        <TouchableOpacity
-                          key={item.id}
-                          onPress={() =>
-                            router.navigate({
-                              pathname: '/product/[id]',
-                              params: { id: item.id },
-                            })
-                          }
-                          className="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm active:scale-[0.98] border border-surface-variant/20 flex-row"
-                        >
-                          <View className="w-24 h-24 flex-shrink-0">
-                            {item.imageUrl ? (
-                              <Image
-                                source={{ uri: item.imageUrl }}
-                                className="w-full h-full"
-                                contentFit="cover"
-                                transition={200}
-                                cachePolicy="memory-disk"
-                              />
-                            ) : (
-                              <View className="w-full h-full bg-surface-container items-center justify-center">
-                                <Utensils size={28} color="#707a6c" />
-                              </View>
-                            )}
-                          </View>
-                          <View className="flex-1 p-3 justify-center gap-1">
-                            <Text
-                              className="font-jakarta-sans font-bold text-base text-on-background"
-                              numberOfLines={1}
-                            >
-                              {item.name}
-                            </Text>
-                            <Text className="font-inter text-sm font-semibold text-primary">
-                              {formatPrice(item.price)} VND
-                            </Text>
-                            <Text
-                              className="font-inter text-xs text-on-surface-variant"
-                              numberOfLines={1}
-                            >
-                              {[item.categoryName, item.restaurant.name]
-                                .filter(Boolean)
-                                .join(' · ')}
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
+          <HomeSearchResults
+            query={debouncedQuery}
+            restaurants={searchData?.restaurants ?? []}
+            items={searchData?.items ?? []}
+            total={searchData?.total}
+            isLoading={isSearchLoading}
+            hasError={Boolean(searchError)}
+            onRestaurantPress={handleRestaurantPress}
+            onMenuItemPress={handleMenuItemPress}
+          />
         ) : (
           <>
-        <View className="mb-8">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="px-4"
-            contentContainerStyle={{ gap: 16, paddingRight: 32 }}
-          >
-            {CATEGORIES.map((cat) => {
-              const isActive = selectedCategory === cat.id;
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  onPress={() => setSelectedCategory(cat.id)}
-                  className="flex-col items-center gap-1.5 active:scale-95"
-                >
-                  <View
-                    className={`w-16 h-16 rounded-2xl items-center justify-center shadow-md ${
-                      isActive
-                        ? 'bg-primary rotate-3'
-                        : 'bg-surface-container-lowest border border-surface-variant'
-                    }`}
-                  >
-                    <cat.Icon
-                      size={30}
-                      color={isActive ? '#ffffff' : '#00490e'}
-                      fill={isActive ? '#ffffff' : 'none'}
-                    />
-                  </View>
-                  <Text
-                    className={`font-jakarta-sans text-sm font-bold mt-1 ${
-                      isActive ? 'text-primary' : 'text-on-surface-variant'
-                    }`}
-                  >
-                    {cat.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* Special Offer Hero Carousel */}
-        <View className="mb-10">
-          <ScrollView
-            horizontal
-            snapToInterval={320}
-            decelerationRate="fast"
-            showsHorizontalScrollIndicator={false}
-            className="px-4"
-            contentContainerStyle={{ gap: 16, paddingRight: 32 }}
-          >
-            {SPECIAL_OFFERS.map((offer) => (
-              <TouchableOpacity
-                key={offer.id}
-                onPress={() => Alert.alert('Offer', `Offer clicked: ${offer.title}`)}
-                className="w-80 h-48 rounded-3xl overflow-hidden shadow-lg relative active:scale-[0.98]"
-              >
-                <Image
-                  source={{ uri: offer.imageUrl }}
-                  className="w-full h-full"
-                  contentFit="cover"
-                />
-                <View className="absolute inset-0 bg-black/40 p-5 justify-end">
-                  <View
-                    className={`${offer.tagBg} px-2.5 py-1 rounded-md self-start mb-2`}
-                  >
-                    <Text className="text-on-primary text-[10px] font-bold uppercase tracking-wide">
-                      {offer.tag}
-                    </Text>
-                  </View>
-                  <Text className="text-white font-jakarta-sans font-bold text-2xl leading-tight">
-                    {offer.title}
-                  </Text>
-                  <Text className="text-white/90 font-inter text-sm mt-1">
-                    {offer.id === '1' ? `Code: ${offer.code}` : offer.code}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Featured Restaurants Section */}
-        <View className="px-4">
-          <View className="flex-row justify-between items-end mb-6">
-            <Text className="font-jakarta-sans text-2xl font-extrabold text-on-background tracking-tight">
-              Featured Restaurants
-            </Text>
-            <TouchableOpacity>
-              <Text className="text-primary text-sm font-bold">See all</Text>
-            </TouchableOpacity>
-          </View>
-
-          {!hasCoordinates ? (
-            <View className="items-center justify-center my-10">
-              <Text className="text-on-surface-variant font-medium">
-                Select an address to see nearby restaurants
-              </Text>
-            </View>
-          ) : isLoading ? (
-            <ActivityIndicator size="large" color="#00490e" />
-          ) : error ? (
-            <Text className="text-error text-center my-4">
-              Error loading restaurants
-            </Text>
-          ) : restaurants.length === 0 ? (
-            <View className="items-center justify-center my-10">
-              <Utensils size={48} color="#707a6c" />
-              <Text className="text-on-surface-variant font-medium mt-4">
-                No restaurants available
-              </Text>
-            </View>
-          ) : (
-            <View className="flex-col gap-5">
-              {restaurants.map((restaurant, index) => {
-                const imageUrl =
-                  restaurant.coverImageUrl ?? restaurant.logoUrl ?? undefined;
-                const rating = getRestaurantRating(restaurant);
-                const reviewCount = restaurant.reviewCount ?? 0;
-                const deliveryEstimateQuery = deliveryEstimateResults[index];
-                const deliveryEstimate = deliveryEstimateQuery?.data;
-                const isDeliveryEstimateLoading =
-                  deliveryEstimateQuery?.isLoading ||
-                  deliveryEstimateQuery?.isFetching;
-                const deliveryFee = deliveryEstimate?.deliveryFee;
-                const isFreeDelivery = deliveryFee === 0;
-                const deliveryTimeLabel =
-                  deliveryEstimate?.estimatedMinutes != null
-                    ? `${deliveryEstimate.estimatedMinutes} min`
-                    : isDeliveryEstimateLoading
-                      ? '...'
-                      : 'N/A';
-                const deliveryFeeLabel =
-                  deliveryFee != null
-                    ? isFreeDelivery
-                      ? 'Free'
-                      : formatCurrency(deliveryFee)
-                    : isDeliveryEstimateLoading
-                      ? '...'
-                      : 'Unavailable';
-
-                return (
-                  <TouchableOpacity
-                    key={restaurant.id}
-                    onPress={() =>
-                      router.navigate({
-                        pathname: '/restaurant/[id]',
-                        params: { id: restaurant.id },
-                      })
-                    }
-                    className="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm active:scale-[0.98] border border-surface-variant/20"
-                  >
-                    <View className="h-40 w-full relative">
-                      {imageUrl ? (
-                        <Image
-                          source={{ uri: imageUrl }}
-                          className="w-full h-full"
-                          contentFit="cover"
-                          transition={200}
-                          cachePolicy="memory-disk"
-                        />
-                      ) : (
-                        <View className="w-full h-full bg-surface-container items-center justify-center">
-                          <Utensils size={40} color="#707a6c" />
-                        </View>
-                      )}
-                      <View className="absolute top-3 right-3 bg-surface-container-lowest/95 px-2.5 py-1 rounded-full flex-row items-center gap-1 shadow-md">
-                        <Star size={16} color="#8b5000" fill="#8b5000" />
-                        <Text className="font-jakarta-sans text-sm font-bold text-on-background">
-                          {rating ? rating.toFixed(1) : 'New'}
-                        </Text>
-                        {reviewCount > 0 && (
-                          <Text className="font-inter text-xs text-on-surface-variant">
-                            ({reviewCount}+)
-                          </Text>
-                        )}
-                      </View>
-                      {isFreeDelivery && (
-                        <View className="absolute top-3 left-3 bg-primary px-2.5 py-1 rounded-lg shadow-md">
-                          <Text className="text-on-primary font-inter text-xs font-bold uppercase tracking-wider">
-                            Free Delivery
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View className="p-4">
-                      <View className="flex-row justify-between items-start mb-1">
-                        <Text className="font-jakarta-sans font-extrabold text-xl text-on-background leading-tight">
-                          {restaurant.name}
-                        </Text>
-                        <TouchableOpacity>
-                          <Heart size={20} color="#40493d" />
-                        </TouchableOpacity>
-                      </View>
-                      <Text className="font-inter text-sm text-on-surface-variant mb-3">
-                        {restaurant.cuisineType || 'Cuisine'}
-                        {rating && rating >= 4.5 ? ' • Gourmet' : ''}
-                      </Text>
-
-                      <View className="flex-row items-center gap-3">
-                        <View className="flex-row items-center gap-1.5 bg-surface-container px-2.5 py-1.5 rounded-lg">
-                          <Clock size={16} color="#1a1c1c" />
-                          <Text className="font-inter text-xs font-semibold text-on-surface">
-                            {deliveryTimeLabel}
-                          </Text>
-                        </View>
-                        <View
-                          className={`flex-row items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${
-                            isFreeDelivery
-                              ? 'bg-primary/10'
-                              : 'bg-surface-container'
-                          }`}
-                        >
-                          <Truck
-                            size={16}
-                            color={
-                              isFreeDelivery ? '#00490e' : '#1a1c1c'
-                            }
-                          />
-                          <Text
-                            className={`font-inter text-xs font-bold ${
-                              isFreeDelivery
-                                ? 'text-primary'
-                                : 'text-on-surface'
-                            }`}
-                          >
-                            {deliveryFeeLabel}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
-        </View>
+            <CategoryRail
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+            />
+            <SpecialOffersCarousel onOfferPress={handleOfferPress} />
+            <FeaturedRestaurantsSection
+              restaurants={restaurants}
+              deliveryEstimateMap={deliveryEstimateMap}
+              hasCoordinates={hasCoordinates}
+              isLoading={isLoading}
+              hasError={Boolean(error)}
+              onRestaurantPress={handleRestaurantPress}
+            />
           </>
         )}
       </ScrollView>
+
       <FloatingCartButton />
     </View>
   );

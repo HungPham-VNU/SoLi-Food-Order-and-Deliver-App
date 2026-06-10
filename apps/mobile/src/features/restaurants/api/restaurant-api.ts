@@ -4,6 +4,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { apiFetch } from '@/src/lib/api-client';
 import {
   Restaurant,
@@ -360,5 +361,25 @@ export function useDeliveryEstimates(
       }))
     : [];
 
-  return useQueries({ queries });
+  const results = useQueries({ queries });
+
+  return useMemo(() => {
+    const estimateMap = new Map<string, (typeof results)[number]>();
+
+    restaurantIds.forEach((restaurantId, index) => {
+      const result = results[index];
+      if (!result) return;
+
+      if (
+        result.data?.restaurantId &&
+        result.data.restaurantId !== restaurantId
+      ) {
+        return;
+      }
+
+      estimateMap.set(restaurantId, result);
+    });
+
+    return estimateMap;
+  }, [restaurantIds, results]);
 }

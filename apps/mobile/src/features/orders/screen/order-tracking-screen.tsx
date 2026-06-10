@@ -33,6 +33,10 @@ import {
   useSubmitReview,
 } from '@/src/features/review/hooks/use-review';
 import { useMenuItemImage } from '@/src/features/restaurants/api';
+import {
+  buildVNPayStatusRouteParams,
+  VNPAY_STATUS_ROUTE,
+} from '@/src/features/payment';
 
 // ─── Status rank map ─────────────────────────────────────────────────────────
 
@@ -594,6 +598,22 @@ export function OrderTrackingScreen() {
   const { data: order, isLoading, isError } = useMyOrderDetail(id ?? '');
 
   const shortId = order?.orderId.slice(0, 8).toUpperCase() ?? '';
+  const isPendingVNPayOrder =
+    order?.paymentMethod === 'vnpay' && order.status === 'pending';
+
+  useEffect(() => {
+    if (!order || !isPendingVNPayOrder) return;
+
+    router.replace({
+      pathname: VNPAY_STATUS_ROUTE as any,
+      params: buildVNPayStatusRouteParams({
+        orderId: order.orderId,
+        paymentUrl: order.paymentUrl,
+        fallbackStatus: order.status,
+        browserResult: 'tracking_blocked',
+      }),
+    });
+  }, [isPendingVNPayOrder, order, router]);
 
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
@@ -625,6 +645,10 @@ export function OrderTrackingScreen() {
           >
             Failed to load order details.
           </Text>
+        </View>
+      ) : isPendingVNPayOrder ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#0d631b" />
         </View>
       ) : (
         <OrderTrackingContent order={order} insets={insets} />

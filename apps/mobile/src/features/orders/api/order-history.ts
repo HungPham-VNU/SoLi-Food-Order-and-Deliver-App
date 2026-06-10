@@ -22,10 +22,14 @@ export const getMyOrders = async (
   return apiFetch<OrderListResponse>(endpoint);
 };
 
-export const getMyOrderDetail = async (orderId: string): Promise<OrderDetail> => {
+export const getMyOrderDetail = async (
+  orderId: string,
+): Promise<OrderDetail> => {
   return apiFetch<OrderDetail>(`/api/orders/my/${orderId}`);
 };
 
-export const getReorderItems = async (orderId: string): Promise<ReorderItem[]> => {
+export const getReorderItems = async (
+  orderId: string,
+): Promise<ReorderItem[]> => {
   return apiFetch<ReorderItem[]>(`/api/orders/my/${orderId}/reorder`);
 };
