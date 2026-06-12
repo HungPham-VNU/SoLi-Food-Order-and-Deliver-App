@@ -8,6 +8,13 @@
       "when": 1780114967708,
       "tag": "0000_early_moonstone",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781253616799,
+      "tag": "0001_lonely_angel",
+      "breakpoints": true
     }
   ]
 }
