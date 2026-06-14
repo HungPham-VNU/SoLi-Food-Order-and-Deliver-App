@@ -42,6 +42,7 @@ export interface PaginatedMenuItems {
 
 export type MenuItemDetail = MenuItem & {
   nutrition?: {
+    servings: number;
     calories: number;
     protein: number;
     carbs: number;
@@ -126,6 +127,7 @@ export class MenuRepository {
       ...row.item,
       nutrition: row.nutrition
         ? {
+            servings: row.nutrition.servings,
             calories: row.nutrition.calories,
             protein: row.nutrition.protein,
             carbs: row.nutrition.carbs,

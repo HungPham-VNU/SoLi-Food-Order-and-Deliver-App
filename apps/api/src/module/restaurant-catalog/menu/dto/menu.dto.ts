@@ -275,6 +275,7 @@ export class MenuItemResponseDto {
 
   @ApiPropertyOptional({
     example: {
+      servings: 2,
       calories: 660,
       protein: 55,
       carbs: 45,
@@ -289,6 +290,7 @@ export class MenuItemResponseDto {
     },
   })
   nutrition?: {
+    servings: number;
     calories: number;
     protein: number;
     carbs: number;
