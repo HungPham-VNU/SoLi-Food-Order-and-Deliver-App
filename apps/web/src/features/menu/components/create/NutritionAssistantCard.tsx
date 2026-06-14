@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Calculator, Plus, Save, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import {
   useCalculateNutrition,
   useSaveNutrition,
 } from '../../hooks/useMenuMutations';
+import { useMenuItemNutritionAnalysis } from '../../hooks/useMenu';
 import type {
   AnalyzeRecipeResponse,
   CalculateNutritionResponse,
@@ -43,6 +44,7 @@ const PREPARATION_OPTIONS: PreparationState[] = [
 interface NutritionAssistantCardProps {
   menuItemId?: string;
   currentNutrition?: MenuItemNutrition | null;
+  onNutritionSaved?: (nutrition: MenuItemNutrition) => void;
   onSaveBeforeAnalyze?: () => Promise<string | null>;
   isSavingItem?: boolean;
 }
@@ -57,9 +59,21 @@ const emptyIngredient = (): NutritionReviewIngredient => ({
   notes: [],
 });
 
+const normalizeReviewIngredients = (
+  ingredients: NutritionReviewIngredient[],
+): NutritionReviewIngredient[] =>
+  ingredients.length > 0
+    ? ingredients.map((ingredient) => ({
+        ...ingredient,
+        preparation: ingredient.preparation ?? 'unknown',
+        notes: ingredient.notes ?? [],
+      }))
+    : [emptyIngredient()];
+
 export function NutritionAssistantCard({
   menuItemId,
   currentNutrition,
+  onNutritionSaved,
   onSaveBeforeAnalyze,
   isSavingItem = false,
 }: NutritionAssistantCardProps) {
@@ -72,7 +86,12 @@ export function NutritionAssistantCard({
   const [calculation, setCalculation] =
     useState<CalculateNutritionResponse | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [hydratedAnalysisSessionId, setHydratedAnalysisSessionId] = useState<
+    string | null
+  >(null);
 
+  const { data: latestAnalysis, isLoading: isLoadingNutritionAnalysis } =
+    useMenuItemNutritionAnalysis(menuItemId);
   const analyzeNutrition = useAnalyzeNutrition(menuItemId);
   const calculateNutrition = useCalculateNutrition(menuItemId ?? '');
   const saveNutrition = useSaveNutrition(menuItemId ?? '');
@@ -93,6 +112,30 @@ export function NutritionAssistantCard({
     servings > 0 &&
     ingredients.some((ingredient) => ingredient.name.trim().length > 0);
 
+  useEffect(() => {
+    if (!latestAnalysis) return;
+    if (
+      analysis &&
+      analysis.analysisSessionId !== latestAnalysis.analysisSessionId
+    ) {
+      return;
+    }
+    if (hydratedAnalysisSessionId === latestAnalysis.analysisSessionId) return;
+
+    setRecipeText(latestAnalysis.recipeText);
+    setAnalysis(latestAnalysis);
+    setIngredients(normalizeReviewIngredients(latestAnalysis.ingredients));
+    setServings(latestAnalysis.servings ?? currentNutrition?.servings ?? 1);
+    setCalculation(null);
+    setSaveMessage(null);
+    setHydratedAnalysisSessionId(latestAnalysis.analysisSessionId);
+  }, [
+    analysis,
+    currentNutrition?.servings,
+    hydratedAnalysisSessionId,
+    latestAnalysis,
+  ]);
+
   const handleAnalyze = async () => {
     setSaveMessage(null);
     setCalculation(null);
@@ -108,15 +151,9 @@ export function NutritionAssistantCard({
       {
         onSuccess: (result) => {
           setAnalysis(result);
-          setIngredients(
-            result.ingredients.length > 0
-              ? result.ingredients.map((ingredient) => ({
-                  ...ingredient,
-                  preparation: ingredient.preparation ?? 'unknown',
-                }))
-              : [emptyIngredient()],
-          );
+          setIngredients(normalizeReviewIngredients(result.ingredients));
           setServings(result.servings ?? 1);
+          setHydratedAnalysisSessionId(result.analysisSessionId);
         },
       },
     );
@@ -176,7 +213,10 @@ export function NutritionAssistantCard({
         verifiedByRestaurant: true,
       },
       {
-        onSuccess: () => setSaveMessage('Nutrition saved.'),
+        onSuccess: (nutrition) => {
+          onNutritionSaved?.(nutrition);
+          setSaveMessage('Nutrition saved.');
+        },
       },
     );
   };
@@ -189,12 +229,6 @@ export function NutritionAssistantCard({
             <Sparkles className="h-5 w-5 text-primary" />
             AI Nutrition
           </h3>
-          {currentNutrition && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Current: {currentNutrition.calories} kcal,{' '}
-              {currentNutrition.protein}g protein per serving
-            </p>
-          )}
         </div>
         {analysis && (
           <Badge
@@ -241,6 +275,11 @@ export function NutritionAssistantCard({
         {analyzeNutrition.error && (
           <p className="text-sm text-destructive">
             {analyzeNutrition.error.message}
+          </p>
+        )}
+        {isLoadingNutritionAnalysis && (
+          <p className="text-xs text-muted-foreground">
+            Loading saved recipe analysis...
           </p>
         )}
       </div>
@@ -399,6 +438,10 @@ export function NutritionAssistantCard({
         </div>
       )}
 
+      {currentNutrition && (
+        <SavedNutritionSummary nutrition={currentNutrition} />
+      )}
+
       {calculation && (
         <div className="mt-8 space-y-5">
           <div className="grid grid-cols-2 gap-3">
@@ -486,4 +529,90 @@ function NutritionMetric({
       </p>
     </div>
   );
+}
+
+function SavedNutritionSummary({
+  nutrition,
+}: {
+  nutrition: MenuItemNutrition;
+}) {
+  return (
+    <div className="mb-6 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-foreground">
+          Analyzed nutrition
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">Read-only</Badge>
+          <Badge variant="secondary">
+            {formatNutritionSource(nutrition.source)}
+          </Badge>
+          {nutrition.verifiedByRestaurant && (
+            <Badge variant="secondary">Verified</Badge>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <NutritionMetric
+          label="Servings"
+          value={formatNutritionValue(nutrition.servings)}
+          unit="servings"
+        />
+        <NutritionMetric
+          label="Calories"
+          value={formatNutritionValue(nutrition.calories)}
+          unit="kcal"
+        />
+        <NutritionMetric
+          label="Protein"
+          value={formatNutritionValue(nutrition.protein)}
+          unit="g"
+        />
+        <NutritionMetric
+          label="Carbs"
+          value={formatNutritionValue(nutrition.carbs)}
+          unit="g"
+        />
+        <NutritionMetric
+          label="Fat"
+          value={formatNutritionValue(nutrition.fat)}
+          unit="g"
+        />
+        <NutritionMetric
+          label="Fiber"
+          value={formatOptionalNutritionValue(nutrition.fiber)}
+          unit={nutrition.fiber === null ? '' : 'g'}
+        />
+        <NutritionMetric
+          label="Sugar"
+          value={formatOptionalNutritionValue(nutrition.sugar)}
+          unit={nutrition.sugar === null ? '' : 'g'}
+        />
+        <NutritionMetric
+          label="Sodium"
+          value={formatOptionalNutritionValue(nutrition.sodium)}
+          unit={nutrition.sodium === null ? '' : 'mg'}
+        />
+      </div>
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        {nutrition.disclaimer}
+      </p>
+    </div>
+  );
+}
+
+function formatNutritionValue(value: number) {
+  return Number.isInteger(value) ? `${value}` : value.toFixed(1);
+}
+
+function formatOptionalNutritionValue(value: number | null) {
+  return value === null ? 'Not set' : formatNutritionValue(value);
+}
+
+function formatNutritionSource(source: MenuItemNutrition['source']) {
+  return source
+    .toLowerCase()
+    .split('_')
+    .map((word) => word[0].toUpperCase() + word.slice(1))
+    .join(' ');
 }

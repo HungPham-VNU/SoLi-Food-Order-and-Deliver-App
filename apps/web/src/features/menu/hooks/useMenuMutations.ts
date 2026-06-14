@@ -1,6 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { menuApi, type CreateMenuItemDto, type UpdateMenuItemDto, type CreateMenuCategoryDto, type CreateModifierGroupDto, type UpdateModifierGroupDto, type CreateModifierOptionDto, type UpdateModifierOptionDto } from '../api/menu.api';
-import type { CalculateNutritionRequest, SaveNutritionRequest } from '../types';
+import type {
+  CalculateNutritionRequest,
+  MenuItem,
+  SaveNutritionRequest,
+} from '../types';
 import { menuKeys } from './useMenu';
 
 export function useCreateMenuItem(restaurantId: string) {
@@ -166,8 +170,12 @@ export function useSaveNutrition(menuItemId: string) {
   return useMutation({
     mutationFn: (dto: SaveNutritionRequest) =>
       menuApi.saveNutrition(menuItemId, dto),
-    onSuccess: () => {
+    onSuccess: (nutrition) => {
+      qc.setQueryData<MenuItem>(menuKeys.item(menuItemId), (item) =>
+        item ? { ...item, nutrition } : item,
+      );
       qc.invalidateQueries({ queryKey: menuKeys.item(menuItemId) });
+      qc.invalidateQueries({ queryKey: menuKeys.nutritionAnalysis(menuItemId) });
     },
   });
 }

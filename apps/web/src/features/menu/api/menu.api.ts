@@ -6,6 +6,8 @@ import type {
   MenuCategory,
   MenuItem,
   MenuItemListResponse,
+  MenuItemNutrition,
+  MenuItemNutritionAnalysis,
   ModifierGroup,
   ModifierOption,
   SaveNutritionRequest,
@@ -135,6 +137,13 @@ export const menuApi = {
       )
       .then((r) => r.data),
 
+  getLatestNutritionAnalysis: (menuItemId: string) =>
+    apiClient
+      .get<MenuItemNutritionAnalysis | null>(
+        `/api/restaurant/menu-items/${menuItemId}/nutrition/latest`,
+      )
+      .then((r) => r.data),
+
   calculateNutrition: (menuItemId: string, dto: CalculateNutritionRequest) =>
     apiClient
       .post<CalculateNutritionResponse>(
@@ -145,7 +154,7 @@ export const menuApi = {
 
   saveNutrition: (menuItemId: string, dto: SaveNutritionRequest) =>
     apiClient
-      .put<{ success: true }>(
+      .put<MenuItemNutrition>(
         `/api/restaurant/menu-items/${menuItemId}/nutrition`,
         dto,
       )

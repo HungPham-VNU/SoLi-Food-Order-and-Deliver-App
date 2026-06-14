@@ -21,7 +21,7 @@ import {
 } from '@/features/menu/hooks/useMenuMutations';
 import { useMenuCategories } from '@/features/menu/hooks/useMenu';
 import { useMyRestaurant } from '@/features/restaurant/hooks/useRestaurants';
-import type { MenuItem } from '@/features/menu/types';
+import type { MenuItem, MenuItemNutrition } from '@/features/menu/types';
 
 export default function CreateMenuItemPage() {
   const navigate = useNavigate();
@@ -70,8 +70,12 @@ export default function CreateMenuItemPage() {
         id: savedItem.id,
         dto: itemFields,
       });
-      setSavedItem(item);
-      return item;
+      const updatedItem = {
+        ...item,
+        nutrition: item.nutrition ?? savedItem.nutrition,
+      };
+      setSavedItem(updatedItem);
+      return updatedItem;
     }
 
     const item = await createItem({
@@ -101,6 +105,10 @@ export default function CreateMenuItemPage() {
   const isSaving = createPending || updatePending;
   const submitError = createError ?? updateError;
   const savedItemId = savedItem?.id;
+
+  const handleNutritionSaved = (nutrition: MenuItemNutrition) => {
+    setSavedItem((item) => (item ? { ...item, nutrition } : item));
+  };
 
   if (restaurantLoading) {
     return (
@@ -160,6 +168,7 @@ export default function CreateMenuItemPage() {
             <NutritionAssistantCard
               menuItemId={savedItemId}
               currentNutrition={savedItem?.nutrition}
+              onNutritionSaved={handleNutritionSaved}
               onSaveBeforeAnalyze={saveBeforeAnalyze}
               isSavingItem={isSaving}
             />

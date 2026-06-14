@@ -19,7 +19,15 @@ export type PreparationState =
   | 'steamed'
   | 'unknown';
 
+export type NutritionAnalysisStatus =
+  | 'ANALYZED'
+  | 'NEEDS_REVIEW'
+  | 'CALCULATED'
+  | 'SAVED'
+  | 'FAILED';
+
 export interface MenuItemNutrition {
+  servings: number;
   calories: number;
   protein: number;
   carbs: number;
@@ -65,7 +73,11 @@ export interface AnalyzeRecipeResponse {
   servings: number | null;
   ingredients: NutritionReviewIngredient[];
   warnings: string[];
-  status: 'ANALYZED' | 'NEEDS_REVIEW' | 'FAILED';
+  status: NutritionAnalysisStatus;
+}
+
+export interface MenuItemNutritionAnalysis extends AnalyzeRecipeResponse {
+  recipeText: string;
 }
 
 export interface CalculateNutritionRequest {
