@@ -1,7 +1,24 @@
-import { resolveOllamaRuntimeConfig } from './ollama.provider';
+import {
+  OLLAMA_CLOUD_API_BASE_URL,
+  resolveOllamaRuntimeConfig,
+} from './ollama.provider';
 
 describe('resolveOllamaRuntimeConfig', () => {
-  it('uses native Ollama cloud API for the direct ollama.com host', () => {
+  it('defaults to the direct Ollama Cloud API', () => {
+    const config = resolveOllamaRuntimeConfig({});
+
+    expect(config).toEqual({
+      endpoint: {
+        mode: 'native',
+        baseURL: OLLAMA_CLOUD_API_BASE_URL,
+        isDirectCloud: true,
+      },
+      model: 'gpt-oss:20b',
+      apiKey: '',
+    });
+  });
+
+  it('normalizes direct cloud model names and trims the API key', () => {
     const config = resolveOllamaRuntimeConfig({
       baseURL: 'https://ollama.com',
       model: ' gemma4:31b-cloud',
@@ -19,33 +36,29 @@ describe('resolveOllamaRuntimeConfig', () => {
     });
   });
 
-  it('keeps /v1 URLs on the OpenAI-compatible API path', () => {
+  it('ignores local base URLs so the service cannot run local Ollama', () => {
     const config = resolveOllamaRuntimeConfig({
       baseURL: 'http://localhost:11434/v1/',
       model: 'qwen2.5:7b',
-      apiKey: 'ollama',
-    });
-
-    expect(config.endpoint).toEqual({
-      mode: 'openai-compatible',
-      baseURL: 'http://localhost:11434/v1',
-      isDirectCloud: false,
-    });
-    expect(config.model).toBe('qwen2.5:7b');
-  });
-
-  it('maps root local Ollama hosts to native /api without changing cloud model suffixes', () => {
-    const config = resolveOllamaRuntimeConfig({
-      baseURL: 'http://localhost:11434',
-      model: 'gpt-oss:120b-cloud',
-      apiKey: 'ollama',
+      apiKey: 'test-key',
     });
 
     expect(config.endpoint).toEqual({
       mode: 'native',
-      baseURL: 'http://localhost:11434/api',
-      isDirectCloud: false,
+      baseURL: OLLAMA_CLOUD_API_BASE_URL,
+      isDirectCloud: true,
     });
-    expect(config.model).toBe('gpt-oss:120b-cloud');
+    expect(config.model).toBe('qwen2.5:7b');
+    expect(config.apiKey).toBe('test-key');
+  });
+
+  it('treats the local Ollama placeholder key as missing for cloud calls', () => {
+    const config = resolveOllamaRuntimeConfig({
+      model: 'gpt-oss:120b-cloud',
+      apiKey: 'ollama',
+    });
+
+    expect(config.model).toBe('gpt-oss:120b');
+    expect(config.apiKey).toBe('');
   });
 });

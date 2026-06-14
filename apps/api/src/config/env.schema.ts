@@ -157,9 +157,12 @@ const baseEnvSchema = z.object({
   // ---------------------------------------------------------------------------
   // AI nutrition extraction via Ollama
   // ---------------------------------------------------------------------------
-  OLLAMA_BASE_URL: z.string().trim().url().default('http://localhost:11434/v1'),
-  OLLAMA_MODEL: z.string().trim().min(1).default('qwen2.5:7b'),
-  OLLAMA_API_KEY: z.string().trim().min(1).default('ollama'),
+  OLLAMA_BASE_URL: z.string().trim().url().default('https://ollama.com'),
+  OLLAMA_MODEL: z.string().trim().min(1).default('gpt-oss:20b'),
+  OLLAMA_API_KEY: z.preprocess(
+    emptyStringToUndefined,
+    z.string().trim().default(''),
+  ),
 
   // ---------------------------------------------------------------------------
   // Observability - optional. When absent, OpenTelemetry exporters stay disabled

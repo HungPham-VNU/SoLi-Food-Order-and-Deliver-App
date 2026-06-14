@@ -5,7 +5,6 @@ import { RestaurantModule } from '@/module/restaurant-catalog/restaurant/restaur
 import { NutritionController } from './nutrition.controller';
 import { NutritionService } from './nutrition.service';
 import { AiRecipeExtractionService } from './ai/ai-recipe-extraction.service';
-import { ollamaProvider } from './ai/ollama.provider';
 import { UnitConversionService } from './matching/unit-conversion.service';
 import { IngredientMatchingService } from './matching/ingredient-matching.service';
 import { NutritionCalculatorService } from './calculator/nutrition-calculator.service';
@@ -21,9 +20,7 @@ import { NutritionRepository } from './repositories/nutrition.repository';
     UnitConversionService,
     IngredientMatchingService,
     NutritionCalculatorService,
-    ollamaProvider,
   ],
   exports: [NutritionService, NutritionRepository],
 })
 export class NutritionModule {}
-

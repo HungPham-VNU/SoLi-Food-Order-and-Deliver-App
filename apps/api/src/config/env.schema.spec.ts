@@ -68,4 +68,21 @@ describe('environment schema observability settings', () => {
     expect(env.OLLAMA_MODEL).toBe('gemma4:31b-cloud');
     expect(env.OLLAMA_API_KEY).toBe('test-key');
   });
+
+  it('defaults Ollama to direct cloud settings', () => {
+    const env = validate(baseConfig);
+
+    expect(env.OLLAMA_BASE_URL).toBe('https://ollama.com');
+    expect(env.OLLAMA_MODEL).toBe('gpt-oss:20b');
+    expect(env.OLLAMA_API_KEY).toBe('');
+  });
+
+  it('allows an empty Ollama API key at startup', () => {
+    const env = validate({
+      ...baseConfig,
+      OLLAMA_API_KEY: '',
+    });
+
+    expect(env.OLLAMA_API_KEY).toBe('');
+  });
 });

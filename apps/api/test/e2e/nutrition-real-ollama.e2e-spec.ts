@@ -136,21 +136,8 @@ function assertRealOllamaE2eConfig() {
     );
   }
 
-  if (!process.env.OLLAMA_BASE_URL) {
-    throw new Error('Real Ollama E2E requires OLLAMA_BASE_URL.');
-  }
-
-  if (!process.env.OLLAMA_MODEL) {
-    throw new Error('Real Ollama E2E requires OLLAMA_MODEL.');
-  }
-
-  if (
-    process.env.OLLAMA_BASE_URL.includes('ollama.com') &&
-    !process.env.OLLAMA_API_KEY
-  ) {
-    throw new Error(
-      'Real Ollama E2E with ollama.com requires OLLAMA_API_KEY.',
-    );
+  if (!process.env.OLLAMA_API_KEY) {
+    throw new Error('Real Ollama Cloud E2E requires OLLAMA_API_KEY.');
   }
 }
 

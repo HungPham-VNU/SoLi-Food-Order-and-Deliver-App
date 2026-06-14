@@ -1,13 +1,10 @@
 import {
-  Inject,
   Injectable,
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { generateObject } from 'ai';
 import {
-  extractedRecipeJsonSchema,
   extractedRecipeSchema,
   type AiExtractedRecipe,
 } from './ai-recipe.schema';
@@ -16,9 +13,7 @@ import {
   type ExtractedRecipeIngredient,
 } from '../types/nutrition.types';
 import {
-  OLLAMA_PROVIDER,
   resolveOllamaRuntimeConfig,
-  type OllamaProvider,
   type OllamaRuntimeConfig,
 } from './ollama.provider';
 
@@ -35,6 +30,7 @@ const SYSTEM_PROMPT = [
   'If uncertain about an ingredient, add a warning.',
   'Keep ingredient names in Vietnamese if the input is in Vietnamese.',
   'Return only data that matches the schema.',
+  'Return raw JSON only. Do not wrap the JSON in Markdown code fences.',
   'IMPORTANT: You must return a valid JSON object strictly following this structure and camelCase keys:',
   '{',
   '  "recipeName": "string | null",',
@@ -57,17 +53,24 @@ const SYSTEM_PROMPT = [
 export class AiRecipeExtractionService {
   private readonly logger = new Logger(AiRecipeExtractionService.name);
 
-  constructor(
-    @Inject(OLLAMA_PROVIDER) private readonly ollama: OllamaProvider,
-    private readonly config: ConfigService,
-  ) {}
+  constructor(private readonly config: ConfigService) {}
 
   async extractRecipe(recipeText: string): Promise<ExtractedRecipe> {
+    const runtimeConfig = this.getRuntimeConfig();
+
+    if (!runtimeConfig.apiKey) {
+      throw new ServiceUnavailableException({
+        message:
+          'AI analysis service is not configured. Set OLLAMA_API_KEY for Ollama Cloud.',
+        cause: 'OLLAMA_API_KEY is required for direct Ollama Cloud API access.',
+      });
+    }
+
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= MAX_AI_ATTEMPTS; attempt += 1) {
       try {
-        const object = await this.generate(recipeText);
+        const object = await this.generate(recipeText, runtimeConfig);
         return this.normalizeRecipe(object);
       } catch (error) {
         lastError = error;
@@ -86,30 +89,19 @@ export class AiRecipeExtractionService {
     });
   }
 
-  private async generate(recipeText: string): Promise<AiExtractedRecipe> {
+  private async generate(
+    recipeText: string,
+    runtimeConfig: OllamaRuntimeConfig,
+  ): Promise<AiExtractedRecipe> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), EXTRACTION_TIMEOUT_MS);
-    const runtimeConfig = this.getRuntimeConfig();
 
     try {
-      if (runtimeConfig.endpoint.mode === 'native') {
-        return await this.generateWithNativeOllama(
-          recipeText,
-          runtimeConfig,
-          controller.signal,
-        );
-      }
-
-      const result = await generateObject({
-        model: this.ollama.chatModel(runtimeConfig.model),
-        schema: extractedRecipeSchema,
-        system: SYSTEM_PROMPT,
-        prompt: recipeText,
-        abortSignal: controller.signal,
-        maxRetries: 0,
-      });
-
-      return extractedRecipeSchema.parse(result.object);
+      return await this.generateWithCloudOllama(
+        recipeText,
+        runtimeConfig,
+        controller.signal,
+      );
     } finally {
       clearTimeout(timeout);
     }
@@ -123,14 +115,14 @@ export class AiRecipeExtractionService {
     });
   }
 
-  private async generateWithNativeOllama(
+  private async generateWithCloudOllama(
     recipeText: string,
     runtimeConfig: OllamaRuntimeConfig,
     abortSignal: AbortSignal,
   ): Promise<AiExtractedRecipe> {
     const response = await fetch(`${runtimeConfig.endpoint.baseURL}/chat`, {
       method: 'POST',
-      headers: this.nativeOllamaHeaders(runtimeConfig),
+      headers: this.ollamaHeaders(runtimeConfig),
       body: JSON.stringify({
         model: runtimeConfig.model,
         messages: [
@@ -138,18 +130,20 @@ export class AiRecipeExtractionService {
           { role: 'user', content: recipeText },
         ],
         stream: false,
-        format: extractedRecipeJsonSchema,
+        think: false,
+        // Ollama Cloud does not currently support structured outputs. Validate
+        // the prompt-shaped JSON locally after receiving the response.
         options: {
           temperature: 0,
         },
       }),
       signal: abortSignal,
     });
-    const responseBody = await this.readNativeOllamaResponse(response);
+    const responseBody = await this.readOllamaResponse(response);
 
     if (!response.ok) {
       throw new Error(
-        `Ollama native API request failed (${response.status}): ${this.nativeOllamaErrorMessage(
+        `Ollama Cloud API request failed (${response.status}): ${this.ollamaErrorMessage(
           responseBody,
           response.statusText,
         )}`,
@@ -158,45 +152,40 @@ export class AiRecipeExtractionService {
 
     const content = responseBody.message?.content;
     if (!content) {
-      throw new Error('Ollama native API response did not include content.');
+      throw new Error('Ollama Cloud API response did not include content.');
     }
 
-    return extractedRecipeSchema.parse(this.parseNativeOllamaContent(content));
+    return extractedRecipeSchema.parse(this.parseOllamaContent(content));
   }
 
-  private nativeOllamaHeaders(
+  private ollamaHeaders(
     runtimeConfig: OllamaRuntimeConfig,
   ): Record<string, string> {
-    const headers: Record<string, string> = {
+    return {
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${runtimeConfig.apiKey}`,
     };
-
-    if (runtimeConfig.apiKey !== 'ollama') {
-      headers.Authorization = `Bearer ${runtimeConfig.apiKey}`;
-    }
-
-    return headers;
   }
 
-  private async readNativeOllamaResponse(
+  private async readOllamaResponse(
     response: Response,
-  ): Promise<NativeOllamaChatResponse> {
+  ): Promise<OllamaChatResponse> {
     const text = await response.text();
     if (!text.trim()) {
       return {};
     }
 
     try {
-      return JSON.parse(text) as NativeOllamaChatResponse;
+      return JSON.parse(text) as OllamaChatResponse;
     } catch {
       throw new Error(
-        `Ollama native API returned non-JSON response (${response.status}).`,
+        `Ollama Cloud API returned non-JSON response (${response.status}).`,
       );
     }
   }
 
-  private nativeOllamaErrorMessage(
-    responseBody: NativeOllamaChatResponse,
+  private ollamaErrorMessage(
+    responseBody: OllamaChatResponse,
     fallback: string,
   ) {
     if (typeof responseBody.error === 'string') {
@@ -206,7 +195,7 @@ export class AiRecipeExtractionService {
     return fallback;
   }
 
-  private parseNativeOllamaContent(content: string): unknown {
+  private parseOllamaContent(content: string): unknown {
     try {
       let cleaned = content.trim();
       if (cleaned.startsWith('```json')) {
@@ -217,41 +206,96 @@ export class AiRecipeExtractionService {
       if (cleaned.endsWith('```')) {
         cleaned = cleaned.replace(/```$/, '');
       }
-      const parsed = JSON.parse(cleaned.trim());
 
-      // Normalise mock endpoints that return snake_case (e.g. gemma4:31b-cloud mock)
-      if (parsed && typeof parsed === 'object') {
-        if ('recipe_name' in parsed) {
-          parsed.recipeName = parsed.recipe_name;
-          delete parsed.recipe_name;
-        }
-        if (Array.isArray(parsed.ingredients)) {
-          parsed.ingredients = parsed.ingredients.map((ing: any) => {
-            if (typeof ing === 'string') {
-              return { rawText: ing, name: ing, quantity: null, unit: 'unknown', preparation: 'unknown', confidence: 1 };
-            }
-            if (ing && typeof ing === 'object') {
-              if ('preparation_state' in ing) {
-                ing.preparation = ing.preparation_state;
-                delete ing.preparation_state;
-              }
-              if (!('rawText' in ing)) ing.rawText = ing.name || '';
-              if (!('confidence' in ing)) ing.confidence = 1;
-            }
-            return ing;
-          });
-        } else if (parsed.ingredients === undefined) {
-          parsed.ingredients = [
-            { rawText: 'Mock ingredient', name: 'Mock ingredient', quantity: null, unit: 'unknown', preparation: 'unknown', confidence: 1 },
-            { rawText: 'Mock ingredient 2', name: 'Mock ingredient 2', quantity: null, unit: 'unknown', preparation: 'unknown', confidence: 1 }
-          ];
-        }
-      }
-
-      return parsed;
+      return this.normalizeLooseRecipeJson(JSON.parse(cleaned.trim()));
     } catch {
-      throw new Error('Ollama native API returned invalid JSON content.');
+      throw new Error('Ollama Cloud API returned invalid JSON content.');
     }
+  }
+
+  private normalizeLooseRecipeJson(parsed: unknown): unknown {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return parsed;
+    }
+
+    const recipe = { ...(parsed as Record<string, unknown>) };
+
+    if ('recipe_name' in recipe && !('recipeName' in recipe)) {
+      recipe.recipeName = recipe.recipe_name;
+    }
+    delete recipe.recipe_name;
+
+    if (!('recipeName' in recipe)) {
+      recipe.recipeName = null;
+    }
+    if (!('servings' in recipe)) {
+      recipe.servings = null;
+    }
+    if (!('warnings' in recipe)) {
+      recipe.warnings = [];
+    }
+
+    if (Array.isArray(recipe.ingredients)) {
+      recipe.ingredients = recipe.ingredients.map((ingredient) =>
+        this.normalizeLooseIngredientJson(ingredient),
+      );
+    }
+
+    return recipe;
+  }
+
+  private normalizeLooseIngredientJson(ingredient: unknown): unknown {
+    if (typeof ingredient === 'string') {
+      return {
+        rawText: ingredient,
+        name: ingredient,
+        quantity: null,
+        unit: 'unknown',
+        preparation: 'unknown',
+        confidence: 0.5,
+      };
+    }
+
+    if (
+      !ingredient ||
+      typeof ingredient !== 'object' ||
+      Array.isArray(ingredient)
+    ) {
+      return ingredient;
+    }
+
+    const normalized = { ...(ingredient as Record<string, unknown>) };
+
+    if ('raw_text' in normalized && !('rawText' in normalized)) {
+      normalized.rawText = normalized.raw_text;
+    }
+    delete normalized.raw_text;
+
+    if ('preparation_state' in normalized && !('preparation' in normalized)) {
+      normalized.preparation = normalized.preparation_state;
+    }
+    delete normalized.preparation_state;
+
+    if (!('rawText' in normalized) && typeof normalized.name === 'string') {
+      normalized.rawText = normalized.name;
+    }
+    if (!('name' in normalized) && typeof normalized.rawText === 'string') {
+      normalized.name = normalized.rawText;
+    }
+    if (!('quantity' in normalized)) {
+      normalized.quantity = null;
+    }
+    if (!('unit' in normalized)) {
+      normalized.unit = 'unknown';
+    }
+    if (!('preparation' in normalized)) {
+      normalized.preparation = 'unknown';
+    }
+    if (!('confidence' in normalized)) {
+      normalized.confidence = 0.5;
+    }
+
+    return normalized;
   }
 
   private normalizeRecipe(recipe: AiExtractedRecipe): ExtractedRecipe {
@@ -272,7 +316,7 @@ export class AiRecipeExtractionService {
   }
 }
 
-interface NativeOllamaChatResponse {
+interface OllamaChatResponse {
   message?: {
     content?: string;
   };
