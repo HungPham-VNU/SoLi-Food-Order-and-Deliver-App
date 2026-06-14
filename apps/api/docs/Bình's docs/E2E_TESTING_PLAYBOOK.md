@@ -73,7 +73,7 @@ apps/api/
 │   └── setup/
 │       ├── app-factory.ts       # Boots NestJS app; mirrors main.ts setup
 │       ├── db-setup.ts          # DB connection, reset, seed utilities, email constants
-│       └── env-setup.ts         # Loads .env.test (or .env) before Jest runs
+│       └── env-setup.ts         # Selects the E2E database before Jest runs
 ```
 
 ### How the NestJS App Is Bootstrapped
@@ -150,48 +150,37 @@ export async function getSnapshot(menuItemId: string) {
 
 ### Environment Variables
 
-| Variable             | Required | Description                                              |
-| -------------------- | -------- | -------------------------------------------------------- |
-| `DATABASE_URL`       | ✅       | PostgreSQL connection string for app + migrations        |
-| `TEST_DATABASE_URL`  | Optional | Separate test DB; falls back to `DATABASE_URL`           |
-| `BETTER_AUTH_SECRET` | ✅       | Secret for JWT signing (Better Auth)                     |
-| `BETTER_AUTH_URL`    | ✅       | Base URL for Better Auth (e.g. `http://localhost:3000`)  |
-| `REDIS_HOST`         | ✅       | Redis host (used by OrderingModule for cart/idempotency) |
-| `REDIS_PORT`         | ✅       | Redis port (default: `6379`)                             |
+| Variable             | Required       | Description                                              |
+| -------------------- | -------------- | -------------------------------------------------------- |
+| `DATABASE_URL`       | ✅             | PostgreSQL connection string for app + schema push       |
+| `TEST_DATABASE_URL`  | Local optional | Dedicated E2E DB; local runs derive it when omitted      |
+| `BETTER_AUTH_SECRET` | ✅             | Secret for JWT signing (Better Auth)                     |
+| `BETTER_AUTH_URL`    | ✅             | Base URL for Better Auth (e.g. `http://localhost:3000`)  |
+| `REDIS_HOST`         | ✅             | Redis host (used by OrderingModule for cart/idempotency) |
+| `REDIS_PORT`         | ✅             | Redis port (default: `6379`)                             |
 
 ### .env Resolution Order
 
-`test/setup/env-setup.ts` runs as a Jest `setupFile` (before any test file executes):
+`test/setup/env-setup.ts` runs as a Jest `setupFile` before any test file
+executes. It selects the E2E database like this:
 
-```typescript
-// Loaded via setupFiles in jest-e2e.json
-const envTest = path.join(root, '.env.test');
-const envDev = path.join(root, '.env');
+1. Use `TEST_DATABASE_URL` when set.
+2. In local non-CI runs, derive a dedicated test database from `DATABASE_URL`
+   when `TEST_DATABASE_URL` is omitted. Example: `food_order_db` becomes
+   `food_order_test`.
+3. In CI, keep the workflow-provided `DATABASE_URL`.
 
-if (fs.existsSync(envTest)) {
-  dotenv.config({ path: envTest, override: true }); // preferred
-} else if (fs.existsSync(envDev)) {
-  dotenv.config({ path: envDev, override: true }); // fallback
-}
-```
+Local E2E refuses database names that do not include `test` or `e2e`.
 
-**To use a dedicated test database**, create `.env.test` with a different `DATABASE_URL` pointing to `food_order_test`. If `.env.test` does not exist, tests run against the dev database — **dangerous in CI** but acceptable locally.
-
-### Running Migrations for the Test DB
-
-`drizzle.config.ts` reads `DATABASE_URL` from the environment. To migrate the test DB:
+### Preparing the Local Test DB
 
 ```powershell
-# Set TEST DB as target, then migrate
-$env:DATABASE_URL = "postgresql://food_order:foodordersecret@localhost:5433/food_order_test"
-pnpm db:migrate
+pnpm run db:test:prepare
 ```
 
-Or in `.env.test`:
-
-```
-DATABASE_URL=postgresql://food_order:foodordersecret@localhost:5433/food_order_test
-```
+This creates the local test database when needed, runs `drizzle-kit push`
+against it, and installs the search extensions. `pnpm run test:e2e` runs this
+preparation step automatically outside CI.
 
 ### Docker Services
 
@@ -199,7 +188,7 @@ DATABASE_URL=postgresql://food_order:foodordersecret@localhost:5433/food_order_t
 # docker-compose.yml (relevant services)
 postgres:
   container_name: food_order_db
-  ports: ['5433:5432'] # host:container — always use 5433 on localhost
+  ports: ['5432:5432']
 
 redis:
   container_name: food_order_redis
@@ -452,7 +441,7 @@ export async function resetDb(): Promise<void> {
 }
 ```
 
-Targeting users by email (not `DELETE ALL`) makes `resetDb()` safe to run against a shared dev database that may have real accounts.
+Targeting users by email (not `DELETE ALL`) keeps `resetDb()` scoped to the identities created by the E2E suites.
 
 ### `seedBaseRestaurant(ownerId: string)`
 
@@ -767,11 +756,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 ### ❌ Pitfall 4: Running Migrations Against the Wrong Database
 
-**What happened**: `pnpm db:migrate` ran against the dev DB because `DATABASE_URL` in `.env` was still pointing there.
+**What happened**: Local E2E schema setup targeted the normal development DB.
 
-**Root cause**: `drizzle.config.ts` reads `process.env.DATABASE_URL` directly. If `.env.test` is not loaded first, the wrong DB is targeted.
+**Root cause**: Running Drizzle commands manually without pointing
+`DATABASE_URL` at the dedicated E2E database.
 
-**Lesson**: When migrating the test DB, either set `DATABASE_URL` in your shell session explicitly, or create `.env.test` with the test DB URL and run migrations in that environment.
+**Lesson**: Use `pnpm run db:test:prepare` for local E2E setup. It derives or
+uses `TEST_DATABASE_URL`, refuses non-test database names, and runs
+`drizzle-kit push` against the dedicated E2E database.
 
 ---
 
@@ -1069,25 +1061,6 @@ Add new helpers to `test/helpers/db.ts` when you need to assert DB state not exp
 
 ### CI Considerations
 
-For continuous integration:
-
-1. Add `--forceExit` to the `test:e2e` script if connections don't close cleanly.
-2. Ensure the test DB and test `DATABASE_URL` are configured in CI environment variables.
-3. Run `docker compose up -d` in the CI pipeline before running tests.
-4. Run migrations for the test DB before the test suite: `pnpm db:migrate`.
-5. Use a dedicated test database to avoid interfering with dev data.
-
-```yaml
-# Example GitHub Actions step
-- name: Run E2E Tests
-  env:
-    DATABASE_URL: postgresql://food_order:foodordersecret@localhost:5433/food_order_test
-    BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-    BETTER_AUTH_URL: http://localhost:3000
-    REDIS_HOST: localhost
-    REDIS_PORT: 6379
-  run: |
-    cd apps/api
-    pnpm db:migrate
-    pnpm test:e2e --forceExit
-```
+The dedicated database behavior described above is for local development. The
+local preparation script skips when `CI=true` or `GITHUB_ACTIONS=true`, so CI
+continues to use its workflow-provided database and schema setup.

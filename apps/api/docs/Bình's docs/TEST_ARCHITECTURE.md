@@ -5,7 +5,7 @@
 ```
 apps/api/test/
 ├── setup/
-│   ├── env-setup.ts        ← Load .env.test before Jest runs
+│   ├── env-setup.ts        ← Select the E2E database before Jest runs
 │   ├── app-factory.ts      ← NestJS app + MockAuthGuard
 │   └── db-setup.ts         ← Drizzle connection, DB reset, base seed
 ├── helpers/
@@ -23,7 +23,12 @@ apps/api/test/
 
 ### `setup/env-setup.ts`
 
-Loaded via `setupFiles` in `jest-e2e.json`. Runs in every Jest worker **before** any test code executes. Loads `.env.test` (or falls back to `.env`) so that `process.env.DATABASE_URL` is set when NestJS modules initialise.
+Loaded via `setupFiles` in `jest-e2e.json`. Runs in every Jest worker **before** any test code executes.
+
+Local development never falls back to the normal dev database. `env-setup.ts`
+uses `TEST_DATABASE_URL` when present; otherwise it derives a dedicated local
+test database from `DATABASE_URL` (for example `food_order_db` to
+`food_order_test`). CI keeps its workflow-provided `DATABASE_URL`.
 
 ### `setup/app-factory.ts`
 
@@ -67,7 +72,7 @@ Factories for the four identity scenarios every test needs:
 
 ```
 Jest worker starts
-  └─ env-setup.ts: load .env.test → process.env populated
+  └─ env-setup.ts: DATABASE_URL points at the E2E database
 
   describe block (e.g. menu.e2e-spec.ts)
     beforeAll:
