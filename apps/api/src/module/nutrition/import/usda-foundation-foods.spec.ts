@@ -1,6 +1,10 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   buildUsdaFoundationNutritionFoods,
   parseCsv,
+  streamUsdaFoundationNutritionFoodBatches,
 } from './usda-foundation-foods';
 
 describe('USDA Foundation Foods import mapper', () => {
@@ -66,5 +70,67 @@ describe('USDA Foundation Foods import mapper', () => {
         sodium100g: 50,
       }),
     ]);
+  });
+
+  it('streams nutrition food batches without building one full output array', async () => {
+    const csvDir = mkdtempSync(join(tmpdir(), 'usda-foundation-foods-'));
+    const batches: unknown[][] = [];
+
+    try {
+      writeFileSync(
+        join(csvDir, 'foundation_food.csv'),
+        ['"fdc_id","NDB_number","footnote"', '"100","0500",""'].join('\n'),
+      );
+      writeFileSync(
+        join(csvDir, 'food.csv'),
+        [
+          '"fdc_id","data_type","description","food_category_id","publication_date"',
+          '"100","foundation_food","Chicken, broilers or fryers, breast, meat only, raw","5","2026-04-30"',
+        ].join('\n'),
+      );
+      writeFileSync(
+        join(csvDir, 'food_category.csv'),
+        ['"id","code","description"', '"5","0500","Poultry Products"'].join(
+          '\n',
+        ),
+      );
+      writeFileSync(
+        join(csvDir, 'food_nutrient.csv'),
+        [
+          '"id","fdc_id","nutrient_id","amount","data_points","derivation_id","min","max","median","footnote","min_year_acquired"',
+          '"1","100","1008","121","1","1","","","","",""',
+          '"2","100","1003","22.5","1","1","","","","",""',
+          '"3","100","1004","2.6","1","1","","","","",""',
+          '"4","100","1005","0","1","1","","","","",""',
+        ].join('\n'),
+      );
+
+      const result = await streamUsdaFoundationNutritionFoodBatches(csvDir, {
+        batchSize: 1,
+        onBatch: (batch) => {
+          batches.push(batch);
+        },
+      });
+
+      expect(result).toMatchObject({
+        importedFoodCount: 1,
+        foundationFoodCount: 1,
+        skippedMissingFoodRows: 0,
+        skippedMissingRequiredNutrients: 0,
+      });
+      expect(batches).toEqual([
+        [
+          expect.objectContaining({
+            nameEn: 'Chicken, broilers or fryers, breast, meat only, raw',
+            calories100g: 121,
+            protein100g: 22.5,
+            carbs100g: 0,
+            fat100g: 2.6,
+          }),
+        ],
+      ]);
+    } finally {
+      rmSync(csvDir, { recursive: true, force: true });
+    }
   });
 });

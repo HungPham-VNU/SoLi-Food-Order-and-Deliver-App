@@ -6,9 +6,8 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import {
   USDA_FOUNDATION_FOODS_ARCHIVE_URL,
   USDA_FOUNDATION_FOODS_RELEASE_DATE,
-  buildUsdaFoundationNutritionFoods,
   hasRequiredUsdaCsvFiles,
-  readUsdaCsvDirectory,
+  streamUsdaFoundationNutritionFoodBatches,
 } from '../../module/nutrition/import/usda-foundation-foods';
 import { nutritionFoods } from '../../module/nutrition/domain/nutrition.schema';
 
@@ -16,42 +15,40 @@ const db = drizzle(process.env.DATABASE_URL!);
 
 async function main() {
   const csvDir = resolveCsvDir();
-  const result = buildUsdaFoundationNutritionFoods(
-    readUsdaCsvDirectory(csvDir),
-  );
-
-  if (result.foods.length === 0) {
-    throw new Error('No USDA Foundation Foods rows were eligible for import.');
-  }
-
   const batchSize = 100;
-  for (let index = 0; index < result.foods.length; index += batchSize) {
-    const batch = result.foods.slice(index, index + batchSize);
 
-    await db
-      .insert(nutritionFoods)
-      .values(batch)
-      .onConflictDoUpdate({
-        target: [nutritionFoods.nameVi, nutritionFoods.state],
-        set: {
-          nameEn: sql`excluded.name_en`,
-          aliases: sql`excluded.aliases`,
-          category: sql`excluded.category`,
-          calories100g: sql`excluded.calories_100g`,
-          protein100g: sql`excluded.protein_100g`,
-          carbs100g: sql`excluded.carbs_100g`,
-          fat100g: sql`excluded.fat_100g`,
-          fiber100g: sql`excluded.fiber_100g`,
-          sugar100g: sql`excluded.sugar_100g`,
-          sodium100g: sql`excluded.sodium_100g`,
-          updatedAt: new Date(),
-        },
-      });
+  const result = await streamUsdaFoundationNutritionFoodBatches(csvDir, {
+    batchSize,
+    onBatch: async (batch) => {
+      await db
+        .insert(nutritionFoods)
+        .values(batch)
+        .onConflictDoUpdate({
+          target: [nutritionFoods.nameVi, nutritionFoods.state],
+          set: {
+            nameEn: sql`excluded.name_en`,
+            aliases: sql`excluded.aliases`,
+            category: sql`excluded.category`,
+            calories100g: sql`excluded.calories_100g`,
+            protein100g: sql`excluded.protein_100g`,
+            carbs100g: sql`excluded.carbs_100g`,
+            fat100g: sql`excluded.fat_100g`,
+            fiber100g: sql`excluded.fiber_100g`,
+            sugar100g: sql`excluded.sugar_100g`,
+            sodium100g: sql`excluded.sodium_100g`,
+            updatedAt: new Date(),
+          },
+        });
+    },
+  });
+
+  if (result.importedFoodCount === 0) {
+    throw new Error('No USDA Foundation Foods rows were eligible for import.');
   }
 
   console.log(
     [
-      `Imported ${result.foods.length} USDA Foundation Foods nutrition rows.`,
+      `Imported ${result.importedFoodCount} USDA Foundation Foods nutrition rows.`,
       `Release: ${USDA_FOUNDATION_FOODS_RELEASE_DATE}.`,
       `Source CSV directory: ${csvDir}.`,
       `Skipped ${result.skippedMissingRequiredNutrients} of ${result.foundationFoodCount} Foundation Foods rows because calories/protein/carbs/fat were incomplete.`,

@@ -141,9 +141,10 @@ export class NutritionService {
       );
     }
 
-    const foods = await this.repo.listNutritionFoods();
-    const matchedIngredients = dto.ingredients.map((ingredient) =>
-      this.matchAndConvertIngredient(ingredient, foods),
+    const matchedIngredients = await Promise.all(
+      dto.ingredients.map((ingredient) =>
+        this.matchAndConvertIngredient(ingredient),
+      ),
     );
 
     const calculation = this.calculator.calculate(
@@ -523,10 +524,15 @@ export class NutritionService {
     };
   }
 
-  private matchAndConvertIngredient(
-    ingredient: ConfirmedIngredientDto,
-    foods: NutritionFood[],
-  ) {
+  private async matchAndConvertIngredient(ingredient: ConfirmedIngredientDto) {
+    const preferredState = this.ingredientMatching.resolvePreferredState({
+      name: ingredient.name,
+      preparation: ingredient.preparation ?? 'unknown',
+    });
+    const foods = await this.repo.searchNutritionFoodsForIngredient({
+      name: ingredient.name,
+      preferredState,
+    });
     const match = this.ingredientMatching.matchIngredient(
       {
         name: ingredient.name,

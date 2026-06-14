@@ -28,7 +28,7 @@ export class IngredientMatchingService {
     foods: NutritionFood[],
   ): IngredientMatchResult {
     const normalizedInput = this.normalize(input.name);
-    const preferredState = this.resolvePreferredState(
+    const preferredState = this.resolvePreferredStateFromNormalized(
       normalizedInput,
       input.preparation ?? 'unknown',
     );
@@ -73,6 +73,15 @@ export class IngredientMatchingService {
   isGenericIngredientName(name: string): boolean {
     const normalized = this.normalize(name);
     return ['thit', 'rau', 'sot', 'gia vi', 'bot'].includes(normalized);
+  }
+
+  resolvePreferredState(
+    input: IngredientMatchInput,
+  ): NutritionFood['state'] | null {
+    return this.resolvePreferredStateFromNormalized(
+      this.normalize(input.name),
+      input.preparation ?? 'unknown',
+    );
   }
 
   private scoreFood(normalizedInput: string, food: NutritionFood): number {
@@ -123,7 +132,7 @@ export class IngredientMatchingService {
     return bestSimilarity >= 0.72 ? 0.55 + bestSimilarity * 0.25 : 0;
   }
 
-  private resolvePreferredState(
+  private resolvePreferredStateFromNormalized(
     normalizedName: string,
     preparation: PreparationState,
   ): NutritionFood['state'] | null {
