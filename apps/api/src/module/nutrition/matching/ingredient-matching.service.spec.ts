@@ -69,6 +69,26 @@ describe('IngredientMatchingService', () => {
     expect(result.bestCandidate?.matchedFoodId).toBe('rice-cooked');
   });
 
+  it('matches USDA comma-separated descriptions by token overlap', () => {
+    const description = 'Chicken, broilers or fryers, breast, meat only, raw';
+    const result = service.matchIngredient(
+      { name: 'chicken breast', preparation: 'raw' },
+      [
+        makeFood({
+          id: 'usda-chicken-breast',
+          nameVi: description,
+          nameEn: description,
+          aliases: ['chicken broilers or fryers breast meat only raw'],
+          state: 'raw',
+        }),
+      ],
+    );
+
+    expect(result.bestCandidate?.matchedFoodId).toBe('usda-chicken-breast');
+    expect(result.bestCandidate?.matchConfidence).toBeGreaterThanOrEqual(0.8);
+    expect(result.requiresConfirmation).toBe(true);
+  });
+
   it('flags generic ingredient names', () => {
     expect(service.isGenericIngredientName('thịt')).toBe(true);
     expect(service.isGenericIngredientName('uc ga')).toBe(false);

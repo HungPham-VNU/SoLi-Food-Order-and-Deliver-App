@@ -20,12 +20,18 @@ import type {
 import type { SaveMenuItemNutritionDto } from './dto/save-menu-item-nutrition.dto';
 import {
   NUTRITION_DISCLAIMER,
+  NUTRITION_UNITS,
+  PREPARATION_STATES,
   type ExtractedRecipe,
   type ExtractedRecipeIngredient,
   type NutritionAnalysisStatus,
+  type NutritionUnit,
+  type PreparationState,
 } from './types/nutrition.types';
 import type {
   NewNutritionAnalysisIngredient,
+  NutritionAnalysisIngredient,
+  MenuItemNutrition,
   NutritionFood,
 } from './domain/nutrition.schema';
 
@@ -171,7 +177,10 @@ export class NutritionService {
         notes: ingredient.warnings,
       })),
     );
-    await this.repo.updateSessionStatus(session.id, 'CALCULATED');
+    await this.repo.updateCalculatedSession(
+      session.id,
+      this.buildConfirmedRecipe(session.aiExtractedJson, dto),
+    );
 
     return {
       matchedIngredients: matchedIngredients.map((ingredient) => ({
@@ -186,6 +195,32 @@ export class NutritionService {
       })),
       nutrition: calculation.nutrition,
       warnings,
+    };
+  }
+
+  async getLatestMenuItemNutritionAnalysis(
+    menuItemId: string,
+    requesterId: string,
+    isAdmin: boolean,
+  ) {
+    await this.assertMenuItemOwnership(menuItemId, requesterId, isAdmin);
+    const session =
+      await this.repo.findLatestEditableAnalysisByMenuItemId(menuItemId);
+    if (!session) return null;
+
+    const [ingredients] = await Promise.all([
+      this.repo.listIngredientsBySessionId(session.id),
+    ]);
+    const extractedRecipe = this.parseExtractedRecipe(session.aiExtractedJson);
+
+    return {
+      analysisSessionId: session.id,
+      recipeName: extractedRecipe?.recipeName ?? null,
+      recipeText: session.rawRecipeText,
+      servings: extractedRecipe?.servings ?? null,
+      ingredients: this.toReviewIngredients(ingredients, extractedRecipe),
+      warnings: extractedRecipe?.warnings ?? [],
+      status: session.status,
     };
   }
 
@@ -212,7 +247,7 @@ export class NutritionService {
       );
     }
 
-    await this.repo.saveMenuItemNutrition({
+    const savedNutrition = await this.repo.saveMenuItemNutrition({
       menuItemId,
       servings: dto.servings,
       calories: dto.nutrition.calories,
@@ -226,7 +261,172 @@ export class NutritionService {
     });
     await this.repo.updateSessionStatus(session.id, 'SAVED');
 
-    return { success: true };
+    return this.toMenuItemNutritionResponse(savedNutrition);
+  }
+
+  private toMenuItemNutritionResponse(nutrition: MenuItemNutrition) {
+    return {
+      servings: nutrition.servings,
+      calories: nutrition.calories,
+      protein: nutrition.protein,
+      carbs: nutrition.carbs,
+      fat: nutrition.fat,
+      fiber: nutrition.fiber,
+      sugar: nutrition.sugar,
+      sodium: nutrition.sodium,
+      source: nutrition.source,
+      verifiedByRestaurant: nutrition.verifiedByRestaurant,
+      disclaimer: NUTRITION_DISCLAIMER,
+    };
+  }
+
+  private buildConfirmedRecipe(
+    aiExtractedJson: unknown,
+    dto: CalculateNutritionDto,
+  ): ExtractedRecipe {
+    const existingRecipe = this.parseExtractedRecipe(aiExtractedJson);
+    const existingIngredientsByName = this.indexIngredientsByName(
+      existingRecipe?.ingredients ?? [],
+    );
+
+    return {
+      recipeName: existingRecipe?.recipeName ?? null,
+      servings: dto.servings,
+      ingredients: dto.ingredients.map((ingredient) => {
+        const existingIngredient = existingIngredientsByName.get(
+          this.normalizeIngredientName(ingredient.name),
+        );
+
+        return {
+          rawText: existingIngredient?.rawText ?? ingredient.name,
+          name: ingredient.name,
+          quantity: ingredient.quantity ?? null,
+          unit: ingredient.unit,
+          preparation: ingredient.preparation ?? 'unknown',
+          confidence: existingIngredient?.confidence ?? 1,
+          requiresConfirmation: false,
+          notes: [],
+        };
+      }),
+      warnings: existingRecipe?.warnings ?? [],
+    };
+  }
+
+  private toReviewIngredients(
+    rows: NutritionAnalysisIngredient[],
+    extractedRecipe: ExtractedRecipe | null,
+  ) {
+    if (rows.length === 0) {
+      return (
+        extractedRecipe?.ingredients.map((ingredient) => ({
+          rawText: ingredient.rawText,
+          name: ingredient.name,
+          quantity: ingredient.quantity,
+          unit: ingredient.unit,
+          preparation: ingredient.preparation,
+          confidence: ingredient.confidence,
+          requiresConfirmation: ingredient.requiresConfirmation ?? false,
+          notes: ingredient.notes ?? [],
+        })) ?? []
+      );
+    }
+
+    const extractedIngredients = extractedRecipe?.ingredients ?? [];
+    const extractedIngredientsByName =
+      this.indexIngredientsByName(extractedIngredients);
+
+    return rows.map((row, index) => {
+      const name = row.correctedName ?? row.extractedName;
+      const extractedIngredient =
+        extractedIngredients[index] ??
+        extractedIngredientsByName.get(this.normalizeIngredientName(name));
+
+      return {
+        rawText: row.rawText ?? extractedIngredient?.rawText ?? null,
+        name,
+        quantity: row.quantity,
+        unit: this.toNutritionUnit(row.unit),
+        preparation: this.toPreparationState(
+          extractedIngredient?.preparation ?? 'unknown',
+        ),
+        confidence: row.confidence ?? extractedIngredient?.confidence ?? 1,
+        requiresConfirmation:
+          row.requiresConfirmation ??
+          extractedIngredient?.requiresConfirmation ??
+          false,
+        notes: row.notes ?? extractedIngredient?.notes ?? [],
+      };
+    });
+  }
+
+  private parseExtractedRecipe(value: unknown): ExtractedRecipe | null {
+    if (!value || typeof value !== 'object') return null;
+
+    const recipe = value as Partial<ExtractedRecipe>;
+    if (!Array.isArray(recipe.ingredients)) return null;
+    const ingredients = recipe.ingredients as unknown[];
+
+    return {
+      recipeName:
+        typeof recipe.recipeName === 'string' ? recipe.recipeName : null,
+      servings:
+        typeof recipe.servings === 'number' && recipe.servings > 0
+          ? recipe.servings
+          : null,
+      ingredients: ingredients
+        .filter(
+          (ingredient): ingredient is Partial<ExtractedRecipeIngredient> =>
+            !!ingredient && typeof ingredient === 'object',
+        )
+        .map((ingredient) => ({
+          rawText:
+            typeof ingredient.rawText === 'string'
+              ? ingredient.rawText
+              : (ingredient.name ?? ''),
+          name: typeof ingredient.name === 'string' ? ingredient.name : '',
+          quantity:
+            typeof ingredient.quantity === 'number'
+              ? ingredient.quantity
+              : null,
+          unit: this.toNutritionUnit(ingredient.unit),
+          preparation: this.toPreparationState(ingredient.preparation),
+          confidence:
+            typeof ingredient.confidence === 'number'
+              ? ingredient.confidence
+              : 1,
+          requiresConfirmation: ingredient.requiresConfirmation ?? false,
+          notes: Array.isArray(ingredient.notes) ? ingredient.notes : [],
+        }))
+        .filter((ingredient) => ingredient.name.trim().length > 0),
+      warnings: Array.isArray(recipe.warnings) ? recipe.warnings : [],
+    };
+  }
+
+  private indexIngredientsByName(ingredients: ExtractedRecipeIngredient[]) {
+    return new Map(
+      ingredients.map((ingredient) => [
+        this.normalizeIngredientName(ingredient.name),
+        ingredient,
+      ]),
+    );
+  }
+
+  private normalizeIngredientName(name: string): string {
+    return name.trim().toLowerCase();
+  }
+
+  private toNutritionUnit(unit: unknown): NutritionUnit {
+    return typeof unit === 'string' &&
+      (NUTRITION_UNITS as readonly string[]).includes(unit)
+      ? (unit as NutritionUnit)
+      : 'unknown';
+  }
+
+  private toPreparationState(preparation: unknown): PreparationState {
+    return typeof preparation === 'string' &&
+      (PREPARATION_STATES as readonly string[]).includes(preparation)
+      ? (preparation as PreparationState)
+      : 'unknown';
   }
 
   private async assertMenuItemOwnership(
@@ -256,7 +456,9 @@ export class NutritionService {
     let hasReviewIssues = warnings.length > 0;
 
     if (recipe.servings === null) {
-      warnings.push('Servings are missing. Please enter the number of servings.');
+      warnings.push(
+        'Servings are missing. Please enter the number of servings.',
+      );
       hasReviewIssues = true;
     }
 
@@ -278,7 +480,9 @@ export class NutritionService {
       if (ingredient.unit === 'unknown') {
         addNote(`Unit is missing for ${ingredient.name}.`);
       } else if (!this.unitConversion.isSupported(ingredient.unit)) {
-        addNote(`Unit ${ingredient.unit} is not supported for ${ingredient.name}.`);
+        addNote(
+          `Unit ${ingredient.unit} is not supported for ${ingredient.name}.`,
+        );
       }
 
       if (ingredient.confidence < 0.8) {
@@ -339,12 +543,15 @@ export class NutritionService {
     const matchedFood =
       match.bestCandidate === null
         ? null
-        : foods.find((food) => food.id === match.bestCandidate?.matchedFoodId) ??
-          null;
+        : (foods.find(
+            (food) => food.id === match.bestCandidate?.matchedFoodId,
+          ) ?? null);
     const warnings = [...conversion.notes];
 
     if (!match.bestCandidate) {
-      warnings.push(`No nutrition database match found for ${ingredient.name}.`);
+      warnings.push(
+        `No nutrition database match found for ${ingredient.name}.`,
+      );
     } else if (match.requiresConfirmation) {
       warnings.push(
         `Nutrition match for ${ingredient.name} requires restaurant confirmation.`,
@@ -367,4 +574,3 @@ export class NutritionService {
     };
   }
 }
-

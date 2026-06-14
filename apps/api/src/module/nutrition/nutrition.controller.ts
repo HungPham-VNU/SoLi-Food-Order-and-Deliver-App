@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Param,
   ParseUUIDPipe,
   Post,
@@ -19,7 +20,10 @@ import { hasRole } from '@/module/auth/role.util';
 import { NutritionService } from './nutrition.service';
 import { AnalyzeRecipeDto } from './dto/analyze-recipe.dto';
 import { CalculateNutritionDto } from './dto/calculate-nutrition.dto';
-import { SaveMenuItemNutritionDto } from './dto/save-menu-item-nutrition.dto';
+import {
+  MenuItemNutritionResponseDto,
+  SaveMenuItemNutritionDto,
+} from './dto/save-menu-item-nutrition.dto';
 
 @ApiTags('Nutrition')
 @ApiBearerAuth()
@@ -27,6 +31,26 @@ import { SaveMenuItemNutritionDto } from './dto/save-menu-item-nutrition.dto';
 @Roles(['admin', 'restaurant'])
 export class NutritionController {
   constructor(private readonly service: NutritionService) {}
+
+  @Get('latest')
+  @ApiOperation({
+    summary: 'Get the latest editable nutrition analysis for a menu item',
+  })
+  @ApiParam({ name: 'menuItemId', format: 'uuid' })
+  @ApiOkResponse({
+    description:
+      'Latest recipe text and ingredient table returned for edit hydration',
+  })
+  latest(
+    @Param('menuItemId', ParseUUIDPipe) menuItemId: string,
+    @Session() session: UserSession,
+  ) {
+    return this.service.getLatestMenuItemNutritionAnalysis(
+      menuItemId,
+      session.user.id,
+      hasRole(session.user.role, 'admin'),
+    );
+  }
 
   @Post('analyze-recipe')
   @ApiOperation({ summary: 'Analyze a recipe text for menu item nutrition' })
@@ -70,7 +94,10 @@ export class NutritionController {
   @ApiOperation({ summary: 'Save restaurant-verified menu item nutrition' })
   @ApiParam({ name: 'menuItemId', format: 'uuid' })
   @ApiBody({ type: SaveMenuItemNutritionDto })
-  @ApiOkResponse({ description: 'Nutrition saved' })
+  @ApiOkResponse({
+    description: 'Nutrition saved',
+    type: MenuItemNutritionResponseDto,
+  })
   save(
     @Param('menuItemId', ParseUUIDPipe) menuItemId: string,
     @Session() session: UserSession,
@@ -84,4 +111,3 @@ export class NutritionController {
     );
   }
 }
-

@@ -107,6 +107,13 @@ export class IngredientMatchingService {
       return 0.76;
     }
 
+    const bestTokenOverlap = Math.max(
+      this.tokenOverlapScore(normalizedInput, normalizedNameVi),
+      this.tokenOverlapScore(normalizedInput, normalizedNameEn),
+      ...aliases.map((alias) => this.tokenOverlapScore(normalizedInput, alias)),
+    );
+    if (bestTokenOverlap > 0) return bestTokenOverlap;
+
     const bestSimilarity = Math.max(
       this.similarity(normalizedInput, normalizedNameVi),
       this.similarity(normalizedInput, normalizedNameEn),
@@ -133,7 +140,28 @@ export class IngredientMatchingService {
       .replace(/\p{Diacritic}/gu, '')
       .toLowerCase()
       .trim()
+      .replace(/[^\p{Letter}\p{Number}]+/gu, ' ')
       .replace(/\s+/g, ' ');
+  }
+
+  private tokenOverlapScore(
+    normalizedInput: string,
+    normalizedFood: string,
+  ): number {
+    const inputTokens = this.tokenize(normalizedInput);
+    if (inputTokens.length === 0) return 0;
+
+    const foodTokens = new Set(this.tokenize(normalizedFood));
+    if (!inputTokens.every((token) => foodTokens.has(token))) return 0;
+
+    return Math.min(0.82, 0.68 + inputTokens.length * 0.05);
+  }
+
+  private tokenize(value: string): string[] {
+    return value
+      .split(' ')
+      .map((token) => token.trim())
+      .filter((token) => token.length > 1);
   }
 
   private similarity(left: string, right: string): number {
@@ -162,4 +190,3 @@ export class IngredientMatchingService {
     return previous[right.length];
   }
 }
-

@@ -174,4 +174,6 @@ export type NutritionAnalysisSession =
   typeof nutritionAnalysisSessions.$inferSelect;
 export type NewNutritionAnalysisIngredient =
   typeof nutritionAnalysisIngredients.$inferInsert;
+export type NutritionAnalysisIngredient =
+  typeof nutritionAnalysisIngredients.$inferSelect;
 export type MenuItemNutrition = typeof menuItemNutrition.$inferSelect;
