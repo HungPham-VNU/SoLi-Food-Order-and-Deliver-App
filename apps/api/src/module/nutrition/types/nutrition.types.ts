@@ -43,6 +43,16 @@ export const PREPARATION_STATES = [
 
 export type PreparationState = (typeof PREPARATION_STATES)[number];
 
+export const INGREDIENT_CATEGORIES = [
+  'main',
+  'seasoning',
+  'sauce',
+  'garnish',
+  'herb_side',
+] as const;
+
+export type IngredientCategory = (typeof INGREDIENT_CATEGORIES)[number];
+
 export const NUTRITION_ANALYSIS_STATUSES = [
   'ANALYZED',
   'NEEDS_REVIEW',
@@ -60,6 +70,7 @@ export interface ExtractedRecipeIngredient {
   quantity: number | null;
   unit: NutritionUnit;
   preparation: PreparationState;
+  category: IngredientCategory;
   confidence: number;
   requiresConfirmation?: boolean;
   notes?: string[];

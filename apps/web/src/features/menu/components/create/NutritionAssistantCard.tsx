@@ -13,6 +13,7 @@ import { useMenuItemNutritionAnalysis } from '../../hooks/useMenu';
 import type {
   AnalyzeRecipeResponse,
   CalculateNutritionResponse,
+  IngredientCategory,
   MenuItemNutrition,
   NutritionReviewIngredient,
   NutritionUnit,
@@ -44,6 +45,16 @@ const PREPARATION_OPTIONS: PreparationState[] = [
   'unknown',
 ];
 
+const NO_PREPARATION_CATEGORIES: ReadonlySet<IngredientCategory> = new Set([
+  'seasoning',
+  'sauce',
+  'garnish',
+  'herb_side',
+]);
+
+const OPTIONAL_MEASUREMENT_CATEGORIES: ReadonlySet<IngredientCategory> =
+  new Set(['seasoning', 'sauce', 'garnish', 'herb_side']);
+
 interface NutritionAssistantCardProps {
   menuItemId?: string;
   currentNutrition?: MenuItemNutrition | null;
@@ -57,8 +68,11 @@ const emptyIngredient = (): NutritionReviewIngredient => ({
   quantity: null,
   unit: 'g',
   preparation: 'unknown',
+  category: 'main',
   confidence: 1,
   requiresConfirmation: true,
+  measurementRequired: true,
+  preparationApplicable: true,
   notes: [],
 });
 
@@ -66,12 +80,32 @@ const normalizeReviewIngredients = (
   ingredients: NutritionReviewIngredient[],
 ): NutritionReviewIngredient[] =>
   ingredients.length > 0
-    ? ingredients.map((ingredient) => ({
-        ...ingredient,
-        preparation: ingredient.preparation ?? 'unknown',
-        notes: ingredient.notes ?? [],
-      }))
+    ? ingredients.map((ingredient) =>
+        applyIngredientReviewHints({
+          ...ingredient,
+          notes: ingredient.notes ?? [],
+        }),
+      )
     : [emptyIngredient()];
+
+const applyIngredientReviewHints = (
+  ingredient: NutritionReviewIngredient,
+): NutritionReviewIngredient => {
+  const category = ingredient.category ?? 'main';
+  const preparationApplicable = !NO_PREPARATION_CATEGORIES.has(category);
+  const measurementRequired =
+    !OPTIONAL_MEASUREMENT_CATEGORIES.has(category) ||
+    ingredient.quantity !== null;
+
+  return {
+    ...ingredient,
+    preparation: preparationApplicable
+      ? (ingredient.preparation ?? 'unknown')
+      : null,
+    measurementRequired,
+    preparationApplicable,
+  };
+};
 
 export function NutritionAssistantCard({
   menuItemId,
@@ -113,7 +147,13 @@ export function NutritionAssistantCard({
   const canCalculate =
     !!analysis?.analysisSessionId &&
     servings > 0 &&
-    ingredients.some((ingredient) => ingredient.name.trim().length > 0);
+    ingredients.some((ingredient) => {
+      const reviewedIngredient = applyIngredientReviewHints(ingredient);
+      return (
+        reviewedIngredient.name.trim().length > 0 &&
+        reviewedIngredient.measurementRequired
+      );
+    });
 
   useEffect(() => {
     if (!latestAnalysis) return;
@@ -168,7 +208,9 @@ export function NutritionAssistantCard({
   ) => {
     setIngredients((current) =>
       current.map((ingredient, i) =>
-        i === index ? { ...ingredient, ...patch } : ingredient,
+        i === index
+          ? applyIngredientReviewHints({ ...ingredient, ...patch })
+          : ingredient,
       ),
     );
     setCalculation(null);
@@ -183,12 +225,19 @@ export function NutritionAssistantCard({
         servings,
         ingredients: ingredients
           .filter((ingredient) => ingredient.name.trim().length > 0)
-          .map((ingredient) => ({
-            name: ingredient.name.trim(),
-            quantity: ingredient.quantity,
-            unit: ingredient.unit,
-            preparation: ingredient.preparation ?? 'unknown',
-          })),
+          .map((ingredient) => {
+            const reviewedIngredient = applyIngredientReviewHints(ingredient);
+
+            return {
+              name: reviewedIngredient.name.trim(),
+              quantity: reviewedIngredient.quantity,
+              unit: reviewedIngredient.unit,
+              preparation: reviewedIngredient.preparationApplicable
+                ? (reviewedIngredient.preparation ?? 'unknown')
+                : null,
+              category: reviewedIngredient.category,
+            };
+          }),
       },
       {
         onSuccess: (result) => {
@@ -331,97 +380,124 @@ export function NutritionAssistantCard({
                 </tr>
               </thead>
               <tbody>
-                {ingredients.map((ingredient, index) => (
-                  <tr
-                    key={`${ingredient.rawText ?? 'manual'}-${index}`}
-                    className={
-                      ingredient.requiresConfirmation
-                        ? 'bg-amber-50/70 dark:bg-amber-950/20'
-                        : 'bg-card'
-                    }
-                  >
-                    <td className="px-3 py-2">
-                      <Input
-                        value={ingredient.name}
-                        onChange={(event) =>
-                          updateIngredient(index, { name: event.target.value })
-                        }
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        value={ingredient.quantity ?? ''}
-                        onChange={(event) =>
-                          updateIngredient(index, {
-                            quantity:
-                              event.target.value === ''
-                                ? null
-                                : Number(event.target.value),
-                          })
-                        }
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <select
-                        className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm outline-none"
-                        value={ingredient.unit}
-                        onChange={(event) =>
-                          updateIngredient(index, {
-                            unit: event.target.value as NutritionUnit,
-                          })
-                        }
-                      >
-                        {UNIT_OPTIONS.map((unit) => (
-                          <option key={unit} value={unit}>
-                            {unit}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-3 py-2">
-                      <select
-                        className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm outline-none"
-                        value={ingredient.preparation ?? 'unknown'}
-                        onChange={(event) =>
-                          updateIngredient(index, {
-                            preparation: event.target.value as PreparationState,
-                          })
-                        }
-                      >
-                        {PREPARATION_OPTIONS.map((state) => (
-                          <option key={state} value={state}>
-                            {state}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground">
-                      {typeof ingredient.confidence === 'number'
-                        ? `${Math.round(ingredient.confidence * 100)}%`
-                        : 'Manual'}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground">
-                      {(ingredient.notes ?? [])[0] ?? ''}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          setIngredients((current) =>
-                            current.filter((_, i) => i !== index),
-                          )
-                        }
-                        aria-label="Remove ingredient"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {ingredients.map((ingredient, index) => {
+                  const reviewedIngredient =
+                    applyIngredientReviewHints(ingredient);
+                  const isOptionalUnmeasured =
+                    !reviewedIngredient.measurementRequired;
+                  const firstNote =
+                    (reviewedIngredient.notes ?? [])[0] ??
+                    (isOptionalUnmeasured
+                      ? 'Not counted unless an amount is added.'
+                      : '');
+
+                  return (
+                    <tr
+                      key={`${ingredient.rawText ?? 'manual'}-${index}`}
+                      className={
+                        reviewedIngredient.requiresConfirmation
+                          ? 'bg-amber-50/70 dark:bg-amber-950/20'
+                          : 'bg-card'
+                      }
+                    >
+                      <td className="px-3 py-2">
+                        <Input
+                          value={reviewedIngredient.name}
+                          onChange={(event) =>
+                            updateIngredient(index, {
+                              name: event.target.value,
+                            })
+                          }
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={reviewedIngredient.quantity ?? ''}
+                          onChange={(event) =>
+                            updateIngredient(index, {
+                              quantity:
+                                event.target.value === ''
+                                  ? null
+                                  : Number(event.target.value),
+                            })
+                          }
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        {isOptionalUnmeasured ? (
+                          <span className="inline-flex h-8 items-center rounded-lg bg-muted/50 px-2 text-xs text-muted-foreground">
+                            Not measured
+                          </span>
+                        ) : (
+                          <select
+                            className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm outline-none"
+                            value={reviewedIngredient.unit}
+                            onChange={(event) =>
+                              updateIngredient(index, {
+                                unit: event.target.value as NutritionUnit,
+                              })
+                            }
+                          >
+                            {UNIT_OPTIONS.map((unit) => (
+                              <option key={unit} value={unit}>
+                                {unit}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        {reviewedIngredient.preparationApplicable ? (
+                          <select
+                            className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm outline-none"
+                            value={reviewedIngredient.preparation ?? 'unknown'}
+                            onChange={(event) =>
+                              updateIngredient(index, {
+                                preparation: event.target
+                                  .value as PreparationState,
+                              })
+                            }
+                          >
+                            {PREPARATION_OPTIONS.map((state) => (
+                              <option key={state} value={state}>
+                                {state}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="inline-flex h-8 items-center rounded-lg bg-muted/50 px-2 text-xs text-muted-foreground">
+                            Not applicable
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground">
+                        {typeof reviewedIngredient.confidence === 'number'
+                          ? `${Math.round(reviewedIngredient.confidence * 100)}%`
+                          : 'Manual'}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">
+                        {firstNote}
+                      </td>
+                      <td className="px-3 py-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            setIngredients((current) =>
+                              current.filter((_, i) => i !== index),
+                            )
+                          }
+                          aria-label="Remove ingredient"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

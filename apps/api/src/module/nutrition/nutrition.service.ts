@@ -19,11 +19,13 @@ import type {
 } from './dto/calculate-nutrition.dto';
 import type { SaveMenuItemNutritionDto } from './dto/save-menu-item-nutrition.dto';
 import {
+  INGREDIENT_CATEGORIES,
   NUTRITION_DISCLAIMER,
   NUTRITION_UNITS,
   PREPARATION_STATES,
   type ExtractedRecipe,
   type ExtractedRecipeIngredient,
+  type IngredientCategory,
   type NutritionAnalysisStatus,
   type NutritionUnit,
   type PreparationState,
@@ -32,8 +34,17 @@ import type {
   NewNutritionAnalysisIngredient,
   NutritionAnalysisIngredient,
   MenuItemNutrition,
-  NutritionFood,
 } from './domain/nutrition.schema';
+
+const NO_PREPARATION_CATEGORIES: ReadonlySet<IngredientCategory> = new Set([
+  'seasoning',
+  'sauce',
+  'garnish',
+  'herb_side',
+]);
+
+const OPTIONAL_MEASUREMENT_CATEGORIES: ReadonlySet<IngredientCategory> =
+  new Set(['seasoning', 'sauce', 'garnish', 'herb_side']);
 
 @Injectable()
 export class NutritionService {
@@ -109,16 +120,9 @@ export class NutritionService {
       analysisSessionId: session.id,
       recipeName: extracted.recipeName,
       servings: extracted.servings,
-      ingredients: reviewed.ingredients.map((ingredient) => ({
-        rawText: ingredient.rawText,
-        name: ingredient.name,
-        quantity: ingredient.quantity,
-        unit: ingredient.unit,
-        preparation: ingredient.preparation,
-        confidence: ingredient.confidence,
-        requiresConfirmation: ingredient.requiresConfirmation ?? false,
-        notes: ingredient.notes ?? [],
-      })),
+      ingredients: reviewed.ingredients.map((ingredient) =>
+        this.toReviewIngredientResponse(ingredient),
+      ),
       warnings: reviewed.warnings,
       status,
     };
@@ -149,11 +153,13 @@ export class NutritionService {
 
     const calculation = this.calculator.calculate(
       dto.servings,
-      matchedIngredients.map((ingredient) => ({
-        inputName: ingredient.inputName,
-        quantityGram: ingredient.quantityGram,
-        food: ingredient.food,
-      })),
+      matchedIngredients
+        .filter((ingredient) => !ingredient.excludedFromCalculation)
+        .map((ingredient) => ({
+          inputName: ingredient.inputName,
+          quantityGram: ingredient.quantityGram,
+          food: ingredient.food,
+        })),
     );
 
     const warnings = [
@@ -191,6 +197,7 @@ export class NutritionService {
         quantityGram: ingredient.quantityGram,
         matchConfidence: ingredient.matchConfidence,
         requiresConfirmation: ingredient.requiresConfirmation,
+        excludedFromCalculation: ingredient.excludedFromCalculation,
         candidates: ingredient.candidates,
         warnings: ingredient.warnings,
       })),
@@ -298,15 +305,21 @@ export class NutritionService {
           this.normalizeIngredientName(ingredient.name),
         );
 
-        return {
+        const confirmedIngredient = {
           rawText: existingIngredient?.rawText ?? ingredient.name,
           name: ingredient.name,
           quantity: ingredient.quantity ?? null,
           unit: ingredient.unit,
           preparation: ingredient.preparation ?? 'unknown',
+          category: ingredient.category ?? 'main',
           confidence: existingIngredient?.confidence ?? 1,
           requiresConfirmation: false,
           notes: [],
+        };
+
+        return {
+          ...confirmedIngredient,
+          ...this.getReviewIngredientMetadata(confirmedIngredient),
         };
       }),
       warnings: existingRecipe?.warnings ?? [],
@@ -319,16 +332,9 @@ export class NutritionService {
   ) {
     if (rows.length === 0) {
       return (
-        extractedRecipe?.ingredients.map((ingredient) => ({
-          rawText: ingredient.rawText,
-          name: ingredient.name,
-          quantity: ingredient.quantity,
-          unit: ingredient.unit,
-          preparation: ingredient.preparation,
-          confidence: ingredient.confidence,
-          requiresConfirmation: ingredient.requiresConfirmation ?? false,
-          notes: ingredient.notes ?? [],
-        })) ?? []
+        extractedRecipe?.ingredients.map((ingredient) =>
+          this.toReviewIngredientResponse(ingredient),
+        ) ?? []
       );
     }
 
@@ -342,7 +348,7 @@ export class NutritionService {
         extractedIngredients[index] ??
         extractedIngredientsByName.get(this.normalizeIngredientName(name));
 
-      return {
+      return this.toReviewIngredientResponse({
         rawText: row.rawText ?? extractedIngredient?.rawText ?? null,
         name,
         quantity: row.quantity,
@@ -350,14 +356,54 @@ export class NutritionService {
         preparation: this.toPreparationState(
           extractedIngredient?.preparation ?? 'unknown',
         ),
+        category: extractedIngredient?.category ?? 'main',
         confidence: row.confidence ?? extractedIngredient?.confidence ?? 1,
         requiresConfirmation:
           row.requiresConfirmation ??
           extractedIngredient?.requiresConfirmation ??
           false,
         notes: row.notes ?? extractedIngredient?.notes ?? [],
-      };
+      });
     });
+  }
+
+  private toReviewIngredientResponse(
+    ingredient: Omit<ExtractedRecipeIngredient, 'rawText'> & {
+      rawText?: string | null;
+    },
+  ) {
+    const metadata = this.getReviewIngredientMetadata(ingredient);
+
+    return {
+      rawText: ingredient.rawText ?? null,
+      name: ingredient.name,
+      quantity: ingredient.quantity,
+      unit: ingredient.unit,
+      preparation: metadata.preparationApplicable
+        ? ingredient.preparation
+        : null,
+      confidence: ingredient.confidence,
+      requiresConfirmation: ingredient.requiresConfirmation ?? false,
+      category: ingredient.category ?? 'main',
+      measurementRequired: metadata.measurementRequired,
+      preparationApplicable: metadata.preparationApplicable,
+      notes: ingredient.notes ?? [],
+    };
+  }
+
+  private getReviewIngredientMetadata(
+    ingredient: Pick<ExtractedRecipeIngredient, 'category' | 'quantity'>,
+  ) {
+    const category = ingredient.category ?? 'main';
+    const preparationApplicable = !NO_PREPARATION_CATEGORIES.has(category);
+    const measurementRequired =
+      !OPTIONAL_MEASUREMENT_CATEGORIES.has(category) ||
+      ingredient.quantity !== null;
+
+    return {
+      measurementRequired,
+      preparationApplicable,
+    };
   }
 
   private parseExtractedRecipe(value: unknown): ExtractedRecipe | null {
@@ -391,6 +437,7 @@ export class NutritionService {
               : null,
           unit: this.toNutritionUnit(ingredient.unit),
           preparation: this.toPreparationState(ingredient.preparation),
+          category: this.toIngredientCategory(ingredient.category),
           confidence:
             typeof ingredient.confidence === 'number'
               ? ingredient.confidence
@@ -412,8 +459,21 @@ export class NutritionService {
     );
   }
 
+  private toIngredientCategory(category: unknown): IngredientCategory {
+    return typeof category === 'string' &&
+      (INGREDIENT_CATEGORIES as readonly string[]).includes(category)
+      ? (category as IngredientCategory)
+      : 'main';
+  }
+
   private normalizeIngredientName(name: string): string {
-    return name.trim().toLowerCase();
+    return name
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^\p{Letter}\p{Number}]+/gu, ' ')
+      .replace(/\s+/g, ' ');
   }
 
   private toNutritionUnit(unit: unknown): NutritionUnit {
@@ -466,6 +526,7 @@ export class NutritionService {
     const ingredients = recipe.ingredients.map((ingredient) => {
       const notes = [...(ingredient.notes ?? [])];
       let requiresConfirmation = ingredient.requiresConfirmation ?? false;
+      const reviewMetadata = this.getReviewIngredientMetadata(ingredient);
 
       if (requiresConfirmation || notes.length > 0) {
         hasReviewIssues = true;
@@ -479,13 +540,17 @@ export class NutritionService {
         hasReviewIssues = true;
       };
 
-      if (ingredient.quantity === null) {
+      if (ingredient.quantity === null && reviewMetadata.measurementRequired) {
         addNote(`Quantity is missing for ${ingredient.name}.`);
       }
 
-      if (ingredient.unit === 'unknown') {
+      if (ingredient.unit === 'unknown' && reviewMetadata.measurementRequired) {
         addNote(`Unit is missing for ${ingredient.name}.`);
-      } else if (!this.unitConversion.isSupported(ingredient.unit)) {
+      } else if (
+        reviewMetadata.measurementRequired &&
+        ingredient.unit !== 'unknown' &&
+        !this.unitConversion.isSupported(ingredient.unit)
+      ) {
         addNote(
           `Unit ${ingredient.unit} is not supported for ${ingredient.name}.`,
         );
@@ -495,12 +560,16 @@ export class NutritionService {
         addNote(`Low confidence extraction for ${ingredient.name}.`);
       }
 
-      if (this.ingredientMatching.isGenericIngredientName(ingredient.name)) {
+      if (
+        reviewMetadata.measurementRequired &&
+        this.ingredientMatching.isGenericIngredientName(ingredient.name)
+      ) {
         addNote(`Ingredient name "${ingredient.name}" is too generic.`);
       }
 
       return {
         ...ingredient,
+        ...reviewMetadata,
         requiresConfirmation,
         notes,
       };
@@ -530,6 +599,27 @@ export class NutritionService {
   }
 
   private async matchAndConvertIngredient(ingredient: ConfirmedIngredientDto) {
+    const category = ingredient.category ?? 'main';
+    if (
+      OPTIONAL_MEASUREMENT_CATEGORIES.has(category) &&
+      ingredient.quantity == null
+    ) {
+      return {
+        inputName: ingredient.name,
+        quantity: ingredient.quantity ?? null,
+        unit: ingredient.unit,
+        quantityGram: null,
+        matchedFoodId: null,
+        matchedName: null,
+        matchConfidence: 0,
+        requiresConfirmation: false,
+        excludedFromCalculation: true,
+        candidates: [],
+        warnings: [],
+        food: null,
+      };
+    }
+
     const preferredState = this.ingredientMatching.resolvePreferredState({
       name: ingredient.name,
       preparation: ingredient.preparation ?? 'unknown',
@@ -579,6 +669,7 @@ export class NutritionService {
       matchConfidence: match.bestCandidate?.matchConfidence ?? 0,
       requiresConfirmation:
         match.requiresConfirmation || conversion.requiresConfirmation,
+      excludedFromCalculation: false,
       candidates: match.candidates,
       warnings,
       food: matchedFood,

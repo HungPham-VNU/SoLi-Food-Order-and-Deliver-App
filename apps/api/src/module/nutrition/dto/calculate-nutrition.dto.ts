@@ -11,8 +11,10 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  INGREDIENT_CATEGORIES,
   NUTRITION_UNITS,
   PREPARATION_STATES,
+  type IngredientCategory,
   type NutritionUnit,
   type PreparationState,
 } from '../types/nutrition.types';
@@ -35,7 +37,12 @@ export class ConfirmedIngredientDto {
   @ApiPropertyOptional({ enum: PREPARATION_STATES, example: 'cooked' })
   @IsOptional()
   @IsIn(PREPARATION_STATES)
-  preparation?: PreparationState;
+  preparation?: PreparationState | null;
+
+  @ApiPropertyOptional({ enum: INGREDIENT_CATEGORIES, example: 'main' })
+  @IsOptional()
+  @IsIn(INGREDIENT_CATEGORIES)
+  category?: IngredientCategory;
 }
 
 export class CalculateNutritionDto {
@@ -54,4 +61,3 @@ export class CalculateNutritionDto {
   @Type(() => ConfirmedIngredientDto)
   ingredients!: ConfirmedIngredientDto[];
 }
-

@@ -22,6 +22,13 @@ export type PreparationState =
   | 'steamed'
   | 'unknown';
 
+export type IngredientCategory =
+  | 'main'
+  | 'seasoning'
+  | 'sauce'
+  | 'garnish'
+  | 'herb_side';
+
 export type NutritionAnalysisStatus =
   | 'ANALYZED'
   | 'NEEDS_REVIEW'
@@ -64,9 +71,12 @@ export interface NutritionReviewIngredient {
   name: string;
   quantity: number | null;
   unit: NutritionUnit;
-  preparation?: PreparationState;
+  preparation?: PreparationState | null;
+  category?: IngredientCategory;
   confidence?: number;
   requiresConfirmation?: boolean;
+  measurementRequired?: boolean;
+  preparationApplicable?: boolean;
   notes?: string[];
 }
 
@@ -90,7 +100,8 @@ export interface CalculateNutritionRequest {
     name: string;
     quantity: number | null;
     unit: NutritionUnit;
-    preparation?: PreparationState;
+    preparation?: PreparationState | null;
+    category?: IngredientCategory;
   }>;
 }
 
@@ -101,6 +112,7 @@ export interface MatchedNutritionIngredient {
   quantityGram: number | null;
   matchConfidence: number;
   requiresConfirmation: boolean;
+  excludedFromCalculation?: boolean;
   warnings: string[];
   candidates?: Array<{
     matchedFoodId: string;

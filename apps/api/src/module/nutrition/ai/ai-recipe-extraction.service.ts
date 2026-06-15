@@ -9,9 +9,11 @@ import {
   type AiExtractedRecipe,
 } from './ai-recipe.schema';
 import {
+  INGREDIENT_CATEGORIES,
   NUTRITION_UNITS,
   type ExtractedRecipe,
   type ExtractedRecipeIngredient,
+  type IngredientCategory,
   type NutritionUnit,
 } from '../types/nutrition.types';
 import {
@@ -150,6 +152,7 @@ const SYSTEM_PROMPT = [
   'If quantity is missing, use null.',
   'If unit is missing, use "unknown".',
   'If preparation state is unknown, use "unknown".',
+  'Classify each ingredient into exactly one category: "main" for primary ingredients that contribute significantly to nutrition (meat, rice, noodles, vegetables with quantity); "seasoning" for dry seasonings added to taste (salt, pepper, sugar, MSG, spice powders); "sauce" for liquid condiments and sauces (fish sauce, soy sauce, oyster sauce, chili sauce); "garnish" for small decorative toppings (cilantro sprigs, sliced chili, fried shallots); "herb_side" for Vietnamese herb/vegetable sides served alongside the dish that are typically unmeasured (rau sống, rau thơm, rau ăn kèm).',
   'If uncertain about an ingredient, add a warning.',
   'Keep ingredient names in Vietnamese if the input is in Vietnamese.',
   'Split compound ingredient lines into separate ingredients when multiple ingredients or quantities are present.',
@@ -168,7 +171,8 @@ const SYSTEM_PROMPT = [
   '      "quantity": "number | null",',
   '      "unit": "g|kg|ml|l|tbsp|tsp|piece|cup|bowl|bunch|pinch|unknown",',
   '      "preparation": "raw|cooked|fried|boiled|grilled|steamed|unknown",',
-  '      "confidence": "number between 0 and 1"',
+  '      "confidence": "number between 0 and 1",',
+  '      "category": "main|seasoning|sauce|garnish|herb_side"',
   '    }',
   '  ],',
   '  "warnings": ["string"]',
@@ -402,6 +406,10 @@ export class AiRecipeExtractionService {
     }
     delete normalized.preparation_state;
 
+    if (!('category' in normalized)) {
+      normalized.category = 'main';
+    }
+
     if (!('rawText' in normalized) && typeof normalized.name === 'string') {
       normalized.rawText = normalized.name;
     }
@@ -624,6 +632,7 @@ export class AiRecipeExtractionService {
         ...ingredient,
         unit: ingredient.unit ?? 'unknown',
         preparation: ingredient.preparation ?? 'unknown',
+        category: ingredient.category ?? 'main',
       }),
     );
 

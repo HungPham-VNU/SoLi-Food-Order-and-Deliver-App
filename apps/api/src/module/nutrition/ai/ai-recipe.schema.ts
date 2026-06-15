@@ -1,8 +1,13 @@
 import { z } from 'zod';
-import { NUTRITION_UNITS, PREPARATION_STATES } from '../types/nutrition.types';
+import {
+  INGREDIENT_CATEGORIES,
+  NUTRITION_UNITS,
+  PREPARATION_STATES,
+} from '../types/nutrition.types';
 
 export const aiRecipeUnitSchema = z.enum(NUTRITION_UNITS);
 export const aiRecipePreparationSchema = z.enum(PREPARATION_STATES);
+export const aiRecipeCategorySchema = z.enum(INGREDIENT_CATEGORIES);
 
 export const extractedRecipeIngredientSchema = z.object({
   rawText: z.string().min(1),
@@ -11,6 +16,7 @@ export const extractedRecipeIngredientSchema = z.object({
   unit: aiRecipeUnitSchema.nullable().default('unknown'),
   preparation: aiRecipePreparationSchema.nullable().default('unknown'),
   confidence: z.number().min(0).max(1),
+  category: aiRecipeCategorySchema.default('main'),
   requiresConfirmation: z.boolean().optional().default(false),
   notes: z.array(z.string()).optional().default([]),
 });
@@ -53,6 +59,7 @@ export const extractedRecipeJsonSchema = {
           unit: nullableEnumJsonSchema(NUTRITION_UNITS),
           preparation: nullableEnumJsonSchema(PREPARATION_STATES),
           confidence: { type: 'number', minimum: 0, maximum: 1 },
+          category: { type: 'string', enum: INGREDIENT_CATEGORIES },
           requiresConfirmation: { type: 'boolean' },
           notes: {
             type: 'array',
@@ -66,6 +73,7 @@ export const extractedRecipeJsonSchema = {
           'unit',
           'preparation',
           'confidence',
+          'category',
         ],
       },
     },
