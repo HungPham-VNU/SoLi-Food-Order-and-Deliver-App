@@ -578,11 +578,10 @@ export function NutritionAssistantCard({
       {allWarnings.length > 0 && (
         <div
           aria-live="polite"
-          className="relative mt-6 overflow-hidden rounded-xl bg-gradient-to-br from-primary-700 to-primary-800 p-4 text-sm font-medium leading-relaxed text-primary-foreground shadow-md"
+          className="mt-6 flex items-start gap-3 rounded-2xl border border-accent/20 bg-accent/10 p-4"
         >
-          <div className="absolute -top-6 -right-6 h-20 w-20 rounded-full bg-white/10 blur-2xl" />
-          <Sparkles className="relative mb-2 h-5 w-5 text-secondary-300" />
-          <ul className="relative list-disc space-y-2 pl-4 marker:text-secondary-300">
+          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+          <ul className="list-disc space-y-2 pl-4 text-xs leading-relaxed text-accent-foreground marker:text-accent">
             {allWarnings.map((warning) => (
               <li key={warning} className="break-words">
                 {warning}
