@@ -1,5 +1,6 @@
 import { NutritionService } from './nutrition.service';
 import { UnitConversionService } from './matching/unit-conversion.service';
+import { IngredientCanonicalizerService } from './matching/ingredient-canonicalizer.service';
 import { IngredientMatchingService } from './matching/ingredient-matching.service';
 import { NutritionCalculatorService } from './calculator/nutrition-calculator.service';
 import type { NutritionFood } from './domain/nutrition.schema';
@@ -14,6 +15,8 @@ function makeFood(overrides: Partial<NutritionFood> = {}): NutritionFood {
     id: 'food-1',
     nameVi: 'uc ga',
     nameEn: 'chicken breast',
+    source: 'TEST',
+    sourceFoodId: 'food-1',
     aliases: ['uc ga', 'chicken breast'],
     category: 'meat',
     state: 'raw',
@@ -77,6 +80,7 @@ describe('NutritionService', () => {
       repo as any,
       new UnitConversionService(),
       new IngredientMatchingService(),
+      new IngredientCanonicalizerService(repo as any),
       new NutritionCalculatorService(),
     );
 
@@ -152,6 +156,7 @@ describe('NutritionService', () => {
       repo as any,
       new UnitConversionService(),
       new IngredientMatchingService(),
+      new IngredientCanonicalizerService(repo as any),
       new NutritionCalculatorService(),
     );
 
@@ -216,6 +221,7 @@ describe('NutritionService', () => {
           Promise.resolve(name === 'uc ga' ? [chicken] : [rice]),
         ),
       listNutritionFoods: jest.fn(),
+      upsertNutritionIngredientAlias: jest.fn().mockResolvedValue(undefined),
       replaceSessionIngredients: jest.fn().mockResolvedValue(undefined),
       updateCalculatedSession: jest.fn().mockResolvedValue(undefined),
     };
@@ -229,6 +235,7 @@ describe('NutritionService', () => {
       repo as any,
       new UnitConversionService(),
       new IngredientMatchingService(),
+      new IngredientCanonicalizerService(repo as any),
       new NutritionCalculatorService(),
     );
 
@@ -261,10 +268,12 @@ describe('NutritionService', () => {
     expect(repo.searchNutritionFoodsForIngredient).toHaveBeenCalledTimes(2);
     expect(repo.searchNutritionFoodsForIngredient).toHaveBeenNthCalledWith(1, {
       name: 'uc ga',
+      locale: 'vi',
       preferredState: 'raw',
     });
     expect(repo.searchNutritionFoodsForIngredient).toHaveBeenNthCalledWith(2, {
       name: 'com trang',
+      locale: 'vi',
       preferredState: 'cooked',
     });
     expect(repo.listNutritionFoods).not.toHaveBeenCalled();
@@ -306,6 +315,7 @@ describe('NutritionService', () => {
       searchNutritionFoodsForIngredient: jest
         .fn()
         .mockResolvedValue([chicken]),
+      upsertNutritionIngredientAlias: jest.fn().mockResolvedValue(undefined),
       replaceSessionIngredients: jest.fn().mockResolvedValue(undefined),
       updateCalculatedSession: jest.fn().mockResolvedValue(undefined),
     };
@@ -319,6 +329,7 @@ describe('NutritionService', () => {
       repo as any,
       new UnitConversionService(),
       new IngredientMatchingService(),
+      new IngredientCanonicalizerService(repo as any),
       new NutritionCalculatorService(),
     );
 
@@ -384,5 +395,160 @@ describe('NutritionService', () => {
       carbs: 0,
       fat: 2.6,
     });
+  });
+
+  it('falls back to an English canonical ingredient name when localized search misses', async () => {
+    const chicken = makeFood();
+    const repo = {
+      findSessionById: jest.fn().mockResolvedValue({
+        id: analysisSessionId,
+        menuItemId,
+        restaurantId,
+        inputType: 'text',
+        rawRecipeText: '',
+        aiExtractedJson: null,
+        status: 'ANALYZED',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      searchNutritionFoodsForIngredient: jest
+        .fn()
+        .mockImplementation(({ name, locale }: { name: string; locale: string }) =>
+          Promise.resolve(
+            name === 'chicken breast' && locale === 'en' ? [chicken] : [],
+          ),
+        ),
+      findNutritionIngredientAlias: jest.fn().mockResolvedValue(null),
+      upsertNutritionIngredientAlias: jest.fn().mockResolvedValue(undefined),
+      replaceSessionIngredients: jest.fn().mockResolvedValue(undefined),
+      updateCalculatedSession: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = new NutritionService(
+      {
+        findOne: jest.fn().mockResolvedValue({ id: menuItemId, restaurantId }),
+      } as any,
+      {} as any,
+      {} as any,
+      repo as any,
+      new UnitConversionService(),
+      new IngredientMatchingService(),
+      new IngredientCanonicalizerService(repo as any),
+      new NutritionCalculatorService(),
+    );
+
+    const result = await service.calculateNutrition(
+      menuItemId,
+      'admin-user',
+      true,
+      {
+        analysisSessionId,
+        servings: 1,
+        ingredients: [
+          {
+            name: 'thịt gà',
+            canonicalNameEn: 'chicken breast',
+            canonicalNameConfidence: 0.95,
+            quantity: 100,
+            unit: 'g',
+            preparation: 'raw',
+            category: 'main',
+          },
+        ],
+      },
+    );
+
+    expect(repo.searchNutritionFoodsForIngredient).toHaveBeenNthCalledWith(1, {
+      name: 'thịt gà',
+      locale: 'vi',
+      preferredState: 'raw',
+    });
+    expect(repo.searchNutritionFoodsForIngredient).toHaveBeenNthCalledWith(2, {
+      name: 'chicken breast',
+      locale: 'en',
+      preferredState: 'raw',
+    });
+    expect(result.matchedIngredients[0]).toMatchObject({
+      inputName: 'thịt gà',
+      matchedFoodId: 'food-1',
+      requiresConfirmation: false,
+    });
+    expect(repo.upsertNutritionIngredientAlias).toHaveBeenCalledWith(
+      expect.objectContaining({
+        locale: 'vi',
+        normalizedName: 'thit ga',
+        englishName: 'chicken breast',
+        nutritionFoodId: 'food-1',
+        createdBy: 'AI_CANONICALIZED',
+      }),
+    );
+  });
+
+  it('uses restaurant-selected nutrition food ids as confirmed mappings', async () => {
+    const chicken = makeFood();
+    const repo = {
+      findSessionById: jest.fn().mockResolvedValue({
+        id: analysisSessionId,
+        menuItemId,
+        restaurantId,
+        inputType: 'text',
+        rawRecipeText: '',
+        aiExtractedJson: null,
+        status: 'ANALYZED',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      findNutritionFoodById: jest.fn().mockResolvedValue(chicken),
+      searchNutritionFoodsForIngredient: jest.fn(),
+      upsertNutritionIngredientAlias: jest.fn().mockResolvedValue(undefined),
+      replaceSessionIngredients: jest.fn().mockResolvedValue(undefined),
+      updateCalculatedSession: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = new NutritionService(
+      {
+        findOne: jest.fn().mockResolvedValue({ id: menuItemId, restaurantId }),
+      } as any,
+      {} as any,
+      {} as any,
+      repo as any,
+      new UnitConversionService(),
+      new IngredientMatchingService(),
+      new IngredientCanonicalizerService(repo as any),
+      new NutritionCalculatorService(),
+    );
+
+    const result = await service.calculateNutrition(
+      menuItemId,
+      'admin-user',
+      true,
+      {
+        analysisSessionId,
+        servings: 1,
+        ingredients: [
+          {
+            name: 'thịt gà',
+            matchedNutritionFoodId: 'food-1',
+            quantity: 100,
+            unit: 'g',
+            preparation: 'raw',
+            category: 'main',
+          },
+        ],
+      },
+    );
+
+    expect(repo.searchNutritionFoodsForIngredient).not.toHaveBeenCalled();
+    expect(result.matchedIngredients[0]).toMatchObject({
+      matchedFoodId: 'food-1',
+      requiresConfirmation: false,
+    });
+    expect(repo.upsertNutritionIngredientAlias).toHaveBeenCalledWith(
+      expect.objectContaining({
+        locale: 'vi',
+        normalizedName: 'thit ga',
+        englishName: 'chicken breast',
+        nutritionFoodId: 'food-1',
+        createdBy: 'RESTAURANT_CONFIRMED',
+      }),
+    );
   });
 });

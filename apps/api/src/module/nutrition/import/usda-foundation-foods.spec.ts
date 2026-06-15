@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  buildUsdaEnglishLocalization,
   buildUsdaFoundationNutritionFoods,
   parseCsv,
   streamUsdaFoundationNutritionFoodBatches,
@@ -59,6 +60,8 @@ describe('USDA Foundation Foods import mapper', () => {
       expect.objectContaining({
         nameEn: 'Chicken, broilers or fryers, breast, meat only, raw',
         nameVi: 'Chicken, broilers or fryers, breast, meat only, raw',
+        source: 'USDA_FDC',
+        sourceFoodId: '100',
         aliases: ['chicken broilers or fryers breast meat only raw', 'chicken'],
         category: 'Poultry Products',
         state: 'raw',
@@ -122,6 +125,8 @@ describe('USDA Foundation Foods import mapper', () => {
         [
           expect.objectContaining({
             nameEn: 'Chicken, broilers or fryers, breast, meat only, raw',
+            source: 'USDA_FDC',
+            sourceFoodId: '100',
             calories100g: 121,
             protein100g: 22.5,
             carbs100g: 0,
@@ -132,5 +137,20 @@ describe('USDA Foundation Foods import mapper', () => {
     } finally {
       rmSync(csvDir, { recursive: true, force: true });
     }
+  });
+
+  it('builds English localization rows for imported USDA foods', () => {
+    expect(
+      buildUsdaEnglishLocalization({
+        nutritionFoodId: 'food-1',
+        nameEn: 'Chicken, broilers or fryers, breast, meat only, raw',
+        aliases: ['chicken broilers or fryers breast meat only raw', 'chicken'],
+      }),
+    ).toEqual({
+      nutritionFoodId: 'food-1',
+      locale: 'en',
+      name: 'Chicken, broilers or fryers, breast, meat only, raw',
+      aliases: ['chicken broilers or fryers breast meat only raw', 'chicken'],
+    });
   });
 });

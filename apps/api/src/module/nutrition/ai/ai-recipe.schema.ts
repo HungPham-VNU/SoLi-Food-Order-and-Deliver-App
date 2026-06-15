@@ -12,6 +12,8 @@ export const aiRecipeCategorySchema = z.enum(INGREDIENT_CATEGORIES);
 export const extractedRecipeIngredientSchema = z.object({
   rawText: z.string().min(1),
   name: z.string().min(1),
+  canonicalNameEn: z.string().min(1).nullable().optional().default(null),
+  canonicalNameConfidence: z.number().min(0).max(1).nullable().optional().default(null),
   quantity: z.number().positive().nullable(),
   unit: aiRecipeUnitSchema.nullable().default('unknown'),
   preparation: aiRecipePreparationSchema.nullable().default('unknown'),
@@ -55,6 +57,13 @@ export const extractedRecipeJsonSchema = {
         properties: {
           rawText: { type: 'string', minLength: 1 },
           name: { type: 'string', minLength: 1 },
+          canonicalNameEn: nullableStringJsonSchema,
+          canonicalNameConfidence: {
+            anyOf: [
+              { type: 'number', minimum: 0, maximum: 1 },
+              { type: 'null' },
+            ],
+          },
           quantity: nullablePositiveNumberJsonSchema,
           unit: nullableEnumJsonSchema(NUTRITION_UNITS),
           preparation: nullableEnumJsonSchema(PREPARATION_STATES),

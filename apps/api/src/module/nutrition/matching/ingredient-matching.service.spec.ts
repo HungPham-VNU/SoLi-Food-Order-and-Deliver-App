@@ -1,11 +1,17 @@
-import { IngredientMatchingService } from './ingredient-matching.service';
-import type { NutritionFood } from '../domain/nutrition.schema';
+import {
+  IngredientMatchingService,
+  type MatchableNutritionFood,
+} from './ingredient-matching.service';
 
-function makeFood(overrides: Partial<NutritionFood>): NutritionFood {
+function makeFood(
+  overrides: Partial<MatchableNutritionFood>,
+): MatchableNutritionFood {
   return {
     id: 'food-1',
     nameVi: 'ức gà',
     nameEn: 'chicken breast',
+    source: 'TEST',
+    sourceFoodId: 'food-1',
     aliases: ['uc ga'],
     category: 'meat',
     state: 'raw',
@@ -40,6 +46,26 @@ describe('IngredientMatchingService', () => {
     const result = service.matchIngredient({ name: 'uc ga' }, [makeFood({})]);
 
     expect(result.bestCandidate?.matchedName).toBe('ức gà');
+    expect(result.requiresConfirmation).toBe(false);
+  });
+
+  it('matches localized Vietnamese aliases for canonical USDA foods', () => {
+    const result = service.matchIngredient(
+      { name: 'thịt lợn ba chỉ', preparation: 'raw' },
+      [
+        makeFood({
+          id: 'pork-belly',
+          nameVi: 'Pork, belly, with skin, raw',
+          nameEn: 'Pork, belly, with skin, raw',
+          aliases: ['pork belly'],
+          localizedName: 'ba chỉ heo',
+          localizedAliases: ['ba chi heo', 'thit lon ba chi', 'ba roi'],
+        }),
+      ],
+    );
+
+    expect(result.bestCandidate?.matchedFoodId).toBe('pork-belly');
+    expect(result.bestCandidate?.matchedName).toBe('ba chỉ heo');
     expect(result.requiresConfirmation).toBe(false);
   });
 

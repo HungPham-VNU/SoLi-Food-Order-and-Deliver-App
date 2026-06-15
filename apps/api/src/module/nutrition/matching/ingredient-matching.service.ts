@@ -2,6 +2,12 @@ import { Injectable } from '@nestjs/common';
 import type { NutritionFood } from '../domain/nutrition.schema';
 import type { PreparationState } from '../types/nutrition.types';
 
+export type MatchableNutritionFood = NutritionFood & {
+  localizedName?: string | null;
+  localizedAliases?: string[] | null;
+  localizedLocale?: string | null;
+};
+
 export interface IngredientMatchInput {
   name: string;
   preparation?: PreparationState;
@@ -25,7 +31,7 @@ export interface IngredientMatchResult {
 export class IngredientMatchingService {
   matchIngredient(
     input: IngredientMatchInput,
-    foods: NutritionFood[],
+    foods: MatchableNutritionFood[],
   ): IngredientMatchResult {
     const normalizedInput = this.normalize(input.name);
     const preferredState = this.resolvePreferredStateFromNormalized(
@@ -43,7 +49,7 @@ export class IngredientMatchingService {
 
         return {
           matchedFoodId: food.id,
-          matchedName: food.nameVi,
+          matchedName: food.localizedName ?? food.nameVi,
           matchedNameEn: food.nameEn,
           state: food.state,
           matchConfidence: Math.min(0.99, baseScore + stateBoost),
@@ -84,14 +90,34 @@ export class IngredientMatchingService {
     );
   }
 
-  private scoreFood(normalizedInput: string, food: NutritionFood): number {
+  private scoreFood(
+    normalizedInput: string,
+    food: MatchableNutritionFood,
+  ): number {
+    const normalizedLocalizedName = food.localizedName
+      ? this.normalize(food.localizedName)
+      : null;
     const normalizedNameVi = this.normalize(food.nameVi);
     const normalizedNameEn = this.normalize(food.nameEn);
-    const aliases = food.aliases.map((alias) => this.normalize(alias));
+    const aliases = this.uniqueNormalized([
+      ...(food.localizedAliases ?? []),
+      ...food.aliases,
+    ]);
 
+    if (normalizedLocalizedName && normalizedInput === normalizedLocalizedName) {
+      return 0.99;
+    }
     if (normalizedInput === normalizedNameVi) return 0.98;
     if (normalizedInput === normalizedNameEn) return 0.94;
-    if (aliases.includes(normalizedInput)) return 0.95;
+    if (aliases.includes(normalizedInput)) return 0.96;
+
+    if (
+      normalizedLocalizedName &&
+      (normalizedLocalizedName.includes(normalizedInput) ||
+        normalizedInput.includes(normalizedLocalizedName))
+    ) {
+      return 0.82;
+    }
 
     if (
       normalizedNameVi.includes(normalizedInput) ||
@@ -117,6 +143,9 @@ export class IngredientMatchingService {
     }
 
     const bestTokenOverlap = Math.max(
+      normalizedLocalizedName
+        ? this.tokenOverlapScore(normalizedInput, normalizedLocalizedName)
+        : 0,
       this.tokenOverlapScore(normalizedInput, normalizedNameVi),
       this.tokenOverlapScore(normalizedInput, normalizedNameEn),
       ...aliases.map((alias) => this.tokenOverlapScore(normalizedInput, alias)),
@@ -124,6 +153,9 @@ export class IngredientMatchingService {
     if (bestTokenOverlap > 0) return bestTokenOverlap;
 
     const bestSimilarity = Math.max(
+      normalizedLocalizedName
+        ? this.similarity(normalizedInput, normalizedLocalizedName)
+        : 0,
       this.similarity(normalizedInput, normalizedNameVi),
       this.similarity(normalizedInput, normalizedNameEn),
       ...aliases.map((alias) => this.similarity(normalizedInput, alias)),
@@ -171,6 +203,16 @@ export class IngredientMatchingService {
       .split(' ')
       .map((token) => token.trim())
       .filter((token) => token.length > 1);
+  }
+
+  private uniqueNormalized(values: string[]): string[] {
+    return Array.from(
+      new Set(
+        values
+          .map((value) => this.normalize(value))
+          .filter((value) => value.length >= 2),
+      ),
+    );
   }
 
   private similarity(left: string, right: string): number {

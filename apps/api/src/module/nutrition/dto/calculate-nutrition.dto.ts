@@ -6,6 +6,8 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Max,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -23,6 +25,24 @@ export class ConfirmedIngredientDto {
   @ApiProperty({ example: 'uc ga' })
   @IsString()
   name!: string;
+
+  @ApiPropertyOptional({ example: 'chicken breast', nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  canonicalNameEn?: string | null;
+
+  @ApiPropertyOptional({ example: 0.9, nullable: true })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  canonicalNameConfidence?: number | null;
+
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  @IsOptional()
+  @IsUUID()
+  matchedNutritionFoodId?: string | null;
 
   @ApiPropertyOptional({ example: 500, nullable: true })
   @IsOptional()
@@ -49,6 +69,12 @@ export class CalculateNutritionDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   analysisSessionId!: string;
+
+  @ApiPropertyOptional({ example: 'vi' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(16)
+  locale?: string | null;
 
   @ApiProperty({ example: 2 })
   @IsNumber()

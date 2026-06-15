@@ -155,6 +155,8 @@ const SYSTEM_PROMPT = [
   'Classify each ingredient into exactly one category: "main" for primary ingredients that contribute significantly to nutrition (meat, rice, noodles, vegetables with quantity); "seasoning" for dry seasonings added to taste (salt, pepper, sugar, MSG, spice powders); "sauce" for liquid condiments and sauces (fish sauce, soy sauce, oyster sauce, chili sauce); "garnish" for small decorative toppings (cilantro sprigs, sliced chili, fried shallots); "herb_side" for Vietnamese herb/vegetable sides served alongside the dish that are typically unmeasured (rau sống, rau thơm, rau ăn kèm).',
   'If uncertain about an ingredient, add a warning.',
   'Keep ingredient names in Vietnamese if the input is in Vietnamese.',
+  'For every ingredient, also provide "canonicalNameEn": a concise English food name suitable for searching an English nutrition database. Use null only when no safe English equivalent is known.',
+  'For every "canonicalNameEn", provide "canonicalNameConfidence" between 0 and 1. Use null when canonicalNameEn is null.',
   'Split compound ingredient lines into separate ingredients when multiple ingredients or quantities are present.',
   'Normalize Vietnamese quantity words when clear: nửa = 0.5, một = 1, hai = 2, vài = 3 with a warning.',
   'Normalize units: gam/gram -> g; kg/ký/kí/cân -> kg; lạng -> g and multiply quantity by 100; muỗng canh/thìa canh -> tbsp; muỗng cà phê/thìa cà phê -> tsp; ly/cốc -> cup; bát/chén/tô -> bowl; củ/quả/trái/vắt/miếng/nhánh -> piece; mớ/bó/nắm/rổ -> bunch; chút/ít/nhúm -> pinch.',
@@ -168,6 +170,8 @@ const SYSTEM_PROMPT = [
   '    {',
   '      "rawText": "string",',
   '      "name": "string",',
+  '      "canonicalNameEn": "string | null",',
+  '      "canonicalNameConfidence": "number between 0 and 1 | null",',
   '      "quantity": "number | null",',
   '      "unit": "g|kg|ml|l|tbsp|tsp|piece|cup|bowl|bunch|pinch|unknown",',
   '      "preparation": "raw|cooked|fried|boiled|grilled|steamed|unknown",',
@@ -406,6 +410,38 @@ export class AiRecipeExtractionService {
     }
     delete normalized.preparation_state;
 
+    if ('english_name_guess' in normalized && !('canonicalNameEn' in normalized)) {
+      normalized.canonicalNameEn = normalized.english_name_guess;
+    }
+    delete normalized.english_name_guess;
+
+    if ('english_name' in normalized && !('canonicalNameEn' in normalized)) {
+      normalized.canonicalNameEn = normalized.english_name;
+    }
+    delete normalized.english_name;
+
+    if ('englishName' in normalized && !('canonicalNameEn' in normalized)) {
+      normalized.canonicalNameEn = normalized.englishName;
+    }
+    delete normalized.englishName;
+
+    if (
+      'canonical_name_en' in normalized &&
+      !('canonicalNameEn' in normalized)
+    ) {
+      normalized.canonicalNameEn = normalized.canonical_name_en;
+    }
+    delete normalized.canonical_name_en;
+
+    if (
+      'canonical_name_confidence' in normalized &&
+      !('canonicalNameConfidence' in normalized)
+    ) {
+      normalized.canonicalNameConfidence =
+        normalized.canonical_name_confidence;
+    }
+    delete normalized.canonical_name_confidence;
+
     if (!('category' in normalized)) {
       normalized.category = 'main';
     }
@@ -469,6 +505,14 @@ export class AiRecipeExtractionService {
 
     normalized.quantity = quantity;
     normalized.unit = unit;
+    normalized.canonicalNameEn = this.normalizeCanonicalNameEn(
+      normalized.canonicalNameEn,
+    );
+    normalized.canonicalNameConfidence =
+      this.normalizeCanonicalNameConfidence(
+        normalized.canonicalNameConfidence,
+        normalized.canonicalNameEn,
+      );
     if (!('preparation' in normalized)) {
       normalized.preparation = 'unknown';
     }
@@ -608,6 +652,23 @@ export class AiRecipeExtractionService {
       : [];
   }
 
+  private normalizeCanonicalNameEn(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+
+    const cleaned = value.trim().replace(/\s+/g, ' ');
+    return cleaned.length > 0 ? cleaned.slice(0, 120) : null;
+  }
+
+  private normalizeCanonicalNameConfidence(
+    value: unknown,
+    canonicalNameEn: unknown,
+  ): number | null {
+    if (!canonicalNameEn) return null;
+    if (typeof value !== 'number' || !Number.isFinite(value)) return 0.6;
+
+    return Math.min(1, Math.max(0, value));
+  }
+
   private normalizeLooseText(value: string): string {
     return value
       .normalize('NFD')
@@ -630,6 +691,8 @@ export class AiRecipeExtractionService {
     const ingredients: ExtractedRecipeIngredient[] = recipe.ingredients.map(
       (ingredient) => ({
         ...ingredient,
+        canonicalNameEn: ingredient.canonicalNameEn ?? null,
+        canonicalNameConfidence: ingredient.canonicalNameConfidence ?? null,
         unit: ingredient.unit ?? 'unknown',
         preparation: ingredient.preparation ?? 'unknown',
         category: ingredient.category ?? 'main',

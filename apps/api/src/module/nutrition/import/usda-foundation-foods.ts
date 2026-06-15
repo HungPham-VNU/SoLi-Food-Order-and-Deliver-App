@@ -1,6 +1,9 @@
 import { createReadStream, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { nutritionFoods } from '../domain/nutrition.schema';
+import {
+  nutritionFoodLocalizations,
+  nutritionFoods,
+} from '../domain/nutrition.schema';
 
 export const USDA_FOUNDATION_FOODS_RELEASE_DATE = '2026-04-30';
 export const USDA_FOUNDATION_FOODS_ARCHIVE_URL =
@@ -30,6 +33,8 @@ const TRACKED_NUTRIENT_IDS: ReadonlySet<string> = new Set<string>(
 type CsvFileName = (typeof REQUIRED_CSV_FILES)[number];
 type CsvRecord = Record<string, string>;
 type NutritionFoodInsert = typeof nutritionFoods.$inferInsert;
+type NutritionFoodLocalizationInsert =
+  typeof nutritionFoodLocalizations.$inferInsert;
 type Awaitable<T> = T | Promise<T>;
 
 export interface UsdaCsvFiles {
@@ -63,6 +68,12 @@ export interface UsdaFoundationFoodStreamResult {
 export interface UsdaFoundationFoodBatchOptions {
   batchSize?: number;
   onBatch: (foods: NutritionFoodInsert[]) => Awaitable<void>;
+}
+
+export interface UsdaEnglishLocalizationInput {
+  nutritionFoodId: string;
+  nameEn: string;
+  aliases: string[];
 }
 
 export function hasRequiredUsdaCsvFiles(csvDir: string): boolean {
@@ -232,6 +243,17 @@ export function parseCsv(content: string): CsvRecord[] {
         headers.map((header, index) => [header, row[index] ?? '']),
       ),
     );
+}
+
+export function buildUsdaEnglishLocalization(
+  input: UsdaEnglishLocalizationInput,
+): NutritionFoodLocalizationInsert {
+  return {
+    nutritionFoodId: input.nutritionFoodId,
+    locale: 'en',
+    name: input.nameEn,
+    aliases: input.aliases,
+  };
 }
 
 async function readFoundationFoodIds(filePath: string): Promise<Set<string>> {
@@ -477,6 +499,8 @@ function buildNutritionFoodInsert(
   return {
     nameVi: description,
     nameEn: description,
+    source: 'USDA_FDC',
+    sourceFoodId: food.fdc_id,
     aliases: buildAliases(description),
     category: categoriesById.get(food.food_category_id) ?? null,
     state: inferFoodState(description),

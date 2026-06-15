@@ -8,9 +8,19 @@ import { MenuService } from '@/module/restaurant-catalog/menu/menu.service';
 import { RestaurantService } from '@/module/restaurant-catalog/restaurant/restaurant.service';
 import type { MenuItem } from '@/module/restaurant-catalog/menu/menu.schema';
 import { AiRecipeExtractionService } from './ai/ai-recipe-extraction.service';
-import { NutritionRepository } from './repositories/nutrition.repository';
+import {
+  NutritionRepository,
+  type NutritionFoodSearchResult,
+} from './repositories/nutrition.repository';
 import { UnitConversionService } from './matching/unit-conversion.service';
-import { IngredientMatchingService } from './matching/ingredient-matching.service';
+import {
+  IngredientMatchingService,
+  type IngredientMatchResult,
+} from './matching/ingredient-matching.service';
+import {
+  IngredientCanonicalizerService,
+  type IngredientCanonicalizationResult,
+} from './matching/ingredient-canonicalizer.service';
 import { NutritionCalculatorService } from './calculator/nutrition-calculator.service';
 import type { AnalyzeRecipeDto } from './dto/analyze-recipe.dto';
 import type {
@@ -45,6 +55,24 @@ const NO_PREPARATION_CATEGORIES: ReadonlySet<IngredientCategory> = new Set([
 
 const OPTIONAL_MEASUREMENT_CATEGORIES: ReadonlySet<IngredientCategory> =
   new Set(['seasoning', 'sauce', 'garnish', 'herb_side']);
+const DEFAULT_NUTRITION_LOCALE = 'vi';
+const CANONICAL_NAME_CONFIRMATION_THRESHOLD = 0.8;
+
+interface NutritionFoodMatchResolution {
+  foods: NutritionFoodSearchResult[];
+  match: IngredientMatchResult;
+  matchedFood: NutritionFoodSearchResult | null;
+  requiresConfirmation: boolean;
+  warnings: string[];
+  canonicalEnglishName: string | null;
+  canonicalConfidence: number | null;
+  matchSource:
+    | 'localized'
+    | 'canonical-cache'
+    | 'canonical-provided'
+    | 'canonical-input'
+    | 'restaurant-confirmed';
+}
 
 @Injectable()
 export class NutritionService {
@@ -55,6 +83,7 @@ export class NutritionService {
     private readonly repo: NutritionRepository,
     private readonly unitConversion: UnitConversionService,
     private readonly ingredientMatching: IngredientMatchingService,
+    private readonly ingredientCanonicalizer: IngredientCanonicalizerService,
     private readonly calculator: NutritionCalculatorService,
   ) {}
 
@@ -145,9 +174,10 @@ export class NutritionService {
       );
     }
 
+    const locale = this.normalizeNutritionLocale(dto.locale);
     const matchedIngredients = await Promise.all(
       dto.ingredients.map((ingredient) =>
-        this.matchAndConvertIngredient(ingredient),
+        this.matchAndConvertIngredient(ingredient, locale),
       ),
     );
 
@@ -308,6 +338,12 @@ export class NutritionService {
         const confirmedIngredient = {
           rawText: existingIngredient?.rawText ?? ingredient.name,
           name: ingredient.name,
+          canonicalNameEn:
+            ingredient.canonicalNameEn ?? existingIngredient?.canonicalNameEn ?? null,
+          canonicalNameConfidence:
+            ingredient.canonicalNameConfidence ??
+            existingIngredient?.canonicalNameConfidence ??
+            null,
           quantity: ingredient.quantity ?? null,
           unit: ingredient.unit,
           preparation: ingredient.preparation ?? 'unknown',
@@ -351,6 +387,9 @@ export class NutritionService {
       return this.toReviewIngredientResponse({
         rawText: row.rawText ?? extractedIngredient?.rawText ?? null,
         name,
+        canonicalNameEn: extractedIngredient?.canonicalNameEn ?? null,
+        canonicalNameConfidence:
+          extractedIngredient?.canonicalNameConfidence ?? null,
         quantity: row.quantity,
         unit: this.toNutritionUnit(row.unit),
         preparation: this.toPreparationState(
@@ -370,6 +409,8 @@ export class NutritionService {
   private toReviewIngredientResponse(
     ingredient: Omit<ExtractedRecipeIngredient, 'rawText'> & {
       rawText?: string | null;
+      canonicalNameEn?: string | null;
+      canonicalNameConfidence?: number | null;
     },
   ) {
     const metadata = this.getReviewIngredientMetadata(ingredient);
@@ -377,6 +418,8 @@ export class NutritionService {
     return {
       rawText: ingredient.rawText ?? null,
       name: ingredient.name,
+      canonicalNameEn: ingredient.canonicalNameEn ?? null,
+      canonicalNameConfidence: ingredient.canonicalNameConfidence ?? null,
       quantity: ingredient.quantity,
       unit: ingredient.unit,
       preparation: metadata.preparationApplicable
@@ -431,6 +474,14 @@ export class NutritionService {
               ? ingredient.rawText
               : (ingredient.name ?? ''),
           name: typeof ingredient.name === 'string' ? ingredient.name : '',
+          canonicalNameEn:
+            typeof ingredient.canonicalNameEn === 'string'
+              ? ingredient.canonicalNameEn
+              : null,
+          canonicalNameConfidence:
+            typeof ingredient.canonicalNameConfidence === 'number'
+              ? ingredient.canonicalNameConfidence
+              : null,
           quantity:
             typeof ingredient.quantity === 'number'
               ? ingredient.quantity
@@ -510,6 +561,17 @@ export class NutritionService {
 
   private sanitizeRecipeText(recipeText: string): string {
     return recipeText.trim().replace(/\0/g, '').slice(0, 5000);
+  }
+
+  private normalizeNutritionLocale(locale: string | null | undefined): string {
+    const normalized = (locale ?? DEFAULT_NUTRITION_LOCALE)
+      .trim()
+      .toLowerCase()
+      .replace(/_/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .slice(0, 16);
+
+    return normalized || DEFAULT_NUTRITION_LOCALE;
   }
 
   private applyReviewRules(recipe: ExtractedRecipe) {
@@ -598,7 +660,10 @@ export class NutritionService {
     };
   }
 
-  private async matchAndConvertIngredient(ingredient: ConfirmedIngredientDto) {
+  private async matchAndConvertIngredient(
+    ingredient: ConfirmedIngredientDto,
+    locale: string,
+  ) {
     const category = ingredient.category ?? 'main';
     if (
       OPTIONAL_MEASUREMENT_CATEGORIES.has(category) &&
@@ -624,16 +689,10 @@ export class NutritionService {
       name: ingredient.name,
       preparation: ingredient.preparation ?? 'unknown',
     });
-    const foods = await this.repo.searchNutritionFoodsForIngredient({
-      name: ingredient.name,
+    const resolution = await this.resolveNutritionFoodMatch(
+      ingredient,
+      locale,
       preferredState,
-    });
-    const match = this.ingredientMatching.matchIngredient(
-      {
-        name: ingredient.name,
-        preparation: ingredient.preparation ?? 'unknown',
-      },
-      foods,
     );
     const conversion = this.unitConversion.convertToGrams({
       ingredientName: ingredient.name,
@@ -641,19 +700,21 @@ export class NutritionService {
       unit: ingredient.unit,
     });
 
-    const matchedFood =
-      match.bestCandidate === null
-        ? null
-        : (foods.find(
-            (food) => food.id === match.bestCandidate?.matchedFoodId,
-          ) ?? null);
-    const warnings = [...conversion.notes];
+    if (resolution.match.bestCandidate && !resolution.requiresConfirmation) {
+      await this.rememberResolvedIngredientAlias(
+        ingredient,
+        locale,
+        resolution,
+      );
+    }
 
-    if (!match.bestCandidate) {
+    const warnings = [...conversion.notes, ...resolution.warnings];
+
+    if (!resolution.match.bestCandidate) {
       warnings.push(
         `No nutrition database match found for ${ingredient.name}.`,
       );
-    } else if (match.requiresConfirmation) {
+    } else if (resolution.requiresConfirmation) {
       warnings.push(
         `Nutrition match for ${ingredient.name} requires restaurant confirmation.`,
       );
@@ -664,15 +725,262 @@ export class NutritionService {
       quantity: ingredient.quantity ?? null,
       unit: ingredient.unit,
       quantityGram: conversion.quantityGram,
-      matchedFoodId: match.bestCandidate?.matchedFoodId ?? null,
-      matchedName: match.bestCandidate?.matchedName ?? null,
-      matchConfidence: match.bestCandidate?.matchConfidence ?? 0,
+      matchedFoodId: resolution.match.bestCandidate?.matchedFoodId ?? null,
+      matchedName: resolution.match.bestCandidate?.matchedName ?? null,
+      matchConfidence: resolution.match.bestCandidate?.matchConfidence ?? 0,
       requiresConfirmation:
-        match.requiresConfirmation || conversion.requiresConfirmation,
+        resolution.requiresConfirmation || conversion.requiresConfirmation,
       excludedFromCalculation: false,
-      candidates: match.candidates,
+      candidates: resolution.match.candidates,
       warnings,
-      food: matchedFood,
+      food: resolution.matchedFood,
     };
+  }
+
+  private async resolveNutritionFoodMatch(
+    ingredient: ConfirmedIngredientDto,
+    locale: string,
+    preferredState: NutritionFoodSearchResult['state'] | null,
+  ): Promise<NutritionFoodMatchResolution> {
+    if (ingredient.matchedNutritionFoodId) {
+      return this.resolveRestaurantConfirmedFood(
+        ingredient,
+        locale,
+        ingredient.matchedNutritionFoodId,
+      );
+    }
+
+    const directFoods = await this.repo.searchNutritionFoodsForIngredient({
+      name: ingredient.name,
+      locale,
+      preferredState,
+    });
+    let bestResolution = this.buildMatchResolution({
+      foods: directFoods,
+      match: this.ingredientMatching.matchIngredient(
+        {
+          name: ingredient.name,
+          preparation: ingredient.preparation ?? 'unknown',
+        },
+        directFoods,
+      ),
+      matchSource: 'localized',
+      canonicalEnglishName: null,
+      canonicalConfidence: null,
+    });
+
+    if (
+      bestResolution.match.bestCandidate &&
+      !bestResolution.requiresConfirmation
+    ) {
+      return bestResolution;
+    }
+
+    const canonicalization = await this.ingredientCanonicalizer.canonicalize({
+      name: ingredient.name,
+      locale,
+      canonicalNameEn: ingredient.canonicalNameEn,
+      canonicalNameConfidence: ingredient.canonicalNameConfidence,
+    });
+    if (!canonicalization) return bestResolution;
+
+    const canonicalResolution = await this.resolveCanonicalNutritionFoodMatch(
+      ingredient,
+      locale,
+      preferredState,
+      canonicalization,
+    );
+    if (this.shouldUseFallbackResolution(bestResolution, canonicalResolution)) {
+      bestResolution = canonicalResolution;
+    }
+
+    return bestResolution;
+  }
+
+  private async resolveRestaurantConfirmedFood(
+    ingredient: ConfirmedIngredientDto,
+    locale: string,
+    nutritionFoodId: string,
+  ): Promise<NutritionFoodMatchResolution> {
+    const food = await this.repo.findNutritionFoodById(nutritionFoodId, locale);
+    if (!food) {
+      return this.emptyMatchResolution({
+        matchSource: 'restaurant-confirmed',
+        warnings: [
+          `Selected nutrition food was not found for ${ingredient.name}.`,
+        ],
+      });
+    }
+
+    const match = this.ingredientMatching.matchIngredient(
+      {
+        name: ingredient.canonicalNameEn ?? food.nameEn,
+        preparation: ingredient.preparation ?? 'unknown',
+      },
+      [food],
+    );
+
+    return this.buildMatchResolution({
+      foods: [food],
+      match,
+      matchSource: 'restaurant-confirmed',
+      canonicalEnglishName: ingredient.canonicalNameEn ?? food.nameEn,
+      canonicalConfidence: 1,
+      forceConfirmed: true,
+    });
+  }
+
+  private async resolveCanonicalNutritionFoodMatch(
+    ingredient: ConfirmedIngredientDto,
+    locale: string,
+    preferredState: NutritionFoodSearchResult['state'] | null,
+    canonicalization: IngredientCanonicalizationResult,
+  ): Promise<NutritionFoodMatchResolution> {
+    if (canonicalization.nutritionFoodId) {
+      const cachedFood = await this.repo.findNutritionFoodById(
+        canonicalization.nutritionFoodId,
+        locale,
+      );
+      if (cachedFood) {
+        return this.buildCanonicalMatchResolution(
+          ingredient,
+          canonicalization,
+          [cachedFood],
+        );
+      }
+    }
+
+    const englishFoods = await this.repo.searchNutritionFoodsForIngredient({
+      name: canonicalization.englishName,
+      locale: 'en',
+      preferredState,
+    });
+
+    return this.buildCanonicalMatchResolution(
+      ingredient,
+      canonicalization,
+      englishFoods,
+    );
+  }
+
+  private buildCanonicalMatchResolution(
+    ingredient: ConfirmedIngredientDto,
+    canonicalization: IngredientCanonicalizationResult,
+    foods: NutritionFoodSearchResult[],
+  ): NutritionFoodMatchResolution {
+    return this.buildMatchResolution({
+      foods,
+      match: this.ingredientMatching.matchIngredient(
+        {
+          name: canonicalization.englishName,
+          preparation: ingredient.preparation ?? 'unknown',
+        },
+        foods,
+      ),
+      matchSource:
+        canonicalization.source === 'cache'
+          ? 'canonical-cache'
+          : canonicalization.source === 'input'
+            ? 'canonical-input'
+            : 'canonical-provided',
+      canonicalEnglishName: canonicalization.englishName,
+      canonicalConfidence: canonicalization.confidence,
+    });
+  }
+
+  private buildMatchResolution(input: {
+    foods: NutritionFoodSearchResult[];
+    match: IngredientMatchResult;
+    matchSource: NutritionFoodMatchResolution['matchSource'];
+    canonicalEnglishName: string | null;
+    canonicalConfidence: number | null;
+    forceConfirmed?: boolean;
+  }): NutritionFoodMatchResolution {
+    const matchedFood =
+      input.match.bestCandidate === null
+        ? null
+        : (input.foods.find(
+            (food) => food.id === input.match.bestCandidate?.matchedFoodId,
+          ) ?? null);
+    const canonicalRequiresConfirmation =
+      input.matchSource === 'canonical-provided' &&
+      (input.canonicalConfidence ?? 0) < CANONICAL_NAME_CONFIRMATION_THRESHOLD;
+
+    return {
+      foods: input.foods,
+      match: input.match,
+      matchedFood,
+      requiresConfirmation:
+        input.forceConfirmed === true
+          ? false
+          : input.match.requiresConfirmation || canonicalRequiresConfirmation,
+      warnings: [],
+      canonicalEnglishName: input.canonicalEnglishName,
+      canonicalConfidence: input.canonicalConfidence,
+      matchSource: input.matchSource,
+    };
+  }
+
+  private emptyMatchResolution(input: {
+    matchSource: NutritionFoodMatchResolution['matchSource'];
+    warnings: string[];
+  }): NutritionFoodMatchResolution {
+    return {
+      foods: [],
+      match: {
+        bestCandidate: null,
+        candidates: [],
+        requiresConfirmation: true,
+      },
+      matchedFood: null,
+      requiresConfirmation: true,
+      warnings: input.warnings,
+      canonicalEnglishName: null,
+      canonicalConfidence: null,
+      matchSource: input.matchSource,
+    };
+  }
+
+  private shouldUseFallbackResolution(
+    current: NutritionFoodMatchResolution,
+    fallback: NutritionFoodMatchResolution,
+  ): boolean {
+    if (!fallback.match.bestCandidate) return false;
+    if (!current.match.bestCandidate) return true;
+    if (current.requiresConfirmation && !fallback.requiresConfirmation) {
+      return true;
+    }
+
+    return (
+      fallback.match.bestCandidate.matchConfidence >
+      current.match.bestCandidate.matchConfidence + 0.05
+    );
+  }
+
+  private async rememberResolvedIngredientAlias(
+    ingredient: ConfirmedIngredientDto,
+    locale: string,
+    resolution: NutritionFoodMatchResolution,
+  ): Promise<void> {
+    const bestCandidate = resolution.match.bestCandidate;
+    if (!bestCandidate || !resolution.matchedFood) return;
+
+    await this.ingredientCanonicalizer.remember({
+      name: ingredient.name,
+      locale,
+      englishName:
+        resolution.canonicalEnglishName ?? resolution.matchedFood.nameEn,
+      nutritionFoodId: bestCandidate.matchedFoodId,
+      confidence: Math.min(
+        bestCandidate.matchConfidence,
+        resolution.canonicalConfidence ?? bestCandidate.matchConfidence,
+      ),
+      createdBy:
+        resolution.matchSource === 'restaurant-confirmed'
+          ? 'RESTAURANT_CONFIRMED'
+          : resolution.matchSource === 'canonical-provided'
+            ? 'AI_CANONICALIZED'
+            : 'AUTO_CONFIDENT',
+    });
   }
 }

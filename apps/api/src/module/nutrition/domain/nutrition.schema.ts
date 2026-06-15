@@ -48,6 +48,8 @@ export const nutritionFoods = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     nameVi: text('name_vi').notNull(),
     nameEn: text('name_en').notNull(),
+    source: text('source').notNull().default('LEGACY'),
+    sourceFoodId: text('source_food_id'),
     aliases: text('aliases')
       .array()
       .notNull()
@@ -71,7 +73,68 @@ export const nutritionFoods = pgTable(
     ),
     index('nutrition_foods_aliases_gin_idx').using('gin', table.aliases),
     index('nutrition_foods_name_vi_idx').on(table.nameVi),
+    index('nutrition_foods_source_idx').on(table.source),
+    index('nutrition_foods_source_food_id_idx').on(table.sourceFoodId),
     index('nutrition_foods_state_idx').on(table.state),
+  ],
+);
+
+export const nutritionFoodLocalizations = pgTable(
+  'nutrition_food_localizations',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    nutritionFoodId: uuid('nutrition_food_id')
+      .notNull()
+      .references(() => nutritionFoods.id, { onDelete: 'cascade' }),
+    locale: text('locale').notNull(),
+    name: text('name').notNull(),
+    aliases: text('aliases')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('nutrition_food_localizations_food_locale_uidx').on(
+      table.nutritionFoodId,
+      table.locale,
+    ),
+    index('nutrition_food_localizations_food_idx').on(table.nutritionFoodId),
+    index('nutrition_food_localizations_locale_idx').on(table.locale),
+    index('nutrition_food_localizations_aliases_gin_idx').using(
+      'gin',
+      table.aliases,
+    ),
+  ],
+);
+
+export const nutritionIngredientAliases = pgTable(
+  'nutrition_ingredient_aliases',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    locale: text('locale').notNull(),
+    originalName: text('original_name').notNull(),
+    normalizedName: text('normalized_name').notNull(),
+    englishName: text('english_name').notNull(),
+    nutritionFoodId: uuid('nutrition_food_id').references(
+      () => nutritionFoods.id,
+      { onDelete: 'set null' },
+    ),
+    confidence: real('confidence').notNull().default(0),
+    createdBy: text('created_by').notNull().default('SYSTEM'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('nutrition_ingredient_aliases_locale_normalized_uidx').on(
+      table.locale,
+      table.normalizedName,
+    ),
+    index('nutrition_ingredient_aliases_food_idx').on(table.nutritionFoodId),
+    index('nutrition_ingredient_aliases_english_name_idx').on(
+      table.englishName,
+    ),
   ],
 );
 
@@ -168,6 +231,14 @@ export const menuItemNutrition = pgTable(
 );
 
 export type NutritionFood = typeof nutritionFoods.$inferSelect;
+export type NutritionFoodLocalization =
+  typeof nutritionFoodLocalizations.$inferSelect;
+export type NewNutritionFoodLocalization =
+  typeof nutritionFoodLocalizations.$inferInsert;
+export type NutritionIngredientAlias =
+  typeof nutritionIngredientAliases.$inferSelect;
+export type NewNutritionIngredientAlias =
+  typeof nutritionIngredientAliases.$inferInsert;
 export type NewNutritionAnalysisSession =
   typeof nutritionAnalysisSessions.$inferInsert;
 export type NutritionAnalysisSession =

@@ -7,6 +7,8 @@ function makeFood(overrides: Partial<NutritionFood> = {}): NutritionFood {
     id: 'food-1',
     nameVi: 'ức gà',
     nameEn: 'chicken breast',
+    source: 'TEST',
+    sourceFoodId: 'food-1',
     aliases: ['uc ga'],
     category: 'meat',
     state: 'raw',
@@ -84,4 +86,3 @@ describe('NutritionCalculatorService', () => {
     expect(() => service.calculate(0, [])).toThrow(BadRequestException);
   });
 });
-

@@ -6,6 +6,7 @@ import { NutritionController } from './nutrition.controller';
 import { NutritionService } from './nutrition.service';
 import { AiRecipeExtractionService } from './ai/ai-recipe-extraction.service';
 import { UnitConversionService } from './matching/unit-conversion.service';
+import { IngredientCanonicalizerService } from './matching/ingredient-canonicalizer.service';
 import { IngredientMatchingService } from './matching/ingredient-matching.service';
 import { NutritionCalculatorService } from './calculator/nutrition-calculator.service';
 import { NutritionRepository } from './repositories/nutrition.repository';
@@ -18,6 +19,7 @@ import { NutritionRepository } from './repositories/nutrition.repository';
     NutritionRepository,
     AiRecipeExtractionService,
     UnitConversionService,
+    IngredientCanonicalizerService,
     IngredientMatchingService,
     NutritionCalculatorService,
   ],

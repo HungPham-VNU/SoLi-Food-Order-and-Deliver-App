@@ -67,6 +67,8 @@ export type NutritionAnalysisStatus =
 export interface ExtractedRecipeIngredient {
   rawText: string;
   name: string;
+  canonicalNameEn?: string | null;
+  canonicalNameConfidence?: number | null;
   quantity: number | null;
   unit: NutritionUnit;
   preparation: PreparationState;
