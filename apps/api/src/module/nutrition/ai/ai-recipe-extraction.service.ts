@@ -9,11 +9,9 @@ import {
   type AiExtractedRecipe,
 } from './ai-recipe.schema';
 import {
-  INGREDIENT_CATEGORIES,
   NUTRITION_UNITS,
   type ExtractedRecipe,
   type ExtractedRecipeIngredient,
-  type IngredientCategory,
   type NutritionUnit,
 } from '../types/nutrition.types';
 import {
@@ -499,11 +497,14 @@ export class AiRecipeExtractionService {
     }
 
     if (approximate) {
+      const ingredientLabel =
+        typeof normalized.name === 'string' && normalized.name.trim()
+          ? normalized.name
+          : rawText;
+
       normalized.requiresConfirmation = true;
       notes.push(
-        `Approximate household quantity inferred for ${String(
-          normalized.name ?? rawText,
-        )}. Please confirm.`,
+        `Approximate household quantity inferred for ${ingredientLabel}. Please confirm.`,
       );
     }
 
