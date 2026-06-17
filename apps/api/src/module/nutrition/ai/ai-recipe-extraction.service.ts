@@ -332,13 +332,15 @@ export class AiRecipeExtractionService {
   private parseOllamaContent(content: string): unknown {
     try {
       let cleaned = content.trim();
-      if (cleaned.startsWith('```json')) {
-        cleaned = cleaned.replace(/^```json/, '');
-      } else if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```/, '');
-      }
-      if (cleaned.endsWith('```')) {
-        cleaned = cleaned.replace(/```$/, '');
+      const jsonMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        cleaned = jsonMatch[1];
+      } else {
+        const firstBrace = cleaned.indexOf('{');
+        const lastBrace = cleaned.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+        }
       }
 
       return this.normalizeLooseRecipeJson(JSON.parse(cleaned.trim()));
@@ -410,7 +412,10 @@ export class AiRecipeExtractionService {
     }
     delete normalized.preparation_state;
 
-    if ('english_name_guess' in normalized && !('canonicalNameEn' in normalized)) {
+    if (
+      'english_name_guess' in normalized &&
+      !('canonicalNameEn' in normalized)
+    ) {
       normalized.canonicalNameEn = normalized.english_name_guess;
     }
     delete normalized.english_name_guess;
@@ -437,8 +442,7 @@ export class AiRecipeExtractionService {
       'canonical_name_confidence' in normalized &&
       !('canonicalNameConfidence' in normalized)
     ) {
-      normalized.canonicalNameConfidence =
-        normalized.canonical_name_confidence;
+      normalized.canonicalNameConfidence = normalized.canonical_name_confidence;
     }
     delete normalized.canonical_name_confidence;
 
@@ -508,11 +512,10 @@ export class AiRecipeExtractionService {
     normalized.canonicalNameEn = this.normalizeCanonicalNameEn(
       normalized.canonicalNameEn,
     );
-    normalized.canonicalNameConfidence =
-      this.normalizeCanonicalNameConfidence(
-        normalized.canonicalNameConfidence,
-        normalized.canonicalNameEn,
-      );
+    normalized.canonicalNameConfidence = this.normalizeCanonicalNameConfidence(
+      normalized.canonicalNameConfidence,
+      normalized.canonicalNameEn,
+    );
     if (!('preparation' in normalized)) {
       normalized.preparation = 'unknown';
     }

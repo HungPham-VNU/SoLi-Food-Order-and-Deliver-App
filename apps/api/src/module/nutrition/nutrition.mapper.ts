@@ -174,9 +174,24 @@ export function toReviewIngredients(
 
   return rows.map((row, index) => {
     const name = row.correctedName ?? row.extractedName;
-    const extractedIngredient =
-      extractedIngredients[index] ??
-      extractedIngredientsByName.get(normalizeIngredientName(name));
+    let extractedIngredient = extractedIngredientsByName.get(
+      normalizeIngredientName(name),
+    );
+    if (!extractedIngredient) {
+      const byIndex = extractedIngredients[index];
+      if (
+        byIndex &&
+        normalizeIngredientName(byIndex.name) === normalizeIngredientName(name)
+      ) {
+        extractedIngredient = byIndex;
+      } else if (
+        byIndex &&
+        !extractedIngredientsByName.has(normalizeIngredientName(byIndex.name))
+      ) {
+        // Fallback to index if the name at this index hasn't been used yet
+        extractedIngredient = byIndex;
+      }
+    }
 
     return toReviewIngredientResponse({
       rawText: row.rawText ?? extractedIngredient?.rawText ?? null,
