@@ -47,9 +47,21 @@ export class NutritionCalculatorService {
       total.protein += ingredient.food.protein100g * factor;
       total.carbs += ingredient.food.carbs100g * factor;
       total.fat += ingredient.food.fat100g * factor;
-      total.fiber = this.addNullable(total.fiber, ingredient.food.fiber100g, factor);
-      total.sugar = this.addNullable(total.sugar, ingredient.food.sugar100g, factor);
-      total.sodium = this.addNullable(total.sodium, ingredient.food.sodium100g, factor);
+      total.fiber = this.addNullable(
+        total.fiber,
+        ingredient.food.fiber100g,
+        factor,
+      );
+      total.sugar = this.addNullable(
+        total.sugar,
+        ingredient.food.sugar100g,
+        factor,
+      );
+      total.sodium = this.addNullable(
+        total.sodium,
+        ingredient.food.sodium100g,
+        factor,
+      );
     }
 
     const roundedTotal = this.roundAmount(total);
@@ -105,4 +117,3 @@ export class NutritionCalculatorService {
     return Math.round(value * 10) / 10;
   }
 }
-

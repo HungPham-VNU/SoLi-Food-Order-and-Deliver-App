@@ -23,7 +23,9 @@ async function seedAdmin() {
 
   if (existingUsers.length > 0) {
     const existingUser = existingUsers[0];
-    console.log(`User ${email} already exists. Updating name, role, and emailVerified status...`);
+    console.log(
+      `User ${email} already exists. Updating name, role, and emailVerified status...`,
+    );
 
     // Update user role and status
     await db

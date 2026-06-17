@@ -13,7 +13,13 @@ export const extractedRecipeIngredientSchema = z.object({
   rawText: z.string().min(1),
   name: z.string().min(1),
   canonicalNameEn: z.string().min(1).nullable().optional().default(null),
-  canonicalNameConfidence: z.number().min(0).max(1).nullable().optional().default(null),
+  canonicalNameConfidence: z
+    .number()
+    .min(0)
+    .max(1)
+    .nullable()
+    .optional()
+    .default(null),
   quantity: z.number().positive().nullable(),
   unit: aiRecipeUnitSchema.nullable().default('unknown'),
   preparation: aiRecipePreparationSchema.nullable().default('unknown'),

@@ -104,7 +104,10 @@ export class IngredientMatchingService {
       ...food.aliases,
     ]);
 
-    if (normalizedLocalizedName && normalizedInput === normalizedLocalizedName) {
+    if (
+      normalizedLocalizedName &&
+      normalizedInput === normalizedLocalizedName
+    ) {
       return 0.99;
     }
     if (normalizedInput === normalizedNameVi) return 0.98;

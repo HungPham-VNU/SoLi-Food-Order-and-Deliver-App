@@ -6,6 +6,7 @@ import { IngredientMatchingService } from './matching/ingredient-matching.servic
 import { NutritionIngredientResolutionService } from './matching/nutrition-ingredient-resolution.service';
 import { NutritionCalculatorService } from './calculator/nutrition-calculator.service';
 import type { NutritionFood } from './domain/nutrition.schema';
+import type { NutritionRepository } from './repositories/nutrition.repository';
 import type { ExtractedRecipe } from './types/nutrition.types';
 
 const menuItemId = '11111111-1111-4111-8111-111111111111';
@@ -55,7 +56,7 @@ function makeService(
     menuService?: unknown;
     restaurantService?: unknown;
     aiExtraction?: unknown;
-    repo?: any;
+    repo?: Partial<NutritionRepository>;
     unitConversion?: UnitConversionService;
     ingredientMatching?: IngredientMatchingService;
     ingredientCanonicalizer?: IngredientCanonicalizerService;
@@ -63,17 +64,16 @@ function makeService(
     calculator?: NutritionCalculatorService;
   } = {},
 ) {
-  const repo = input.repo ?? {};
+  const repo = (input.repo ?? {}) as NutritionRepository;
   const unitConversion = input.unitConversion ?? new UnitConversionService();
   const ingredientMatching =
     input.ingredientMatching ?? new IngredientMatchingService();
   const ingredientCanonicalizer =
-    input.ingredientCanonicalizer ??
-    new IngredientCanonicalizerService(repo as any);
+    input.ingredientCanonicalizer ?? new IngredientCanonicalizerService(repo);
   const ingredientResolution =
     input.ingredientResolution ??
     new NutritionIngredientResolutionService(
-      repo as any,
+      repo,
       unitConversion,
       ingredientMatching,
       ingredientCanonicalizer,
@@ -697,8 +697,15 @@ describe('NutritionService', () => {
       service.saveMenuItemNutrition(menuItemId, 'admin-user', true, {
         analysisSessionId,
         servings: 1,
+        nutrition: {
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+        },
+        ingredients: [],
         verifiedByRestaurant: false,
-      } as any),
+      }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(repo.findSessionById).not.toHaveBeenCalled();
     expect(repo.saveMenuItemNutrition).not.toHaveBeenCalled();
@@ -741,7 +748,8 @@ describe('NutritionService', () => {
           carbs: 40,
           fat: 8,
         },
-      } as any,
+        ingredients: [],
+      },
     );
 
     expect(repo.saveMenuItemNutrition).toHaveBeenCalledWith({

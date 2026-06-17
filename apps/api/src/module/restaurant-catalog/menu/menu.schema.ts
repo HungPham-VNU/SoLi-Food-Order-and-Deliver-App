@@ -12,6 +12,18 @@ import {
 } from 'drizzle-orm/pg-core';
 import { restaurants } from '../restaurant/restaurant.schema';
 
+function parseVector(value: string): number[] {
+  const parsed: unknown = JSON.parse(value);
+  if (
+    !Array.isArray(parsed) ||
+    !parsed.every((item) => typeof item === 'number')
+  ) {
+    throw new Error('Invalid vector value from database.');
+  }
+
+  return parsed;
+}
+
 const vector = customType<{ data: number[]; driverData: string }>({
   dataType() {
     return 'vector(768)';
@@ -20,7 +32,7 @@ const vector = customType<{ data: number[]; driverData: string }>({
     return `[${value.join(',')}]`;
   },
   fromDriver(value: string): number[] {
-    return JSON.parse(value);
+    return parseVector(value);
   },
 });
 

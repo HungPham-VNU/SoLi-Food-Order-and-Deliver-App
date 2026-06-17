@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { NutritionRepository } from '../repositories/nutrition.repository';
 
-export type IngredientCanonicalizationSource =
-  | 'cache'
-  | 'provided'
-  | 'input';
+export type IngredientCanonicalizationSource = 'cache' | 'provided' | 'input';
 
 export interface IngredientCanonicalizationInput {
   name: string;
@@ -57,7 +54,10 @@ export class IngredientCanonicalizerService {
     if (providedEnglishName) {
       return {
         englishName: providedEnglishName,
-        confidence: this.normalizeConfidence(input.canonicalNameConfidence, 0.6),
+        confidence: this.normalizeConfidence(
+          input.canonicalNameConfidence,
+          0.6,
+        ),
         source: 'provided',
         nutritionFoodId: null,
       };
