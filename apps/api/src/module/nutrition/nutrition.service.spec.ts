@@ -1,7 +1,9 @@
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { NutritionService } from './nutrition.service';
 import { UnitConversionService } from './matching/unit-conversion.service';
 import { IngredientCanonicalizerService } from './matching/ingredient-canonicalizer.service';
 import { IngredientMatchingService } from './matching/ingredient-matching.service';
+import { NutritionIngredientResolutionService } from './matching/nutrition-ingredient-resolution.service';
 import { NutritionCalculatorService } from './calculator/nutrition-calculator.service';
 import type { NutritionFood } from './domain/nutrition.schema';
 import type { ExtractedRecipe } from './types/nutrition.types';
@@ -9,6 +11,21 @@ import type { ExtractedRecipe } from './types/nutrition.types';
 const menuItemId = '11111111-1111-4111-8111-111111111111';
 const restaurantId = '22222222-2222-4222-8222-222222222222';
 const analysisSessionId = '33333333-3333-4333-8333-333333333333';
+
+function makeSession(overrides: Record<string, unknown> = {}) {
+  return {
+    id: analysisSessionId,
+    menuItemId,
+    restaurantId,
+    inputType: 'text',
+    rawRecipeText: '',
+    aiExtractedJson: null,
+    status: 'ANALYZED',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
 
 function makeFood(overrides: Partial<NutritionFood> = {}): NutritionFood {
   return {
@@ -31,6 +48,49 @@ function makeFood(overrides: Partial<NutritionFood> = {}): NutritionFood {
     updatedAt: new Date(),
     ...overrides,
   };
+}
+
+function makeService(
+  input: {
+    menuService?: unknown;
+    restaurantService?: unknown;
+    aiExtraction?: unknown;
+    repo?: any;
+    unitConversion?: UnitConversionService;
+    ingredientMatching?: IngredientMatchingService;
+    ingredientCanonicalizer?: IngredientCanonicalizerService;
+    ingredientResolution?: NutritionIngredientResolutionService;
+    calculator?: NutritionCalculatorService;
+  } = {},
+) {
+  const repo = input.repo ?? {};
+  const unitConversion = input.unitConversion ?? new UnitConversionService();
+  const ingredientMatching =
+    input.ingredientMatching ?? new IngredientMatchingService();
+  const ingredientCanonicalizer =
+    input.ingredientCanonicalizer ??
+    new IngredientCanonicalizerService(repo as any);
+  const ingredientResolution =
+    input.ingredientResolution ??
+    new NutritionIngredientResolutionService(
+      repo as any,
+      unitConversion,
+      ingredientMatching,
+      ingredientCanonicalizer,
+    );
+
+  return new NutritionService(
+    input.menuService ?? {
+      findOne: jest.fn().mockResolvedValue({ id: menuItemId, restaurantId }),
+    },
+    input.restaurantService ?? {},
+    input.aiExtraction ?? {},
+    repo,
+    unitConversion,
+    ingredientMatching,
+    ingredientResolution,
+    input.calculator ?? new NutritionCalculatorService(),
+  );
 }
 
 describe('NutritionService', () => {
@@ -69,20 +129,12 @@ describe('NutritionService', () => {
       }),
       insertIngredients: jest.fn().mockResolvedValue(undefined),
     };
-    const service = new NutritionService(
-      {
-        findOne: jest.fn().mockResolvedValue({ id: menuItemId, restaurantId }),
-      } as any,
-      {} as any,
-      {
+    const service = makeService({
+      aiExtraction: {
         extractRecipe: jest.fn().mockResolvedValue(extractedRecipe),
-      } as any,
-      repo as any,
-      new UnitConversionService(),
-      new IngredientMatchingService(),
-      new IngredientCanonicalizerService(repo as any),
-      new NutritionCalculatorService(),
-    );
+      },
+      repo,
+    });
 
     const result = await service.analyzeRecipe(menuItemId, 'admin-user', true, {
       recipeText: 'Bun cha',
@@ -145,20 +197,12 @@ describe('NutritionService', () => {
       }),
       insertIngredients: jest.fn().mockResolvedValue(undefined),
     };
-    const service = new NutritionService(
-      {
-        findOne: jest.fn().mockResolvedValue({ id: menuItemId, restaurantId }),
-      } as any,
-      {} as any,
-      {
+    const service = makeService({
+      aiExtraction: {
         extractRecipe: jest.fn().mockResolvedValue(extractedRecipe),
-      } as any,
-      repo as any,
-      new UnitConversionService(),
-      new IngredientMatchingService(),
-      new IngredientCanonicalizerService(repo as any),
-      new NutritionCalculatorService(),
-    );
+      },
+      repo,
+    });
 
     const result = await service.analyzeRecipe(menuItemId, 'admin-user', true, {
       recipeText: 'Com tam',
@@ -228,18 +272,7 @@ describe('NutritionService', () => {
       updateCalculatedSession: jest.fn().mockResolvedValue(undefined),
     };
 
-    const service = new NutritionService(
-      {
-        findOne: jest.fn().mockResolvedValue({ id: menuItemId, restaurantId }),
-      } as any,
-      {} as any,
-      {} as any,
-      repo as any,
-      new UnitConversionService(),
-      new IngredientMatchingService(),
-      new IngredientCanonicalizerService(repo as any),
-      new NutritionCalculatorService(),
-    );
+    const service = makeService({ repo });
 
     const result = await service.calculateNutrition(
       menuItemId,
@@ -314,26 +347,13 @@ describe('NutritionService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       }),
-      searchNutritionFoodsForIngredient: jest
-        .fn()
-        .mockResolvedValue([chicken]),
+      searchNutritionFoodsForIngredient: jest.fn().mockResolvedValue([chicken]),
       upsertNutritionIngredientAlias: jest.fn().mockResolvedValue(undefined),
       replaceSessionIngredients: jest.fn().mockResolvedValue(undefined),
       updateCalculatedSession: jest.fn().mockResolvedValue(undefined),
     };
 
-    const service = new NutritionService(
-      {
-        findOne: jest.fn().mockResolvedValue({ id: menuItemId, restaurantId }),
-      } as any,
-      {} as any,
-      {} as any,
-      repo as any,
-      new UnitConversionService(),
-      new IngredientMatchingService(),
-      new IngredientCanonicalizerService(repo as any),
-      new NutritionCalculatorService(),
-    );
+    const service = makeService({ repo });
 
     const result = await service.calculateNutrition(
       menuItemId,
@@ -415,28 +435,18 @@ describe('NutritionService', () => {
       }),
       searchNutritionFoodsForIngredient: jest
         .fn()
-        .mockImplementation(({ name, locale }: { name: string; locale: string }) =>
-          Promise.resolve(
-            name === 'chicken breast' && locale === 'en' ? [chicken] : [],
-          ),
+        .mockImplementation(
+          ({ name, locale }: { name: string; locale: string }) =>
+            Promise.resolve(
+              name === 'chicken breast' && locale === 'en' ? [chicken] : [],
+            ),
         ),
       findNutritionIngredientAlias: jest.fn().mockResolvedValue(null),
       upsertNutritionIngredientAlias: jest.fn().mockResolvedValue(undefined),
       replaceSessionIngredients: jest.fn().mockResolvedValue(undefined),
       updateCalculatedSession: jest.fn().mockResolvedValue(undefined),
     };
-    const service = new NutritionService(
-      {
-        findOne: jest.fn().mockResolvedValue({ id: menuItemId, restaurantId }),
-      } as any,
-      {} as any,
-      {} as any,
-      repo as any,
-      new UnitConversionService(),
-      new IngredientMatchingService(),
-      new IngredientCanonicalizerService(repo as any),
-      new NutritionCalculatorService(),
-    );
+    const service = makeService({ repo });
 
     const result = await service.calculateNutrition(
       menuItemId,
@@ -505,18 +515,7 @@ describe('NutritionService', () => {
       replaceSessionIngredients: jest.fn().mockResolvedValue(undefined),
       updateCalculatedSession: jest.fn().mockResolvedValue(undefined),
     };
-    const service = new NutritionService(
-      {
-        findOne: jest.fn().mockResolvedValue({ id: menuItemId, restaurantId }),
-      } as any,
-      {} as any,
-      {} as any,
-      repo as any,
-      new UnitConversionService(),
-      new IngredientMatchingService(),
-      new IngredientCanonicalizerService(repo as any),
-      new NutritionCalculatorService(),
-    );
+    const service = makeService({ repo });
 
     const result = await service.calculateNutrition(
       menuItemId,
@@ -552,5 +551,222 @@ describe('NutritionService', () => {
         createdBy: 'RESTAURANT_CONFIRMED',
       }),
     );
+  });
+
+  it('persists a failed analysis response when AI extraction fails', async () => {
+    const repo = {
+      createSession: jest
+        .fn()
+        .mockResolvedValue(makeSession({ status: 'FAILED' })),
+    };
+    const service = makeService({
+      aiExtraction: {
+        extractRecipe: jest.fn().mockRejectedValue(new Error('AI offline')),
+      },
+      repo,
+    });
+
+    const result = await service.analyzeRecipe(menuItemId, 'admin-user', true, {
+      recipeText: '  Bun cha\0 text  ',
+    });
+
+    expect(repo.createSession).toHaveBeenCalledWith({
+      menuItemId,
+      restaurantId,
+      inputType: 'text',
+      rawRecipeText: 'Bun cha text',
+      aiExtractedJson: null,
+      status: 'FAILED',
+    });
+    expect(result).toEqual({
+      analysisSessionId,
+      recipeName: null,
+      servings: null,
+      ingredients: [],
+      warnings: [
+        'AI analysis service is currently unavailable. Please try again or enter ingredients manually.',
+      ],
+      status: 'FAILED',
+    });
+  });
+
+  it('hydrates latest analysis from extracted JSON when no ingredient rows exist', async () => {
+    const extractedRecipe: ExtractedRecipe = {
+      recipeName: 'Com tam',
+      servings: 2,
+      ingredients: [
+        {
+          rawText: 'muoi tieu',
+          name: 'muoi',
+          quantity: null,
+          unit: 'unknown',
+          preparation: 'unknown',
+          category: 'seasoning',
+          confidence: 0.95,
+          requiresConfirmation: false,
+          notes: [],
+        },
+      ],
+      warnings: ['Confirm serving size.'],
+    };
+    const repo = {
+      findLatestEditableAnalysisByMenuItemId: jest.fn().mockResolvedValue(
+        makeSession({
+          rawRecipeText: 'Com tam recipe',
+          aiExtractedJson: extractedRecipe,
+          status: 'NEEDS_REVIEW',
+        }),
+      ),
+      listIngredientsBySessionId: jest.fn().mockResolvedValue([]),
+    };
+    const service = makeService({ repo });
+
+    const result = await service.getLatestMenuItemNutritionAnalysis(
+      menuItemId,
+      'admin-user',
+      true,
+    );
+
+    expect(result).toMatchObject({
+      analysisSessionId,
+      recipeName: 'Com tam',
+      recipeText: 'Com tam recipe',
+      servings: 2,
+      warnings: ['Confirm serving size.'],
+      status: 'NEEDS_REVIEW',
+    });
+    expect(result?.ingredients).toEqual([
+      expect.objectContaining({
+        name: 'muoi',
+        quantity: 0,
+        preparation: null,
+        measurementRequired: false,
+        preparationApplicable: false,
+      }),
+    ]);
+  });
+
+  it('rejects non-owners before reading nutrition analysis data', async () => {
+    const repo = {
+      findLatestEditableAnalysisByMenuItemId: jest.fn(),
+    };
+    const service = makeService({
+      restaurantService: {
+        findOne: jest
+          .fn()
+          .mockResolvedValue({ id: restaurantId, ownerId: 'owner-1' }),
+      },
+      repo,
+    });
+
+    await expect(
+      service.getLatestMenuItemNutritionAnalysis(menuItemId, 'owner-2', false),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(repo.findLatestEditableAnalysisByMenuItemId).not.toHaveBeenCalled();
+  });
+
+  it('rejects calculate requests for sessions from another menu item', async () => {
+    const repo = {
+      findSessionById: jest.fn().mockResolvedValue(
+        makeSession({
+          menuItemId: '44444444-4444-4444-8444-444444444444',
+        }),
+      ),
+      searchNutritionFoodsForIngredient: jest.fn(),
+    };
+    const service = makeService({ repo });
+
+    await expect(
+      service.calculateNutrition(menuItemId, 'admin-user', true, {
+        analysisSessionId,
+        servings: 1,
+        ingredients: [],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.searchNutritionFoodsForIngredient).not.toHaveBeenCalled();
+  });
+
+  it('requires restaurant verification before saving nutrition', async () => {
+    const repo = {
+      findSessionById: jest.fn(),
+      saveMenuItemNutrition: jest.fn(),
+    };
+    const service = makeService({ repo });
+
+    await expect(
+      service.saveMenuItemNutrition(menuItemId, 'admin-user', true, {
+        analysisSessionId,
+        servings: 1,
+        verifiedByRestaurant: false,
+      } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.findSessionById).not.toHaveBeenCalled();
+    expect(repo.saveMenuItemNutrition).not.toHaveBeenCalled();
+  });
+
+  it('saves verified nutrition and marks the analysis session saved', async () => {
+    const savedNutrition = {
+      menuItemId,
+      servings: 2,
+      calories: 300,
+      protein: 20,
+      carbs: 40,
+      fat: 8,
+      fiber: null,
+      sugar: null,
+      sodium: null,
+      source: 'AI_ESTIMATED',
+      verifiedByRestaurant: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const repo = {
+      findSessionById: jest.fn().mockResolvedValue(makeSession()),
+      saveMenuItemNutrition: jest.fn().mockResolvedValue(savedNutrition),
+      updateSessionStatus: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = makeService({ repo });
+
+    const result = await service.saveMenuItemNutrition(
+      menuItemId,
+      'admin-user',
+      true,
+      {
+        analysisSessionId,
+        servings: 2,
+        verifiedByRestaurant: true,
+        nutrition: {
+          calories: 300,
+          protein: 20,
+          carbs: 40,
+          fat: 8,
+        },
+      } as any,
+    );
+
+    expect(repo.saveMenuItemNutrition).toHaveBeenCalledWith({
+      menuItemId,
+      servings: 2,
+      calories: 300,
+      protein: 20,
+      carbs: 40,
+      fat: 8,
+      fiber: null,
+      sugar: null,
+      sodium: null,
+      verifiedByRestaurant: true,
+    });
+    expect(repo.updateSessionStatus).toHaveBeenCalledWith(
+      analysisSessionId,
+      'SAVED',
+    );
+    expect(result).toMatchObject({
+      servings: 2,
+      calories: 300,
+      protein: 20,
+      carbs: 40,
+      fat: 8,
+      verifiedByRestaurant: true,
+    });
   });
 });

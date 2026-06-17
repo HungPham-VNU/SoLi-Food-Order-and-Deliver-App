@@ -68,9 +68,7 @@ export class NutritionRepository {
     return row;
   }
 
-  async findSessionById(
-    id: string,
-  ): Promise<NutritionAnalysisSession | null> {
+  async findSessionById(id: string): Promise<NutritionAnalysisSession | null> {
     const rows = await this.db
       .select()
       .from(nutritionAnalysisSessions)
@@ -365,7 +363,8 @@ export class NutritionRepository {
           eq(localizedFood.locale, locale),
         ),
       )
-      .where(sql`(
+      .where(
+        sql`(
         lower(${localizedFood.name}) = lower(${query})
         OR ${indexedLocalizedAliasExactMatch}
         OR ${exactLocalizedAliasMatch}
@@ -384,7 +383,8 @@ export class NutritionRepository {
         OR ${fullText} @@ ${fullTextQuery}
         OR lower(${nutritionFoods.nameVi}) % lower(${query})
         OR lower(${nutritionFoods.nameEn}) % lower(${query})
-      )`)
+      )`,
+      )
       .orderBy(
         sql`${score} DESC`,
         sql`COALESCE(${localizedFood.name}, ${nutritionFoods.nameVi})`,

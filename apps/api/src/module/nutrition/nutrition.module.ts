@@ -8,6 +8,7 @@ import { AiRecipeExtractionService } from './ai/ai-recipe-extraction.service';
 import { UnitConversionService } from './matching/unit-conversion.service';
 import { IngredientCanonicalizerService } from './matching/ingredient-canonicalizer.service';
 import { IngredientMatchingService } from './matching/ingredient-matching.service';
+import { NutritionIngredientResolutionService } from './matching/nutrition-ingredient-resolution.service';
 import { NutritionCalculatorService } from './calculator/nutrition-calculator.service';
 import { NutritionRepository } from './repositories/nutrition.repository';
 
@@ -21,6 +22,7 @@ import { NutritionRepository } from './repositories/nutrition.repository';
     UnitConversionService,
     IngredientCanonicalizerService,
     IngredientMatchingService,
+    NutritionIngredientResolutionService,
     NutritionCalculatorService,
   ],
   exports: [NutritionService, NutritionRepository],
