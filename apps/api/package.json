@@ -34,7 +34,6 @@
     "db:seed:admin": "tsx src/drizzle/seeds/admin.seed.ts"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^0.2.16",
     "@better-auth/drizzle-adapter": "^1.6.11",
     "@better-auth/expo": "^1.6.11",
     "@nestjs/common": "^11.1.21",
@@ -62,7 +61,6 @@
     "@scalar/nestjs-api-reference": "^1.1.16",
     "@thallesp/nestjs-better-auth": "^2.6.0",
     "@types/ioredis": "^5.0.0",
-    "ai": "^4.3.19",
     "better-auth": "^1.6.11",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -72,7 +70,7 @@
     "express": "^5.2.1",
     "firebase-admin": "^13.10.0",
     "ioredis": "^5.10.1",
-    "nodemailer": "^8.0.7",
+    "nodemailer": "^8.0.9",
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
