@@ -12,7 +12,10 @@ async function main(): Promise<void> {
     );
   }
 
-  const client = new Client({ connectionString: databaseUrl });
+  const client = new Client({
+    connectionString: databaseUrl,
+    ssl: getSslConfig(databaseUrl),
+  });
 
   await client.connect();
   try {
@@ -46,6 +49,28 @@ async function main(): Promise<void> {
 
 function quoteIdentifier(identifier: string): string {
   return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+function getSslConfig(
+  databaseUrl: string,
+): false | { rejectUnauthorized: boolean } {
+  let host: string;
+  try {
+    host = new URL(databaseUrl).hostname;
+  } catch {
+    return { rejectUnauthorized: false };
+  }
+
+  const localHosts = new Set([
+    'localhost',
+    '127.0.0.1',
+    '::1',
+    'host.docker.internal',
+    'postgres',
+  ]);
+
+  if (localHosts.has(host)) return false;
+  return { rejectUnauthorized: false };
 }
 
 function printExtensionHint(error: unknown): void {
