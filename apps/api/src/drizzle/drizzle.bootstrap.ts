@@ -5,14 +5,13 @@ import { DB_CONNECTION } from './drizzle.constants';
 import * as schema from './schema';
 
 /**
- * PostgreSQL extensions the search module depends on.
+ * PostgreSQL extensions the search modules depend on.
  *
- * `unaccent` powers accent-insensitive `ILIKE` matching (e.g. "pho" → "Phở")
- * and `pg_trgm` backs the trigram GIN indexes used to keep those `ILIKE`
- * scans fast. Without `unaccent` every text search throws
- * `function unaccent(text) does not exist` → HTTP 500.
+ * `unaccent` powers accent-insensitive text matching, `pg_trgm` backs
+ * trigram GIN indexes, and `vector` provides the pgvector type used by
+ * semantic search.
  */
-const REQUIRED_EXTENSIONS = ['unaccent', 'pg_trgm'] as const;
+const REQUIRED_EXTENSIONS = ['unaccent', 'pg_trgm', 'vector'] as const;
 
 /**
  * Ensures the extensions required by the search module exist before the API
@@ -42,6 +41,9 @@ export class DrizzleBootstrap implements OnModuleInit {
       );
       await this.db.execute(
         sql`CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public`,
+      );
+      await this.db.execute(
+        sql`CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public`,
       );
     } catch (error) {
       // Swallow here; the verification step decides whether this is fatal so a
@@ -75,8 +77,8 @@ export class DrizzleBootstrap implements OnModuleInit {
 
     this.fail(
       `Missing required PostgreSQL extension(s): ${missing.join(', ')}. ` +
-        `Text search (\`unaccent\`/\`pg_trgm\`) will fail until they are installed ` +
-        `(e.g. \`CREATE EXTENSION IF NOT EXISTS unaccent\`).`,
+        `Text and semantic search will fail until they are installed ` +
+        `(e.g. \`CREATE EXTENSION IF NOT EXISTS vector\`).`,
     );
   }
 
@@ -94,7 +96,7 @@ export class DrizzleBootstrap implements OnModuleInit {
 
   private async findMissingExtensions(): Promise<string[]> {
     const result = await this.db.execute<{ extname: string }>(
-      sql`SELECT extname FROM pg_extension WHERE extname IN ('unaccent', 'pg_trgm')`,
+      sql`SELECT extname FROM pg_extension WHERE extname IN ('unaccent', 'pg_trgm', 'vector')`,
     );
     const present = new Set(result.rows.map((row) => row.extname));
     return REQUIRED_EXTENSIONS.filter((name) => !present.has(name));

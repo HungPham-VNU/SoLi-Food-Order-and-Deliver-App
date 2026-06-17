@@ -8,7 +8,20 @@ import {
   text,
   timestamp,
   uuid,
+  customType,
 } from 'drizzle-orm/pg-core';
+
+const vector = customType<{ data: number[]; driverData: string }>({
+  dataType() {
+    return 'vector(768)';
+  },
+  toDriver(value: number[]): string {
+    return `[${value.join(',')}]`;
+  },
+  fromDriver(value: string): number[] {
+    return JSON.parse(value);
+  },
+});
 
 export const restaurants = pgTable(
   'restaurants',
@@ -17,6 +30,8 @@ export const restaurants = pgTable(
     ownerId: uuid('owner_id').notNull(),
     name: text('name').notNull(),
     description: text('description'),
+    searchDocument: text('search_document'),
+    embedding: vector('embedding'),
     address: text('address').notNull(),
     phone: text('phone').notNull(),
     isOpen: boolean('is_open').notNull().default(false),

@@ -8,8 +8,21 @@ import {
   index,
   uniqueIndex,
   timestamp,
+  customType,
 } from 'drizzle-orm/pg-core';
 import { restaurants } from '../restaurant/restaurant.schema';
+
+const vector = customType<{ data: number[]; driverData: string }>({
+  dataType() {
+    return 'vector(768)';
+  },
+  toDriver(value: number[]): string {
+    return `[${value.join(',')}]`;
+  },
+  fromDriver(value: string): number[] {
+    return JSON.parse(value);
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Status enum (kept — canonical availability field)
@@ -60,6 +73,8 @@ export const menuItems = pgTable(
       .references(() => restaurants.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     description: text('description'),
+    searchDocument: text('search_document'),
+    embedding: vector('embedding'),
     // Price stored as integer VND (no fractional currency in Vietnam).
     price: integer('price').notNull(),
     sku: text('sku'),

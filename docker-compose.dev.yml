@@ -15,7 +15,7 @@
 
 services:
   postgres:
-    image: postgres:18
+    image: pgvector/pgvector:0.8.2-pg18-trixie
     container_name: food_order_db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-food_order}
@@ -25,6 +25,7 @@ services:
       - '5432:5432'
     volumes:
       - food_order_db:/var/lib/postgresql
+      - ./infra/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/01-init-test-db.sql:ro
     healthcheck:
       # $$VAR is expanded by the container shell, not by Compose.
       test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
@@ -65,6 +66,9 @@ services:
       REDIS_URL: redis://redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-https://ollama.com}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gpt-oss:20b}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
       # Enable polling-based file watching for reliable hot-reload inside Docker
       # on macOS/Windows (Docker Desktop bind mounts don't emit inotify events).
       CHOKIDAR_USEPOLLING: 'true'

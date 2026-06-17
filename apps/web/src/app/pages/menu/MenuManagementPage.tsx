@@ -5,8 +5,15 @@ import { MenuSidebar } from '@/features/menu/components/MenuSidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useMenuItems, useMenuCategories } from '@/features/menu/hooks/useMenu';
-import { useDeleteMenuItem, useUpdateMenuItem, useCreateCategory } from '@/features/menu/hooks/useMenuMutations';
-import { useMyRestaurant, useUpdateRestaurant } from '@/features/restaurant/hooks/useRestaurants';
+import {
+  useDeleteMenuItem,
+  useUpdateMenuItem,
+  useCreateCategory,
+} from '@/features/menu/hooks/useMenuMutations';
+import {
+  useMyRestaurant,
+  useUpdateRestaurant,
+} from '@/features/restaurant/hooks/useRestaurants';
 import type { MenuItem } from '@/features/menu/types';
 
 export function MenuManagementPage() {
@@ -20,7 +27,8 @@ export function MenuManagementPage() {
   const restaurantId = restaurant?.id;
   const isOpen = restaurant?.isOpen ?? false;
 
-  const { data: itemsResponse, isLoading: itemsLoading } = useMenuItems(restaurantId);
+  const { data: itemsResponse, isLoading: itemsLoading } =
+    useMenuItems(restaurantId);
   const { data: categories = [] } = useMenuCategories(restaurantId);
 
   const deleteItem = useDeleteMenuItem(restaurantId ?? '');
@@ -33,9 +41,15 @@ export function MenuManagementPage() {
     ? allItems.filter((i) => i.categoryId === activeCategoryId)
     : allItems;
 
-  const availableItems = allItems.filter((i) => i.status === 'available').length;
-  const unavailableItems = allItems.filter((i) => i.status === 'unavailable').length;
-  const outOfStockItems = allItems.filter((i) => i.status === 'out_of_stock').length;
+  const availableItems = allItems.filter(
+    (i) => i.status === 'available',
+  ).length;
+  const unavailableItems = allItems.filter(
+    (i) => i.status === 'unavailable',
+  ).length;
+  const outOfStockItems = allItems.filter(
+    (i) => i.status === 'out_of_stock',
+  ).length;
 
   const overview = {
     totalItems: allItems.length,
@@ -55,10 +69,18 @@ export function MenuManagementPage() {
 
   const handleSubmitCategory = () => {
     const name = newCategoryName.trim();
-    if (!name || !restaurantId) { setAddingCategory(false); return; }
+    if (!name || !restaurantId) {
+      setAddingCategory(false);
+      return;
+    }
     createCategory.mutate(
       { restaurantId, name, displayOrder: categories.length },
-      { onSuccess: () => { setAddingCategory(false); setNewCategoryName(''); } },
+      {
+        onSuccess: () => {
+          setAddingCategory(false);
+          setNewCategoryName('');
+        },
+      },
     );
   };
 
@@ -73,9 +95,13 @@ export function MenuManagementPage() {
     }
   };
 
-  const handleToggleAvailability = (id: string, currentStatus: MenuItem['status']) => {
+  const handleToggleAvailability = (
+    id: string,
+    currentStatus: MenuItem['status'],
+  ) => {
     if (currentStatus === 'out_of_stock') return;
-    const nextStatus = currentStatus === 'available' ? 'unavailable' : 'available';
+    const nextStatus =
+      currentStatus === 'available' ? 'unavailable' : 'available';
     updateItem.mutate({ id, dto: { status: nextStatus } });
   };
 
@@ -85,7 +111,10 @@ export function MenuManagementPage() {
 
   const handleStoreToggle = () => {
     if (!restaurant) return;
-    updateRestaurant.mutate({ id: restaurant.id, data: { isOpen: !restaurant.isOpen } });
+    updateRestaurant.mutate({
+      id: restaurant.id,
+      data: { isOpen: !restaurant.isOpen },
+    });
   };
 
   return (
@@ -105,8 +134,13 @@ export function MenuManagementPage() {
           {/* Store Status Card */}
           <Card className="bg-surface-container-lowest rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-outline-variant/10 ring-0 py-0 gap-0">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${isOpen ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
-                <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+              <div
+                className={`h-12 w-12 rounded-2xl flex items-center justify-center ${isOpen ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
+              >
+                <span
+                  className="material-symbols-outlined text-3xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
                   storefront
                 </span>
               </div>
@@ -114,7 +148,9 @@ export function MenuManagementPage() {
                 <p className="text-xs font-bold uppercase tracking-widest text-outline">
                   Store Visibility
                 </p>
-                <p className={`text-sm font-bold ${isOpen ? 'text-green-700' : 'text-muted-foreground'}`}>
+                <p
+                  className={`text-sm font-bold ${isOpen ? 'text-green-700' : 'text-muted-foreground'}`}
+                >
                   {isOpen ? 'Currently Accepting Orders' : 'Store Offline'}
                 </p>
                 {updateRestaurant.isError && (
@@ -132,7 +168,11 @@ export function MenuManagementPage() {
                     : 'bg-primary text-white'
                 }`}
               >
-                {updateRestaurant.isPending ? 'Saving…' : isOpen ? 'Go Offline' : 'Go Online'}
+                {updateRestaurant.isPending
+                  ? 'Saving…'
+                  : isOpen
+                    ? 'Go Offline'
+                    : 'Go Online'}
               </Button>
             </CardContent>
           </Card>
@@ -153,7 +193,9 @@ export function MenuManagementPage() {
                     : 'bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container'
                 }`}
               >
-                <span className="material-symbols-outlined text-sm">grid_view</span>
+                <span className="material-symbols-outlined text-sm">
+                  grid_view
+                </span>
                 All Items
               </Button>
 
@@ -189,13 +231,22 @@ export function MenuManagementPage() {
                   />
                   <button
                     onClick={handleSubmitCategory}
-                    disabled={!newCategoryName.trim() || createCategory.isPending}
+                    disabled={
+                      !newCategoryName.trim() || createCategory.isPending
+                    }
                     className="text-primary disabled:opacity-40 hover:opacity-70 transition-opacity"
                   >
-                    <span className="material-symbols-outlined text-[18px]">check</span>
+                    <span className="material-symbols-outlined text-[18px]">
+                      check
+                    </span>
                   </button>
-                  <button onClick={handleCancelCategory} className="text-on-surface-variant hover:opacity-70 transition-opacity">
-                    <span className="material-symbols-outlined text-[18px]">close</span>
+                  <button
+                    onClick={handleCancelCategory}
+                    className="text-on-surface-variant hover:opacity-70 transition-opacity"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      close
+                    </span>
                   </button>
                 </div>
               ) : (
@@ -214,12 +265,17 @@ export function MenuManagementPage() {
             {/* Items List */}
             <div className="space-y-4">
               {itemsLoading && (
-                <p className="text-on-surface-variant text-sm py-8 text-center">Loading menu items…</p>
+                <p className="text-on-surface-variant text-sm py-8 text-center">
+                  Loading menu items…
+                </p>
               )}
               {!itemsLoading && filteredItems.length === 0 && (
                 <p className="text-on-surface-variant text-sm py-8 text-center">
                   No items yet.{' '}
-                  <button onClick={handleAddItem} className="text-primary font-bold hover:underline">
+                  <button
+                    onClick={handleAddItem}
+                    className="text-primary font-bold hover:underline"
+                  >
                     Add your first item
                   </button>
                 </p>

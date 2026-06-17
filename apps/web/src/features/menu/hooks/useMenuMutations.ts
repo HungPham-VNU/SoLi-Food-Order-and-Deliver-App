@@ -1,5 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { menuApi, type CreateMenuItemDto, type UpdateMenuItemDto, type CreateMenuCategoryDto, type CreateModifierGroupDto, type UpdateModifierGroupDto, type CreateModifierOptionDto, type UpdateModifierOptionDto } from '../api/menu.api';
+import type {
+  CalculateNutritionRequest,
+  MenuItem,
+  SaveNutritionRequest,
+} from '../types';
 import { menuKeys } from './useMenu';
 
 export function useCreateMenuItem(restaurantId: string) {
@@ -123,6 +128,54 @@ export function useDeleteModifierOption(menuItemId: string, groupId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: menuKeys.modifierGroups(menuItemId) });
       qc.invalidateQueries({ queryKey: menuKeys.modifierGroup(menuItemId, groupId) });
+    },
+  });
+}
+
+type AnalyzeNutritionVariables =
+  | string
+  | {
+      menuItemId?: string;
+      recipeText: string;
+    };
+
+export function useAnalyzeNutrition(defaultMenuItemId?: string) {
+  return useMutation({
+    mutationFn: (variables: AnalyzeNutritionVariables) => {
+      const menuItemId =
+        typeof variables === 'string'
+          ? defaultMenuItemId
+          : (variables.menuItemId ?? defaultMenuItemId);
+      const recipeText =
+        typeof variables === 'string' ? variables : variables.recipeText;
+
+      if (!menuItemId) {
+        throw new Error('Save this item before analyzing the recipe.');
+      }
+
+      return menuApi.analyzeNutrition(menuItemId, recipeText);
+    },
+  });
+}
+
+export function useCalculateNutrition(menuItemId: string) {
+  return useMutation({
+    mutationFn: (dto: CalculateNutritionRequest) =>
+      menuApi.calculateNutrition(menuItemId, dto),
+  });
+}
+
+export function useSaveNutrition(menuItemId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: SaveNutritionRequest) =>
+      menuApi.saveNutrition(menuItemId, dto),
+    onSuccess: (nutrition) => {
+      qc.setQueryData<MenuItem>(menuKeys.item(menuItemId), (item) =>
+        item ? { ...item, nutrition } : item,
+      );
+      qc.invalidateQueries({ queryKey: menuKeys.item(menuItemId) });
+      qc.invalidateQueries({ queryKey: menuKeys.nutritionAnalysis(menuItemId) });
     },
   });
 }

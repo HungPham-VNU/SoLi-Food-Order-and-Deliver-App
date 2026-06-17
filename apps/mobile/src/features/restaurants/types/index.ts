@@ -42,6 +42,18 @@ export interface MenuItem {
   status: 'available' | 'unavailable' | 'out_of_stock';
   imageUrl?: string;
   tags?: string[];
+  nutrition?: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber: number | null;
+    sugar: number | null;
+    sodium: number | null;
+    source: 'AI_ESTIMATED' | 'MANUALLY_ENTERED' | 'VERIFIED_BY_RESTAURANT';
+    verifiedByRestaurant: boolean;
+    disclaimer: string;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -155,6 +155,16 @@ const baseEnvSchema = z.object({
   FIREBASE_SERVICE_ACCOUNT_PATH: z.string().optional(),
 
   // ---------------------------------------------------------------------------
+  // AI nutrition extraction via Ollama
+  // ---------------------------------------------------------------------------
+  OLLAMA_BASE_URL: z.string().trim().url().default('https://ollama.com'),
+  OLLAMA_MODEL: z.string().trim().min(1).default('gpt-oss:20b'),
+  OLLAMA_API_KEY: z.preprocess(
+    emptyStringToUndefined,
+    z.string().trim().default(''),
+  ),
+
+  // ---------------------------------------------------------------------------
   // Observability - optional. When absent, OpenTelemetry exporters stay disabled
   // and the app continues to run with local structured JSON logs.
   // ---------------------------------------------------------------------------

@@ -62,6 +62,23 @@ There are two seeding options available:
   $ pnpm run db:seed:rich
   ```
 
+### USDA Foundation Foods nutrition data
+
+The nutrition analyzer can import USDA FoodData Central Foundation Foods
+(`2026-04-30`) into `nutrition_foods`. Run these commands from the repository
+root after migrations are applied:
+
+```powershell
+New-Item -ItemType Directory -Force .tmp\usda
+curl.exe -L "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_foundation_food_csv_2026-04-30.zip" -o ".tmp\usda\FoodData_Central_foundation_food_csv_2026-04-30.zip"
+Expand-Archive -Force ".tmp\usda\FoodData_Central_foundation_food_csv_2026-04-30.zip" ".tmp\usda\foundation_food_csv_2026-04-30"
+pnpm --filter api db:seed:nutrition:usda
+```
+
+The import uses `foundation_food.csv` as the allow-list, joins
+`food.csv`, `food_nutrient.csv`, and `food_category.csv`, then imports rows
+with complete calories, protein, carbohydrate, and fat values per 100g.
+
 ## Compile and run the project
 
 ```bash
@@ -87,6 +104,10 @@ $ pnpm run test:e2e
 # test coverage
 $ pnpm run test:cov
 ```
+
+For local development, `test:e2e` prepares and uses a dedicated E2E database
+(`food_order_test` by default) so test resets do not touch the normal dev
+database.
 
 ## Deployment
 

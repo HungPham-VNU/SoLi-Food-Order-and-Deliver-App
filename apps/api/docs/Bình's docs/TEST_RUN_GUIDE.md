@@ -2,200 +2,100 @@
 
 ## Prerequisites
 
-| Tool           | Where it runs                             |
-| -------------- | ----------------------------------------- |
-| Docker Desktop | Local machine (starts PostgreSQL + Redis) |
-| Node.js ≥ 20   | Local machine                             |
-| pnpm           | Local machine (`npm i -g pnpm`)           |
+| Tool           | Where it runs                           |
+| -------------- | --------------------------------------- |
+| Docker Desktop | Local machine, for PostgreSQL and Redis |
+| Node.js >= 20  | Local machine                           |
+| pnpm           | Local machine                           |
 
----
+## 1. Start local infrastructure
 
-## 1. Start infrastructure
-
-The API depends on PostgreSQL and Redis, both provided by Docker Compose.
+From the repo root:
 
 ```bash
-# From the repo root
 docker compose up -d
 ```
 
-Verify both containers are healthy:
+Expected containers:
 
-```bash
-docker ps
-# Expected: food_order_db (port 5433) and food_order_redis (port 6379) are Up
+```text
+food_order_db     localhost:5432
+food_order_redis  localhost:6379
 ```
 
----
+## 2. Local E2E database isolation
 
-## 2. Configure the test database
+Local E2E tests reset database state, so they must not use the normal
+development database (`food_order_db`).
 
-E2E tests wipe and re-seed data on every run.  
-**Strongly recommended**: use a dedicated test database so your dev data is safe.
-
-### Option A — Dedicated test database (recommended)
-
-Connect to the running Postgres container and create the database:
-
-```bash
-docker exec -it food_order_db psql -U food_order -c "CREATE DATABASE food_order_test;"
-```
-
-Create `apps/api/.env.test` with the test DB URL:
+The test runner uses `TEST_DATABASE_URL` when it is set. If it is not set, local
+non-CI runs derive a dedicated test database from `DATABASE_URL`:
 
 ```env
-TEST_DATABASE_URL=postgresql://food_order:foodordersecret@localhost:5433/food_order_test
-BETTER_AUTH_SECRET=any-secret-value-for-tests
-BETTER_AUTH_URL=http://localhost:3000
-REDIS_HOST=localhost
-REDIS_PORT=6379
+DATABASE_URL=postgresql://food_order:foodordersecret@localhost:5432/food_order_db
+# local E2E derives:
+TEST_DATABASE_URL=postgresql://food_order:foodordersecret@localhost:5432/food_order_test
 ```
 
-### Option B — Share the dev database (quick start, destructive)
+The derived or configured test database name must include `test` or `e2e`.
 
-If you don't mind test runs clearing your dev data, skip `.env.test`.  
-Tests will fall back to `DATABASE_URL` from `apps/api/.env`.
+To override the default locally, create `apps/api/.env.test.local`:
 
----
+```env
+TEST_DATABASE_URL=postgresql://food_order:foodordersecret@localhost:5432/food_order_e2e
+```
 
-## 3. Run database migrations
+## 3. Prepare the local test database
 
-Migrations must be applied to the test database before the first run.
+From `apps/api`:
 
 ```bash
-cd apps/api
-
-# Run against the default DATABASE_URL (dev DB)
-pnpm db:migrate
-
-# To run against the test DB, prefix with the TEST_DATABASE_URL
-TEST_DATABASE_URL=postgresql://food_order:foodordersecret@localhost:5433/food_order_test \
-  DATABASE_URL=postgresql://food_order:foodordersecret@localhost:5433/food_order_test \
-  pnpm db:migrate
+pnpm run db:test:prepare
 ```
 
-> **Note**: `drizzle.config.ts` reads `DATABASE_URL`. The simplest approach is to
-> temporarily set `DATABASE_URL` to the test DB URL when running migrations for the
-> first time, then reset it back.
+This command:
 
----
+1. Loads local env files.
+2. Creates the dedicated test database if it does not exist.
+3. Runs `drizzle-kit push` against the test database.
+4. Ensures the search extensions (`unaccent`, `pg_trgm`) are installed.
 
-## 4. Install dependencies
+`pnpm run test:e2e` runs this preparation step automatically for local
+development and skips it when `CI=true` or `GITHUB_ACTIONS=true`.
+
+## 4. Run E2E tests
+
+From `apps/api`:
 
 ```bash
-# From the repo root (pnpm workspace)
-pnpm install
+pnpm run test:e2e
 ```
 
----
-
-## 5. Run the E2E tests
+Run one spec:
 
 ```bash
-cd apps/api
-
-# Run all E2E tests
-pnpm test:e2e
-
-# Run a single spec file
-pnpm test:e2e --testPathPattern=modifiers
-
-# Run with verbose output
-pnpm test:e2e --verbose
+pnpm run test:e2e --testPathPattern=modifiers
 ```
 
-The command that runs is:
+The Jest config uses `maxWorkers: 1` because suites reset shared test data.
 
-```
-jest --config ./test/jest-e2e.json
-```
+## 5. Test lifecycle
 
-Tests run sequentially (`maxWorkers: 1`) because each suite resets the database.
-
----
-
-## 6. What happens during a test run
-
-```
-1. env-setup.ts loads .env.test (or .env as fallback)
-2. Each test spec:
-   a. createTestApp()   → boots the full NestJS app with MockAuthGuard
-   b. resetDb()          → deletes ordering snapshots + restaurants (cascades)
-   c. seedBaseRestaurant() → inserts one restaurant owned by the test user
-   d. Tests run (create data via HTTP, assert via HTTP + DB helpers)
-   e. teardownTestApp()  → closes the NestJS app
+```text
+1. test:e2e prepares the local test DB when not running in CI.
+2. env-setup.ts points DATABASE_URL at the dedicated E2E database.
+3. Each suite boots the real NestJS app.
+4. resetDb() clears E2E-owned rows.
+5. The suite seeds the data it needs and runs HTTP assertions.
+6. teardownTestApp() closes the app.
 ```
 
----
+## Troubleshooting
 
-## 7. Troubleshooting
-
-| Symptom                                 | Cause                                   | Fix                                                              |
-| --------------------------------------- | --------------------------------------- | ---------------------------------------------------------------- |
-| `DATABASE_URL is not defined`           | No .env file loaded                     | Create `apps/api/.env` or `.env.test`                            |
-| `connect ECONNREFUSED 127.0.0.1:5433`   | PostgreSQL not running                  | `docker compose up -d`                                           |
-| `relation "restaurants" does not exist` | Migrations not applied                  | Run `pnpm db:migrate` against the test DB                        |
-| `ECONNREFUSED 127.0.0.1:6379`           | Redis not running                       | `docker compose up -d`                                           |
-| **All tests get 401 Unauthorized**      | MockAuthGuard not overriding real guard | See Authentication Override issue below                          |
-| Tests conflict with each other          | Running in parallel                     | `maxWorkers: 1` is set in `jest-e2e.json` — should be sequential |
-
-### Known Issue: Authentication Override
-
-**Problem:**  
-The `@thallesp/nestjs-better-auth` guard cannot be fully overridden in the test environment, causing all authenticated requests to fail with 401.
-
-**Root Cause:**  
-The auth module registers its guard in a way that bypasses standard NestJS provider override mechanisms. This is particularly challenging in ESM + testing module context.
-
-**Current Workarounds:**
-
-1. **Temporarily disable auth in the API** (during development):
-   - Remove `@Guard(AuthGuard)` decorators from controller methods you want to test
-   - Or set a feature flag in the AppModule to skip auth registration
-   - **Not recommended for production test verification**
-
-2. **Run tests against a deployed instance with real auth** (CI/production):
-   - Deploy the API to a test environment
-   - Obtain real JWT tokens via the auth flow
-   - Pass tokens in `Authorization: Bearer <token>` headers instead of mock headers
-   - Update the test helper functions to use real tokens
-
-3. **Switch to Keycloak or mock-server for auth** (longer term):
-   - Replace `@thallesp/nestjs-better-auth` with a more test-friendly auth library
-   - Or use a dedicated mock OAuth2 server that Jest can communicate with
-
-**Recommended Solution (Next Step):**  
-Create a feature flag (`TEST_MODE_DISABLE_AUTH` env var) in `AppModule` that allows you to conditionally skip `AuthModule` registration during tests. Then update `app-factory.ts` to set this flag and manually register a simple mock auth service instead of importing `AppModule` directly.
-
----
-
-## 8. CI integration
-
-```yaml
-# Example GitHub Actions step
-- name: Start infrastructure
-  run: docker compose up -d
-
-- name: Wait for Postgres
-  run: |
-    for i in {1..30}; do
-      docker exec food_order_db pg_isready -U food_order && break
-      sleep 1
-    done
-
-- name: Run migrations
-  working-directory: apps/api
-  env:
-    DATABASE_URL: postgresql://food_order:foodordersecret@localhost:5433/food_order_test
-  run: pnpm db:migrate
-
-- name: Run E2E tests
-  working-directory: apps/api
-  env:
-    TEST_DATABASE_URL: postgresql://food_order:foodordersecret@localhost:5433/food_order_test
-    BETTER_AUTH_SECRET: ci-secret
-    BETTER_AUTH_URL: http://localhost:3000
-    REDIS_HOST: localhost
-    REDIS_PORT: 6379
-  run: pnpm test:e2e
-```
+| Symptom                                     | Cause                                    | Fix                         |
+| ------------------------------------------- | ---------------------------------------- | --------------------------- |
+| `connect ECONNREFUSED 127.0.0.1:5432`       | PostgreSQL is not running                | `docker compose up -d`      |
+| `database "food_order_test" does not exist` | Test DB was not prepared                 | `pnpm run db:test:prepare`  |
+| `relation "restaurants" does not exist`     | Schema was not pushed to the test DB     | `pnpm run db:test:prepare`  |
+| `ECONNREFUSED 127.0.0.1:6379`               | Redis is not running                     | `docker compose up -d`      |
+| Local E2E refuses to run                    | DB name does not include `test` or `e2e` | Use a dedicated test DB URL |

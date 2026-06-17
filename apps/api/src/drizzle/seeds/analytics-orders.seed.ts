@@ -1,13 +1,23 @@
 import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import {
+  getNodePostgresSslConfig,
+  requireDatabaseUrl,
+} from '../postgres-connection';
+import {
   orders,
   orderItems,
   orderStatusLogs,
 } from '../../module/ordering/order/order.schema';
 import type { CancellationReason } from '../../module/ordering/order/order.schema';
 
-const db = drizzle(process.env.DATABASE_URL!);
+const databaseUrl = requireDatabaseUrl();
+const db = drizzle({
+  connection: {
+    connectionString: databaseUrl,
+    ssl: getNodePostgresSslConfig(databaseUrl),
+  },
+});
 
 const RESTAURANT_ID = '722b1275-7f60-418c-8f06-03caa3d891a5';
 const CUSTOMER_ID = '22222222-2222-4222-8222-222222222222';

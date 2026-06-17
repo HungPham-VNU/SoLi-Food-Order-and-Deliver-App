@@ -273,6 +273,36 @@ export class MenuItemResponseDto {
   })
   tags?: string[] | null;
 
+  @ApiPropertyOptional({
+    example: {
+      servings: 2,
+      calories: 660,
+      protein: 55,
+      carbs: 45,
+      fat: 21,
+      fiber: null,
+      sugar: null,
+      sodium: null,
+      source: 'AI_ESTIMATED',
+      verifiedByRestaurant: true,
+      disclaimer:
+        'Nutrition values are estimates based on the provided recipe and ingredient database. Actual values may vary depending on ingredients, portion size, and cooking method.',
+    },
+  })
+  nutrition?: {
+    servings: number;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber: number | null;
+    sugar: number | null;
+    sodium: number | null;
+    source: 'AI_ESTIMATED' | 'MANUALLY_ENTERED' | 'VERIFIED_BY_RESTAURANT';
+    verifiedByRestaurant: boolean;
+    disclaimer: string;
+  } | null;
+
   @ApiProperty({ type: String, format: 'date-time' })
   createdAt!: Date;
 

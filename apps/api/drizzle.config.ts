@@ -1,28 +1,8 @@
 import { defineConfig } from 'drizzle-kit';
+import { withRequiredSslMode } from './src/drizzle/postgres-connection';
 
 const baseUrl = process.env.DATABASE_URL!;
-
-const LOCAL_HOSTS = new Set([
-  'localhost',
-  '127.0.0.1',
-  '::1',
-  'host.docker.internal',
-  'postgres',
-]);
-
-function isLocalDatabase(url: string): boolean {
-  try {
-    return LOCAL_HOSTS.has(new URL(url).hostname);
-  } catch {
-    return false;
-  }
-}
-
-const dbUrl = isLocalDatabase(baseUrl)
-  ? baseUrl
-  : baseUrl.includes('?')
-    ? `${baseUrl}&sslmode=require`
-    : `${baseUrl}?sslmode=require`;
+const dbUrl = withRequiredSslMode(baseUrl);
 
 export default defineConfig({
   out: './src/drizzle/out',

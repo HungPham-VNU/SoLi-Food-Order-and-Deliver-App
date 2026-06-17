@@ -11,9 +11,19 @@
 
 import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
+import {
+  getNodePostgresSslConfig,
+  requireDatabaseUrl,
+} from '../postgres-connection';
 import { appSettings } from '../../module/ordering/common/app-settings.schema';
 
-const db = drizzle(process.env.DATABASE_URL!);
+const databaseUrl = requireDatabaseUrl();
+const db = drizzle({
+  connection: {
+    connectionString: databaseUrl,
+    ssl: getNodePostgresSslConfig(databaseUrl),
+  },
+});
 
 async function seed() {
   const rows = [

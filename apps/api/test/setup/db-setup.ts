@@ -4,9 +4,8 @@
  * Provides a shared Drizzle client for the test database plus helpers for
  * resetting and seeding data before each test suite.
  *
- * All operations go through the ORM — no psql CLI required.
- * The DB is the same PostgreSQL instance that Docker Compose starts; you can
- * point TEST_DATABASE_URL at a separate "test" database if you prefer isolation.
+ * All operations go through the ORM. The Jest environment setup points
+ * DATABASE_URL at the dedicated E2E database before tests import this module.
  *
  * Delete order respects FK constraints:
  *   ordering_menu_item_snapshots (no FK — cross-BC)
@@ -61,11 +60,9 @@ let _db: NodePgDatabase<typeof schema> | null = null;
 
 export function getTestDb(): NodePgDatabase<typeof schema> {
   if (_db) return _db;
-  const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
+  const url = process.env.DATABASE_URL;
   if (!url) {
-    throw new Error(
-      'Set TEST_DATABASE_URL (or DATABASE_URL) before running E2E tests.',
-    );
+    throw new Error('DATABASE_URL is not configured for E2E tests.');
   }
   _db = drizzle({ connection: { connectionString: url } });
   return _db;
@@ -78,7 +75,7 @@ export function getTestDb(): NodePgDatabase<typeof schema> {
  * Cascade-deletes their sessions and accounts automatically.
  *
  * Deliberately targets by email rather than deleting ALL users so this helper
- * is safe to run against a shared dev database that may have real accounts.
+ * stays scoped to the identities created by the E2E suites.
  */
 export async function resetUsers(): Promise<void> {
   const db = getTestDb();
@@ -148,6 +145,7 @@ export async function ensureExtensions(): Promise<void> {
   const db = getTestDb();
   await db.execute(sql`CREATE EXTENSION IF NOT EXISTS unaccent`);
   await db.execute(sql`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
+  await db.execute(sql`CREATE EXTENSION IF NOT EXISTS vector`);
 }
 
 export async function seedBaseRestaurant(ownerId: string): Promise<void> {

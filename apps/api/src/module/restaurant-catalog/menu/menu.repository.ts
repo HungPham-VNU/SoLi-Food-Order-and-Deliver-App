@@ -17,6 +17,8 @@ import type {
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '@/drizzle/schema';
+import { menuItemNutrition } from '@/module/nutrition/domain/nutrition.schema';
+import { NUTRITION_DISCLAIMER } from '@/module/nutrition/types/nutrition.types';
 
 // PostgreSQL unique-constraint violation error code.
 const PG_UNIQUE_VIOLATION = '23505';
@@ -37,6 +39,22 @@ export interface PaginatedMenuItems {
   data: MenuItem[];
   total: number;
 }
+
+export type MenuItemDetail = MenuItem & {
+  nutrition?: {
+    servings: number;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber: number | null;
+    sugar: number | null;
+    sodium: number | null;
+    source: 'AI_ESTIMATED' | 'MANUALLY_ENTERED' | 'VERIFIED_BY_RESTAURANT';
+    verifiedByRestaurant: boolean;
+    disclaimer: string;
+  } | null;
+};
 
 @Injectable()
 export class MenuRepository {
@@ -86,13 +104,43 @@ export class MenuRepository {
     };
   }
 
-  async findById(id: string): Promise<MenuItem | null> {
+  async findById(id: string): Promise<MenuItemDetail | null> {
     const result = await this.db
-      .select()
+      .select({
+        item: menuItems,
+        nutrition: menuItemNutrition,
+      })
       .from(menuItems)
+      .leftJoin(
+        menuItemNutrition,
+        and(
+          eq(menuItemNutrition.menuItemId, menuItems.id),
+          eq(menuItemNutrition.verifiedByRestaurant, true),
+        ),
+      )
       .where(eq(menuItems.id, id))
       .limit(1);
-    return result[0] ?? null;
+    const row = result[0];
+    if (!row) return null;
+
+    return {
+      ...row.item,
+      nutrition: row.nutrition
+        ? {
+            servings: row.nutrition.servings,
+            calories: row.nutrition.calories,
+            protein: row.nutrition.protein,
+            carbs: row.nutrition.carbs,
+            fat: row.nutrition.fat,
+            fiber: row.nutrition.fiber,
+            sugar: row.nutrition.sugar,
+            sodium: row.nutrition.sodium,
+            source: row.nutrition.source,
+            verifiedByRestaurant: row.nutrition.verifiedByRestaurant,
+            disclaimer: NUTRITION_DISCLAIMER,
+          }
+        : null,
+    };
   }
 
   async create(dto: CreateMenuItemDto): Promise<MenuItem> {

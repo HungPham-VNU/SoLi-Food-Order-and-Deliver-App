@@ -61,6 +61,10 @@
 import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 
+import {
+  getNodePostgresSslConfig,
+  requireDatabaseUrl,
+} from '../postgres-connection';
 import { user } from '../../module/auth/auth.schema';
 import {
   restaurants,
@@ -85,7 +89,13 @@ import {
   couponCodes,
 } from '../../module/promotion/domain/promotion.schema';
 
-const db = drizzle(process.env.DATABASE_URL!);
+const databaseUrl = requireDatabaseUrl();
+const db = drizzle({
+  connection: {
+    connectionString: databaseUrl,
+    ssl: getNodePostgresSslConfig(databaseUrl),
+  },
+});
 
 // ─── Fixed IDs ────────────────────────────────────────────────────────────────
 

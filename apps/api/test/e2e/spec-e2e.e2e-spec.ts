@@ -13,7 +13,7 @@
  *  - All state changes go through HTTP (no direct DB mutations except role grants).
  *  - DB helpers are used ONLY for assertions, not for seeding business data.
  *  - Extra actors (customer, shipper, admin) use SPEC_* emails deleted in
- *    beforeAll/afterAll to avoid polluting the dev database.
+ *    beforeAll/afterAll to keep test data scoped to this suite.
  *  - delay(200) is required after every event-firing HTTP call (restaurant
  *    create/update, zone create, menu item create/update) to let async
  *    projectors finish before assertions read ACL snapshots.

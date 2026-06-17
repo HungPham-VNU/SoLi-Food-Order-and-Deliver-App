@@ -55,4 +55,34 @@ describe('environment schema observability settings', () => {
       'Authorization=Basic%20base64-instance-id-and-token',
     );
   });
+
+  it('trims Ollama configuration values', () => {
+    const env = validate({
+      ...baseConfig,
+      OLLAMA_BASE_URL: ' https://ollama.com ',
+      OLLAMA_MODEL: ' gemma4:31b-cloud ',
+      OLLAMA_API_KEY: ' test-key ',
+    });
+
+    expect(env.OLLAMA_BASE_URL).toBe('https://ollama.com');
+    expect(env.OLLAMA_MODEL).toBe('gemma4:31b-cloud');
+    expect(env.OLLAMA_API_KEY).toBe('test-key');
+  });
+
+  it('defaults Ollama to direct cloud settings', () => {
+    const env = validate(baseConfig);
+
+    expect(env.OLLAMA_BASE_URL).toBe('https://ollama.com');
+    expect(env.OLLAMA_MODEL).toBe('gpt-oss:20b');
+    expect(env.OLLAMA_API_KEY).toBe('');
+  });
+
+  it('allows an empty Ollama API key at startup', () => {
+    const env = validate({
+      ...baseConfig,
+      OLLAMA_API_KEY: '',
+    });
+
+    expect(env.OLLAMA_API_KEY).toBe('');
+  });
 });

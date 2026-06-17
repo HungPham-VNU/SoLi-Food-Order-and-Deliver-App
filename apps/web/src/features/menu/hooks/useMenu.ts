@@ -6,6 +6,7 @@ export const menuKeys = {
   items: (restaurantId: string) => ['menu', 'items', restaurantId] as const,
   item: (id: string) => ['menu', 'item', id] as const,
   categories: (restaurantId: string) => ['menu', 'categories', restaurantId] as const,
+  nutritionAnalysis: (menuItemId: string) => ['menu', 'nutritionAnalysis', menuItemId] as const,
   modifierGroups: (menuItemId: string) => ['menu', 'modifierGroups', menuItemId] as const,
   modifierGroup: (menuItemId: string, groupId: string) => ['menu', 'modifierGroup', menuItemId, groupId] as const,
 };
@@ -31,6 +32,14 @@ export function useMenuItem(id: string | undefined) {
     queryKey: menuKeys.item(id ?? ''),
     queryFn: () => menuApi.getItem(id!),
     enabled: !!id,
+  });
+}
+
+export function useMenuItemNutritionAnalysis(menuItemId: string | undefined) {
+  return useQuery({
+    queryKey: menuKeys.nutritionAnalysis(menuItemId ?? ''),
+    queryFn: () => menuApi.getLatestNutritionAnalysis(menuItemId!),
+    enabled: !!menuItemId,
   });
 }
 

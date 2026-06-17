@@ -264,6 +264,49 @@ export function MenuItemDetailScreen({
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
       >
         <View className="flex-col gap-6">
+          {item.nutrition && (
+            <View className="bg-surface-container-lowest rounded-xl p-6 shadow-sm">
+              <Text className="font-jakarta-sans text-xl font-semibold text-on-surface mb-4">
+                Nutrition
+              </Text>
+              <View className="flex-row flex-wrap gap-3">
+                <View className="min-w-[45%] flex-1 rounded-xl bg-surface-container-low p-4">
+                  <Text className="text-xs text-on-surface-variant">
+                    Calories
+                  </Text>
+                  <Text className="font-jakarta-sans text-xl font-bold text-on-surface mt-1">
+                    {item.nutrition.calories} kcal
+                  </Text>
+                </View>
+                <View className="min-w-[45%] flex-1 rounded-xl bg-surface-container-low p-4">
+                  <Text className="text-xs text-on-surface-variant">
+                    Protein
+                  </Text>
+                  <Text className="font-jakarta-sans text-xl font-bold text-on-surface mt-1">
+                    {item.nutrition.protein} g
+                  </Text>
+                </View>
+                <View className="min-w-[45%] flex-1 rounded-xl bg-surface-container-low p-4">
+                  <Text className="text-xs text-on-surface-variant">
+                    Carbs
+                  </Text>
+                  <Text className="font-jakarta-sans text-xl font-bold text-on-surface mt-1">
+                    {item.nutrition.carbs} g
+                  </Text>
+                </View>
+                <View className="min-w-[45%] flex-1 rounded-xl bg-surface-container-low p-4">
+                  <Text className="text-xs text-on-surface-variant">Fat</Text>
+                  <Text className="font-jakarta-sans text-xl font-bold text-on-surface mt-1">
+                    {item.nutrition.fat} g
+                  </Text>
+                </View>
+              </View>
+              <Text className="mt-4 text-xs leading-5 text-on-surface-variant">
+                {item.nutrition.disclaimer}
+              </Text>
+            </View>
+          )}
+
           {/* Modifier Groups */}
           {modifierGroups?.map((group) => (
             <View

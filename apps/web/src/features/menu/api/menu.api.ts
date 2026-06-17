@@ -1,5 +1,17 @@
 import { apiClient } from '@/lib/api-client';
-import type { MenuItem, MenuCategory, MenuItemListResponse, ModifierGroup, ModifierOption } from '../types';
+import type {
+  AnalyzeRecipeResponse,
+  CalculateNutritionRequest,
+  CalculateNutritionResponse,
+  MenuCategory,
+  MenuItem,
+  MenuItemListResponse,
+  MenuItemNutrition,
+  MenuItemNutritionAnalysis,
+  ModifierGroup,
+  ModifierOption,
+  SaveNutritionRequest,
+} from '../types';
 
 export interface CreateMenuItemDto {
   restaurantId: string;
@@ -116,4 +128,35 @@ export const menuApi = {
 
   deleteModifierOption: (menuItemId: string, groupId: string, optionId: string) =>
     apiClient.delete(`/api/menu-items/${menuItemId}/modifier-groups/${groupId}/options/${optionId}`),
+
+  analyzeNutrition: (menuItemId: string, recipeText: string) =>
+    apiClient
+      .post<AnalyzeRecipeResponse>(
+        `/api/restaurant/menu-items/${menuItemId}/nutrition/analyze-recipe`,
+        { recipeText },
+      )
+      .then((r) => r.data),
+
+  getLatestNutritionAnalysis: (menuItemId: string) =>
+    apiClient
+      .get<MenuItemNutritionAnalysis | null>(
+        `/api/restaurant/menu-items/${menuItemId}/nutrition/latest`,
+      )
+      .then((r) => r.data),
+
+  calculateNutrition: (menuItemId: string, dto: CalculateNutritionRequest) =>
+    apiClient
+      .post<CalculateNutritionResponse>(
+        `/api/restaurant/menu-items/${menuItemId}/nutrition/calculate`,
+        dto,
+      )
+      .then((r) => r.data),
+
+  saveNutrition: (menuItemId: string, dto: SaveNutritionRequest) =>
+    apiClient
+      .put<MenuItemNutrition>(
+        `/api/restaurant/menu-items/${menuItemId}/nutrition`,
+        dto,
+      )
+      .then((r) => r.data),
 };

@@ -5,7 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventBus } from '@nestjs/cqrs';
-import { MenuRepository, type PaginatedMenuItems } from './menu.repository';
+import {
+  MenuRepository,
+  type MenuItemDetail,
+  type PaginatedMenuItems,
+} from './menu.repository';
 import type {
   CreateMenuItemDto,
   UpdateMenuItemDto,
@@ -61,7 +65,7 @@ export class MenuService {
     });
   }
 
-  async findOne(id: string): Promise<MenuItem> {
+  async findOne(id: string): Promise<MenuItemDetail> {
     const item = await this.repo.findById(id);
     if (!item) {
       throw new NotFoundException(`Menu item ${id} not found`);

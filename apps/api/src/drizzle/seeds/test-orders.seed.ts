@@ -8,13 +8,23 @@
 import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import {
+  getNodePostgresSslConfig,
+  requireDatabaseUrl,
+} from '../postgres-connection';
+import {
   orders,
   orderItems,
   orderStatusLogs,
 } from '../../module/ordering/order/order.schema';
 import type { OrderModifier } from '../../module/ordering/order/order.schema';
 
-const db = drizzle(process.env.DATABASE_URL!);
+const databaseUrl = requireDatabaseUrl();
+const db = drizzle({
+  connection: {
+    connectionString: databaseUrl,
+    ssl: getNodePostgresSslConfig(databaseUrl),
+  },
+});
 
 // Fixed test IDs from main seed
 const RESTAURANT_ID = 'fe8b2648-2260-4bc5-9acd-d88972148c78'; // Phở Bắc

@@ -8,8 +8,12 @@ import { DietaryTagsCard } from '@/features/menu/components/create/DietaryTagsCa
 import { MediaUploadCard } from '@/features/menu/components/create/MediaUploadCard';
 import { MarketVisibilityCard } from '@/features/menu/components/create/MarketVisibilityCard';
 import { ModifiersCard } from '@/features/menu/components/create/ModifiersCard';
+import { NutritionAssistantCard } from '@/features/menu/components/create/NutritionAssistantCard';
 import { CreateMenuItemFooter } from '@/features/menu/components/create/CreateMenuItemFooter';
-import { createMenuItemSchema, type CreateMenuItemFormValues } from '@/features/menu/schemas/menu.schema';
+import {
+  createMenuItemSchema,
+  type CreateMenuItemFormValues,
+} from '@/features/menu/schemas/menu.schema';
 import { useUpdateMenuItem } from '@/features/menu/hooks/useMenuMutations';
 import { useMenuCategories, useMenuItem } from '@/features/menu/hooks/useMenu';
 import { useMyRestaurant } from '@/features/restaurant/hooks/useRestaurants';
@@ -24,7 +28,11 @@ export default function EditMenuItemPage() {
   const { data: categories = [] } = useMenuCategories(restaurantId);
   const { data: editItem, isLoading: editItemLoading } = useMenuItem(itemId);
 
-  const { mutate: updateItem, isPending: updatePending, error: updateError } = useUpdateMenuItem(restaurantId ?? '');
+  const {
+    mutate: updateItem,
+    isPending: updatePending,
+    error: updateError,
+  } = useUpdateMenuItem(restaurantId ?? '');
 
   const methods = useForm<CreateMenuItemFormValues>({
     resolver: zodResolver(createMenuItemSchema),
@@ -74,12 +82,15 @@ export default function EditMenuItemPage() {
   if (!restaurant) {
     return (
       <div className="w-full py-2 px-1">
-        <h1 className="text-4xl font-extrabold text-foreground tracking-tight mb-4">Edit Item</h1>
+        <h1 className="text-4xl font-extrabold text-foreground tracking-tight mb-4">
+          Edit Item
+        </h1>
         <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive">
           <p className="font-bold mb-1">Restaurant not found</p>
           <p className="text-sm">
-            Your restaurant account must be <strong>approved</strong> before you can manage menu items.
-            Check your restaurant status in the database or contact an admin.
+            Your restaurant account must be <strong>approved</strong> before you
+            can manage menu items. Check your restaurant status in the database
+            or contact an admin.
           </p>
           <button
             onClick={() => navigate('/menu')}
@@ -95,10 +106,15 @@ export default function EditMenuItemPage() {
   if (!editItem) {
     return (
       <div className="w-full py-2 px-1">
-        <h1 className="text-4xl font-extrabold text-foreground tracking-tight mb-4">Edit Item</h1>
+        <h1 className="text-4xl font-extrabold text-foreground tracking-tight mb-4">
+          Edit Item
+        </h1>
         <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive">
           <p className="font-bold mb-1">Menu item not found</p>
-          <p className="text-sm">The menu item you're trying to edit doesn't exist or has been deleted.</p>
+          <p className="text-sm">
+            The menu item you're trying to edit doesn't exist or has been
+            deleted.
+          </p>
           <button
             onClick={() => navigate('/menu')}
             className="mt-4 text-sm font-bold underline"
@@ -117,15 +133,25 @@ export default function EditMenuItemPage() {
           onCancel={() => navigate('/menu')}
           onSave={methods.handleSubmit(onSubmit)}
           isEditMode={true}
+          isPending={updatePending}
         />
 
         {updateError && (
-          <p className="text-sm text-destructive mb-4 px-1">{updateError.message}</p>
+          <p className="text-sm text-destructive mb-4 px-1">
+            {updateError.message}
+          </p>
         )}
 
         <div className="grid grid-cols-12 gap-8">
           <div className="col-span-12 lg:col-span-8 space-y-8">
-            <ProductEssenceCard categories={categories} restaurantId={restaurantId!} />
+            <ProductEssenceCard
+              categories={categories}
+              restaurantId={restaurantId!}
+            />
+            <NutritionAssistantCard
+              menuItemId={itemId!}
+              currentNutrition={editItem.nutrition}
+            />
             <DietaryTagsCard />
             <ModifiersCard menuItemId={itemId!} />
           </div>
