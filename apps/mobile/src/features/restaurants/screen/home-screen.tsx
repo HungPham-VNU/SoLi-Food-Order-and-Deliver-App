@@ -7,28 +7,34 @@ import { useAddressStore } from '@/src/features/location';
 import {
   CategoryRail,
   FeaturedRestaurantsSection,
+  HomeAiSearchResults,
   HomeSearchBar,
   HomeSearchResults,
   HomeTopBar,
   SpecialOffersCarousel,
 } from '../components';
 import {
+  useAiSearch,
   useDeliveryEstimates,
   useNearbyRestaurants,
   useUnifiedSearch,
 } from '../api';
 import { useDebouncedValue } from '../hooks';
+import { useSearchModeStore } from '../store';
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const { mode: searchMode, toggleMode: toggleSearchMode } =
+    useSearchModeStore();
   const debouncedQuery = useDebouncedValue(searchQuery, 400).trim();
   const { latitude, longitude } = useAddressStore();
 
   const hasCoordinates = latitude != null && longitude != null;
   const isSearchActive = debouncedQuery.length > 0;
+  const isAiSearchMode = searchMode === 'ai';
 
   const {
     data: restaurantsData,
@@ -51,6 +57,20 @@ export function HomeScreen() {
     q: debouncedQuery,
     latitude,
     longitude,
+    enabled: isSearchActive && !isAiSearchMode,
+  });
+
+  const {
+    data: aiSearchData,
+    isLoading: isAiSearchLoading,
+    error: aiSearchError,
+    refetch: refetchAiSearch,
+    isRefetching: isRefetchingAiSearch,
+  } = useAiSearch({
+    query: debouncedQuery,
+    latitude,
+    longitude,
+    enabled: isSearchActive && isAiSearchMode,
   });
 
   const restaurants = useMemo(
@@ -68,9 +88,23 @@ export function HomeScreen() {
   );
 
   const onRefresh = React.useCallback(() => {
-    void refetchNearby();
-    void refetchSearch();
-  }, [refetchNearby, refetchSearch]);
+    if (!isSearchActive) {
+      void refetchNearby();
+      return;
+    }
+
+    if (isAiSearchMode) {
+      void refetchAiSearch();
+    } else {
+      void refetchSearch();
+    }
+  }, [
+    isAiSearchMode,
+    isSearchActive,
+    refetchAiSearch,
+    refetchNearby,
+    refetchSearch,
+  ]);
 
   const handleRestaurantPress = React.useCallback(
     (restaurantId: string) => {
@@ -96,7 +130,8 @@ export function HomeScreen() {
     Alert.alert('Offer', `Offer clicked: ${offerTitle}`);
   }, []);
 
-  const refreshing = isRefetchingNearby || isRefetchingSearch;
+  const refreshing =
+    isRefetchingNearby || isRefetchingSearch || isRefetchingAiSearch;
 
   return (
     <View className="flex-1 bg-background font-inter text-on-surface">
@@ -118,9 +153,30 @@ export function HomeScreen() {
           />
         }
       >
-        <HomeSearchBar query={searchQuery} onChangeQuery={setSearchQuery} />
+        <HomeSearchBar
+          query={searchQuery}
+          onChangeQuery={setSearchQuery}
+          mode={searchMode}
+          onToggleMode={toggleSearchMode}
+        />
 
-        {isSearchActive ? (
+        {isSearchActive && isAiSearchMode ? (
+          <HomeAiSearchResults
+            query={debouncedQuery}
+            interpretation={aiSearchData?.interpretation}
+            appliedFilters={aiSearchData?.appliedFilters ?? []}
+            restaurants={aiSearchData?.restaurants ?? []}
+            items={aiSearchData?.items ?? []}
+            total={aiSearchData?.total}
+            followUps={aiSearchData?.followUps ?? []}
+            isFallback={aiSearchData?.mode === 'classic_fallback'}
+            isLoading={isAiSearchLoading}
+            hasError={Boolean(aiSearchError)}
+            onRestaurantPress={handleRestaurantPress}
+            onMenuItemPress={handleMenuItemPress}
+            onFollowUpPress={setSearchQuery}
+          />
+        ) : isSearchActive ? (
           <HomeSearchResults
             query={debouncedQuery}
             restaurants={searchData?.restaurants ?? []}

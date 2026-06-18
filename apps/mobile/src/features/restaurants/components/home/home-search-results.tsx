@@ -29,7 +29,7 @@ interface HomeSearchResultsProps {
   onMenuItemPress: (itemId: string) => void;
 }
 
-function RestaurantSearchCard({
+export function RestaurantSearchCard({
   restaurant,
   onPress,
 }: {
@@ -119,7 +119,7 @@ function RestaurantSearchCard({
   );
 }
 
-function SearchItemCard({
+export function SearchItemCard({
   item,
   onPress,
 }: {

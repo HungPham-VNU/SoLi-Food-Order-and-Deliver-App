@@ -3,6 +3,7 @@
 export { HomeScreen } from './screen/home-screen';
 export { RestaurantMenuScreen } from './screen/restaurant-menu-screen';
 export { MenuItemDetailScreen } from './screen/menu-item-detail-screen';
+export * from './store';
 export type {
   Product,
   RelatedProduct,
