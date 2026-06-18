@@ -101,6 +101,7 @@ export const menuItems = pgTable(
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (table) => [
+    index('menu_items_price_idx').on(table.price),
     // GIN index enables efficient array-contains queries on tags, e.g.
     // WHERE 'vegetarian' = ANY(tags) (Issue #15).
     index('menu_items_tags_gin_idx').using('gin', table.tags),

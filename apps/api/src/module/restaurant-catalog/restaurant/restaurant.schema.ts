@@ -68,6 +68,7 @@ export const restaurants = pgTable(
     // Composite index speeds up the most common public query:
     // WHERE is_approved = true AND is_open = true (Issue #14).
     index('restaurants_approved_open_idx').on(table.isApproved, table.isOpen),
+    index('restaurants_rating_idx').on(table.averageRating, table.reviewCount),
   ],
 );
 
