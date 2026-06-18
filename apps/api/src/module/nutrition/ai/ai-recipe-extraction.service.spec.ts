@@ -1,5 +1,6 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
+import { OllamaAiProvider } from '@/module/ai/ollama-ai.provider';
 import { AiRecipeExtractionService } from './ai-recipe-extraction.service';
 
 type OllamaConfigKey = 'OLLAMA_BASE_URL' | 'OLLAMA_MODEL' | 'OLLAMA_API_KEY';
@@ -9,7 +10,7 @@ function buildService(configValues: Partial<Record<OllamaConfigKey, string>>) {
     get: jest.fn((key: OllamaConfigKey) => configValues[key]),
   } as unknown as ConfigService;
 
-  return new AiRecipeExtractionService(config);
+  return new AiRecipeExtractionService(new OllamaAiProvider(config));
 }
 
 function mockOllamaResponse(content: unknown) {

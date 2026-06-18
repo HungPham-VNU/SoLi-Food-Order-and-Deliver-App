@@ -227,6 +227,8 @@ export const menuItemNutrition = pgTable(
   },
   (table) => [
     uniqueIndex('menu_item_nutrition_menu_item_uidx').on(table.menuItemId),
+    index('menu_item_nutrition_protein_idx').on(table.protein),
+    index('menu_item_nutrition_calories_idx').on(table.calories),
   ],
 );
 

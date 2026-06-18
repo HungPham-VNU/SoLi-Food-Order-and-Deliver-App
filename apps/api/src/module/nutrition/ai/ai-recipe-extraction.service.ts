@@ -3,7 +3,7 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { OllamaAiProvider } from '@/module/ai/ollama-ai.provider';
 import {
   extractedRecipeSchema,
   type AiExtractedRecipe,
@@ -14,10 +14,6 @@ import {
   type ExtractedRecipeIngredient,
   type NutritionUnit,
 } from '../types/nutrition.types';
-import {
-  resolveOllamaRuntimeConfig,
-  type OllamaRuntimeConfig,
-} from './ollama.provider';
 
 const EXTRACTION_TIMEOUT_MS = 30_000;
 const MAX_AI_ATTEMPTS = 2;
@@ -185,12 +181,10 @@ const SYSTEM_PROMPT = [
 export class AiRecipeExtractionService {
   private readonly logger = new Logger(AiRecipeExtractionService.name);
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly aiProvider: OllamaAiProvider) {}
 
   async extractRecipe(recipeText: string): Promise<ExtractedRecipe> {
-    const runtimeConfig = this.getRuntimeConfig();
-
-    if (!runtimeConfig.apiKey) {
+    if (!this.aiProvider.isConfigured()) {
       throw new ServiceUnavailableException({
         message:
           'AI analysis service is not configured. Set OLLAMA_API_KEY for Ollama Cloud.',
@@ -202,7 +196,7 @@ export class AiRecipeExtractionService {
 
     for (let attempt = 1; attempt <= MAX_AI_ATTEMPTS; attempt += 1) {
       try {
-        const object = await this.generate(recipeText, runtimeConfig);
+        const object = await this.generate(recipeText);
         return this.normalizeRecipe(object);
       } catch (error) {
         lastError = error;
@@ -221,110 +215,19 @@ export class AiRecipeExtractionService {
     });
   }
 
-  private async generate(
-    recipeText: string,
-    runtimeConfig: OllamaRuntimeConfig,
-  ): Promise<AiExtractedRecipe> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), EXTRACTION_TIMEOUT_MS);
-
-    try {
-      return await this.generateWithCloudOllama(
-        recipeText,
-        runtimeConfig,
-        controller.signal,
-      );
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
-
-  private getRuntimeConfig(): OllamaRuntimeConfig {
-    return resolveOllamaRuntimeConfig({
-      baseURL: this.config.get<string>('OLLAMA_BASE_URL'),
-      apiKey: this.config.get<string>('OLLAMA_API_KEY'),
-      model: this.config.get<string>('OLLAMA_MODEL'),
+  private async generate(recipeText: string): Promise<AiExtractedRecipe> {
+    const response = await this.aiProvider.chat({
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: recipeText },
+      ],
+      timeoutMs: EXTRACTION_TIMEOUT_MS,
+      temperature: 0,
     });
-  }
 
-  private async generateWithCloudOllama(
-    recipeText: string,
-    runtimeConfig: OllamaRuntimeConfig,
-    abortSignal: AbortSignal,
-  ): Promise<AiExtractedRecipe> {
-    const response = await fetch(`${runtimeConfig.endpoint.baseURL}/chat`, {
-      method: 'POST',
-      headers: this.ollamaHeaders(runtimeConfig),
-      body: JSON.stringify({
-        model: runtimeConfig.model,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: recipeText },
-        ],
-        stream: false,
-        think: false,
-        // Ollama Cloud does not currently support structured outputs. Validate
-        // the prompt-shaped JSON locally after receiving the response.
-        options: {
-          temperature: 0,
-        },
-      }),
-      signal: abortSignal,
-    });
-    const responseBody = await this.readOllamaResponse(response);
-
-    if (!response.ok) {
-      throw new Error(
-        `Ollama Cloud API request failed (${response.status}): ${this.ollamaErrorMessage(
-          responseBody,
-          response.statusText,
-        )}`,
-      );
-    }
-
-    const content = responseBody.message?.content;
-    if (!content) {
-      throw new Error('Ollama Cloud API response did not include content.');
-    }
-
-    return extractedRecipeSchema.parse(this.parseOllamaContent(content));
-  }
-
-  private ollamaHeaders(
-    runtimeConfig: OllamaRuntimeConfig,
-  ): Record<string, string> {
-    return {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${runtimeConfig.apiKey}`,
-    };
-  }
-
-  private async readOllamaResponse(
-    response: Response,
-  ): Promise<OllamaChatResponse> {
-    const text = await response.text();
-    if (!text.trim()) {
-      return {};
-    }
-
-    try {
-      return JSON.parse(text) as OllamaChatResponse;
-    } catch {
-      throw new Error(
-        `Ollama Cloud API returned non-JSON response (${response.status}).`,
-      );
-    }
-  }
-
-  private ollamaErrorMessage(
-    responseBody: OllamaChatResponse,
-    fallback: string,
-  ) {
-    if (typeof responseBody.error === 'string') {
-      return responseBody.error;
-    }
-
-    return fallback;
+    return extractedRecipeSchema.parse(
+      this.parseOllamaContent(response.content),
+    );
   }
 
   private parseOllamaContent(content: string): unknown {
@@ -710,11 +613,4 @@ export class AiRecipeExtractionService {
       warnings: recipe.warnings,
     };
   }
-}
-
-interface OllamaChatResponse {
-  message?: {
-    content?: string;
-  };
-  error?: string;
 }
