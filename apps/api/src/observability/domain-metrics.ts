@@ -43,6 +43,28 @@ export const aiSearchBranchHitsCount = meter.createCounter(
   },
 );
 
+export const aiSearchRankingLatencyMs = meter.createHistogram(
+  'api.domain.ai_search.ranking_latency_ms',
+  {
+    description: 'AI search ranking latency in milliseconds',
+    unit: 'ms',
+  },
+);
+
+export const aiSearchRankingCandidatesCount = meter.createHistogram(
+  'api.domain.ai_search.ranking_candidates.count',
+  {
+    description: 'AI search ranking candidate counts',
+  },
+);
+
+export const aiSearchDiversitySuppressedCount = meter.createCounter(
+  'api.domain.ai_search.diversity_suppressed.count',
+  {
+    description: 'AI search results deferred by restaurant diversity',
+  },
+);
+
 export const aiSearchSemanticFallbackCount = meter.createCounter(
   'api.domain.ai_search.semantic_fallback.count',
   {
@@ -123,6 +145,32 @@ export function recordAiSearchBranch(attributes: {
   };
   aiSearchBranchHitsCount.add(attributes.hitCount, metricAttributes);
   aiSearchBranchLatencyMs.record(attributes.latencyMs, metricAttributes);
+}
+
+export function recordAiSearchRanking(attributes: {
+  target: 'items' | 'restaurants';
+  mode: 'legacy' | 'v2';
+  candidateCount: number;
+  outputCount: number;
+  diversitySuppressedCount: number;
+  latencyMs: number;
+}) {
+  const metricAttributes = {
+    target: attributes.target,
+    mode: attributes.mode,
+  };
+
+  aiSearchRankingCandidatesCount.record(
+    attributes.candidateCount,
+    metricAttributes,
+  );
+  aiSearchRankingLatencyMs.record(attributes.latencyMs, metricAttributes);
+  if (attributes.diversitySuppressedCount > 0) {
+    aiSearchDiversitySuppressedCount.add(
+      attributes.diversitySuppressedCount,
+      metricAttributes,
+    );
+  }
 }
 
 export function recordAiSearchSemanticFallback(reason: string) {
