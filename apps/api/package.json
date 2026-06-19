@@ -32,6 +32,7 @@
     "db:seed:rich": "tsx src/drizzle/seeds/rich-catalog.seed.ts",
     "db:seed:adong": "tsx src/drizzle/seeds/restaurant-adong.seed.ts",
     "ai-search:backfill-embeddings": "tsx src/module/restaurant-catalog/search/indexing/ai-search-backfill.ts",
+    "ai-search:refresh-ranking-stats": "tsx src/module/restaurant-catalog/search/ai/ai-search-ranking-stats-refresh.ts",
     "db:seed:admin": "tsx src/drizzle/seeds/admin.seed.ts"
   },
   "dependencies": {

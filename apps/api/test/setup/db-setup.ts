@@ -34,6 +34,10 @@ import { reviews } from '../../src/module/review/domain/review.schema';
 import { notifications } from '../../src/module/notification/domain/notification.schema';
 import { notificationDeliveryLogs } from '../../src/module/notification/domain/notification-delivery-log.schema';
 import { aiSearchEmbeddingJobs } from '../../src/module/restaurant-catalog/search/indexing/ai-search-embedding-job.schema';
+import {
+  aiSearchItemRankingStats,
+  aiSearchRestaurantRankingStats,
+} from '../../src/module/restaurant-catalog/search/ai/ai-search-ranking-stats.schema';
 
 // ─── Test user credentials ────────────────────────────────────────────────────
 //
@@ -113,6 +117,8 @@ export async function resetDb(): Promise<void> {
   await db.delete(couponCodes);
   await db.delete(promotions);
   await db.delete(aiSearchEmbeddingJobs);
+  await db.delete(aiSearchItemRankingStats);
+  await db.delete(aiSearchRestaurantRankingStats);
   await db.delete(restaurants);
   await resetUsers();
 }
@@ -148,6 +154,41 @@ export async function ensureExtensions(): Promise<void> {
   await db.execute(sql`CREATE EXTENSION IF NOT EXISTS unaccent`);
   await db.execute(sql`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
   await db.execute(sql`CREATE EXTENSION IF NOT EXISTS vector`);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS ai_search_item_ranking_stats (
+      menu_item_id UUID PRIMARY KEY,
+      restaurant_id UUID NOT NULL,
+      delivered_order_count_30d INTEGER NOT NULL DEFAULT 0,
+      delivered_order_count_90d INTEGER NOT NULL DEFAULT 0,
+      ordered_quantity_30d INTEGER NOT NULL DEFAULT 0,
+      ordered_quantity_90d INTEGER NOT NULL DEFAULT 0,
+      last_ordered_at TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT now()
+    )
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS ai_search_item_ranking_stats_restaurant_idx
+      ON ai_search_item_ranking_stats (restaurant_id)
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS ai_search_item_ranking_stats_updated_idx
+      ON ai_search_item_ranking_stats (updated_at)
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS ai_search_restaurant_ranking_stats (
+      restaurant_id UUID PRIMARY KEY,
+      delivered_order_count_30d INTEGER NOT NULL DEFAULT 0,
+      delivered_order_count_90d INTEGER NOT NULL DEFAULT 0,
+      ordered_quantity_30d INTEGER NOT NULL DEFAULT 0,
+      ordered_quantity_90d INTEGER NOT NULL DEFAULT 0,
+      last_ordered_at TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT now()
+    )
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS ai_search_restaurant_ranking_stats_updated_idx
+      ON ai_search_restaurant_ranking_stats (updated_at)
+  `);
 }
 
 export async function seedBaseRestaurant(ownerId: string): Promise<void> {

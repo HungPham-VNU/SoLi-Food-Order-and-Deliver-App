@@ -2,6 +2,7 @@ export * from '../module/auth/auth.schema';
 export * from '../module/restaurant-catalog/restaurant/restaurant.schema';
 export * from '../module/restaurant-catalog/menu/menu.schema';
 export * from '../module/restaurant-catalog/search/indexing/ai-search-embedding-job.schema';
+export * from '../module/restaurant-catalog/search/ai/ai-search-ranking-stats.schema';
 export * from '../module/image/image.schema';
 
 // Ordering bounded context — Phase 1 schemas
