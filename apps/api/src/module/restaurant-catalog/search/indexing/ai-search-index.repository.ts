@@ -59,6 +59,7 @@ interface MenuItemSearchDocumentRow {
   carbs: number | null;
   fat: number | null;
   verifiedByRestaurant: boolean | null;
+  ingredients: string[] | null;
 }
 
 interface MenuItemSearchMetadataUpdate {
@@ -550,6 +551,22 @@ export class AiSearchIndexRepository {
         carbs: menuItemNutrition.carbs,
         fat: menuItemNutrition.fat,
         verifiedByRestaurant: menuItemNutrition.verifiedByRestaurant,
+        ingredients: sql<string[]>`COALESCE((
+          SELECT array_agg(DISTINCT ingredient_name ORDER BY ingredient_name)
+          FROM (
+            SELECT trim(COALESCE(corrected_name, extracted_name)) AS ingredient_name
+            FROM nutrition_analysis_ingredients
+            WHERE analysis_session_id = (
+              SELECT id
+              FROM nutrition_analysis_sessions
+              WHERE menu_item_id = ${menuItems.id}
+                AND status = 'SAVED'
+              ORDER BY updated_at DESC, created_at DESC
+              LIMIT 1
+            )
+          ) AS saved_ingredients
+          WHERE ingredient_name <> ''
+        ), ARRAY[]::text[])`,
       })
       .from(menuItems)
       .innerJoin(restaurants, eq(menuItems.restaurantId, restaurants.id))
@@ -571,6 +588,7 @@ export class AiSearchIndexRepository {
       categoryName: row.categoryName,
       cuisineType: row.cuisineType,
       restaurantName: row.restaurantName,
+      ingredients: row.ingredients,
       nutrition: {
         calories: numberOrNull(row.calories),
         protein: numberOrNull(row.protein),

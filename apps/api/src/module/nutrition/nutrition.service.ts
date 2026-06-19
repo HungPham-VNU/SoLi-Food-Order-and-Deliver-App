@@ -36,6 +36,7 @@ import {
   toMenuItemNutritionResponse,
   toReviewIngredientResponse,
   toReviewIngredients,
+  toSavedAnalysisIngredientRows,
   toSaveMenuItemNutritionValues,
 } from './nutrition.mapper';
 import { applyRecipeReviewRules } from './review/nutrition-review.policy';
@@ -185,8 +186,11 @@ export class NutritionService {
 
     const savedNutrition = await this.repo.saveMenuItemNutrition(
       toSaveMenuItemNutritionValues(menuItemId, dto),
+      {
+        analysisSessionId: session.id,
+        ingredients: toSavedAnalysisIngredientRows(session.id, dto),
+      },
     );
-    await this.repo.updateSessionStatus(session.id, 'SAVED');
 
     return toMenuItemNutritionResponse(savedNutrition);
   }

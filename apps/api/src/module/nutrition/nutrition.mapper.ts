@@ -94,6 +94,25 @@ export function toSaveMenuItemNutritionValues(
   };
 }
 
+export function toSavedAnalysisIngredientRows(
+  analysisSessionId: string,
+  dto: SaveMenuItemNutritionDto,
+): NewNutritionAnalysisIngredient[] {
+  return dto.ingredients.map((ingredient) => ({
+    analysisSessionId,
+    rawText: null,
+    extractedName: ingredient.name,
+    correctedName: ingredient.name,
+    quantity: ingredient.quantityGram,
+    unit: 'g',
+    quantityGram: ingredient.quantityGram,
+    matchedNutritionFoodId: ingredient.matchedFoodId ?? null,
+    confidence: 1,
+    requiresConfirmation: false,
+    notes: [],
+  }));
+}
+
 export function toMenuItemNutritionResponse(nutrition: MenuItemNutrition) {
   return {
     servings: nutrition.servings,

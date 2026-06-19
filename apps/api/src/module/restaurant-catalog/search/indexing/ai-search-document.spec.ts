@@ -62,4 +62,28 @@ describe('buildSearchDocument', () => {
     expect(verified.document).toContain('protein');
     expect(verified.contentHash).not.toBe(unverified.contentHash);
   });
+
+  it('includes ingredient names only when nutrition is restaurant verified', () => {
+    const unverified = buildSearchDocument({
+      primaryName: 'Summer Bowl',
+      ingredients: ['uc ga', 'com trang'],
+      nutrition: {
+        verifiedByRestaurant: false,
+      },
+    });
+    const verified = buildSearchDocument({
+      primaryName: 'Summer Bowl',
+      ingredients: ['uc ga', 'com trang'],
+      nutrition: {
+        verifiedByRestaurant: true,
+      },
+    });
+
+    expect(unverified.document).not.toContain('uc');
+    expect(unverified.document).not.toContain('trang');
+    expect(verified.document).toContain('ingredients');
+    expect(verified.document).toContain('uc');
+    expect(verified.document).toContain('trang');
+    expect(verified.contentHash).not.toBe(unverified.contentHash);
+  });
 });

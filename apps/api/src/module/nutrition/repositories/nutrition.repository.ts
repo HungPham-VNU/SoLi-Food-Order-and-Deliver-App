@@ -52,6 +52,11 @@ export interface NutritionIngredientAliasUpsertInput {
   createdBy: string;
 }
 
+export interface SaveMenuItemNutritionOptions {
+  analysisSessionId?: string;
+  ingredients?: NewNutritionAnalysisIngredient[];
+}
+
 @Injectable()
 export class NutritionRepository {
   constructor(
@@ -401,18 +406,21 @@ export class NutritionRepository {
     }));
   }
 
-  async saveMenuItemNutrition(values: {
-    menuItemId: string;
-    servings: number;
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-    fiber?: number | null;
-    sugar?: number | null;
-    sodium?: number | null;
-    verifiedByRestaurant: boolean;
-  }): Promise<MenuItemNutrition> {
+  async saveMenuItemNutrition(
+    values: {
+      menuItemId: string;
+      servings: number;
+      calories: number;
+      protein: number;
+      carbs: number;
+      fat: number;
+      fiber?: number | null;
+      sugar?: number | null;
+      sodium?: number | null;
+      verifiedByRestaurant: boolean;
+    },
+    options: SaveMenuItemNutritionOptions = {},
+  ): Promise<MenuItemNutrition> {
     return this.db.transaction(async (tx) => {
       const [row] = await tx
         .insert(menuItemNutrition)
@@ -437,6 +445,31 @@ export class NutritionRepository {
           },
         })
         .returning();
+
+      if (options.analysisSessionId) {
+        if (options.ingredients) {
+          await tx
+            .delete(nutritionAnalysisIngredients)
+            .where(
+              eq(
+                nutritionAnalysisIngredients.analysisSessionId,
+                options.analysisSessionId,
+              ),
+            );
+          
+          if (options.ingredients.length > 0) {
+            await tx
+              .insert(nutritionAnalysisIngredients)
+              .values(options.ingredients);
+          }
+        }
+
+        await tx
+          .update(nutritionAnalysisSessions)
+          .set({ status: 'SAVED', updatedAt: new Date() })
+          .where(eq(nutritionAnalysisSessions.id, options.analysisSessionId));
+      }
+
       await this.searchIndex.refreshMenuItemSearchMetadata(
         values.menuItemId,
         tx,

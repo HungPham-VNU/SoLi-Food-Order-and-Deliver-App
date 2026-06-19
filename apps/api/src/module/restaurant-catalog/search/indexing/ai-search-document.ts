@@ -22,6 +22,7 @@ export interface SearchDocumentInput {
   categoryName?: string | null;
   cuisineType?: string | null;
   restaurantName?: string | null;
+  ingredients?: string[] | null;
   nutrition?: {
     calories?: number | null;
     protein?: number | null;
@@ -46,6 +47,7 @@ export function buildSearchDocument(
     input.cuisineType,
     input.categoryName,
     ...(input.tags ?? []),
+    buildIngredientText(input.ingredients, input.nutrition),
     buildNutritionText(input.nutrition),
   ];
   const normalized = normalizeSearchText(parts.filter(Boolean).join(' '));
@@ -78,6 +80,23 @@ function appendSynonyms(document: string): string {
   }
 
   return Array.from(tokens).join(' ');
+}
+
+function buildIngredientText(
+  ingredients: SearchDocumentInput['ingredients'],
+  nutrition: SearchDocumentInput['nutrition'],
+): string | null {
+  if (!nutrition?.verifiedByRestaurant || !ingredients?.length) return null;
+
+  const names = Array.from(
+    new Set(
+      ingredients
+        .map((ingredient) => ingredient.trim())
+        .filter((ingredient) => ingredient.length > 0),
+    ),
+  );
+
+  return names.length > 0 ? `ingredients ${names.join(' ')}` : null;
 }
 
 function buildNutritionText(

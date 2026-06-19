@@ -730,7 +730,6 @@ describe('NutritionService', () => {
     const repo = {
       findSessionById: jest.fn().mockResolvedValue(makeSession()),
       saveMenuItemNutrition: jest.fn().mockResolvedValue(savedNutrition),
-      updateSessionStatus: jest.fn().mockResolvedValue(undefined),
     };
     const service = makeService({ repo });
 
@@ -748,25 +747,43 @@ describe('NutritionService', () => {
           carbs: 40,
           fat: 8,
         },
-        ingredients: [],
+        ingredients: [
+          {
+            name: 'uc ga',
+            quantityGram: 100,
+            matchedFoodId: 'food-1',
+          },
+        ],
       },
     );
 
-    expect(repo.saveMenuItemNutrition).toHaveBeenCalledWith({
-      menuItemId,
-      servings: 2,
-      calories: 300,
-      protein: 20,
-      carbs: 40,
-      fat: 8,
-      fiber: null,
-      sugar: null,
-      sodium: null,
-      verifiedByRestaurant: true,
-    });
-    expect(repo.updateSessionStatus).toHaveBeenCalledWith(
-      analysisSessionId,
-      'SAVED',
+    expect(repo.saveMenuItemNutrition).toHaveBeenCalledWith(
+      {
+        menuItemId,
+        servings: 2,
+        calories: 300,
+        protein: 20,
+        carbs: 40,
+        fat: 8,
+        fiber: null,
+        sugar: null,
+        sodium: null,
+        verifiedByRestaurant: true,
+      },
+      {
+        analysisSessionId,
+        ingredients: [
+          expect.objectContaining({
+            analysisSessionId,
+            extractedName: 'uc ga',
+            correctedName: 'uc ga',
+            quantity: 100,
+            quantityGram: 100,
+            unit: 'g',
+            matchedNutritionFoodId: 'food-1',
+          }),
+        ],
+      },
     );
     expect(result).toMatchObject({
       servings: 2,
