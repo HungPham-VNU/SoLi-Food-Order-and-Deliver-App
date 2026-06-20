@@ -1,4 +1,5 @@
 import {
+  useMutation,
   useQueries,
   useQuery,
   useQueryClient,
@@ -249,45 +250,39 @@ export function useUnifiedSearch(params: UnifiedSearchParams) {
 }
 
 interface AiSearchParams {
-  query: string;
   latitude?: number | null;
   longitude?: number | null;
   radiusKm?: number;
   offset?: number;
   limit?: number;
-  enabled?: boolean;
 }
 
 export function useAiSearch(params: AiSearchParams) {
-  const {
-    query,
-    latitude,
-    longitude,
-    radiusKm = 5,
-    offset = 0,
-    limit = 20,
-    enabled = true,
-  } = params;
-  const trimmedQuery = query.trim();
+  const { latitude, longitude, radiusKm = 5, offset = 0, limit = 20 } = params;
   const hasCoords = latitude != null && longitude != null;
-  const body = {
-    query: trimmedQuery,
-    lat: hasCoords ? (latitude ?? undefined) : undefined,
-    lon: hasCoords ? (longitude ?? undefined) : undefined,
-    radiusKm: hasCoords ? radiusKm : undefined,
-    offset,
-    limit,
-  };
-  const queryString = buildSearchQuery(body);
 
-  return useQuery({
-    queryKey: restaurantKeys.aiSearch(queryString),
-    queryFn: () =>
-      apiFetch<AiSearchResponse>('/api/search/ai', {
+  return useMutation({
+    mutationKey: restaurantKeys.aiSearch('submitted'),
+    mutationFn: (query: string) => {
+      const trimmedQuery = query.trim();
+      if (!trimmedQuery) {
+        throw new Error('AI search query cannot be empty');
+      }
+
+      const body = {
+        query: trimmedQuery,
+        lat: hasCoords ? (latitude ?? undefined) : undefined,
+        lon: hasCoords ? (longitude ?? undefined) : undefined,
+        radiusKm: hasCoords ? radiusKm : undefined,
+        offset,
+        limit,
+      };
+
+      return apiFetch<AiSearchResponse>('/api/search/ai', {
         method: 'POST',
         body: JSON.stringify(body),
-      }),
-    enabled: trimmedQuery.length > 0 && enabled,
+      });
+    },
   });
 }
 

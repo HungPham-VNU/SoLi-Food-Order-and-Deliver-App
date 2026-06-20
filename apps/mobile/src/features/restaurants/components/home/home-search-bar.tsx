@@ -6,6 +6,7 @@ import type { SearchMode } from '../../store';
 interface HomeSearchBarProps {
   query: string;
   onChangeQuery: (query: string) => void;
+  onSubmitQuery: () => void;
   mode: SearchMode;
   onToggleMode: () => void;
 }
@@ -13,6 +14,7 @@ interface HomeSearchBarProps {
 export function HomeSearchBar({
   query,
   onChangeQuery,
+  onSubmitQuery,
   mode,
   onToggleMode,
 }: HomeSearchBarProps) {
@@ -40,6 +42,7 @@ export function HomeSearchBar({
           placeholderTextColor="#40493d"
           value={query}
           onChangeText={onChangeQuery}
+          onSubmitEditing={onSubmitQuery}
           returnKeyType="search"
           clearButtonMode="never"
         />
