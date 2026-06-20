@@ -636,7 +636,7 @@ export class AiSearchRepository {
       )`;
     }
 
-    return sql<number>`0.6`;
+    return sql<number>`0.6::float`;
   }
 
   private buildRestaurantBranchScoreExpr(
@@ -686,7 +686,7 @@ export class AiSearchRepository {
       )`;
     }
 
-    return sql<number>`0.6`;
+    return sql<number>`0.6::float`;
   }
 
   private buildItemOrderBy(
