@@ -1,8 +1,9 @@
 import { Tag } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import type { CreateMenuItemFormValues } from '@/features/menu/schemas/menu.schema';
+import { useDietaryTags } from '@/features/menu/hooks/useMenu';
 
-const DIETARY_TAGS = [
+const FALLBACK_DIETARY_TAGS = [
   'Vegan',
   'Gluten-Free',
   'Organic',
@@ -13,6 +14,13 @@ const DIETARY_TAGS = [
 export function DietaryTagsCard() {
   const { watch, setValue } = useFormContext<CreateMenuItemFormValues>();
   const selected = watch('tags') ?? [];
+  const { data } = useDietaryTags();
+  const activeTagNames = data?.map((tag) => tag.name) ?? FALLBACK_DIETARY_TAGS;
+  const activeTagSet = new Set(activeTagNames);
+  const tagOptions = [
+    ...activeTagNames,
+    ...selected.filter((tag) => !activeTagSet.has(tag)),
+  ];
 
   const toggle = (tag: string) => {
     setValue(
@@ -28,7 +36,7 @@ export function DietaryTagsCard() {
         Dietary &amp; Lifestyle Tags
       </h3>
       <div className="flex flex-wrap gap-3">
-        {DIETARY_TAGS.map((tag) => {
+        {tagOptions.map((tag) => {
           const active = selected.includes(tag);
           return (
             <button

@@ -5,9 +5,6 @@ import {
   HttpStatus,
   Inject,
   Logger,
-  Param,
-  ParseUUIDPipe,
-  Patch,
   Query,
   Res,
 } from '@nestjs/common';
@@ -15,16 +12,11 @@ import type { ConfigType } from '@nestjs/config';
 import type { Response } from 'express';
 import {
   ApiBearerAuth,
-  ApiConflictResponse,
   ApiExcludeEndpoint,
-  ApiForbiddenResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
-  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { CommandBus } from '@nestjs/cqrs';
 import {
@@ -39,7 +31,6 @@ import { PaymentService } from '../services/payment.service';
 import type { IpnResponse } from '../commands/process-ipn.handler';
 import type { PaymentStatus } from '../domain/payment-transaction.schema';
 import { vnpayConfig } from '@/config/vnpay.config';
-import { TransitionOrderCommand } from '@/module/ordering/order-lifecycle/commands/transition-order.command';
 
 /**
  * PaymentController
@@ -309,71 +300,6 @@ export class PaymentController {
   }
 
   // ---------------------------------------------------------------------------
-  // Phase 8.6b - Customer cancels an unpaid VNPay payment session
-  // ---------------------------------------------------------------------------
-
-  @Patch('vnpay/orders/:orderId/cancel')
-  @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Cancel an unpaid VNPay payment for the current customer',
-    description:
-      'Marks the pending/awaiting VNPay payment transaction for this order as failed, ' +
-      'then cancels the pending order. The caller must own the payment transaction. ' +
-      'Completed payments cannot be cancelled here.',
-  })
-  @ApiParam({ name: 'orderId', format: 'uuid' })
-  @ApiOkResponse({
-    description: 'VNPay payment transaction and pending order cancelled',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        orderId: { type: 'string', format: 'uuid' },
-        status: { type: 'string', enum: ['failed'] },
-        updatedAt: { type: 'string', format: 'date-time' },
-      },
-    },
-  })
-  @ApiUnauthorizedResponse({ description: 'Not authenticated' })
-  @ApiForbiddenResponse({ description: 'Payment does not belong to caller' })
-  @ApiNotFoundResponse({ description: 'VNPay payment transaction not found' })
-  @ApiConflictResponse({
-    description: 'Payment status changed during cancellation',
-  })
-  @ApiUnprocessableEntityResponse({
-    description: 'Payment already completed or cannot be cancelled',
-  })
-  async cancelPendingVNPayPayment(
-    @Param('orderId', ParseUUIDPipe) orderId: string,
-    @Session() session: UserSession,
-  ): Promise<CancelVNPayPaymentDto> {
-    const txn = await this.paymentService.cancelPendingVNPayPaymentForOrder(
-      orderId,
-      session.user.id,
-      'Customer cancelled VNPay payment from mobile checkout',
-    );
-
-    await this.commandBus.execute(
-      new TransitionOrderCommand(
-        orderId,
-        'cancelled',
-        session.user.id,
-        'customer',
-        'Customer cancelled VNPay payment before completion.',
-        'customer_request',
-      ),
-    );
-
-    return {
-      id: txn.id,
-      orderId: txn.orderId,
-      status: txn.status,
-      updatedAt: txn.updatedAt,
-    };
-  }
-
-  // ---------------------------------------------------------------------------
   // Phase 8.7 â€” Customer payment history
   // ---------------------------------------------------------------------------
 
@@ -480,13 +406,6 @@ export interface ReturnUrlResponse {
  * Single item returned in the GET /payments/my response list.
  * Intentionally omits rawIpnPayload and paymentUrl (sensitive / large).
  */
-export interface CancelVNPayPaymentDto {
-  id: string;
-  orderId: string;
-  status: PaymentStatus;
-  updatedAt: Date;
-}
-
 export interface MyPaymentTransactionDto {
   id: string;
   orderId: string;

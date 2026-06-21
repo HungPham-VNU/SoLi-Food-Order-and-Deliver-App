@@ -2,7 +2,6 @@ import { Injectable, Inject } from '@nestjs/common';
 import { and, eq, inArray, lt, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import {
   orders,
   orderItems,
@@ -25,9 +24,7 @@ import {
  */
 @Injectable()
 export class OrderRepository {
-  constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) private readonly db: NodePgDatabase) {}
 
   /**
    * Load a single order by primary key.

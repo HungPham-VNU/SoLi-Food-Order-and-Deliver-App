@@ -2,8 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, count, desc, eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
-import { reviews, type Review } from '../domain/review.schema';
+import { reviews, type NewReview, type Review } from '../domain/review.schema';
+import type { UnitOfWorkContext } from '@/shared/ports/unit-of-work-context';
 
 /**
  * ReviewRepository
@@ -15,10 +15,17 @@ import { reviews, type Review } from '../domain/review.schema';
  */
 @Injectable()
 export class ReviewRepository {
-  constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) private readonly db: NodePgDatabase) {}
 
+  async create(
+    values: NewReview,
+    context?: UnitOfWorkContext,
+  ): Promise<Review> {
+    const database =
+      (context?.transaction as NodePgDatabase | undefined) ?? this.db;
+    const [created] = await database.insert(reviews).values(values).returning();
+    return created;
+  }
   /**
    * Find the review for a given order — used by:
    *  - SubmitReviewHandler optimistic pre-check (BR-22.9)

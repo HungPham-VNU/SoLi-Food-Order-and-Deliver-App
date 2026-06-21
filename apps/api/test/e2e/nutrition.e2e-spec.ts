@@ -3,15 +3,15 @@ import { jest } from '@jest/globals';
 import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import type { App } from 'supertest/types';
-import { AiRecipeExtractionService } from '../../src/module/nutrition/ai/ai-recipe-extraction.service';
+import { AiRecipeExtractionService } from '../../src/module/restaurant-catalog/nutrition/ai/ai-recipe-extraction.service';
 import {
   nutritionAnalysisIngredients,
   nutritionAnalysisSessions,
-} from '../../src/module/nutrition/domain/nutrition.schema';
+} from '../../src/module/restaurant-catalog/nutrition/domain/nutrition.schema';
 import {
   NUTRITION_DISCLAIMER,
   type ExtractedRecipe,
-} from '../../src/module/nutrition/types/nutrition.types';
+} from '../../src/module/restaurant-catalog/nutrition/types/nutrition.types';
 import { ownerHeaders, setAuthManager } from '../helpers/auth';
 import { TestAuthManager } from '../helpers/test-auth';
 import { createTestApp, teardownTestApp } from '../setup/app-factory';

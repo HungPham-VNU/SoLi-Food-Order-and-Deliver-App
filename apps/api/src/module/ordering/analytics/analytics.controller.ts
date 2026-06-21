@@ -8,7 +8,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
-import { hasRole } from '@/module/auth/role.util';
+import { hasRole } from '@/shared/security/role.util';
 import { AnalyticsService } from './analytics.service';
 import { AnalyticsQueryDto, AnalyticsResponseDto } from './dto/analytics.dto';
 

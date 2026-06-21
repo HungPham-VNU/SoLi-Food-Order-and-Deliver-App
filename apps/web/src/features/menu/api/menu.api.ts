@@ -35,6 +35,15 @@ export interface UpdateMenuItemDto {
   status?: 'available' | 'unavailable' | 'out_of_stock';
 }
 
+export interface DietaryTagOption {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  category: 'dietary' | 'lifestyle';
+  isActive: boolean;
+}
+
 export interface CreateMenuCategoryDto {
   restaurantId: string;
   name: string;
@@ -72,6 +81,10 @@ export interface UpdateModifierOptionDto {
 }
 
 export const menuApi = {
+  getDietaryTags: () =>
+    apiClient
+      .get<DietaryTagOption[]>('/api/dietary-tags')
+      .then((response) => response.data),
   getItems: (restaurantId: string, params?: { categoryId?: string; status?: string; offset?: number; limit?: number }) =>
     apiClient.get<MenuItemListResponse>('/api/menu-items', {
       params: { restaurantId, status: 'all', ...params },

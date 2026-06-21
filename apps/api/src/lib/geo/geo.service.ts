@@ -12,7 +12,7 @@ export interface Coordinates {
  * GeoService
  *
  * Pure Haversine geometry utilities — no external dependencies.
- * Registered as @Global() via GeoModule so any module can inject it without
+ * Registered through GeoModule; consumers import that module explicitly before
  * explicitly importing GeoModule.
  */
 @Injectable()

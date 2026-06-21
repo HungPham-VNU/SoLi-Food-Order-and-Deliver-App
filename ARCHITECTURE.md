@@ -49,16 +49,16 @@ The workspace also applies several security overrides to force minimum safe vers
 
 Root `package.json` defines workspace-wide scripts delegated through Turborepo:
 
-| Script | What it does |
-|---|---|
-| `pnpm build` | Build all apps (respects dependency graph) |
-| `pnpm dev` | Start all apps in watch/dev mode |
-| `pnpm dev:api` | Start API only |
-| `pnpm dev:web` | Start web only |
-| `pnpm dev:mobile` | Start mobile only |
-| `pnpm dev:admin` | Start admin only |
-| `pnpm lint` | Lint all packages |
-| `pnpm test` | Test all packages |
+| Script            | What it does                               |
+| ----------------- | ------------------------------------------ |
+| `pnpm build`      | Build all apps (respects dependency graph) |
+| `pnpm dev`        | Start all apps in watch/dev mode           |
+| `pnpm dev:api`    | Start API only                             |
+| `pnpm dev:web`    | Start web only                             |
+| `pnpm dev:mobile` | Start mobile only                          |
+| `pnpm dev:admin`  | Start admin only                           |
+| `pnpm lint`       | Lint all packages                          |
+| `pnpm test`       | Test all packages                          |
 
 ---
 
@@ -70,15 +70,15 @@ Turborepo provides task caching, affected-package detection, and dependency-orde
 
 ### Task Graph
 
-| Task | Depends on | Caching | Notes |
-|---|---|---|---|
-| `build` | `^build` (upstream packages first) | ✅ `dist/**`, `.next/**`, `.expo/**`, `web-build/**` | Standard DAG build |
-| `test` | `transit` | ✅ | |
-| `lint` | `transit` | ✅ | |
-| `typecheck` | `transit` | ✅ | |
-| `test:e2e` | `build` | ❌ `cache: false` | Always re-runs |
-| `dev` | — | ❌ `cache: false`, `persistent: true` | Long-lived watch process |
-| `transit` | `^transit` | ✅ | Synthetic task for sequencing |
+| Task        | Depends on                         | Caching                                              | Notes                         |
+| ----------- | ---------------------------------- | ---------------------------------------------------- | ----------------------------- |
+| `build`     | `^build` (upstream packages first) | ✅ `dist/**`, `.next/**`, `.expo/**`, `web-build/**` | Standard DAG build            |
+| `test`      | `transit`                          | ✅                                                   |                               |
+| `lint`      | `transit`                          | ✅                                                   |                               |
+| `typecheck` | `transit`                          | ✅                                                   |                               |
+| `test:e2e`  | `build`                            | ❌ `cache: false`                                    | Always re-runs                |
+| `dev`       | —                                  | ❌ `cache: false`, `persistent: true`                | Long-lived watch process      |
+| `transit`   | `^transit`                         | ✅                                                   | Synthetic task for sequencing |
 
 The `--affected` flag (used in CI) scopes work to only packages changed by the current commit, using full Git history (`fetch-depth: 0`).
 
@@ -135,6 +135,10 @@ src/
 ├── config/                 # Typed environment config
 └── main.ts
 ```
+
+#### Bounded-context contract
+
+The authoritative ownership and dependency rules are documented in [apps/api/docs/BOUNDED_CONTEXTS.md](apps/api/docs/BOUNDED_CONTEXTS.md) and enforced by the API architecture test. Nutrition and dietary tags belong to Restaurant Catalog; AI, Redis, geo, and database code are infrastructure.
 
 #### Key Architectural Rules (from `CONTEXT.md`)
 
@@ -256,16 +260,16 @@ pnpm dev:mobile    # Expo mobile only
 
 Copy `.env.example` to `.env` at the repo root. Key variables:
 
-| Variable | Purpose |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `REDIS_URL` | Redis connection |
-| `VITE_API_BASE_URL` | API URL baked into web build |
-| `EXPO_PUBLIC_API_URL` | API URL in mobile bundle |
+| Variable                     | Purpose                               |
+| ---------------------------- | ------------------------------------- |
+| `DATABASE_URL`               | PostgreSQL connection string          |
+| `REDIS_URL`                  | Redis connection                      |
+| `VITE_API_BASE_URL`          | API URL baked into web build          |
+| `EXPO_PUBLIC_API_URL`        | API URL in mobile bundle              |
 | `OTEL_*` / `GRAFANA_CLOUD_*` | OpenTelemetry export to Grafana Cloud |
-| `EXPO_PUBLIC_SENTRY_*` | Sentry for mobile |
-| `VITE_GRAFANA_FARO_*` | Faro RUM for web |
-| `VITE_POSTHOG_KEY` | PostHog analytics for web |
+| `EXPO_PUBLIC_SENTRY_*`       | Sentry for mobile                     |
+| `VITE_GRAFANA_FARO_*`        | Faro RUM for web                      |
+| `VITE_POSTHOG_KEY`           | PostHog analytics for web             |
 
 ---
 
@@ -310,23 +314,23 @@ All workflows use `.github/actions/setup-environment`, which installs **pnpm 11.
 
 ### Pipeline Workflows (Entry Points)
 
-| Workflow | Trigger | What it does |
-|---|---|---|
-| `pipeline-main.yml` | Manual `workflow_dispatch` | Full path: validate → Docker publish → Render deploy → EAS mobile |
-| `pipeline-api.yml` | Push to `master` touching `apps/api/**`, or manual | Validate API → publish Docker image → deploy to Render |
-| `pipeline-web.yml` | Push to `master` touching `apps/web/**`, or manual | Validate web → publish Docker image → deploy to Render |
-| `pipeline-mobile.yml` | Push to `master` touching `apps/mobile/**`, or manual | Validate mobile → EAS Android APK |
-| `pipeline-render-iac.yml` | Push to `master` touching `infra/render/**`, or manual | Terraform plan/apply on Render infrastructure |
+| Workflow                  | Trigger                                                | What it does                                                      |
+| ------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------- |
+| `pipeline-main.yml`       | Manual `workflow_dispatch`                             | Full path: validate → Docker publish → Render deploy → EAS mobile |
+| `pipeline-api.yml`        | Push to `master` touching `apps/api/**`, or manual     | Validate API → publish Docker image → deploy to Render            |
+| `pipeline-web.yml`        | Push to `master` touching `apps/web/**`, or manual     | Validate web → publish Docker image → deploy to Render            |
+| `pipeline-mobile.yml`     | Push to `master` touching `apps/mobile/**`, or manual  | Validate mobile → EAS Android APK                                 |
+| `pipeline-render-iac.yml` | Push to `master` touching `infra/render/**`, or manual | Terraform plan/apply on Render infrastructure                     |
 
 ### Reusable Workflows
 
-| Workflow | Called by | Purpose |
-|---|---|---|
-| `ci-validate.yml` | `pipeline-main.yml` | Full monorepo validation (lint, typecheck, test, build, E2E) with Postgres + Redis service containers |
-| `cd-package-docker.yml` | API, Web, Main | Build + push Docker image to GHCR |
-| `cd-package-mobile.yml` | Mobile, Main | EAS local Android build → upload APK artifact |
-| `cd-render-image.yml` | API, Web, Main | Call Render deploy hook with new GHCR image tag |
-| `cd-render-iac.yml` | Render IaC pipeline | Terraform fmt/init/validate/plan/apply |
+| Workflow                | Called by           | Purpose                                                                                               |
+| ----------------------- | ------------------- | ----------------------------------------------------------------------------------------------------- |
+| `ci-validate.yml`       | `pipeline-main.yml` | Full monorepo validation (lint, typecheck, test, build, E2E) with Postgres + Redis service containers |
+| `cd-package-docker.yml` | API, Web, Main      | Build + push Docker image to GHCR                                                                     |
+| `cd-package-mobile.yml` | Mobile, Main        | EAS local Android build → upload APK artifact                                                         |
+| `cd-render-image.yml`   | API, Web, Main      | Call Render deploy hook with new GHCR image tag                                                       |
+| `cd-render-iac.yml`     | Render IaC pipeline | Terraform fmt/init/validate/plan/apply                                                                |
 
 ### Main Pipeline Job Order
 
@@ -371,12 +375,12 @@ CI uses `TURBO_TOKEN` + `TURBO_TEAM` for Turborepo remote caching. The `.turbo` 
 
 ### Managed Resources
 
-| Resource | Name | Default Plan |
-|---|---|---|
-| `render_postgres.main` | UITFood Postgres | free |
-| `render_web_service.api` | UITFood API | image-backed from GHCR |
-| `render_web_service.web` | UITFood Web | image-backed from GHCR |
-| `render_env_group_link.api_runtime_secrets` | Links env group to API | optional |
+| Resource                                    | Name                   | Default Plan           |
+| ------------------------------------------- | ---------------------- | ---------------------- |
+| `render_postgres.main`                      | UITFood Postgres       | free                   |
+| `render_web_service.api`                    | UITFood API            | image-backed from GHCR |
+| `render_web_service.web`                    | UITFood Web            | image-backed from GHCR |
+| `render_env_group_link.api_runtime_secrets` | Links env group to API | optional               |
 
 ### Secret Boundary
 
@@ -398,18 +402,18 @@ App deploys are **separate from Terraform**. The `cd-render-image.yml` workflow 
 
 ## 11. Sources of Truth (Summary)
 
-| Concern | Source |
-|---|---|
-| Monorepo task graph | `turbo.json` |
-| Workspace membership | `pnpm-workspace.yaml` |
-| CI/CD orchestration | `.github/workflows/*.yml` |
-| Shared CI setup | `.github/actions/setup-environment/action.yml` |
-| API Docker image | `apps/api/Dockerfile` |
-| Web Docker image | `apps/web/Dockerfile` + `apps/web/nginx.conf` |
-| Mobile build profile | `apps/mobile/eas.json` + root `eas.json` |
-| Render image promotion | Render deploy hooks via `cd-render-image.yml` |
-| Render infrastructure | `infra/render/*.tf` |
-| Render runtime secrets | Render service settings / env group (not Terraform) |
-| Terraform state | HCP Terraform workspace |
-| Domain language & architecture rules | `CONTEXT.md` |
-| Full CI/CD reference | `CICD.md` |
+| Concern                              | Source                                              |
+| ------------------------------------ | --------------------------------------------------- |
+| Monorepo task graph                  | `turbo.json`                                        |
+| Workspace membership                 | `pnpm-workspace.yaml`                               |
+| CI/CD orchestration                  | `.github/workflows/*.yml`                           |
+| Shared CI setup                      | `.github/actions/setup-environment/action.yml`      |
+| API Docker image                     | `apps/api/Dockerfile`                               |
+| Web Docker image                     | `apps/web/Dockerfile` + `apps/web/nginx.conf`       |
+| Mobile build profile                 | `apps/mobile/eas.json` + root `eas.json`            |
+| Render image promotion               | Render deploy hooks via `cd-render-image.yml`       |
+| Render infrastructure                | `infra/render/*.tf`                                 |
+| Render runtime secrets               | Render service settings / env group (not Terraform) |
+| Terraform state                      | HCP Terraform workspace                             |
+| Domain language & architecture rules | `CONTEXT.md`                                        |
+| Full CI/CD reference                 | `CICD.md`                                           |

@@ -26,9 +26,6 @@ import { RestaurantUpdatedEvent } from '@/shared/events/restaurant-updated.event
 import type { Restaurant } from './restaurant.schema';
 import { RestaurantRepository } from './restaurant.repository';
 import { EventBus } from '@nestjs/cqrs';
-import { ImageService } from '@/module/image/image.service';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as schema from '@/drizzle/schema';
 import type { CreateRestaurantDto } from './dto/restaurant.dto';
 
 function makeRestaurant(overrides: Partial<Restaurant> = {}): Restaurant {
@@ -54,6 +51,7 @@ function buildService(opts?: {
     create: jest.Mock;
     update: jest.Mock;
     remove: jest.Mock;
+    incrementRating: jest.Mock;
   }>;
 }) {
   const repo = {
@@ -63,21 +61,21 @@ function buildService(opts?: {
     create: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
+    incrementRating: jest.fn(),
     ...opts?.repoOverrides,
   };
   const eventBus = { publish: jest.fn() };
   const imageService = { create: jest.fn().mockResolvedValue(undefined) };
-  const dbWhere = jest.fn().mockResolvedValue(undefined);
-  const dbSet = jest.fn().mockReturnValue({ where: dbWhere });
-  const dbUpdate = jest.fn().mockReturnValue({ set: dbSet });
-  const db = { update: dbUpdate };
+  const userDirectory = {
+    promoteToRestaurant: jest.fn().mockResolvedValue(undefined),
+  };
   const service = new RestaurantService(
     repo as unknown as RestaurantRepository,
     eventBus as unknown as EventBus,
-    imageService as unknown as ImageService,
-    db as unknown as NodePgDatabase<typeof schema>,
+    imageService,
+    userDirectory,
   );
-  return { service, repo, eventBus, imageService, dbWhere, dbSet, dbUpdate };
+  return { service, repo, eventBus, imageService, userDirectory };
 }
 
 describe('RestaurantService', () => {
@@ -200,18 +198,17 @@ describe('RestaurantService', () => {
     });
 
     it('promotes owner role user→restaurant when isApproved=true', async () => {
-      const { service, repo, dbUpdate, dbSet } = buildService();
+      const { service, repo, userDirectory } = buildService();
       repo.update.mockResolvedValue(makeRestaurant({ ownerId: 'owner-1' }));
       await service.setApproved('rest-1', true);
-      expect(dbUpdate).toHaveBeenCalled();
-      expect(dbSet).toHaveBeenCalledWith({ role: 'restaurant' });
+      expect(userDirectory.promoteToRestaurant).toHaveBeenCalledWith('owner-1');
     });
 
     it('does NOT touch user role when isApproved=false', async () => {
-      const { service, repo, dbUpdate } = buildService();
+      const { service, repo, userDirectory } = buildService();
       repo.update.mockResolvedValue(makeRestaurant());
       await service.setApproved('rest-1', false);
-      expect(dbUpdate).not.toHaveBeenCalled();
+      expect(userDirectory.promoteToRestaurant).not.toHaveBeenCalled();
     });
 
     it('publishes RestaurantUpdatedEvent', async () => {

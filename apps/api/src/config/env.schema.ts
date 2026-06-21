@@ -2,6 +2,65 @@ import { z } from 'zod';
 
 const emptyStringToUndefined = (value: unknown) =>
   value === '' ? undefined : value;
+const stringToBoolean = (defaultValue: boolean) =>
+  z
+    .string()
+    .optional()
+    .default(defaultValue ? 'true' : 'false')
+    .transform((value) =>
+      ['1', 'true', 'yes'].includes(value.trim().toLowerCase()),
+    );
+
+const aiSearchRankingWeightKeys = [
+  'retrieval',
+  'nutrition',
+  'price',
+  'distance',
+  'rating',
+  'popularity',
+  'freshness',
+  'availability',
+] as const;
+
+const defaultAiSearchRankingWeights = JSON.stringify({
+  retrieval: 0.35,
+  nutrition: 0.15,
+  price: 0.1,
+  distance: 0.1,
+  rating: 0.1,
+  popularity: 0.1,
+  freshness: 0.05,
+  availability: 0.05,
+});
+
+function validateAiSearchRankingWeights(raw: string): string | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return 'AI_SEARCH_RANKING_WEIGHTS must be valid JSON';
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return 'AI_SEARCH_RANKING_WEIGHTS must be a JSON object';
+  }
+
+  let total = 0;
+  const record = parsed as Record<string, unknown>;
+  for (const key of aiSearchRankingWeightKeys) {
+    const value = Number(record[key]);
+    if (!Number.isFinite(value) || value < 0) {
+      return `AI_SEARCH_RANKING_WEIGHTS.${key} must be a non-negative number`;
+    }
+    total += value;
+  }
+
+  if (total <= 0) {
+    return 'AI_SEARCH_RANKING_WEIGHTS must have a positive total';
+  }
+
+  return null;
+}
 
 /**
  * Zod schema for all required environment variables.
@@ -165,6 +224,59 @@ const baseEnvSchema = z.object({
   ),
 
   // ---------------------------------------------------------------------------
+  // AI search intent extraction. When disabled, deterministic parsing is used.
+  // ---------------------------------------------------------------------------
+  AI_SEARCH_ENABLED: stringToBoolean(false),
+  AI_SEARCH_MODEL: z.string().trim().min(1).default('gpt-oss:20b'),
+  AI_SEARCH_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
+  AI_SEARCH_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.65),
+  AI_SEARCH_DAILY_LIMIT_PER_USER: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(100),
+  AI_SEARCH_RANKING_V2_ENABLED: stringToBoolean(false),
+  AI_SEARCH_DIVERSITY_ENABLED: stringToBoolean(true),
+  AI_SEARCH_MAX_ITEMS_PER_RESTAURANT: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(3),
+  AI_SEARCH_RANKING_WEIGHTS: z
+    .string()
+    .trim()
+    .min(1)
+    .default(defaultAiSearchRankingWeights),
+  AI_SEARCH_EMBEDDING_BASE_URL: z
+    .string()
+    .trim()
+    .url()
+    .default('http://localhost:11434'),
+  AI_SEARCH_EMBEDDING_MODEL: z.string().trim().min(1).default('embeddinggemma'),
+  AI_SEARCH_EMBEDDING_VERSION: z.string().trim().min(1).default('1'),
+  AI_SEARCH_EMBEDDING_DIMENSIONS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(768),
+  AI_SEARCH_EMBEDDING_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(8000),
+  AI_SEARCH_EMBEDDING_WORKER_ENABLED: stringToBoolean(false),
+  AI_SEARCH_EMBEDDING_BATCH_SIZE: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(20),
+  AI_SEARCH_EMBEDDING_RATE_LIMIT_PER_MINUTE: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60),
+
+  // ---------------------------------------------------------------------------
   // Observability - optional. When absent, OpenTelemetry exporters stay disabled
   // and the app continues to run with local structured JSON logs.
   // ---------------------------------------------------------------------------
@@ -234,6 +346,17 @@ export const envSchema = baseEnvSchema.superRefine((env, ctx) => {
   );
   const hasGrafanaToken = Boolean(env.GRAFANA_CLOUD_OTLP_TOKEN);
   const hasExplicitOtelHeaders = Boolean(env.OTEL_EXPORTER_OTLP_HEADERS);
+  const rankingWeightsError = validateAiSearchRankingWeights(
+    env.AI_SEARCH_RANKING_WEIGHTS,
+  );
+
+  if (rankingWeightsError) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['AI_SEARCH_RANKING_WEIGHTS'],
+      message: rankingWeightsError,
+    });
+  }
 
   if (hasGrafanaUsername && !hasGrafanaToken) {
     ctx.addIssue({

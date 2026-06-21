@@ -2,7 +2,6 @@ import { Injectable, Inject } from '@nestjs/common';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import {
   notifications,
   type NewNotification,
@@ -36,9 +35,7 @@ export interface InboxFilters {
  */
 @Injectable()
 export class NotificationRepository {
-  constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) private readonly db: NodePgDatabase) {}
 
   /**
    * Insert a new notification row.

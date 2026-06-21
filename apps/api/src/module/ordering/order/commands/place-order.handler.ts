@@ -13,7 +13,6 @@ import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import { PlaceOrderCommand } from './place-order.command';
 import { CartRedisRepository } from '../../cart/cart.redis-repository';
 import { MenuItemSnapshotRepository } from '../../acl/repositories/menu-item-snapshot.repository';
@@ -132,7 +131,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
   private readonly logger = new Logger(PlaceOrderHandler.name);
 
   constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
+    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase,
     private readonly cartRepo: CartRedisRepository,
     private readonly menuItemSnapshotRepo: MenuItemSnapshotRepository,
     private readonly restaurantSnapshotRepo: RestaurantSnapshotRepository,

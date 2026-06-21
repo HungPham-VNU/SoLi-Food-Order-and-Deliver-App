@@ -1,22 +1,12 @@
-import Constants from 'expo-constants';
-
 import { authClient } from '@/src/lib/auth-client';
+import { BASE_URL } from '@/src/lib/api-config';
 import {
   captureMobileException,
   createRequestId,
   Sentry,
 } from '@/src/lib/observability';
 
-const getBaseUrl = () => {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL.replace(/\/+$/, '');
-  }
-  const debuggerHost = Constants.expoConfig?.hostUri;
-  const localhost = debuggerHost?.split(':')[0] || 'localhost';
-  return `http://${localhost}:3000`.replace(/\/+$/, '');
-};
-
-export const BASE_URL = getBaseUrl();
+export { BASE_URL } from '@/src/lib/api-config';
 
 export async function apiFetch<T>(
   endpoint: string,

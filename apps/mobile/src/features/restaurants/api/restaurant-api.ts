@@ -1,4 +1,5 @@
 import {
+  useMutation,
   useQueries,
   useQuery,
   useQueryClient,
@@ -13,6 +14,7 @@ import {
   MenuItemListResponse,
   ModifierGroup,
   UnifiedSearchResponse,
+  AiSearchResponse,
   DeliveryEstimateResponse,
 } from '../types';
 
@@ -22,6 +24,8 @@ export const restaurantKeys = {
   list: (filters: string) => [...restaurantKeys.lists(), { filters }] as const,
   search: (filters: string) =>
     [...restaurantKeys.all, 'search', { filters }] as const,
+  aiSearch: (filters: string) =>
+    [...restaurantKeys.all, 'ai-search', { filters }] as const,
   details: () => [...restaurantKeys.all, 'detail'] as const,
   detail: (id: string) => [...restaurantKeys.details(), id] as const,
   estimates: (id: string) => [...restaurantKeys.detail(id), 'estimates'] as const,
@@ -213,10 +217,19 @@ interface UnifiedSearchParams {
   radiusKm?: number;
   offset?: number;
   limit?: number;
+  enabled?: boolean;
 }
 
 export function useUnifiedSearch(params: UnifiedSearchParams) {
-  const { q, latitude, longitude, radiusKm = 5, offset = 0, limit = 20 } = params;
+  const {
+    q,
+    latitude,
+    longitude,
+    radiusKm = 5,
+    offset = 0,
+    limit = 20,
+    enabled = true,
+  } = params;
   const trimmedQ = q.trim();
   const hasCoords = latitude != null && longitude != null;
   const queryString = buildSearchQuery({
@@ -232,7 +245,44 @@ export function useUnifiedSearch(params: UnifiedSearchParams) {
   return useQuery({
     queryKey: restaurantKeys.search(queryString),
     queryFn: () => apiFetch<UnifiedSearchResponse>(endpoint),
-    enabled: trimmedQ.length > 0,
+    enabled: trimmedQ.length > 0 && enabled,
+  });
+}
+
+interface AiSearchParams {
+  latitude?: number | null;
+  longitude?: number | null;
+  radiusKm?: number;
+  offset?: number;
+  limit?: number;
+}
+
+export function useAiSearch(params: AiSearchParams) {
+  const { latitude, longitude, radiusKm = 5, offset = 0, limit = 20 } = params;
+  const hasCoords = latitude != null && longitude != null;
+
+  return useMutation({
+    mutationKey: restaurantKeys.aiSearch('submitted'),
+    mutationFn: (query: string) => {
+      const trimmedQuery = query.trim();
+      if (!trimmedQuery) {
+        throw new Error('AI search query cannot be empty');
+      }
+
+      const body = {
+        query: trimmedQuery,
+        lat: hasCoords ? (latitude ?? undefined) : undefined,
+        lon: hasCoords ? (longitude ?? undefined) : undefined,
+        radiusKm: hasCoords ? radiusKm : undefined,
+        offset,
+        limit,
+      };
+
+      return apiFetch<AiSearchResponse>('/api/search/ai', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+    },
   });
 }
 

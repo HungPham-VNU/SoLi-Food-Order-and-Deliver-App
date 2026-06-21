@@ -6,6 +6,7 @@ import { MenuRepository } from './menu.repository';
 import { DatabaseModule } from '@/drizzle/drizzle.module';
 import { RestaurantModule } from '@/module/restaurant-catalog/restaurant/restaurant.module';
 import { ImageModule } from '@/module/image/image.module';
+import { AiSearchIndexModule } from '@/module/restaurant-catalog/search/indexing/ai-search-index.module';
 
 /**
  * MenuModule — owns menu_items, menu_categories.
@@ -13,7 +14,13 @@ import { ImageModule } from '@/module/image/image.module';
  * the circular dependency (ModifiersModule imports MenuModule for MenuRepository).
  */
 @Module({
-  imports: [DatabaseModule, RestaurantModule, ImageModule, CqrsModule],
+  imports: [
+    DatabaseModule,
+    RestaurantModule,
+    ImageModule,
+    CqrsModule,
+    AiSearchIndexModule,
+  ],
   controllers: [MenuController],
   providers: [MenuService, MenuRepository],
   exports: [MenuService, MenuRepository],

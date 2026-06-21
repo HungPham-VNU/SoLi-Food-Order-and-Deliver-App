@@ -20,7 +20,7 @@ export function RegisterLocationPage() {
 
   const onSubmit = (data: RestaurantFormValues) => {
     createRestaurant(data, {
-      onSuccess: () => navigate('/auth/register/pending', { state: { step2Completed: true } }),
+      onSuccess: () => navigate('/pending-approval', { replace: true }),
     });
   };
 

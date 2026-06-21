@@ -18,7 +18,7 @@ import {
   type UserSession,
 } from '@thallesp/nestjs-better-auth';
 import { ZonesService } from './zones.service';
-import { hasRole } from '@/module/auth/role.util';
+import { hasRole } from '@/shared/security/role.util';
 import {
   ApiBearerAuth,
   ApiBody,

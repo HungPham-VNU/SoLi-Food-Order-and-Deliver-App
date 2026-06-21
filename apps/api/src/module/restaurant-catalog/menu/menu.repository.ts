@@ -16,9 +16,9 @@ import type {
 } from './dto/menu.dto';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as schema from '@/drizzle/schema';
-import { menuItemNutrition } from '@/module/nutrition/domain/nutrition.schema';
-import { NUTRITION_DISCLAIMER } from '@/module/nutrition/types/nutrition.types';
+import { menuItemNutrition } from '@/module/restaurant-catalog/nutrition/domain/nutrition.schema';
+import { NUTRITION_DISCLAIMER } from '@/module/restaurant-catalog/nutrition/types/nutrition.types';
+import { AiSearchIndexRepository } from '@/module/restaurant-catalog/search/indexing/ai-search-index.repository';
 
 // PostgreSQL unique-constraint violation error code.
 const PG_UNIQUE_VIOLATION = '23505';
@@ -59,7 +59,8 @@ export type MenuItemDetail = MenuItem & {
 @Injectable()
 export class MenuRepository {
   constructor(
-    @Inject(DB_CONNECTION) readonly db: NodePgDatabase<typeof schema>,
+    @Inject(DB_CONNECTION) readonly db: NodePgDatabase,
+    private readonly searchIndex: AiSearchIndexRepository,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -144,17 +145,23 @@ export class MenuRepository {
   }
 
   async create(dto: CreateMenuItemDto): Promise<MenuItem> {
-    const [row] = await this.db.insert(menuItems).values(dto).returning();
-    return row;
+    return this.db.transaction(async (tx) => {
+      const [row] = await tx.insert(menuItems).values(dto).returning();
+      await this.searchIndex.refreshMenuItemSearchMetadata(row.id, tx);
+      return row;
+    });
   }
 
   async update(id: string, dto: UpdateMenuItemDto): Promise<MenuItem> {
-    const [row] = await this.db
-      .update(menuItems)
-      .set({ ...dto, updatedAt: new Date() })
-      .where(eq(menuItems.id, id))
-      .returning();
-    return row;
+    return this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(menuItems)
+        .set({ ...dto, updatedAt: new Date() })
+        .where(eq(menuItems.id, id))
+        .returning();
+      await this.searchIndex.refreshMenuItemSearchMetadata(row.id, tx);
+      return row;
+    });
   }
 
   async remove(id: string): Promise<void> {
@@ -215,12 +222,15 @@ export class MenuRepository {
     dto: UpdateMenuCategoryDto,
   ): Promise<MenuCategory> {
     try {
-      const [row] = await this.db
-        .update(menuCategories)
-        .set({ ...dto, updatedAt: new Date() })
-        .where(eq(menuCategories.id, id))
-        .returning();
-      return row;
+      return await this.db.transaction(async (tx) => {
+        const [row] = await tx
+          .update(menuCategories)
+          .set({ ...dto, updatedAt: new Date() })
+          .where(eq(menuCategories.id, id))
+          .returning();
+        await this.searchIndex.refreshMenuItemsForCategory(id, tx);
+        return row;
+      });
     } catch (err: unknown) {
       if ((err as { code?: string }).code === PG_UNIQUE_VIOLATION) {
         throw new ConflictException(
@@ -232,6 +242,19 @@ export class MenuRepository {
   }
 
   async removeCategory(id: string): Promise<void> {
-    await this.db.delete(menuCategories).where(eq(menuCategories.id, id));
+    await this.db.transaction(async (tx) => {
+      const [category] = await tx
+        .select({ restaurantId: menuCategories.restaurantId })
+        .from(menuCategories)
+        .where(eq(menuCategories.id, id))
+        .limit(1);
+      await tx.delete(menuCategories).where(eq(menuCategories.id, id));
+      if (category) {
+        await this.searchIndex.refreshMenuItemsForRestaurant(
+          category.restaurantId,
+          tx,
+        );
+      }
+    });
   }
 }

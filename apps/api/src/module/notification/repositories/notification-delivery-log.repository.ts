@@ -2,7 +2,6 @@ import { Injectable, Inject } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import {
   notificationDeliveryLogs,
   type NewNotificationDeliveryLog,
@@ -20,9 +19,7 @@ import {
  */
 @Injectable()
 export class NotificationDeliveryLogRepository {
-  constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) private readonly db: NodePgDatabase) {}
 
   /**
    * Record one delivery attempt.

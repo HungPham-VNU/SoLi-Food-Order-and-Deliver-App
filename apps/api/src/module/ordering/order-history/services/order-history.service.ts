@@ -1,14 +1,8 @@
 import {
   ForbiddenException,
-  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
-import { reviews } from '@/drizzle/schema';
 import { RestaurantSnapshotRepository } from '../../acl/repositories/restaurant-snapshot.repository';
 import { OrderHistoryRepository } from '../repositories/order-history.repository';
 import type {
@@ -97,7 +91,6 @@ function mapOrderToDetail(
   order: Order,
   items: OrderItem[],
   timeline: OrderStatusLog[],
-  hasReview: boolean = false,
 ): OrderDetailDto {
   const mappedItems = items.map(mapItem);
   const subtotal = mappedItems.reduce((sum, item) => sum + item.subtotal, 0);
@@ -119,7 +112,7 @@ function mapOrderToDetail(
     updatedAt: order.updatedAt.toISOString(),
     items: mappedItems,
     timeline: timeline.map(mapStatusLog),
-    hasReview,
+    hasReview: order.reviewedAt != null,
   };
 }
 
@@ -146,27 +139,7 @@ export class OrderHistoryService {
   constructor(
     private readonly orderHistoryRepo: OrderHistoryRepository,
     private readonly restaurantSnapshotRepo: RestaurantSnapshotRepository,
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
   ) {}
-
-  /**
-   * UC-22: true when a row exists in `reviews` for this orderId. The reviews
-   * table is exposed via the shared schema barrel; the OrderingModule never
-   * imports the ReviewModule directly (ADR-003).
-   */
-  private async hasReview(orderId: string): Promise<boolean> {
-    const rows = await this.db
-      .select({ id: reviews.id })
-      .from(reviews)
-      .where(
-        and(
-          eq(reviews.orderId, orderId),
-          eq(reviews.moderationStatus, 'visible'),
-        ),
-      )
-      .limit(1);
-    return rows.length > 0;
-  }
 
   // ---------------------------------------------------------------------------
   // Customer
@@ -197,13 +170,7 @@ export class OrderHistoryService {
     if (bundle.order.customerId !== actorId) {
       throw new NotFoundException(`Order ${orderId} not found.`);
     }
-    const hasReview = await this.hasReview(orderId);
-    return mapOrderToDetail(
-      bundle.order,
-      bundle.items,
-      bundle.timeline,
-      hasReview,
-    );
+    return mapOrderToDetail(bundle.order, bundle.items, bundle.timeline);
   }
 
   /**
@@ -339,12 +306,6 @@ export class OrderHistoryService {
   async getAnyOrderDetail(orderId: string): Promise<OrderDetailDto> {
     const bundle = await this.orderHistoryRepo.findDetailById(orderId);
     if (!bundle) throw new NotFoundException(`Order ${orderId} not found.`);
-    const hasReview = await this.hasReview(orderId);
-    return mapOrderToDetail(
-      bundle.order,
-      bundle.items,
-      bundle.timeline,
-      hasReview,
-    );
+    return mapOrderToDetail(bundle.order, bundle.items, bundle.timeline);
   }
 }

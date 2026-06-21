@@ -10,7 +10,6 @@ import {
   type NewModifierOption,
 } from '@/module/restaurant-catalog/menu/menu.schema';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import type {
   CreateModifierGroupDto,
   UpdateModifierGroupDto,
@@ -24,9 +23,7 @@ import type {
 
 @Injectable()
 export class ModifierGroupRepository {
-  constructor(
-    @Inject(DB_CONNECTION) readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) readonly db: NodePgDatabase) {}
 
   async findByMenuItem(menuItemId: string): Promise<ModifierGroup[]> {
     return this.db
@@ -83,9 +80,7 @@ export class ModifierGroupRepository {
 
 @Injectable()
 export class ModifierOptionRepository {
-  constructor(
-    @Inject(DB_CONNECTION) readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) readonly db: NodePgDatabase) {}
 
   async findByGroup(groupId: string): Promise<ModifierOption[]> {
     return this.db

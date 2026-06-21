@@ -9,7 +9,16 @@ export const menuKeys = {
   nutritionAnalysis: (menuItemId: string) => ['menu', 'nutritionAnalysis', menuItemId] as const,
   modifierGroups: (menuItemId: string) => ['menu', 'modifierGroups', menuItemId] as const,
   modifierGroup: (menuItemId: string, groupId: string) => ['menu', 'modifierGroup', menuItemId, groupId] as const,
+  dietaryTags: () => ['menu', 'dietary-tags'] as const,
 };
+
+export function useDietaryTags() {
+  return useQuery({
+    queryKey: menuKeys.dietaryTags(),
+    queryFn: menuApi.getDietaryTags,
+    staleTime: 5 * 60 * 1000,
+  });
+}
 
 export function useMenuItems(restaurantId: string | undefined) {
   return useQuery({

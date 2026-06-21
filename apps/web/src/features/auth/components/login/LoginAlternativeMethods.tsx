@@ -49,7 +49,7 @@ export function LoginAlternativeMethods() {
       // bounce the user to the API server instead of the web portal.
       await authClient.signIn.social({
         provider: 'google',
-        callbackURL: `${window.location.origin}/`,
+        callbackURL: `${window.location.origin}/auth/onboarding`,
       });
     } catch (err) {
       console.error('[auth] Google sign-in failed', err);

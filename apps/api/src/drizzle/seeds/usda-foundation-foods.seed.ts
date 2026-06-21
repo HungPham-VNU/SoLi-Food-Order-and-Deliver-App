@@ -13,15 +13,15 @@ import {
   buildUsdaEnglishLocalization,
   hasRequiredUsdaCsvFiles,
   streamUsdaFoundationNutritionFoodBatches,
-} from '../../module/nutrition/import/usda-foundation-foods';
+} from '../../module/restaurant-catalog/nutrition/import/usda-foundation-foods';
 import {
   CUSTOM_VIETNAMESE_NUTRITION_FOODS,
   VIETNAMESE_USDA_LOCALIZATIONS,
-} from '../../module/nutrition/import/vietnamese-nutrition-data';
+} from '../../module/restaurant-catalog/nutrition/import/vietnamese-nutrition-data';
 import {
   nutritionFoodLocalizations,
   nutritionFoods,
-} from '../../module/nutrition/domain/nutrition.schema';
+} from '../../module/restaurant-catalog/nutrition/domain/nutrition.schema';
 
 const databaseUrl = requireDatabaseUrl();
 const db = drizzle({

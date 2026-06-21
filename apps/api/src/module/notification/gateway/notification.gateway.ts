@@ -96,7 +96,7 @@ export class NotificationGateway
 
   constructor(
     // UserPresenceService manages WebSocket connection counts in Redis.
-    // It internally uses RedisService (which is @Global()) — do NOT also
+    // It internally uses RedisService (provided by the explicitly imported RedisModule) — do NOT also
     // inject RedisService here directly; all presence operations go through
     // UserPresenceService for consistency and testability.
     private readonly presenceService: UserPresenceService,

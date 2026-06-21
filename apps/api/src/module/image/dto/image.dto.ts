@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, IsUrl, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, Max, Min } from 'class-validator';
+export { CreateImageDto } from '@/shared/contracts/image.dto';
 
 export class PaginationQueryDto {
   @ApiPropertyOptional({
@@ -28,32 +29,6 @@ export class PaginationQueryDto {
   @Min(1)
   @Max(100)
   limit: number = 20;
-}
-
-export class CreateImageDto {
-  @ApiProperty({
-    description: 'Cloudinary public ID',
-    example: 'app-images/sample',
-  })
-  @IsString()
-  publicId!: string;
-
-  @ApiProperty({
-    description: 'Secure Cloudinary delivery URL',
-    example: 'https://res.cloudinary.com/demo/image/upload/v123/sample.jpg',
-  })
-  @IsUrl()
-  secureUrl!: string;
-
-  @ApiProperty({ description: 'Image width in pixels', example: 1200 })
-  @IsInt()
-  @Min(1)
-  width!: number;
-
-  @ApiProperty({ description: 'Image height in pixels', example: 800 })
-  @IsInt()
-  @Min(1)
-  height!: number;
 }
 
 export class ImageResponseDto {

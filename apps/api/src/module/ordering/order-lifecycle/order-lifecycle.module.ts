@@ -5,6 +5,7 @@ import { RestaurantSnapshotRepository } from '../acl/repositories/restaurant-sna
 
 // Controllers
 import { OrderLifecycleController } from './controllers/order-lifecycle.controller';
+import { PaymentCancellationController } from './controllers/payment-cancellation.controller';
 
 // Commands
 import { TransitionOrderHandler } from './commands/transition-order.handler';
@@ -23,6 +24,8 @@ import { OrderLifecycleService } from './services/order-lifecycle.service';
 
 // Repositories
 import { OrderRepository } from './repositories/order.repository';
+import { PaymentModule } from '@/module/payment/payment.module';
+import { PromotionModule } from '@/module/promotion/promotion.module';
 
 /**
  * OrderLifecycleModule — Phase 5 implementation.
@@ -40,8 +43,8 @@ import { OrderRepository } from './repositories/order.repository';
  * Phase: 5
  */
 @Module({
-  imports: [CqrsModule, DatabaseModule],
-  controllers: [OrderLifecycleController],
+  imports: [CqrsModule, DatabaseModule, PaymentModule, PromotionModule],
+  controllers: [OrderLifecycleController, PaymentCancellationController],
   providers: [
     // Command handler — core state machine logic
     TransitionOrderHandler,
@@ -53,7 +56,7 @@ import { OrderRepository } from './repositories/order.repository';
     // Event handlers — Promotion BC (PR-3)
     // Rolls back reserved/confirmed promotion usages when an order is
     // cancelled or refunded. Uses PROMOTION_APPLICATION_PORT (DIP).
-    // PromotionModule is @Global() so no additional import is needed.
+    // PromotionModule is imported explicitly above for this port.
     PromotionRollbackOnCancellationHandler,
 
     // Cron task — auto-cancel expired orders

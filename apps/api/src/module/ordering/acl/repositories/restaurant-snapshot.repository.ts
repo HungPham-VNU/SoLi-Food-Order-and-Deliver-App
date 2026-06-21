@@ -2,7 +2,6 @@ import { Injectable, Inject } from '@nestjs/common';
 import { and, eq, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import {
   orderingRestaurantSnapshots,
   type NewOrderingRestaurantSnapshot,
@@ -20,9 +19,7 @@ import {
  */
 @Injectable()
 export class RestaurantSnapshotRepository {
-  constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) private readonly db: NodePgDatabase) {}
 
   async findById(
     restaurantId: string,

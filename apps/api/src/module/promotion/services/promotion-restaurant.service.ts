@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   Logger,
   ForbiddenException,
@@ -7,7 +8,10 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PromotionRepository } from '../repositories/promotion.repository';
-import { RestaurantService } from '@/module/restaurant-catalog/restaurant/restaurant.service';
+import {
+  RESTAURANT_ACCESS_PORT,
+  type IRestaurantAccessPort,
+} from '@/shared/ports/restaurant-access.port';
 import type {
   CreatePromotionDto,
   UpdatePromotionDto,
@@ -25,7 +29,7 @@ import type { Promotion } from '../domain/promotion.schema';
  *
  * Ownership enforcement:
  *   All mutations call assertRestaurantOwner() which looks up the restaurant
- *   via RestaurantService and verifies restaurant.ownerId === callerId.
+ *   through RESTAURANT_ACCESS_PORT, which enforces ownership inside Catalog.
  *   This mirrors the pattern used by MenuService.
  */
 @Injectable()
@@ -34,7 +38,8 @@ export class PromotionRestaurantService {
 
   constructor(
     private readonly promotionRepo: PromotionRepository,
-    private readonly restaurantService: RestaurantService,
+    @Inject(RESTAURANT_ACCESS_PORT)
+    private readonly restaurantAccess: IRestaurantAccessPort,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -267,10 +272,7 @@ export class PromotionRestaurantService {
     restaurantId: string,
     callerId: string,
   ): Promise<void> {
-    const restaurant = await this.restaurantService.findOne(restaurantId);
-    if (restaurant.ownerId !== callerId) {
-      throw new ForbiddenException('You do not own this restaurant');
-    }
+    await this.restaurantAccess.assertOwner(restaurantId, callerId);
   }
 
   private assertPromotionBelongsToRestaurant(

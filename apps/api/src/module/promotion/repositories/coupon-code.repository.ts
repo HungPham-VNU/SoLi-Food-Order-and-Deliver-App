@@ -2,7 +2,6 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import {
   couponCodes,
   type CouponCode,
@@ -20,7 +19,7 @@ export class CouponCodeRepository {
 
   constructor(
     @Inject(DB_CONNECTION)
-    private readonly db: NodePgDatabase<typeof schema>,
+    private readonly db: NodePgDatabase,
   ) {}
 
   // ---------------------------------------------------------------------------

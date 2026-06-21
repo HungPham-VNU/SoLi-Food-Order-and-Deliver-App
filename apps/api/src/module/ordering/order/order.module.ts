@@ -7,6 +7,10 @@ import { MenuItemSnapshotRepository } from '../acl/repositories/menu-item-snapsh
 import { RestaurantSnapshotRepository } from '../acl/repositories/restaurant-snapshot.repository';
 import { DeliveryZoneSnapshotRepository } from '../acl/repositories/delivery-zone-snapshot.repository';
 import { CartRedisRepository } from '../cart/cart.redis-repository';
+import { PaymentModule } from '@/module/payment/payment.module';
+import { PromotionModule } from '@/module/promotion/promotion.module';
+import { RedisModule } from '@/lib/redis/redis.module';
+import { GeoModule } from '@/lib/geo/geo.module';
 
 /**
  * OrderModule — Phase 4 implementation.
@@ -25,7 +29,14 @@ import { CartRedisRepository } from '../cart/cart.redis-repository';
  *   - EventBus                  : provided by CqrsModule
  */
 @Module({
-  imports: [CqrsModule, DatabaseModule],
+  imports: [
+    CqrsModule,
+    DatabaseModule,
+    PaymentModule,
+    PromotionModule,
+    RedisModule,
+    GeoModule,
+  ],
   providers: [
     PlaceOrderHandler,
     AppSettingsService,

@@ -68,4 +68,15 @@ export interface IPaymentInitiationPort {
    * from staying pending until the timeout cron.
    */
   markPaymentAttemptFailed(txnId: string, reason: string): Promise<void>;
+
+  cancelPendingPaymentForOrder(
+    orderId: string,
+    customerId: string,
+    reason?: string,
+  ): Promise<{
+    id: string;
+    orderId: string;
+    status: string;
+    updatedAt: Date;
+  }>;
 }

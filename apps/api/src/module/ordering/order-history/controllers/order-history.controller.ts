@@ -17,7 +17,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
-import { hasRole } from '@/module/auth/role.util';
+import { hasRole } from '@/shared/security/role.util';
 import { OrderHistoryService } from '../services/order-history.service';
 import {
   AdminOrderFiltersDto,

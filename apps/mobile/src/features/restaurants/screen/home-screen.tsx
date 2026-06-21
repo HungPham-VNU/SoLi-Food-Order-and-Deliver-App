@@ -7,28 +7,39 @@ import { useAddressStore } from '@/src/features/location';
 import {
   CategoryRail,
   FeaturedRestaurantsSection,
+  HomeAiSearchResults,
   HomeSearchBar,
   HomeSearchResults,
   HomeTopBar,
   SpecialOffersCarousel,
 } from '../components';
 import {
+  useAiSearch,
   useDeliveryEstimates,
   useNearbyRestaurants,
   useUnifiedSearch,
 } from '../api';
 import { useDebouncedValue } from '../hooks';
+import { useSearchModeStore } from '../store';
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [submittedAiQuery, setSubmittedAiQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const { mode: searchMode, toggleMode: toggleSearchMode } =
+    useSearchModeStore();
   const debouncedQuery = useDebouncedValue(searchQuery, 400).trim();
   const { latitude, longitude } = useAddressStore();
 
   const hasCoordinates = latitude != null && longitude != null;
-  const isSearchActive = debouncedQuery.length > 0;
+  const isAiSearchMode = searchMode === 'ai';
+  const isClassicSearchActive = debouncedQuery.length > 0;
+  const isAiSearchActive = submittedAiQuery.length > 0;
+  const isSearchActive = isAiSearchMode
+    ? isAiSearchActive
+    : isClassicSearchActive;
 
   const {
     data: restaurantsData,
@@ -51,7 +62,43 @@ export function HomeScreen() {
     q: debouncedQuery,
     latitude,
     longitude,
+    enabled: isClassicSearchActive && !isAiSearchMode,
   });
+
+  const {
+    data: aiSearchData,
+    isPending: isAiSearchLoading,
+    error: aiSearchError,
+    mutate: runAiSearch,
+  } = useAiSearch({
+    latitude,
+    longitude,
+  });
+
+  const handleSearchQueryChange = React.useCallback((query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setSubmittedAiQuery('');
+    }
+  }, []);
+
+  const handleSearchSubmit = React.useCallback(() => {
+    if (!isAiSearchMode) return;
+
+    const trimmedQuery = searchQuery.trim();
+    if (!trimmedQuery) {
+      setSubmittedAiQuery('');
+      return;
+    }
+
+    setSubmittedAiQuery(trimmedQuery);
+    runAiSearch(trimmedQuery);
+  }, [isAiSearchMode, runAiSearch, searchQuery]);
+
+  const handleToggleSearchMode = React.useCallback(() => {
+    setSubmittedAiQuery('');
+    toggleSearchMode();
+  }, [toggleSearchMode]);
 
   const restaurants = useMemo(
     () => restaurantsData?.restaurants ?? [],
@@ -68,9 +115,26 @@ export function HomeScreen() {
   );
 
   const onRefresh = React.useCallback(() => {
-    void refetchNearby();
+    if (isAiSearchMode) {
+      if (!isAiSearchActive) {
+        void refetchNearby();
+      }
+      return;
+    }
+
+    if (!isClassicSearchActive) {
+      void refetchNearby();
+      return;
+    }
+
     void refetchSearch();
-  }, [refetchNearby, refetchSearch]);
+  }, [
+    isAiSearchActive,
+    isAiSearchMode,
+    isClassicSearchActive,
+    refetchNearby,
+    refetchSearch,
+  ]);
 
   const handleRestaurantPress = React.useCallback(
     (restaurantId: string) => {
@@ -110,17 +174,41 @@ export function HomeScreen() {
         }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#00490e']}
-            tintColor="#00490e"
-          />
+          isAiSearchActive && isAiSearchMode ? undefined : (
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#00490e']}
+              tintColor="#00490e"
+            />
+          )
         }
       >
-        <HomeSearchBar query={searchQuery} onChangeQuery={setSearchQuery} />
+        <HomeSearchBar
+          query={searchQuery}
+          onChangeQuery={handleSearchQueryChange}
+          onSubmitQuery={handleSearchSubmit}
+          mode={searchMode}
+          onToggleMode={handleToggleSearchMode}
+        />
 
-        {isSearchActive ? (
+        {isSearchActive && isAiSearchMode ? (
+          <HomeAiSearchResults
+            query={submittedAiQuery}
+            interpretation={aiSearchData?.interpretation}
+            appliedFilters={aiSearchData?.appliedFilters ?? []}
+            restaurants={aiSearchData?.restaurants ?? []}
+            items={aiSearchData?.items ?? []}
+            total={aiSearchData?.total}
+            followUps={aiSearchData?.followUps ?? []}
+            isFallback={aiSearchData?.mode === 'classic_fallback'}
+            isLoading={isAiSearchLoading}
+            hasError={Boolean(aiSearchError)}
+            onRestaurantPress={handleRestaurantPress}
+            onMenuItemPress={handleMenuItemPress}
+            onFollowUpPress={handleSearchQueryChange}
+          />
+        ) : isSearchActive ? (
           <HomeSearchResults
             query={debouncedQuery}
             restaurants={searchData?.restaurants ?? []}

@@ -2,7 +2,6 @@ import { Injectable, Inject } from '@nestjs/common';
 import { eq, and, lt, desc } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import {
   deviceTokens,
   type NewDeviceToken,
@@ -20,9 +19,7 @@ import {
  */
 @Injectable()
 export class DeviceTokenRepository {
-  constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) private readonly db: NodePgDatabase) {}
 
   /**
    * Find ALL device tokens for a user (active + inactive).

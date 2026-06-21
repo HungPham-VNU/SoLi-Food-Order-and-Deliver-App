@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signUp } from '@/lib/auth-client';
+import { signUp, useSession } from '@/lib/auth-client';
 import { ApiError } from '@/lib/api-client';
 import { trackEvent } from '@/lib/analytics';
 
@@ -12,6 +12,7 @@ export interface SignUpInput {
 
 export function useSignUp() {
   const navigate = useNavigate();
+  const { refetch: refetchSession } = useSession();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -35,7 +36,8 @@ export function useSignUp() {
       }
 
       trackEvent('signup_success', { method: 'email' });
-      navigate('/auth/register/business');
+      await refetchSession();
+      navigate('/auth/register/business', { replace: true });
 
       return result.data;
     } catch (caught) {

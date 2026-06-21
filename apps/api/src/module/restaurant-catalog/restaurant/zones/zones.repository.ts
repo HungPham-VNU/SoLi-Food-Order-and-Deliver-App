@@ -6,14 +6,11 @@ import {
   type DeliveryZone,
 } from '@/module/restaurant-catalog/restaurant/restaurant.schema';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import type { CreateDeliveryZoneDto, UpdateDeliveryZoneDto } from './zones.dto';
 
 @Injectable()
 export class ZonesRepository {
-  constructor(
-    @Inject(DB_CONNECTION) readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) readonly db: NodePgDatabase) {}
 
   async findByRestaurant(restaurantId: string): Promise<DeliveryZone[]> {
     return this.db

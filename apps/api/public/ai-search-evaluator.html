@@ -1,0 +1,2052 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>UITFood AI Search Evaluator</title>
+    <style>
+      :root {
+        --ink: #17211b;
+        --muted: #637068;
+        --paper: #f7f7f3;
+        --card: #fff;
+        --line: #dfe4de;
+        --green: #176b45;
+        --pale: #e6f3eb;
+        --red: #b42318;
+        --redp: #feeceb;
+        --amber: #a35d08;
+        --blue: #2457a7;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--paper);
+        font:
+          14px/1.45 Inter,
+          system-ui,
+          sans-serif;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+      .top {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 13px 20px;
+        color: white;
+        background: #173d2d;
+      }
+      .brand {
+        min-width: 260px;
+      }
+      .brand h1 {
+        margin: 0;
+        font:
+          700 19px Georgia,
+          serif;
+      }
+      .brand small {
+        color: #bcd1c5;
+      }
+      .connection {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        flex: 1;
+      }
+      .connection input {
+        width: min(430px, 100%);
+        padding: 8px 10px;
+        border: 1px solid #52715f;
+        border-radius: 7px;
+        color: white;
+        background: #0f2e22;
+      }
+      .dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #9aa39e;
+      }
+      .dot.ok {
+        background: #55d68d;
+      }
+      .dot.bad {
+        background: #ff776d;
+      }
+      .btn {
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        color: var(--ink);
+        background: #fff;
+        font-weight: 650;
+        cursor: pointer;
+      }
+      .btn:hover {
+        filter: brightness(0.96);
+      }
+      .btn.primary {
+        border-color: var(--green);
+        color: #fff;
+        background: var(--green);
+      }
+      .btn.dark {
+        border-color: #557363;
+        color: white;
+        background: transparent;
+      }
+      .btn.danger {
+        color: var(--red);
+      }
+      .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+      .app {
+        display: grid;
+        grid-template-columns: 330px minmax(0, 1fr);
+        min-height: calc(100vh - 65px);
+      }
+      aside {
+        position: sticky;
+        top: 65px;
+        height: calc(100vh - 65px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid var(--line);
+        background: #f0f2ed;
+      }
+      .tools {
+        padding: 14px;
+        border-bottom: 1px solid var(--line);
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .row > * {
+        min-width: 0;
+        flex: 1;
+      }
+      .input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fff;
+        outline: none;
+      }
+      .input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: var(--green);
+        box-shadow: 0 0 0 3px #176b4518;
+      }
+      .progress {
+        height: 5px;
+        margin-top: 11px;
+        border-radius: 5px;
+        background: #d9dfda;
+      }
+      .progress div {
+        height: 100%;
+        width: 0;
+        border-radius: 5px;
+        background: var(--green);
+      }
+      .list {
+        overflow: auto;
+        padding: 8px;
+      }
+      .case {
+        width: 100%;
+        margin-bottom: 4px;
+        padding: 10px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        text-align: left;
+        background: transparent;
+        cursor: pointer;
+      }
+      .case:hover {
+        background: #e6eae5;
+      }
+      .case.active {
+        border-color: #b6ccbf;
+        background: #fff;
+      }
+      .case-line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .num {
+        min-width: 25px;
+        color: #819087;
+        font-size: 11px;
+      }
+      .query {
+        flex: 1;
+        overflow: hidden;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .state {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #c8cec9;
+      }
+      .state.done {
+        background: var(--green);
+      }
+      .state.partial {
+        background: #e9a23b;
+      }
+      .state.error {
+        background: var(--red);
+      }
+      .case-meta {
+        margin: 5px 0 0 33px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      main {
+        min-width: 0;
+        padding: 20px 24px 60px;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(100px, 1fr));
+        gap: 9px;
+        margin-bottom: 14px;
+      }
+      .metric {
+        padding: 11px 13px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: #fff;
+      }
+      .metric label {
+        display: block;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 750;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+      .metric b {
+        display: block;
+        margin-top: 4px;
+        font:
+          700 23px Georgia,
+          serif;
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .pass {
+        color: var(--green);
+      }
+      .fail {
+        color: var(--red);
+      }
+      .panel {
+        margin-bottom: 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 8px 24px #1830250b;
+      }
+      .panel-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 13px 15px;
+        border-bottom: 1px solid var(--line);
+      }
+      .panel-head h2 {
+        flex: 1;
+        margin: 0;
+        font:
+          700 18px Georgia,
+          serif;
+      }
+      .body {
+        padding: 15px;
+      }
+      .badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 999px;
+        color: #355344;
+        background: #e7ede9;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .badge.red {
+        color: var(--red);
+        background: var(--redp);
+      }
+      .badge.green {
+        color: var(--green);
+        background: var(--pale);
+      }
+      .editor {
+        display: grid;
+        grid-template-columns: 1.4fr 0.8fr;
+        gap: 12px;
+      }
+      .field {
+        margin-bottom: 9px;
+      }
+      .field label,
+      .section-label {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 750;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+      }
+      textarea {
+        min-height: 64px;
+        resize: vertical;
+      }
+      .coords {
+        display: grid;
+        grid-template-columns: auto repeat(3, 1fr);
+        align-items: end;
+        gap: 8px;
+      }
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 35px;
+        color: var(--muted);
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      .summary {
+        padding: 12px 15px;
+        border-bottom: 1px solid var(--line);
+        background: #fafbf9;
+      }
+      .summary p {
+        margin: 0 0 7px;
+      }
+      .result {
+        display: grid;
+        grid-template-columns:
+          38px minmax(240px, 1.1fr) minmax(180px, 0.75fr)
+          185px;
+        gap: 13px;
+        padding: 15px;
+        border-bottom: 1px solid var(--line);
+      }
+      .result:last-child {
+        border: 0;
+      }
+      .rank {
+        display: grid;
+        place-items: center;
+        width: 33px;
+        height: 33px;
+        border-radius: 50%;
+        color: #fff;
+        background: #365647;
+        font:
+          700 15px Georgia,
+          serif;
+      }
+      .item h3 {
+        margin: 0;
+        font-size: 15px;
+      }
+      .restaurant {
+        margin: 3px 0 7px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .facts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 11px;
+        color: #46534c;
+        font-size: 12px;
+      }
+      .desc {
+        display: -webkit-box;
+        overflow: hidden;
+        margin: 6px 0;
+        color: #58655e;
+        font-size: 12px;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+      }
+      .reasons {
+        margin: 0;
+        padding-left: 17px;
+        color: #4c5d54;
+        font-size: 12px;
+      }
+      .auto {
+        margin-top: 8px;
+        color: var(--red);
+        font-size: 11px;
+      }
+      .grades {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+      }
+      .grade {
+        padding: 7px 2px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      .grade.sel[data-grade='3'] {
+        color: #fff;
+        background: var(--green);
+      }
+      .grade.sel[data-grade='2'] {
+        color: #fff;
+        background: var(--blue);
+      }
+      .grade.sel[data-grade='1'] {
+        color: #fff;
+        background: var(--amber);
+      }
+      .grade.sel[data-grade='0'] {
+        color: #fff;
+        background: var(--red);
+      }
+      .critical {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin: 8px 0;
+        color: var(--red);
+        font-size: 11px;
+        font-weight: 650;
+      }
+      .note {
+        width: 100%;
+        padding: 6px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        font-size: 11px;
+      }
+      .empty {
+        padding: 42px 20px;
+        color: var(--muted);
+        text-align: center;
+      }
+      .empty strong {
+        display: block;
+        color: var(--ink);
+        font:
+          700 18px Georgia,
+          serif;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+      }
+      th {
+        color: var(--muted);
+        font-size: 10px;
+        text-transform: uppercase;
+      }
+      dialog {
+        width: min(620px, calc(100vw - 30px));
+        padding: 0;
+        border: 0;
+        border-radius: 12px;
+        box-shadow: 0 25px 80px #14231b55;
+      }
+      dialog::backdrop {
+        background: #0f1f1677;
+      }
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 12px 18px;
+        border-top: 1px solid var(--line);
+      }
+      .toast {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 10;
+        padding: 11px 15px;
+        border-radius: 8px;
+        color: #fff;
+        background: #263b31;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: 0.2s;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: none;
+      }
+      @media (max-width: 1050px) {
+        .metrics {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        .result {
+          grid-template-columns: 38px 1fr 180px;
+        }
+        .why {
+          grid-column: 2;
+        }
+      }
+      @media (max-width: 760px) {
+        .top {
+          flex-wrap: wrap;
+        }
+        .brand {
+          min-width: 100%;
+        }
+        .app {
+          display: block;
+        }
+        aside {
+          position: static;
+          height: 300px;
+        }
+        main {
+          padding: 14px;
+        }
+        .metrics {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .editor,
+        .coords {
+          grid-template-columns: 1fr;
+        }
+        .result {
+          grid-template-columns: 34px 1fr;
+        }
+        .why,
+        .grader {
+          grid-column: 2;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <h1>AI Search Evaluator</h1>
+        <small>Golden-set relevance and constraint grading</small>
+      </div>
+      <div class="connection">
+        <input
+          id="apiUrl"
+          aria-label="API endpoint"
+          value="/api/search/ai"
+        /><span
+          ><i id="statusDot" class="dot"></i>
+          <small id="statusText">Not tested</small></span
+        >
+      </div>
+      <button id="exportBtn" class="btn dark">Export CSV</button>
+    </header>
+    <div class="app">
+      <aside>
+        <div class="tools">
+          <input
+            id="searchCases"
+            class="input"
+            placeholder="Filter 50 test cases…"
+          />
+          <div class="row">
+            <select id="categoryFilter">
+              <option value="all">All categories</option></select
+            ><button id="addCaseBtn" class="btn">+ Add</button>
+          </div>
+          <div class="row">
+            <button id="runAllBtn" class="btn primary">Run visible suite</button
+            ><button id="resetBtn" class="btn danger">Reset</button>
+          </div>
+          <div class="progress"><div id="progressBar"></div></div>
+        </div>
+        <div id="caseList" class="list"></div>
+      </aside>
+      <main>
+        <section id="metrics" class="metrics"></section>
+        <section class="panel">
+          <div class="panel-head">
+            <span id="caseCategory" class="badge"></span>
+            <h2 id="caseTitle"></h2>
+            <button id="deleteCaseBtn" class="btn danger">Delete</button
+            ><button id="runCaseBtn" class="btn primary">Run test</button>
+          </div>
+          <div class="body">
+            <div class="editor">
+              <div>
+                <div class="field">
+                  <label>Query</label><input id="queryInput" class="input" />
+                </div>
+                <div class="field">
+                  <label>Expected intent</label
+                  ><textarea id="intentInput"></textarea>
+                </div>
+              </div>
+              <div>
+                <div class="field">
+                  <label>Good results</label
+                  ><textarea id="goodInput"></textarea>
+                </div>
+                <div class="field">
+                  <label>Bad results</label><textarea id="badInput"></textarea>
+                </div>
+              </div>
+            </div>
+            <div class="coords">
+              <label class="check"
+                ><input id="useCoords" type="checkbox" checked /> Send
+                location</label
+              >
+              <div class="field">
+                <label>Latitude</label
+                ><input
+                  id="latInput"
+                  class="input"
+                  type="number"
+                  step="any"
+                  value="10.8935"
+                />
+              </div>
+              <div class="field">
+                <label>Longitude</label
+                ><input
+                  id="lonInput"
+                  class="input"
+                  type="number"
+                  step="any"
+                  value="106.792"
+                />
+              </div>
+              <div class="field">
+                <label>Radius km</label
+                ><input
+                  id="radiusInput"
+                  class="input"
+                  type="number"
+                  min=".1"
+                  max="100"
+                  step=".1"
+                  value="5"
+                />
+              </div>
+            </div>
+            <div id="constraints" class="chips"></div>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Ranked results</h2>
+            <span id="runMeta" class="badge">Not run</span>
+          </div>
+          <div id="responseSummary"></div>
+          <div id="results">
+            <div class="empty">
+              <strong>No response yet</strong>Run this case, then grade each
+              result from 0–3.
+            </div>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>Category breakdown</h2></div>
+          <div class="body">
+            <table>
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Queries</th>
+                  <th>Judged</th>
+                  <th>Precision@5</th>
+                  <th>nDCG@10</th>
+                  <th>Violations</th>
+                </tr>
+              </thead>
+              <tbody id="categoryRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+    <dialog id="caseDialog">
+      <div class="panel-head">
+        <h2>Add golden test case</h2>
+        <button class="btn" data-close>Close</button>
+      </div>
+      <form id="caseForm">
+        <div class="body">
+          <div class="field">
+            <label>Query</label><input name="query" class="input" required />
+          </div>
+          <div class="field">
+            <label>Category</label
+            ><select name="category">
+              <option>Nutrition</option>
+              <option>Diet</option>
+              <option>Budget</option>
+              <option>Rating</option>
+              <option>Location</option>
+              <option>Mixed intent</option>
+              <option>Vague</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Expected intent</label
+            ><textarea name="intent" required></textarea>
+          </div>
+          <div class="field">
+            <label>Good result examples</label
+            ><input name="good" class="input" />
+          </div>
+          <div class="field">
+            <label>Bad result examples</label><input name="bad" class="input" />
+          </div>
+          <div class="field">
+            <label>Constraints JSON (optional)</label
+            ><textarea
+              name="constraints"
+              placeholder='{"maxPrice":50000,"critical":true}'
+            ></textarea>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="btn" data-close>Cancel</button
+          ><button class="btn primary">Add case</button>
+        </div>
+      </form>
+    </dialog>
+    <div id="toast" class="toast"></div>
+    <script>
+      const STORAGE = 'uitfood-ai-search-evaluator-v1',
+        SETTINGS = 'uitfood-ai-search-evaluator-settings-v2';
+      const categories = [
+        'Nutrition',
+        'Diet',
+        'Budget',
+        'Rating',
+        'Location',
+        'Mixed intent',
+        'Vague',
+      ];
+      const Q = (id, category, query, intent, good, bad, constraints = {}) => ({
+        id,
+        category,
+        query,
+        intent,
+        good,
+        bad,
+        constraints,
+        response: null,
+        grades: {},
+        error: null,
+      });
+      const seed = [
+        Q(
+          'N01',
+          'Nutrition',
+          'high protein food',
+          'Prioritize dishes with at least 25 g protein.',
+          'chicken breast rice, beef bowl, tofu protein bowl',
+          'milk tea, fries',
+          { proteinMin: 25 },
+        ),
+        Q(
+          'N02',
+          'Nutrition',
+          'low calorie food',
+          'Prefer complete dishes at or below 500 kcal.',
+          'salad, fresh rolls, broth soup',
+          'fried chicken, creamy pasta',
+          { caloriesMax: 500 },
+        ),
+        Q(
+          'N03',
+          'Nutrition',
+          'food for weight loss',
+          'Low-calorie, balanced, filling food; avoid sugary or deep-fried items.',
+          'lean protein salad, vegetable soup',
+          'milk tea, fries',
+          { caloriesMax: 500 },
+        ),
+        Q(
+          'N04',
+          'Nutrition',
+          'healthy food',
+          'Prioritize nutritionally balanced dishes with credible nutrition data.',
+          'grain bowl, lean protein and vegetables',
+          'sugary drinks, deep-fried snacks',
+        ),
+        Q(
+          'N05',
+          'Nutrition',
+          'low fat meal',
+          'Prefer dishes with no more than 15 g fat.',
+          'steamed fish, vegetable soup',
+          'fried chicken, creamy dishes',
+          { fatMax: 15 },
+        ),
+        Q(
+          'N06',
+          'Nutrition',
+          'post workout meal',
+          'High-protein meal with useful carbohydrates.',
+          'chicken rice, beef noodle bowl, tofu rice',
+          'soft drinks, desserts',
+          { proteinMin: 25 },
+        ),
+        Q(
+          'N07',
+          'Nutrition',
+          'light dinner under 500 calories',
+          'Dinner-appropriate dishes at or below 500 kcal.',
+          'salad, soup, fresh rolls',
+          'pizza, fried combo',
+          { caloriesMax: 500 },
+        ),
+        Q(
+          'N08',
+          'Nutrition',
+          'high protein low calorie food',
+          'At least 25 g protein and no more than 500 kcal.',
+          'grilled chicken salad, lean beef bowl',
+          'fried chicken burger, dessert',
+          { proteinMin: 25, caloriesMax: 500 },
+        ),
+        Q(
+          'D01',
+          'Diet',
+          'food for vegan',
+          'No meat, seafood, egg, dairy, honey, or fish sauce.',
+          'vegan salad, tofu dishes',
+          'beef pho, cheese pizza, egg rice',
+          { diet: 'vegan', critical: true },
+        ),
+        Q(
+          'D02',
+          'Diet',
+          'vegan Vietnamese food',
+          'Vietnamese dishes without animal-derived ingredients or fish sauce.',
+          'vegan pho, tofu rice, vegan fresh rolls',
+          'beef pho, fish-sauce noodles',
+          { diet: 'vegan', critical: true },
+        ),
+        Q(
+          'D03',
+          'Diet',
+          'food for vegetarian',
+          'No meat, poultry, fish, or seafood.',
+          'vegetarian rice, tofu noodles',
+          'beef, pork, fish',
+          { diet: 'vegetarian', critical: true },
+        ),
+        Q(
+          'D04',
+          'Diet',
+          'halal food',
+          'Halal-tagged food; no pork, bacon, lard, or alcohol.',
+          'halal chicken rice, halal beef bowl',
+          'pork rice, bacon burger',
+          { diet: 'halal', critical: true },
+        ),
+        Q(
+          'D05',
+          'Diet',
+          'food without peanuts',
+          'Exclude peanuts and peanut-containing sauces.',
+          'clearly peanut-free dishes',
+          'peanut noodles, satay with peanuts',
+          { allergen: 'peanut', critical: true },
+        ),
+        Q(
+          'D06',
+          'Diet',
+          'dairy free food',
+          'Exclude milk, butter, cheese, cream, and yogurt.',
+          'dairy-free rice dishes, clear soup',
+          'cheese pizza, creamy pasta',
+          { allergen: 'dairy', critical: true },
+        ),
+        Q(
+          'D07',
+          'Diet',
+          'gluten free meal',
+          'Prefer explicitly gluten-free dishes; avoid wheat noodles and bread.',
+          'rice bowl, gluten-free salad',
+          'bread, wheat noodles',
+          { diet: 'gluten-free', critical: true },
+        ),
+        Q(
+          'D08',
+          'Diet',
+          'no seafood please',
+          'Exclude fish, shrimp, crab, squid, shellfish, and fish sauce.',
+          'chicken rice, tofu bowl',
+          'sushi, shrimp noodles',
+          { exclude: 'seafood', critical: true },
+        ),
+        Q(
+          'D09',
+          'Diet',
+          'low sugar drink',
+          'Prefer drinks with low or no added sugar.',
+          'unsweetened tea, zero-sugar drink',
+          'milk tea, soda',
+          { lowSugar: true, critical: true },
+        ),
+        Q(
+          'D10',
+          'Diet',
+          'vegetarian but eggs are okay',
+          'No meat or seafood; eggs are explicitly acceptable.',
+          'egg rice, tofu noodles',
+          'beef pho, fish dishes',
+          { diet: 'vegetarian' },
+        ),
+        Q(
+          'B01',
+          'Budget',
+          'cheap food',
+          'Prefer filling dishes priced at or below 50,000 VND.',
+          'rice dishes under 50k, banh mi',
+          'premium meals',
+          { maxPrice: 50000 },
+        ),
+        Q(
+          'B02',
+          'Budget',
+          'food under 50000 VND',
+          'Every result must cost no more than 50,000 VND.',
+          'items priced 50k or less',
+          'items above 50k',
+          { maxPrice: 50000, critical: true },
+        ),
+        Q(
+          'B03',
+          'Budget',
+          'lunch under 40000',
+          'Lunch dishes priced at or below 40,000 VND.',
+          'rice, noodles, banh mi under 40k',
+          'drinks only, items over 40k',
+          { maxPrice: 40000, critical: true },
+        ),
+        Q(
+          'B04',
+          'Budget',
+          'budget dinner for one',
+          'Affordable, dinner-appropriate single-person meals.',
+          'rice bowl, noodles under 50k',
+          'family sets, premium meals',
+          { maxPrice: 50000 },
+        ),
+        Q(
+          'B05',
+          'Budget',
+          'cheapest filling meal',
+          'Sort filling meals by low price; avoid drinks and side dishes.',
+          'rice or noodle mains',
+          'beverages, tiny sides',
+          { maxPrice: 50000 },
+        ),
+        Q(
+          'B06',
+          'Budget',
+          'food from 30000 to 60000',
+          'Dishes within the inclusive 30,000–60,000 VND range.',
+          'items priced 30k–60k',
+          'items outside the range',
+          { minPrice: 30000, maxPrice: 60000, critical: true },
+        ),
+        Q(
+          'B07',
+          'Budget',
+          'cheap food for students',
+          'Student-friendly main meals at or below 45,000 VND.',
+          'banh mi, rice, noodles under 45k',
+          'expensive premium meals',
+          { maxPrice: 45000 },
+        ),
+        Q(
+          'R01',
+          'Rating',
+          'highly rated food',
+          'Prefer restaurants rated at least 4.3 with meaningful review evidence.',
+          'food from 4.3+ restaurants',
+          'low-rated or unrated restaurants',
+          { ratingMin: 4.3 },
+        ),
+        Q(
+          'R02',
+          'Rating',
+          'best rated restaurants',
+          'Rank restaurants by strong average rating and review confidence.',
+          'high-rated well-reviewed restaurants',
+          'low rating with few reviews',
+          { ratingMin: 4.3 },
+        ),
+        Q(
+          'R03',
+          'Rating',
+          'top rated pho',
+          'Pho from highly rated restaurants should rank first.',
+          'pho from 4.3+ restaurants',
+          'non-pho or low-rated options',
+          { ratingMin: 4.3 },
+        ),
+        Q(
+          'R04',
+          'Rating',
+          'popular food with good reviews',
+          'Combine popularity with rating and enough reviews.',
+          'frequently ordered, well-reviewed dishes',
+          'unrated obscure items',
+          { ratingMin: 4 },
+        ),
+        Q(
+          'R05',
+          'Rating',
+          'restaurants rated 4.5 or higher',
+          'Every restaurant must have average rating at least 4.5.',
+          '4.5+ restaurants',
+          'restaurants below 4.5',
+          { ratingMin: 4.5, critical: true },
+        ),
+        Q(
+          'L01',
+          'Location',
+          'food near me',
+          'Prioritize available food within 5 km.',
+          'nearby restaurants and dishes',
+          'far restaurants',
+          { distanceMax: 5 },
+        ),
+        Q(
+          'L02',
+          'Location',
+          'healthy food near me',
+          'Healthy dishes within 5 km; balance relevance and distance.',
+          'nearby low-calorie balanced dishes',
+          'far restaurants, fried snacks',
+          { distanceMax: 5 },
+        ),
+        Q(
+          'L03',
+          'Location',
+          'restaurant near me with good rating',
+          'Restaurants within 5 km rated at least 4.3.',
+          'nearby 4.3+ restaurants',
+          'far or low-rated restaurants',
+          { distanceMax: 5, ratingMin: 4.3 },
+        ),
+        Q(
+          'L04',
+          'Location',
+          'food within 2 km',
+          'Every result must be within 2 km of the supplied coordinates.',
+          'items from restaurants within 2 km',
+          'restaurants farther than 2 km',
+          { distanceMax: 2, critical: true },
+        ),
+        Q(
+          'L05',
+          'Location',
+          'closest open restaurant',
+          'Prioritize distance and current availability.',
+          'nearest open restaurants',
+          'closed or distant restaurants',
+          { distanceMax: 5 },
+        ),
+        Q(
+          'L06',
+          'Location',
+          'nearby Vietnamese lunch',
+          'Vietnamese lunch dishes within 5 km.',
+          'nearby Vietnamese rice/noodle meals',
+          'far or unrelated cuisine',
+          { distanceMax: 5 },
+        ),
+        Q(
+          'M01',
+          'Mixed intent',
+          'highly rated cheap food',
+          'At most 50,000 VND from restaurants rated at least 4.3.',
+          'cheap dishes at highly rated restaurants',
+          'expensive or low-rated items',
+          { maxPrice: 50000, ratingMin: 4.3 },
+        ),
+        Q(
+          'M02',
+          'Mixed intent',
+          'high protein food under 50000',
+          'At least 25 g protein and price at most 50,000 VND.',
+          'budget chicken or tofu protein bowls',
+          'low-protein or expensive food',
+          { proteinMin: 25, maxPrice: 50000 },
+        ),
+        Q(
+          'M03',
+          'Mixed intent',
+          'cheap vegan food near me',
+          'Vegan food within 5 km priced at most 50,000 VND.',
+          'nearby budget vegan dishes',
+          'animal products, far or expensive items',
+          { diet: 'vegan', maxPrice: 50000, distanceMax: 5, critical: true },
+        ),
+        Q(
+          'M04',
+          'Mixed intent',
+          'low calorie highly rated lunch',
+          'Lunch at or below 500 kcal from restaurants rated at least 4.3.',
+          'light lunch from high-rated restaurants',
+          'high-calorie or low-rated food',
+          { caloriesMax: 500, ratingMin: 4.3 },
+        ),
+        Q(
+          'M05',
+          'Mixed intent',
+          'spicy chicken under 60000',
+          'Spicy chicken dishes priced at or below 60,000 VND.',
+          'spicy chicken rice/noodles under 60k',
+          'non-spicy, non-chicken, expensive',
+          { maxPrice: 60000 },
+        ),
+        Q(
+          'M06',
+          'Mixed intent',
+          'vegetarian high protein meal',
+          'Vegetarian dish with at least 20 g protein.',
+          'tofu/legume protein bowl',
+          'meat dishes or low-protein sides',
+          { diet: 'vegetarian', proteinMin: 20, critical: true },
+        ),
+        Q(
+          'M07',
+          'Mixed intent',
+          'top rated food within 3 km',
+          'Results within 3 km from restaurants rated at least 4.3.',
+          'nearby highly rated food',
+          'far or low-rated food',
+          { distanceMax: 3, ratingMin: 4.3 },
+        ),
+        Q(
+          'M08',
+          'Mixed intent',
+          'healthy budget dinner near me',
+          'Balanced dinner within 5 km and at most 50,000 VND.',
+          'nearby affordable balanced mains',
+          'far, expensive, fried snacks',
+          { maxPrice: 50000, distanceMax: 5 },
+        ),
+        Q(
+          'V01',
+          'Vague',
+          'spicy food',
+          'Dishes explicitly described or tagged as spicy.',
+          'spicy noodles, hot curry',
+          'plain dishes, desserts',
+        ),
+        Q(
+          'V02',
+          'Vague',
+          'cheat meal food',
+          'Indulgent, substantial foods rather than health-optimized items.',
+          'burger, pizza, fried chicken',
+          'plain salad, unsweetened tea',
+        ),
+        Q(
+          'V03',
+          'Vague',
+          'something warm and comforting',
+          'Warm soups, noodles, stews, or hearty rice dishes.',
+          'pho, soup, stew',
+          'cold drinks, ice cream',
+        ),
+        Q(
+          'V04',
+          'Vague',
+          'quick lunch',
+          'Lunch-suitable food likely to be simple and available.',
+          'rice bowl, banh mi, noodles',
+          'dessert, family feast',
+        ),
+        Q(
+          'V05',
+          'Vague',
+          'I do not know what to eat',
+          'Return diverse, popular, available main dishes.',
+          'varied well-rated mains',
+          'ten near-duplicate items from one restaurant',
+          { maxPerRestaurant: 3 },
+        ),
+        Q(
+          'V06',
+          'Vague',
+          'surprise me with something good',
+          'Return a diverse selection of high-quality available dishes.',
+          'varied popular dishes',
+          'unavailable items or one-restaurant domination',
+          { maxPerRestaurant: 3 },
+        ),
+      ];
+
+      const $ = (id) => document.getElementById(id);
+      const ids = [
+        'apiUrl',
+        'statusDot',
+        'statusText',
+        'exportBtn',
+        'searchCases',
+        'categoryFilter',
+        'addCaseBtn',
+        'runAllBtn',
+        'resetBtn',
+        'progressBar',
+        'caseList',
+        'metrics',
+        'caseCategory',
+        'caseTitle',
+        'deleteCaseBtn',
+        'runCaseBtn',
+        'queryInput',
+        'intentInput',
+        'goodInput',
+        'badInput',
+        'useCoords',
+        'latInput',
+        'lonInput',
+        'radiusInput',
+        'constraints',
+        'runMeta',
+        'responseSummary',
+        'results',
+        'categoryRows',
+        'caseDialog',
+        'caseForm',
+        'toast',
+      ];
+      const E = Object.fromEntries(ids.map((id) => [id, $(id)]));
+      let state = load(),
+        selected = state.cases[0]?.id,
+        running = false,
+        progress = { done: 0, total: 0 };
+      function load() {
+        try {
+          const s = JSON.parse(localStorage.getItem(STORAGE));
+          if (s?.cases?.length) return s;
+        } catch {}
+        return { cases: structuredClone(seed) };
+      }
+      function save() {
+        localStorage.setItem(STORAGE, JSON.stringify(state));
+      }
+      function settings() {
+        try {
+          return JSON.parse(localStorage.getItem(SETTINGS)) || {};
+        } catch {
+          return {};
+        }
+      }
+      function saveSettings() {
+        localStorage.setItem(
+          SETTINGS,
+          JSON.stringify({
+            api: E.apiUrl.value,
+            coords: E.useCoords.checked,
+            lat: E.latInput.value,
+            lon: E.lonInput.value,
+            radius: E.radiusInput.value,
+          }),
+        );
+      }
+      function current() {
+        return state.cases.find((c) => c.id === selected) || state.cases[0];
+      }
+      function notify(s) {
+        E.toast.textContent = s;
+        E.toast.classList.add('show');
+        clearTimeout(notify.t);
+        notify.t = setTimeout(() => E.toast.classList.remove('show'), 2600);
+      }
+      function esc(v) {
+        return String(v ?? '').replace(
+          /[&<>'"]/g,
+          (c) =>
+            ({
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              "'": '&#39;',
+              '"': '&quot;',
+            })[c],
+        );
+      }
+      function fmt(v, d = 2) {
+        return Number.isFinite(v) ? v.toFixed(d) : '—';
+      }
+      function money(v) {
+        return Number.isFinite(Number(v))
+          ? `${Number(v).toLocaleString('vi-VN')} ₫`
+          : '—';
+      }
+      function has(c) {
+        return !!c.response?.data;
+      }
+      function items(c) {
+        return c.response?.data?.items || [];
+      }
+      function grade(c, i) {
+        return c.grades?.[i.id] || {};
+      }
+      function judged(g) {
+        return Number.isInteger(g.relevance);
+      }
+      function status(c) {
+        if (c.error) return 'error';
+        if (!has(c)) return '';
+        const a = items(c);
+        return !a.length || a.every((i) => judged(grade(c, i)))
+          ? 'done'
+          : 'partial';
+      }
+      function visible() {
+        const text = E.searchCases.value.trim().toLowerCase(),
+          cat = E.categoryFilter.value;
+        return state.cases.filter(
+          (c) =>
+            (cat === 'all' || c.category === cat) &&
+            (!text || `${c.query} ${c.intent}`.toLowerCase().includes(text)),
+        );
+      }
+      function renderList() {
+        E.caseList.innerHTML =
+          visible()
+            .map((c, n) => {
+              const done = items(c).filter((i) => judged(grade(c, i))).length;
+              return `<button class="case ${c.id === selected ? 'active' : ''}" data-case="${esc(c.id)}"><span class="case-line"><span class="num">${String(n + 1).padStart(2, '0')}</span><span class="query">${esc(c.query)}</span><span class="state ${status(c)}"></span></span><span class="case-meta">${esc(c.category)} · ${has(c) ? `${done}/${items(c).length} judged` : 'not run'}</span></button>`;
+            })
+            .join('') || '<div class="empty">No matching cases.</div>';
+      }
+      function labels(c) {
+        const x = c.constraints || {},
+          a = [];
+        if (x.proteinMin != null) a.push(`Protein ≥ ${x.proteinMin} g`);
+        if (x.caloriesMax != null) a.push(`Calories ≤ ${x.caloriesMax}`);
+        if (x.fatMax != null) a.push(`Fat ≤ ${x.fatMax} g`);
+        if (x.minPrice != null) a.push(`Price ≥ ${money(x.minPrice)}`);
+        if (x.maxPrice != null) a.push(`Price ≤ ${money(x.maxPrice)}`);
+        if (x.ratingMin != null) a.push(`Rating ≥ ${x.ratingMin}`);
+        if (x.distanceMax != null) a.push(`Distance ≤ ${x.distanceMax} km`);
+        if (x.diet) a.push(x.diet);
+        if (x.allergen) a.push(`No ${x.allergen}`);
+        if (x.exclude) a.push(`No ${x.exclude}`);
+        if (x.lowSugar) a.push('Low sugar');
+        if (x.maxPerRestaurant) a.push(`≤ ${x.maxPerRestaurant}/restaurant`);
+        if (x.critical) a.push('Safety-critical');
+        return a;
+      }
+      function renderEditor() {
+        const c = current();
+        if (!c) return;
+        E.caseCategory.textContent = c.category;
+        E.caseTitle.textContent = c.id;
+        E.queryInput.value = c.query;
+        E.intentInput.value = c.intent;
+        E.goodInput.value = c.good;
+        E.badInput.value = c.bad;
+        E.constraints.innerHTML =
+          labels(c)
+            .map(
+              (v) =>
+                `<span class="badge ${c.constraints?.critical ? 'red' : ''}">${esc(v)}</span>`,
+            )
+            .join('') ||
+          '<span class="badge">No deterministic constraints</span>';
+        E.deleteCaseBtn.disabled = state.cases.length <= 1;
+      }
+      function violations(c, item, index) {
+        const x = c.constraints || {},
+          v = [],
+          n = item.nutrition || {},
+          r = item.restaurant || {},
+          rating = Number(r.averageRating),
+          distance = Number(r.distanceKm);
+        if (
+          x.proteinMin != null &&
+          n.protein != null &&
+          +n.protein < x.proteinMin
+        )
+          v.push(`protein ${n.protein}g < ${x.proteinMin}g`);
+        if (
+          x.caloriesMax != null &&
+          n.calories != null &&
+          +n.calories > x.caloriesMax
+        )
+          v.push(`calories ${n.calories} > ${x.caloriesMax}`);
+        if (x.fatMax != null && n.fat != null && +n.fat > x.fatMax)
+          v.push(`fat ${n.fat}g > ${x.fatMax}g`);
+        if (x.minPrice != null && +item.price < x.minPrice)
+          v.push(`price below ${money(x.minPrice)}`);
+        if (x.maxPrice != null && +item.price > x.maxPrice)
+          v.push(`price above ${money(x.maxPrice)}`);
+        if (
+          x.ratingMin != null &&
+          Number.isFinite(rating) &&
+          rating < x.ratingMin
+        )
+          v.push(`rating ${rating} < ${x.ratingMin}`);
+        if (
+          x.distanceMax != null &&
+          Number.isFinite(distance) &&
+          distance > x.distanceMax
+        )
+          v.push(`distance ${distance}km > ${x.distanceMax}km`);
+        const text =
+            `${item.name || ''} ${item.description || ''} ${(item.tags || []).join(' ')}`.toLowerCase(),
+          find = (a) => a.find((w) => text.includes(w));
+        let hit;
+        const meat = [
+          'beef',
+          'pork',
+          'chicken',
+          'duck',
+          'bacon',
+          'ham',
+          'fish',
+          'shrimp',
+          'prawn',
+          'crab',
+          'squid',
+          'salmon',
+          'tuna',
+          'meat',
+          'bò',
+          'heo',
+          'gà',
+          'vịt',
+          'cá',
+          'tôm',
+          'cua',
+          'mực',
+        ];
+        const animal = [
+          ...meat,
+          'egg',
+          'milk',
+          'cheese',
+          'butter',
+          'cream',
+          'honey',
+          'fish sauce',
+          'trứng',
+          'sữa',
+          'phô mai',
+          'nước mắm',
+        ];
+        if (x.diet === 'vegan' && (hit = find(animal)))
+          v.push(`possible animal product: ${hit}`);
+        if (x.diet === 'vegetarian' && (hit = find(meat)))
+          v.push(`possible meat/seafood: ${hit}`);
+        if (
+          x.diet === 'halal' &&
+          (hit = find([
+            'pork',
+            'bacon',
+            'ham',
+            'lard',
+            'alcohol',
+            'wine',
+            'heo',
+          ]))
+        )
+          v.push(`possible non-halal ingredient: ${hit}`);
+        if (
+          x.allergen === 'peanut' &&
+          (hit = find(['peanut', 'groundnut', 'đậu phộng', 'lạc']))
+        )
+          v.push(`possible peanut: ${hit}`);
+        if (
+          x.allergen === 'dairy' &&
+          (hit = find([
+            'milk',
+            'cheese',
+            'butter',
+            'cream',
+            'yogurt',
+            'sữa',
+            'phô mai',
+          ]))
+        )
+          v.push(`possible dairy: ${hit}`);
+        if (
+          x.exclude === 'seafood' &&
+          (hit = find([
+            'fish',
+            'shrimp',
+            'prawn',
+            'crab',
+            'squid',
+            'salmon',
+            'tuna',
+            'fish sauce',
+            'cá',
+            'tôm',
+            'cua',
+            'mực',
+            'nước mắm',
+          ]))
+        )
+          v.push(`possible seafood: ${hit}`);
+        if (
+          x.maxPerRestaurant &&
+          items(c)
+            .slice(0, index + 1)
+            .filter((i) => i.restaurant?.id === r.id).length >
+            x.maxPerRestaurant
+        )
+          v.push(`restaurant appears more than ${x.maxPerRestaurant} times`);
+        return v;
+      }
+      function caseMetrics(c) {
+        const a = items(c),
+          g = a.map((i) => grade(c, i)),
+          precision = (k) => {
+            const t = g.slice(0, k);
+            return !t.length || t.some((x) => !judged(x))
+              ? NaN
+              : t.filter((x) => x.relevance >= 2).length / t.length;
+          },
+          ndcg = (k) => {
+            const rel = g.slice(0, k).map((x) => x.relevance);
+            if (!rel.length || rel.some((x) => !Number.isInteger(x)))
+              return NaN;
+            const calc = (x) =>
+                x.reduce((s, v, i) => s + (2 ** v - 1) / Math.log2(i + 2), 0),
+              ideal = calc([...rel].sort((a, b) => b - a));
+            return ideal ? calc(rel) / ideal : 0;
+          };
+        let vio = 0;
+        a.forEach((i, n) => {
+          if (grade(c, i).violation || violations(c, i, n).length) vio++;
+        });
+        return {
+          judged: g.filter(judged).length,
+          total: a.length,
+          p3: precision(3),
+          p5: precision(5),
+          p10: precision(10),
+          n5: ndcg(5),
+          n10: ndcg(10),
+          violations: vio,
+          latency: c.response?.latencyMs ?? NaN,
+          empty: has(c) && !a.length,
+        };
+      }
+      function aggregate(cases) {
+        const m = cases.filter(has).map(caseMetrics),
+          avg = (k) => {
+            const a = m.map((x) => x[k]).filter(Number.isFinite);
+            return a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN;
+          };
+        return {
+          runs: m.length,
+          p5: avg('p5'),
+          n10: avg('n10'),
+          latency: avg('latency'),
+          violations: m.reduce((s, x) => s + x.violations, 0),
+          judged: m.reduce((s, x) => s + x.judged, 0),
+          results: m.reduce((s, x) => s + x.total, 0),
+          empty: m.length ? m.filter((x) => x.empty).length / m.length : NaN,
+        };
+      }
+      function card(label, value, hint, cls = '') {
+        return `<div class="metric"><label>${label}</label><b class="${cls}">${value}</b><span class="hint">${hint}</span></div>`;
+      }
+      function renderMetrics() {
+        const a = aggregate(state.cases);
+        E.metrics.innerHTML =
+          card(
+            'Progress',
+            `${a.runs}/${state.cases.length}`,
+            `${a.judged}/${a.results} results judged`,
+          ) +
+          card(
+            'Precision@5',
+            fmt(a.p5),
+            'target ≥ 0.75',
+            Number.isFinite(a.p5) ? (a.p5 >= 0.75 ? 'pass' : 'fail') : '',
+          ) +
+          card(
+            'nDCG@10',
+            fmt(a.n10),
+            'target ≥ 0.80',
+            Number.isFinite(a.n10) ? (a.n10 >= 0.8 ? 'pass' : 'fail') : '',
+          ) +
+          card(
+            'Violations',
+            a.violations,
+            'target = 0',
+            a.violations ? 'fail' : 'pass',
+          ) +
+          card(
+            'Avg latency',
+            Number.isFinite(a.latency) ? `${Math.round(a.latency)} ms` : '—',
+            'target < 800 ms',
+            Number.isFinite(a.latency)
+              ? a.latency < 800
+                ? 'pass'
+                : 'fail'
+              : '',
+          ) +
+          card(
+            'Empty rate',
+            Number.isFinite(a.empty) ? `${(a.empty * 100).toFixed(1)}%` : '—',
+            'target < 5%',
+            Number.isFinite(a.empty) ? (a.empty < 0.05 ? 'pass' : 'fail') : '',
+          );
+      }
+
+      function renderResponse() {
+        const c = current();
+        if (!c || !has(c)) {
+          E.runMeta.className = `badge ${c?.error ? 'red' : ''}`;
+          E.runMeta.textContent = c?.error ? 'Request failed' : 'Not run';
+          E.responseSummary.innerHTML = c?.error
+            ? `<div class="summary fail">${esc(c.error)}</div>`
+            : '';
+          E.results.innerHTML = `<div class="empty"><strong>${c?.error ? 'Could not load results' : 'No response yet'}</strong>${c?.error ? 'Check the endpoint and API status.' : 'Run this case, then grade each result from 0–3.'}</div>`;
+          return;
+        }
+        const d = c.response.data,
+          a = items(c),
+          m = caseMetrics(c);
+        E.runMeta.className = 'badge green';
+        E.runMeta.textContent = `${c.response.latencyMs} ms · ${d.mode || 'unknown mode'}`;
+        E.responseSummary.innerHTML = `<div class="summary"><p><b>Interpretation:</b> ${esc(d.interpretation || 'None')}</p><div class="chips">${(d.appliedFilters || []).map((f) => `<span class="badge">${esc(f.label)} · ${esc(f.source)}</span>`).join('') || '<span class="badge">No applied filters</span>'}</div><p class="hint" style="margin-top:8px">Case: P@3 ${fmt(m.p3)} · P@5 ${fmt(m.p5)} · P@10 ${fmt(m.p10)} · nDCG@5 ${fmt(m.n5)} · nDCG@10 ${fmt(m.n10)}</p></div>`;
+        if (!a.length) {
+          E.results.innerHTML =
+            '<div class="empty"><strong>Empty result set</strong>This counts toward the empty-result rate.</div>';
+          return;
+        }
+        E.results.innerHTML = a
+          .map((item, index) => {
+            const g = grade(c, item),
+              v = violations(c, item, index),
+              n = item.nutrition || {},
+              r = item.restaurant || {};
+            return `<article class="result"><div class="rank">${index + 1}</div><div class="item"><h3>${esc(item.name)}</h3><div class="restaurant">${esc(r.name || 'Unknown restaurant')} · ${esc(item.categoryName || 'Uncategorized')}</div><div class="facts"><span>${money(item.price)}</span><span>★ ${Number.isFinite(+r.averageRating) ? (+r.averageRating).toFixed(1) : '—'} (${r.reviewCount ?? 0})</span><span>${Number.isFinite(+r.distanceKm) ? (+r.distanceKm).toFixed(2) + ' km' : 'distance —'}</span><span>${n.protein != null ? n.protein + 'g protein' : 'protein —'}</span><span>${n.calories != null ? n.calories + ' kcal' : 'calories —'}</span></div>${item.description ? `<p class="desc">${esc(item.description)}</p>` : ''}${(item.tags || []).length ? `<div class="chips">${item.tags.map((t) => `<span class="badge">${esc(t)}</span>`).join('')}</div>` : ''}</div><div class="why"><span class="section-label">Search explanation</span><ul class="reasons">${(item.matchReasons || []).map((x) => `<li>${esc(x)}</li>`).join('') || '<li>No match reason returned</li>'}</ul>${v.length ? `<div class="auto"><b>Auto-flag:</b> ${esc(v.join('; '))}</div>` : ''}</div><div class="grader"><span class="section-label">Relevance</span><div class="grades">${[0, 1, 2, 3].map((x) => `<button class="grade ${g.relevance === x ? 'sel' : ''}" data-grade="${x}" data-item="${esc(item.id)}" title="${['Bad', 'Weak', 'Acceptable', 'Excellent'][x]} match">${x}</button>`).join('')}</div><label class="critical"><input type="checkbox" data-violation="${esc(item.id)}" ${g.violation ? 'checked' : ''}> Critical violation</label><input class="note" data-note="${esc(item.id)}" value="${esc(g.note || '')}" placeholder="Rater note…"></div></article>`;
+          })
+          .join('');
+      }
+      function renderCategories() {
+        E.categoryRows.innerHTML = categories
+          .map((cat) => {
+            const cases = state.cases.filter((c) => c.category === cat),
+              a = aggregate(cases);
+            return `<tr><td><span class="badge">${cat}</span></td><td>${a.runs}/${cases.length}</td><td>${a.judged}/${a.results}</td><td>${fmt(a.p5)}</td><td>${fmt(a.n10)}</td><td class="${a.violations ? 'fail' : 'pass'}">${a.violations}</td></tr>`;
+          })
+          .join('');
+      }
+      function render() {
+        renderList();
+        renderEditor();
+        renderMetrics();
+        renderResponse();
+        renderCategories();
+        E.progressBar.style.width = progress.total
+          ? (progress.done / progress.total) * 100 + '%'
+          : '0';
+      }
+      function sync() {
+        const c = current();
+        if (!c) return;
+        c.query = E.queryInput.value.trim();
+        c.intent = E.intentInput.value.trim();
+        c.good = E.goodInput.value.trim();
+        c.bad = E.badInput.value.trim();
+        save();
+      }
+      function patchGrade(id, patch) {
+        const c = current();
+        c.grades[id] = { ...(c.grades[id] || {}), ...patch };
+        save();
+        render();
+      }
+      async function runCase(c, quiet = false) {
+        const endpoint = E.apiUrl.value.trim();
+        if (!endpoint) throw Error('API endpoint is required');
+        const body = { query: c.query, offset: 0, limit: 10 };
+        if (E.useCoords.checked) {
+          body.lat = +E.latInput.value;
+          body.lon = +E.lonInput.value;
+          body.radiusKm = +E.radiusInput.value;
+        }
+        c.error = null;
+        c.response = null;
+        c.grades = {};
+        save();
+        if (!quiet) render();
+        const start = performance.now();
+        try {
+          const res = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(body),
+            }),
+            raw = await res.text();
+          let data;
+          try {
+            data = JSON.parse(raw);
+          } catch {
+            data = { message: raw || `HTTP ${res.status}` };
+          }
+          if (!res.ok)
+            throw Error(
+              `${res.status} ${res.statusText}: ${Array.isArray(data.message) ? data.message.join(', ') : data.message || 'Request failed'}`,
+            );
+          if (!Array.isArray(data.items))
+            throw Error('Response does not contain an items array');
+          c.response = {
+            data,
+            latencyMs: Math.round(performance.now() - start),
+            runAt: new Date().toISOString(),
+          };
+          E.statusDot.className = 'dot ok';
+          E.statusText.textContent = 'API reachable';
+        } catch (e) {
+          c.error = e instanceof Error ? e.message : String(e);
+          E.statusDot.className = 'dot bad';
+          E.statusText.textContent = 'Request failed';
+          if (!quiet) notify(c.error);
+        }
+        save();
+        if (!quiet) render();
+        return !c.error;
+      }
+      async function runSelected() {
+        if (running) return;
+        sync();
+        running = true;
+        E.runCaseBtn.disabled = E.runAllBtn.disabled = true;
+        E.runCaseBtn.textContent = 'Running…';
+        await runCase(current());
+        running = false;
+        E.runCaseBtn.disabled = E.runAllBtn.disabled = false;
+        E.runCaseBtn.textContent = 'Run test';
+        render();
+      }
+      async function runSuite() {
+        if (running) return;
+        sync();
+        const cases = visible();
+        if (!cases.length) return;
+        running = true;
+        progress = { done: 0, total: cases.length };
+        E.runAllBtn.disabled = E.runCaseBtn.disabled = true;
+        render();
+        for (const c of cases) {
+          E.runAllBtn.textContent = `Running ${progress.done}/${cases.length}`;
+          selected = c.id;
+          await runCase(c, true);
+          progress.done++;
+          render();
+        }
+        running = false;
+        E.runAllBtn.disabled = E.runCaseBtn.disabled = false;
+        E.runAllBtn.textContent = 'Run visible suite';
+        notify(`Completed ${cases.length} test cases`);
+        render();
+      }
+      function cell(v) {
+        const s =
+          typeof v === 'object' && v !== null
+            ? JSON.stringify(v)
+            : String(v ?? '');
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      function exportCsv() {
+        sync();
+        const headers = [
+            'run_at',
+            'query_id',
+            'category',
+            'query',
+            'expected_intent',
+            'good_results',
+            'bad_results',
+            'constraints',
+            'request_endpoint',
+            'latency_ms',
+            'response_mode',
+            'interpretation',
+            'applied_filters',
+            'rank',
+            'item_id',
+            'item_name',
+            'restaurant_id',
+            'restaurant_name',
+            'price_vnd',
+            'rating',
+            'review_count',
+            'distance_km',
+            'protein_g',
+            'calories',
+            'tags',
+            'match_reasons',
+            'relevance_0_3',
+            'relevant_at_2',
+            'manual_critical_violation',
+            'auto_violations',
+            'rater_note',
+            'precision_at_3',
+            'precision_at_5',
+            'precision_at_10',
+            'ndcg_at_5',
+            'ndcg_at_10',
+            'request_error',
+          ],
+          rows = [headers];
+        state.cases.forEach((c) => {
+          const m = caseMetrics(c),
+            a = items(c),
+            base = [
+              c.response?.runAt,
+              c.id,
+              c.category,
+              c.query,
+              c.intent,
+              c.good,
+              c.bad,
+              c.constraints,
+              E.apiUrl.value,
+              c.response?.latencyMs,
+              c.response?.data?.mode,
+              c.response?.data?.interpretation,
+              c.response?.data?.appliedFilters,
+            ];
+          if (!a.length)
+            rows.push([
+              ...base,
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              fmt(m.p3),
+              fmt(m.p5),
+              fmt(m.p10),
+              fmt(m.n5),
+              fmt(m.n10),
+              c.error || '',
+            ]);
+          a.forEach((i, n) => {
+            const g = grade(c, i),
+              r = i.restaurant || {},
+              nut = i.nutrition || {},
+              auto = violations(c, i, n);
+            rows.push([
+              ...base,
+              n + 1,
+              i.id,
+              i.name,
+              r.id,
+              r.name,
+              i.price,
+              r.averageRating,
+              r.reviewCount,
+              r.distanceKm,
+              nut.protein,
+              nut.calories,
+              i.tags,
+              i.matchReasons,
+              Number.isInteger(g.relevance) ? g.relevance : '',
+              Number.isInteger(g.relevance) ? +(g.relevance >= 2) : '',
+              g.violation ? 1 : 0,
+              auto,
+              g.note || '',
+              fmt(m.p3),
+              fmt(m.p5),
+              fmt(m.p10),
+              fmt(m.n5),
+              fmt(m.n10),
+              c.error || '',
+            ]);
+          });
+        });
+        const csv =
+            '\uFEFF' + rows.map((r) => r.map(cell).join(',')).join('\r\n'),
+          blob = new Blob([csv], { type: 'text/csv;charset=utf-8' }),
+          url = URL.createObjectURL(blob),
+          a = document.createElement('a');
+        a.href = url;
+        a.download = `ai-search-evaluation-${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        notify(`Exported ${rows.length - 1} CSV rows`);
+      }
+      E.caseList.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-case]');
+        if (!b || running) return;
+        sync();
+        selected = b.dataset.case;
+        render();
+      });
+      E.results.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-grade]');
+        if (b) patchGrade(b.dataset.item, { relevance: +b.dataset.grade });
+      });
+      E.results.addEventListener('change', (e) => {
+        if (e.target.matches('[data-violation]'))
+          patchGrade(e.target.dataset.violation, {
+            violation: e.target.checked,
+          });
+      });
+      E.results.addEventListener('input', (e) => {
+        if (e.target.matches('[data-note]')) {
+          const c = current(),
+            id = e.target.dataset.note;
+          c.grades[id] = { ...(c.grades[id] || {}), note: e.target.value };
+          save();
+        }
+      });
+      [E.queryInput, E.intentInput, E.goodInput, E.badInput].forEach((x) =>
+        x.addEventListener('change', () => {
+          sync();
+          renderList();
+        }),
+      );
+      [E.apiUrl, E.useCoords, E.latInput, E.lonInput, E.radiusInput].forEach(
+        (x) => x.addEventListener('change', saveSettings),
+      );
+      E.searchCases.addEventListener('input', renderList);
+      E.categoryFilter.addEventListener('change', renderList);
+      E.runCaseBtn.addEventListener('click', runSelected);
+      E.runAllBtn.addEventListener('click', runSuite);
+      E.exportBtn.addEventListener('click', exportCsv);
+      E.addCaseBtn.addEventListener('click', () => E.caseDialog.showModal());
+      document
+        .querySelectorAll('[data-close]')
+        .forEach((b) =>
+          b.addEventListener('click', () => E.caseDialog.close()),
+        );
+      E.caseForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const d = new FormData(e.target);
+        let x = {};
+        try {
+          x = d.get('constraints').trim()
+            ? JSON.parse(d.get('constraints'))
+            : {};
+        } catch {
+          notify('Constraints must be valid JSON');
+          return;
+        }
+        const id = 'CUSTOM-' + Date.now();
+        state.cases.push(
+          Q(
+            id,
+            d.get('category'),
+            d.get('query').trim(),
+            d.get('intent').trim(),
+            d.get('good').trim(),
+            d.get('bad').trim(),
+            x,
+          ),
+        );
+        selected = id;
+        save();
+        e.target.reset();
+        E.caseDialog.close();
+        render();
+      });
+      E.deleteCaseBtn.addEventListener('click', () => {
+        const c = current();
+        if (!c || !confirm(`Delete test case “${c.query}”?`)) return;
+        state.cases = state.cases.filter((x) => x.id !== c.id);
+        selected = state.cases[0].id;
+        save();
+        render();
+      });
+      E.resetBtn.addEventListener('click', () => {
+        if (!confirm('Reset all responses, grades, and custom cases?')) return;
+        state = { cases: structuredClone(seed) };
+        selected = state.cases[0].id;
+        save();
+        render();
+        notify('Golden test suite reset');
+      });
+      categories.forEach((c) =>
+        E.categoryFilter.insertAdjacentHTML(
+          'beforeend',
+          `<option value="${c}">${c}</option>`,
+        ),
+      );
+      const s = settings();
+      if (s.api) E.apiUrl.value = s.api;
+      if (s.coords !== undefined) E.useCoords.checked = s.coords;
+      if (s.lat) E.latInput.value = s.lat;
+      if (s.lon) E.lonInput.value = s.lon;
+      if (s.radius) E.radiusInput.value = s.radius;
+      render();
+    </script>
+  </body>
+</html>

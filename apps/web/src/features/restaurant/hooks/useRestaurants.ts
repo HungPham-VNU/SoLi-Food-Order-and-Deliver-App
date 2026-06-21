@@ -6,6 +6,8 @@ import type { UpdateRestaurantFormValues } from '../schemas/restaurant.schema';
 export const restaurantKeys = {
   all: ['restaurants'] as const,
   mine: () => [...restaurantKeys.all, 'mine'] as const,
+  mineForUser: (userId: string) =>
+    [...restaurantKeys.mine(), userId] as const,
   detail: (id: string) => [...restaurantKeys.all, id] as const,
 };
 
@@ -14,7 +16,7 @@ export function useMyRestaurant() {
   const userId = session?.user?.id;
 
   return useQuery({
-    queryKey: restaurantKeys.mine(),
+    queryKey: restaurantKeys.mineForUser(userId ?? ''),
     queryFn: async () => {
       // Uses GET /restaurants/my which returns the caller's restaurant of
       // ANY approval status — important so pending submissions surface here

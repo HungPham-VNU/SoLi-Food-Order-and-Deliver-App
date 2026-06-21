@@ -267,7 +267,7 @@ describe('PaymentService', () => {
     });
   });
 
-  describe('cancelPendingVNPayPaymentForOrder', () => {
+  describe('cancelPendingPaymentForOrder', () => {
     it('marks the caller-owned pending VNPay transaction failed', async () => {
       const { service, txnRepo } = buildService();
       const txn = makeTxn({
@@ -281,7 +281,7 @@ describe('PaymentService', () => {
       (txnRepo.findByOrderId as jest.Mock).mockResolvedValue(txn);
       (txnRepo.updateStatus as jest.Mock).mockResolvedValue(failed);
 
-      const result = await service.cancelPendingVNPayPaymentForOrder(
+      const result = await service.cancelPendingPaymentForOrder(
         'order-cancel',
         'cust-1',
       );
@@ -300,7 +300,7 @@ describe('PaymentService', () => {
       const failed = makeTxn({ status: 'failed' });
       (txnRepo.findByOrderId as jest.Mock).mockResolvedValue(failed);
 
-      const result = await service.cancelPendingVNPayPaymentForOrder(
+      const result = await service.cancelPendingPaymentForOrder(
         'order-1',
         'cust-1',
       );
@@ -316,7 +316,7 @@ describe('PaymentService', () => {
       );
 
       await expect(
-        service.cancelPendingVNPayPaymentForOrder('order-1', 'cust-1'),
+        service.cancelPendingPaymentForOrder('order-1', 'cust-1'),
       ).rejects.toThrow('You can only cancel your own VNPay payments.');
       expect(txnRepo.updateStatus).not.toHaveBeenCalled();
     });
@@ -328,7 +328,7 @@ describe('PaymentService', () => {
       );
 
       await expect(
-        service.cancelPendingVNPayPaymentForOrder('order-1', 'cust-1'),
+        service.cancelPendingPaymentForOrder('order-1', 'cust-1'),
       ).rejects.toThrow('already completed');
       expect(txnRepo.updateStatus).not.toHaveBeenCalled();
     });
@@ -338,7 +338,7 @@ describe('PaymentService', () => {
       (txnRepo.findByOrderId as jest.Mock).mockResolvedValue(null);
 
       await expect(
-        service.cancelPendingVNPayPaymentForOrder('missing-order', 'cust-1'),
+        service.cancelPendingPaymentForOrder('missing-order', 'cust-1'),
       ).rejects.toThrow('not found');
       expect(txnRepo.updateStatus).not.toHaveBeenCalled();
     });
@@ -351,7 +351,7 @@ describe('PaymentService', () => {
       (txnRepo.updateStatus as jest.Mock).mockResolvedValue(null);
 
       await expect(
-        service.cancelPendingVNPayPaymentForOrder('order-1', 'cust-1'),
+        service.cancelPendingPaymentForOrder('order-1', 'cust-1'),
       ).rejects.toThrow('Payment status changed');
     });
   });

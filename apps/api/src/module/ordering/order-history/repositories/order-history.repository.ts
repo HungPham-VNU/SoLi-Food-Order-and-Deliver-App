@@ -15,7 +15,6 @@ import {
 } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import {
   orders,
   orderItems,
@@ -81,9 +80,7 @@ const AVAILABLE_FOR_PICKUP_LIMIT = 50;
  */
 @Injectable()
 export class OrderHistoryRepository {
-  constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) private readonly db: NodePgDatabase) {}
 
   // ---------------------------------------------------------------------------
   // Customer: paginated list of their own orders

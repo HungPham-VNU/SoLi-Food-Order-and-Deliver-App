@@ -7,6 +7,7 @@ import {
   Tag,
   Users,
   Sparkles,
+  Leaf,
 } from 'lucide-react';
 import { useSession } from '@/lib/auth-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,6 +18,7 @@ const navItems = [
   { title: 'Restaurants', url: '/restaurants', icon: Store },
   { title: 'Orders', url: '/orders', icon: ClipboardList },
   { title: 'Promotions', url: '/promotions', icon: Tag },
+  { title: 'Dietary Tags', url: '/dietary-tags', icon: Leaf },
   { title: 'Users', url: '/users', icon: Users },
 ];
 

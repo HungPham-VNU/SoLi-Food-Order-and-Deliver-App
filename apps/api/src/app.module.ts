@@ -10,7 +10,6 @@ import { RestaurantCatalogModule } from './module/restaurant-catalog/restaurant-
 import { RedisModule } from './lib/redis/redis.module';
 import { OrderingModule } from './module/ordering/ordering.module';
 import { DevTestUserMiddleware } from './lib/dev-test-user.middleware';
-import { GeoModule } from './lib/geo/geo.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PaymentModule } from './module/payment/payment.module';
 import { NotificationModule } from './module/notification/notification.module';
@@ -18,7 +17,6 @@ import { ImageModule } from './module/image/image.module';
 import { PromotionModule } from './module/promotion/promotion.module';
 import { AdminAnalyticsModule } from './module/admin-analytics/admin-analytics.module';
 import { ReviewModule } from './module/review/review.module';
-import { NutritionModule } from './module/nutrition/nutrition.module';
 import { validate } from './config/env.schema';
 import { vnpayConfig } from './config/vnpay.config';
 import { ObservabilityInterceptor } from './observability/observability.interceptor';
@@ -32,7 +30,6 @@ import { ObservabilityInterceptor } from './observability/observability.intercep
     }),
     DatabaseModule,
     RedisModule,
-    GeoModule,
     ScheduleModule.forRoot(),
     RestaurantCatalogModule,
     PromotionModule,
@@ -42,7 +39,6 @@ import { ObservabilityInterceptor } from './observability/observability.intercep
     NotificationModule,
     ImageModule,
     ReviewModule,
-    NutritionModule,
 
     AuthModule.forRoot({
       auth,

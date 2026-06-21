@@ -6,7 +6,7 @@ import { OrderLifecycleModule } from './order-lifecycle/order-lifecycle.module';
 import { OrderHistoryModule } from './order-history/order-history.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AclModule } from './acl/acl.module';
-import { OrderEligibilityModule } from './order-eligibility/order-eligibility.module';
+import { OrderingContractsModule } from './ordering-contracts.module';
 
 /**
  * OrderingModule — the root of the Ordering bounded context.
@@ -36,9 +36,8 @@ import { OrderEligibilityModule } from './order-eligibility/order-eligibility.mo
     OrderHistoryModule,
     OrderLifecycleModule,
     AnalyticsModule,
-    // Cross-BC port: ORDER_ELIGIBILITY_PORT is @Global() so it is available
-    // to all modules (e.g. ReviewModule) without explicit imports (ADR-007).
-    OrderEligibilityModule,
+    // Public review capabilities are exported through OrderingContractsModule.
+    OrderingContractsModule,
   ],
 })
 export class OrderingModule {}

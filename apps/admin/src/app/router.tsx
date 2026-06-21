@@ -8,6 +8,7 @@ import { PromotionFormPage } from '@/app/pages/promotions/PromotionFormPage';
 import { PromotionDetailPage } from '@/app/pages/promotions/PromotionDetailPage';
 import { UsersPage } from '@/app/pages/users/UsersPage';
 import { SettingsPage } from '@/app/pages/settings/SettingsPage';
+import { DietaryTagsPage } from '@/app/pages/dietary-tags/DietaryTagsPage';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { RequireAdminAuth } from '@/components/auth/RequireAdminAuth';
 
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
           { path: 'promotions/:id', element: <PromotionDetailPage /> },
           { path: 'promotions/:id/edit', element: <PromotionFormPage /> },
           { path: 'users', element: <UsersPage /> },
+          { path: 'dietary-tags', element: <DietaryTagsPage /> },
           { path: 'settings', element: <SettingsPage /> },
         ],
       },

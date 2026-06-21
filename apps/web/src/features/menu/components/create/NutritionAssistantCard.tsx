@@ -177,13 +177,12 @@ export function NutritionAssistantCard({
       );
     });
 
-  const shouldHydrateLatestAnalysis =
+  if (
     latestAnalysis &&
     hydratedAnalysisSessionId !== latestAnalysis.analysisSessionId &&
     (!analysis ||
-      analysis.analysisSessionId === latestAnalysis.analysisSessionId);
-
-  if (shouldHydrateLatestAnalysis) {
+      analysis.analysisSessionId === latestAnalysis.analysisSessionId)
+  ) {
     setRecipeText(latestAnalysis.recipeText);
     setAnalysis(latestAnalysis);
     setIngredients(normalizeReviewIngredients(latestAnalysis.ingredients));
@@ -375,9 +374,7 @@ export function NutritionAssistantCard({
                 aria-describedby={
                   servingsValidationMessage ? 'servings-error' : undefined
                 }
-                onChange={(event) =>
-                  updateServingsInput(event.target.value)
-                }
+                onChange={(event) => updateServingsInput(event.target.value)}
               />
               {servingsValidationMessage && (
                 <p

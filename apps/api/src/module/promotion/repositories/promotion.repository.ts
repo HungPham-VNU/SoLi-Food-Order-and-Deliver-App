@@ -2,7 +2,6 @@ import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import {
   promotions,
   type Promotion,
@@ -22,7 +21,7 @@ export class PromotionRepository {
 
   constructor(
     @Inject(DB_CONNECTION)
-    private readonly db: NodePgDatabase<typeof schema>,
+    private readonly db: NodePgDatabase,
   ) {}
 
   // ---------------------------------------------------------------------------

@@ -23,8 +23,8 @@ import type { Promotion } from '../domain/promotion.schema';
  *   - confirmReservations: transitions reserved → confirmed after order persistence
  *   - rollbackReservations: transitions reserved/confirmed → rolled_back on cancel
  *
- * This service is @Global() via PromotionModule, making PROMOTION_APPLICATION_PORT
- * injectable everywhere without explicit module imports.
+ * PromotionModule exposes this service only through PROMOTION_APPLICATION_PORT.
+ * Consumers import PromotionModule explicitly.
  */
 @Injectable()
 export class PromotionService implements IPromotionApplicationPort {

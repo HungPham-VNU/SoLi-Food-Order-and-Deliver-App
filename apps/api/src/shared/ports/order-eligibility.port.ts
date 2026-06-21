@@ -1,3 +1,5 @@
+import type { UnitOfWorkContext } from './unit-of-work-context';
+
 /**
  * IOrderEligibilityPort
  *
@@ -44,4 +46,6 @@ export interface IOrderEligibilityPort {
     orderId: string,
     customerId: string,
   ): Promise<{ restaurantId: string }>;
+
+  markReviewed(orderId: string, context?: UnitOfWorkContext): Promise<void>;
 }

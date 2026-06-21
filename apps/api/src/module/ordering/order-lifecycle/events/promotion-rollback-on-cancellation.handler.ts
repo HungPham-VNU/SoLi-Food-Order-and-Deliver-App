@@ -19,7 +19,7 @@ import {
  * Design:
  *  - Uses PROMOTION_APPLICATION_PORT (DIP) — never imports PromotionService
  *    directly, preserving Bounded Context isolation.
- *  - PromotionModule is @Global() so the port resolves without explicit imports.
+ *  - OrderLifecycleModule imports PromotionModule explicitly for this port.
  *  - rollbackReservations() is idempotent: only rows with status IN
  *    ('reserved', 'confirmed') are updated. Already-rolled-back rows are
  *    skipped, making repeated calls safe (e.g. under event replay).

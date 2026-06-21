@@ -52,7 +52,7 @@ export function useSignIn() {
         setObservabilityUser(result.data.user.id);
       }
       await refetchSession();
-      navigate('/dashboard', { replace: true });
+      navigate('/auth/onboarding', { replace: true });
 
       return result.data;
     } catch (caught) {

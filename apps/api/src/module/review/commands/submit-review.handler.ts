@@ -1,15 +1,17 @@
 import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
-import { eq, sql } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import {
   ORDER_ELIGIBILITY_PORT,
   type IOrderEligibilityPort,
 } from '@/shared/ports/order-eligibility.port';
 import { ReviewSubmittedEvent } from '@/shared/events/review-submitted.event';
-import { reviews, type Review } from '../domain/review.schema';
+import {
+  RESTAURANT_ACCESS_PORT,
+  type IRestaurantAccessPort,
+} from '@/shared/ports/restaurant-access.port';
+import type { Review } from '../domain/review.schema';
 import { ReviewRepository } from '../repositories/review.repository';
 import { SubmitReviewCommand } from './submit-review.command';
 
@@ -25,9 +27,7 @@ import { SubmitReviewCommand } from './submit-review.command';
  *     - 404 if not owned by caller (BR-22.4, BR-22.5)
  *     - 422 if status not in REVIEWABLE_STATUSES (ready_for_pickup,
  *       picked_up, delivering, delivered) (BR-22.6, BR-22.7)
- *  3. DB transaction:
- *     - INSERT review row
- *     - UPDATE restaurants rating projection using integer ratingSum (BR-22.12)
+ *  3. Persist the review, then update Ordering and Catalog through ports
  *  4. Catch DB UniqueConstraintViolation (23505) → 409 (BR-22.8)
  *  5. Post-commit eventBus.publish(ReviewSubmittedEvent) — failure logged only
  *
@@ -35,11 +35,8 @@ import { SubmitReviewCommand } from './submit-review.command';
  *  - Events published OUTSIDE the transaction (ADR-004; same as TransitionOrderHandler).
  *  - Order eligibility delegated to ORDER_ELIGIBILITY_PORT — no direct coupling
  *    to the Ordering BC's schema, repositories, or module internals.
- *  - Restaurant rating write uses schema.restaurants via the @/drizzle/schema
- *    barrel (ADR-003 stable contract). The update runs INSIDE the same
- *    transaction as the review INSERT so rating columns and reviews can never
- *    drift; passing Drizzle's `tx` context to a port would leak ORM internals,
- *    so the barrel approach is the accepted exception for this transactional write.
+ *  - Catalog owns rating writes through RESTAURANT_ACCESS_PORT.
+ *  - Ordering owns the reviewed marker through ORDER_ELIGIBILITY_PORT.
  *
  * Phase: RV-2 — Review BC
  */
@@ -52,11 +49,13 @@ export class SubmitReviewHandler implements ICommandHandler<
   private readonly logger = new Logger(SubmitReviewHandler.name);
 
   constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
     private readonly reviewRepo: ReviewRepository,
     private readonly eventBus: EventBus,
     @Inject(ORDER_ELIGIBILITY_PORT)
     private readonly orderEligibilityPort: IOrderEligibilityPort,
+    @Inject(RESTAURANT_ACCESS_PORT)
+    private readonly restaurantAccess: IRestaurantAccessPort,
+    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase,
   ) {}
 
   async execute(cmd: SubmitReviewCommand): Promise<Review> {
@@ -93,10 +92,10 @@ export class SubmitReviewHandler implements ICommandHandler<
     // -------------------------------------------------------------------------
     let inserted: Review;
     try {
-      inserted = await this.db.transaction(async (tx) => {
-        const [created] = await tx
-          .insert(reviews)
-          .values({
+      inserted = await this.db.transaction(async (transaction) => {
+        const context = { transaction };
+        const created = await this.reviewRepo.create(
+          {
             orderId: cmd.orderId,
             customerId: cmd.customerId,
             restaurantId,
@@ -104,22 +103,16 @@ export class SubmitReviewHandler implements ICommandHandler<
             comment: cmd.comment ?? null,
             tags: cmd.tags ?? null,
             moderationStatus: 'visible',
-          })
-          .returning();
+          },
+          context,
+        );
 
-        // BR-22.12: rating projection via the shared schema barrel (ADR-003).
-        // Integer ratingSum eliminates floating-point drift across many reviews
-        // and enables exact moderation-safe recalculation when reviews are hidden.
-        await tx
-          .update(schema.restaurants)
-          .set({
-            ratingSum: sql`${schema.restaurants.ratingSum} + ${cmd.stars}`,
-            reviewCount: sql`${schema.restaurants.reviewCount} + 1`,
-            averageRating: sql`(${schema.restaurants.ratingSum} + ${cmd.stars})::real / (${schema.restaurants.reviewCount} + 1)`,
-            updatedAt: new Date(),
-          })
-          .where(eq(schema.restaurants.id, restaurantId));
-
+        await this.restaurantAccess.incrementRating(
+          restaurantId,
+          cmd.stars,
+          context,
+        );
+        await this.orderEligibilityPort.markReviewed(cmd.orderId, context);
         return created;
       });
     } catch (err) {

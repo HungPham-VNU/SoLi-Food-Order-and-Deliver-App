@@ -43,7 +43,11 @@ export const restaurants = pgTable(
     name: text('name').notNull(),
     description: text('description'),
     searchDocument: text('search_document'),
+    searchContentHash: text('search_content_hash'),
     embedding: vector('embedding'),
+    embeddingModel: text('embedding_model'),
+    embeddingVersion: text('embedding_version'),
+    embeddingGeneratedAt: timestamp('embedding_generated_at'),
     address: text('address').notNull(),
     phone: text('phone').notNull(),
     isOpen: boolean('is_open').notNull().default(false),
@@ -68,6 +72,7 @@ export const restaurants = pgTable(
     // Composite index speeds up the most common public query:
     // WHERE is_approved = true AND is_open = true (Issue #14).
     index('restaurants_approved_open_idx').on(table.isApproved, table.isOpen),
+    index('restaurants_rating_idx').on(table.averageRating, table.reviewCount),
   ],
 );
 

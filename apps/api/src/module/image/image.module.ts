@@ -7,6 +7,7 @@ import { CloudinaryService } from './cloudinary.service';
 import { ImageController } from './image.controller';
 import { ImageRepository } from './image.repository';
 import { ImageService } from './image.service';
+import { IMAGE_MANAGEMENT_PORT } from '@/shared/ports/image-management.port';
 
 @Module({
   imports: [DatabaseModule, ConfigModule],
@@ -16,7 +17,11 @@ import { ImageService } from './image.service';
     CloudinaryService,
     ImageService,
     ImageRepository,
+    {
+      provide: IMAGE_MANAGEMENT_PORT,
+      useExisting: ImageService,
+    },
   ],
-  exports: [ImageService],
+  exports: [IMAGE_MANAGEMENT_PORT],
 })
 export class ImageModule {}

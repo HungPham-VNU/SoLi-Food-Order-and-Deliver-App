@@ -2,7 +2,6 @@ import { Injectable, Inject } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import {
   notificationRestaurantSnapshots,
   type NewNotificationRestaurantSnapshot,
@@ -23,9 +22,7 @@ import {
  */
 @Injectable()
 export class NotificationRestaurantAclRepository {
-  constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) private readonly db: NodePgDatabase) {}
 
   /**
    * Find snapshot by restaurantId.

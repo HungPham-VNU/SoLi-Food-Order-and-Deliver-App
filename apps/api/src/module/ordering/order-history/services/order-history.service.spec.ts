@@ -39,6 +39,7 @@ function makeOrder(overrides: Partial<Order> = {}): Order {
     paymentUrl: null,
     shipperId: null,
     expiresAt: new Date(),
+    reviewedAt: null,
     version: 0,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
@@ -107,22 +108,6 @@ function makeSnapshot(
   };
 }
 
-// Chainable Drizzle mock for `db.select().from().where().limit()` -> reviews check
-function makeDb(hasReview = false) {
-  const limitFn = jest
-    .fn()
-    .mockResolvedValue(hasReview ? [{ id: 'review-1' }] : []);
-  const whereFn = jest.fn().mockReturnValue({ limit: limitFn });
-  const fromFn = jest.fn().mockReturnValue({ where: whereFn });
-  const selectFn = jest.fn().mockReturnValue({ from: fromFn });
-  return {
-    select: selectFn,
-    from: fromFn,
-    where: whereFn,
-    limit: limitFn,
-  };
-}
-
 function buildService(dbHasReview = false) {
   const filters: OrderHistoryFiltersDto = { limit: 20, offset: 0 };
 
@@ -130,7 +115,11 @@ function buildService(dbHasReview = false) {
     findByCustomer: jest
       .fn()
       .mockResolvedValue({ data: [makeListRow()], total: 1 }),
-    findDetailById: jest.fn().mockResolvedValue(makeBundle()),
+    findDetailById: jest
+      .fn()
+      .mockResolvedValue(
+        makeBundle({ reviewedAt: dbHasReview ? new Date() : null }),
+      ),
     findByRestaurantId: jest
       .fn()
       .mockResolvedValue({ data: [makeListRow()], total: 1 }),
@@ -147,15 +136,12 @@ function buildService(dbHasReview = false) {
     findByOwnerId: jest.fn().mockResolvedValue(makeSnapshot()),
   } as unknown as RestaurantSnapshotRepository;
 
-  const db = makeDb(dbHasReview);
-
   const service = new OrderHistoryService(
     orderHistoryRepo,
     restaurantSnapshotRepo,
-    db as never,
   );
 
-  return { service, orderHistoryRepo, restaurantSnapshotRepo, db, filters };
+  return { service, orderHistoryRepo, restaurantSnapshotRepo, filters };
 }
 
 // ---------------------------------------------------------------------------

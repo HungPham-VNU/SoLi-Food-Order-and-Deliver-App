@@ -1,6 +1,7 @@
 import {
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -23,9 +24,12 @@ import type {
 } from '@/module/restaurant-catalog/menu/menu.schema';
 import { RestaurantService } from '@/module/restaurant-catalog/restaurant/restaurant.service';
 import { MenuItemUpdatedEvent } from '@/shared/events/menu-item-updated.event';
+import {
+  IMAGE_MANAGEMENT_PORT,
+  type IImageManagementPort,
+} from '@/shared/ports/image-management.port';
+import type { CreateImageDto } from '@/shared/contracts/image.dto';
 import type { MenuItemModifierSnapshot } from '@/shared/events/menu-item-updated.event';
-import { ImageService } from '@/module/image/image.service';
-import type { CreateImageDto } from '@/module/image/dto/image.dto';
 
 export interface FindByRestaurantOptions {
   categoryId?: string;
@@ -46,7 +50,8 @@ export class MenuService {
     private readonly repo: MenuRepository,
     private readonly restaurantService: RestaurantService,
     private readonly eventBus: EventBus,
-    private readonly imageService: ImageService,
+    @Inject(IMAGE_MANAGEMENT_PORT)
+    private readonly imageService: IImageManagementPort,
   ) {}
 
   // -------------------------------------------------------------------------

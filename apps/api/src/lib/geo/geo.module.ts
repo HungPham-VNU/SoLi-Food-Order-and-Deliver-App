@@ -1,13 +1,7 @@
-import { Global, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { GeoService } from './geo.service';
 
-/**
- * GeoModule
- *
- * @Global() — register once in AppModule; GeoService is then injectable
- * everywhere without each module explicitly importing GeoModule.
- */
-@Global()
+/** Geographic calculations shared through an explicitly imported module. */
 @Module({
   providers: [GeoService],
   exports: [GeoService],

@@ -15,7 +15,7 @@ import {
 } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
+import { orderItems, orders, orderStatusLogs } from '../order/order.schema';
 import type { CancellationReason } from '../order/order.schema';
 
 /**
@@ -76,9 +76,7 @@ export interface AnalyticsWindowAggregates {
  */
 @Injectable()
 export class AnalyticsRepository {
-  constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) private readonly db: NodePgDatabase) {}
 
   async aggregateWindow(
     restaurantId: string,
@@ -146,9 +144,9 @@ export class AnalyticsRepository {
   }> {
     // Reusable WHERE clause for the window on the orders table.
     const windowFilter = and(
-      eq(schema.orders.restaurantId, restaurantId),
-      gte(schema.orders.createdAt, start),
-      lt(schema.orders.createdAt, end),
+      eq(orders.restaurantId, restaurantId),
+      gte(orders.createdAt, start),
+      lt(orders.createdAt, end),
     );
 
     const [acceptRows, readyRows, countsRows, autoCancelRows] =
@@ -158,14 +156,14 @@ export class AnalyticsRepository {
           .select({
             avg: sql<
               number | null
-            >`EXTRACT(EPOCH FROM AVG(${schema.orderStatusLogs.createdAt} - ${schema.orders.createdAt}))`,
+            >`EXTRACT(EPOCH FROM AVG(${orderStatusLogs.createdAt} - ${orders.createdAt}))`,
           })
-          .from(schema.orders)
+          .from(orders)
           .innerJoin(
-            schema.orderStatusLogs,
+            orderStatusLogs,
             and(
-              eq(schema.orderStatusLogs.orderId, schema.orders.id),
-              eq(schema.orderStatusLogs.toStatus, 'confirmed'),
+              eq(orderStatusLogs.orderId, orders.id),
+              eq(orderStatusLogs.toStatus, 'confirmed'),
             ),
           )
           .where(windowFilter),
@@ -175,14 +173,14 @@ export class AnalyticsRepository {
           .select({
             avg: sql<
               number | null
-            >`EXTRACT(EPOCH FROM AVG(${schema.orderStatusLogs.createdAt} - ${schema.orders.createdAt}))`,
+            >`EXTRACT(EPOCH FROM AVG(${orderStatusLogs.createdAt} - ${orders.createdAt}))`,
           })
-          .from(schema.orders)
+          .from(orders)
           .innerJoin(
-            schema.orderStatusLogs,
+            orderStatusLogs,
             and(
-              eq(schema.orderStatusLogs.orderId, schema.orders.id),
-              eq(schema.orderStatusLogs.toStatus, 'ready_for_pickup'),
+              eq(orderStatusLogs.orderId, orders.id),
+              eq(orderStatusLogs.toStatus, 'ready_for_pickup'),
             ),
           )
           .where(windowFilter),
@@ -191,29 +189,26 @@ export class AnalyticsRepository {
         this.db
           .select({
             total: count(),
-            refunded: sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} = 'refunded')::int`,
-            terminal: sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} IN ('delivered', 'refunded'))::int`,
-            totalRevenue: sql<number>`COALESCE(SUM(${schema.orders.totalAmount}), 0)::int`,
-            avgOrderValue: sql<number>`COALESCE(AVG(${schema.orders.totalAmount}), 0)::int`,
+            refunded: sql<number>`COUNT(*) FILTER (WHERE ${orders.status} = 'refunded')::int`,
+            terminal: sql<number>`COUNT(*) FILTER (WHERE ${orders.status} IN ('delivered', 'refunded'))::int`,
+            totalRevenue: sql<number>`COALESCE(SUM(${orders.totalAmount}), 0)::int`,
+            avgOrderValue: sql<number>`COALESCE(AVG(${orders.totalAmount}), 0)::int`,
           })
-          .from(schema.orders)
+          .from(orders)
           .where(windowFilter),
 
         // 4. auto-cancel count (distinct orders, system-triggered)
         this.db
           .select({
-            n: sql<number>`COUNT(DISTINCT ${schema.orderStatusLogs.orderId})::int`,
+            n: sql<number>`COUNT(DISTINCT ${orderStatusLogs.orderId})::int`,
           })
-          .from(schema.orderStatusLogs)
-          .innerJoin(
-            schema.orders,
-            eq(schema.orders.id, schema.orderStatusLogs.orderId),
-          )
+          .from(orderStatusLogs)
+          .innerJoin(orders, eq(orders.id, orderStatusLogs.orderId))
           .where(
             and(
               windowFilter,
-              eq(schema.orderStatusLogs.toStatus, 'cancelled'),
-              eq(schema.orderStatusLogs.triggeredByRole, 'system'),
+              eq(orderStatusLogs.toStatus, 'cancelled'),
+              eq(orderStatusLogs.triggeredByRole, 'system'),
             ),
           ),
       ]);
@@ -247,21 +242,18 @@ export class AnalyticsRepository {
       this.db
         .select({
           seconds:
-            sql<number>`EXTRACT(EPOCH FROM (${schema.orderStatusLogs.createdAt} - ${schema.orders.createdAt}))`.as(
+            sql<number>`EXTRACT(EPOCH FROM (${orderStatusLogs.createdAt} - ${orders.createdAt}))`.as(
               'seconds',
             ),
         })
-        .from(schema.orders)
-        .innerJoin(
-          schema.orderStatusLogs,
-          eq(schema.orderStatusLogs.orderId, schema.orders.id),
-        )
+        .from(orders)
+        .innerJoin(orderStatusLogs, eq(orderStatusLogs.orderId, orders.id))
         .where(
           and(
-            eq(schema.orders.restaurantId, restaurantId),
-            gte(schema.orders.createdAt, start),
-            lt(schema.orders.createdAt, end),
-            eq(schema.orderStatusLogs.toStatus, 'confirmed'),
+            eq(orders.restaurantId, restaurantId),
+            gte(orders.createdAt, start),
+            lt(orders.createdAt, end),
+            eq(orderStatusLogs.toStatus, 'confirmed'),
           ),
         ),
     );
@@ -300,22 +292,19 @@ export class AnalyticsRepository {
     const rows = await this.db
       .select({
         reasonCode:
-          sql<string>`COALESCE(${schema.orderStatusLogs.cancellationReason}, 'other')`.as(
+          sql<string>`COALESCE(${orderStatusLogs.cancellationReason}, 'other')`.as(
             'reason_code',
           ),
         n: count().as('n'),
       })
-      .from(schema.orders)
-      .innerJoin(
-        schema.orderStatusLogs,
-        eq(schema.orderStatusLogs.orderId, schema.orders.id),
-      )
+      .from(orders)
+      .innerJoin(orderStatusLogs, eq(orderStatusLogs.orderId, orders.id))
       .where(
         and(
-          eq(schema.orders.restaurantId, restaurantId),
-          gte(schema.orders.createdAt, start),
-          lt(schema.orders.createdAt, end),
-          inArray(schema.orderStatusLogs.toStatus, ['cancelled', 'refunded']),
+          eq(orders.restaurantId, restaurantId),
+          gte(orders.createdAt, start),
+          lt(orders.createdAt, end),
+          inArray(orderStatusLogs.toStatus, ['cancelled', 'refunded']),
         ),
       )
       .groupBy(sql`reason_code`)
@@ -335,17 +324,15 @@ export class AnalyticsRepository {
   ): Promise<Array<{ hour: Date; count: number }>> {
     const rows = await this.db
       .select({
-        hour: sql<string>`date_trunc('hour', ${schema.orders.createdAt})`.as(
-          'hour',
-        ),
+        hour: sql<string>`date_trunc('hour', ${orders.createdAt})`.as('hour'),
         n: count().as('n'),
       })
-      .from(schema.orders)
+      .from(orders)
       .where(
         and(
-          eq(schema.orders.restaurantId, restaurantId),
-          gte(schema.orders.createdAt, start),
-          lt(schema.orders.createdAt, end),
+          eq(orders.restaurantId, restaurantId),
+          gte(orders.createdAt, start),
+          lt(orders.createdAt, end),
         ),
       )
       .groupBy(sql`hour`)
@@ -362,18 +349,16 @@ export class AnalyticsRepository {
   ): Promise<Array<{ hour: Date; rate: number }>> {
     const rows = await this.db
       .select({
-        hour: sql<string>`date_trunc('hour', ${schema.orders.createdAt})`.as(
-          'hour',
-        ),
-        refunded: sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} = 'refunded')::int`,
-        terminal: sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} IN ('delivered', 'refunded'))::int`,
+        hour: sql<string>`date_trunc('hour', ${orders.createdAt})`.as('hour'),
+        refunded: sql<number>`COUNT(*) FILTER (WHERE ${orders.status} = 'refunded')::int`,
+        terminal: sql<number>`COUNT(*) FILTER (WHERE ${orders.status} IN ('delivered', 'refunded'))::int`,
       })
-      .from(schema.orders)
+      .from(orders)
       .where(
         and(
-          eq(schema.orders.restaurantId, restaurantId),
-          gte(schema.orders.createdAt, start),
-          lt(schema.orders.createdAt, end),
+          eq(orders.restaurantId, restaurantId),
+          gte(orders.createdAt, start),
+          lt(orders.createdAt, end),
         ),
       )
       .groupBy(sql`hour`)
@@ -396,38 +381,35 @@ export class AnalyticsRepository {
   ): Promise<
     Array<{ menuItemId: string; name: string; avgPrepSeconds: number }>
   > {
-    const lConf = alias(schema.orderStatusLogs, 'l_conf');
-    const lReady = alias(schema.orderStatusLogs, 'l_ready');
+    const lConf = alias(orderStatusLogs, 'l_conf');
+    const lReady = alias(orderStatusLogs, 'l_ready');
 
     const prepLatency = this.db.$with('prep_latency').as(
       this.db
         .select({
-          orderId: schema.orders.id,
+          orderId: orders.id,
           seconds:
             sql<number>`EXTRACT(EPOCH FROM (${lReady.createdAt} - ${lConf.createdAt}))`.as(
               'seconds',
             ),
         })
-        .from(schema.orders)
+        .from(orders)
         .innerJoin(
           lConf,
-          and(
-            eq(lConf.orderId, schema.orders.id),
-            eq(lConf.toStatus, 'confirmed'),
-          ),
+          and(eq(lConf.orderId, orders.id), eq(lConf.toStatus, 'confirmed')),
         )
         .innerJoin(
           lReady,
           and(
-            eq(lReady.orderId, schema.orders.id),
+            eq(lReady.orderId, orders.id),
             eq(lReady.toStatus, 'ready_for_pickup'),
           ),
         )
         .where(
           and(
-            eq(schema.orders.restaurantId, restaurantId),
-            gte(schema.orders.createdAt, start),
-            lt(schema.orders.createdAt, end),
+            eq(orders.restaurantId, restaurantId),
+            gte(orders.createdAt, start),
+            lt(orders.createdAt, end),
           ),
         ),
     );
@@ -435,18 +417,15 @@ export class AnalyticsRepository {
     const rows = await this.db
       .with(prepLatency)
       .select({
-        menuItemId: schema.orderItems.menuItemId,
-        name: schema.orderItems.itemName,
+        menuItemId: orderItems.menuItemId,
+        name: orderItems.itemName,
         avgSeconds: sql<number>`AVG(${prepLatency.seconds})::float8`.as(
           'avg_seconds',
         ),
       })
       .from(prepLatency)
-      .innerJoin(
-        schema.orderItems,
-        eq(schema.orderItems.orderId, prepLatency.orderId),
-      )
-      .groupBy(schema.orderItems.menuItemId, schema.orderItems.itemName)
+      .innerJoin(orderItems, eq(orderItems.orderId, prepLatency.orderId))
+      .groupBy(orderItems.menuItemId, orderItems.itemName)
       .having(sql`COUNT(*) >= 2`)
       .orderBy(desc(sql`avg_seconds`))
       .limit(5);
@@ -479,35 +458,32 @@ export class AnalyticsRepository {
   > {
     const rows = await this.db
       .select({
-        id: schema.orderStatusLogs.id,
-        orderId: schema.orderStatusLogs.orderId,
-        timestamp: schema.orderStatusLogs.createdAt,
-        fromStatus: schema.orderStatusLogs.fromStatus,
-        toStatus: schema.orderStatusLogs.toStatus,
-        cancellationReason: schema.orderStatusLogs.cancellationReason,
-        note: schema.orderStatusLogs.note,
+        id: orderStatusLogs.id,
+        orderId: orderStatusLogs.orderId,
+        timestamp: orderStatusLogs.createdAt,
+        fromStatus: orderStatusLogs.fromStatus,
+        toStatus: orderStatusLogs.toStatus,
+        cancellationReason: orderStatusLogs.cancellationReason,
+        note: orderStatusLogs.note,
       })
-      .from(schema.orderStatusLogs)
-      .innerJoin(
-        schema.orders,
-        eq(schema.orders.id, schema.orderStatusLogs.orderId),
-      )
+      .from(orderStatusLogs)
+      .innerJoin(orders, eq(orders.id, orderStatusLogs.orderId))
       .where(
         and(
-          eq(schema.orders.restaurantId, restaurantId),
-          gte(schema.orderStatusLogs.createdAt, start),
-          lt(schema.orderStatusLogs.createdAt, end),
+          eq(orders.restaurantId, restaurantId),
+          gte(orderStatusLogs.createdAt, start),
+          lt(orderStatusLogs.createdAt, end),
           or(
             and(
-              eq(schema.orderStatusLogs.triggeredByRole, 'system'),
-              isNotNull(schema.orderStatusLogs.fromStatus),
+              eq(orderStatusLogs.triggeredByRole, 'system'),
+              isNotNull(orderStatusLogs.fromStatus),
             ),
-            eq(schema.orderStatusLogs.toStatus, 'cancelled'),
-            eq(schema.orderStatusLogs.toStatus, 'refunded'),
+            eq(orderStatusLogs.toStatus, 'cancelled'),
+            eq(orderStatusLogs.toStatus, 'refunded'),
           ),
         ),
       )
-      .orderBy(desc(schema.orderStatusLogs.createdAt))
+      .orderBy(desc(orderStatusLogs.createdAt))
       .limit(10);
 
     return rows.map((r) => ({
@@ -536,23 +512,20 @@ export class AnalyticsRepository {
     const acceptLatency = this.db.$with('accept_latency').as(
       this.db
         .select({
-          createdAt: schema.orders.createdAt,
+          createdAt: orders.createdAt,
           seconds:
-            sql<number>`EXTRACT(EPOCH FROM (${schema.orderStatusLogs.createdAt} - ${schema.orders.createdAt}))`.as(
+            sql<number>`EXTRACT(EPOCH FROM (${orderStatusLogs.createdAt} - ${orders.createdAt}))`.as(
               'seconds',
             ),
         })
-        .from(schema.orders)
-        .innerJoin(
-          schema.orderStatusLogs,
-          eq(schema.orderStatusLogs.orderId, schema.orders.id),
-        )
+        .from(orders)
+        .innerJoin(orderStatusLogs, eq(orderStatusLogs.orderId, orders.id))
         .where(
           and(
-            eq(schema.orders.restaurantId, restaurantId),
-            gte(schema.orders.createdAt, start),
-            lt(schema.orders.createdAt, end),
-            eq(schema.orderStatusLogs.toStatus, 'confirmed'),
+            eq(orders.restaurantId, restaurantId),
+            gte(orders.createdAt, start),
+            lt(orders.createdAt, end),
+            eq(orderStatusLogs.toStatus, 'confirmed'),
           ),
         ),
     );
@@ -585,19 +558,19 @@ export class AnalyticsRepository {
   private async queryStuckCount(restaurantId: string): Promise<number> {
     const rows = await this.db
       .select({ n: count() })
-      .from(schema.orders)
+      .from(orders)
       .where(
         and(
-          eq(schema.orders.restaurantId, restaurantId),
-          inArray(schema.orders.status, [
+          eq(orders.restaurantId, restaurantId),
+          inArray(orders.status, [
             'pending',
             'paid',
             'confirmed',
             'preparing',
             'ready_for_pickup',
           ]),
-          isNotNull(schema.orders.expiresAt),
-          lt(schema.orders.expiresAt, sql`now()`),
+          isNotNull(orders.expiresAt),
+          lt(orders.expiresAt, sql`now()`),
         ),
       );
 

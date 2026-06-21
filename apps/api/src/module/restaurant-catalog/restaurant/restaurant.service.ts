@@ -6,8 +6,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventBus } from '@nestjs/cqrs';
-import { and, eq } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import {
   RestaurantRepository,
   type PaginatedResult,
@@ -15,10 +13,17 @@ import {
 import { CreateRestaurantDto, UpdateRestaurantDto } from './dto/restaurant.dto';
 import type { Restaurant } from '@/module/restaurant-catalog/restaurant/restaurant.schema';
 import { RestaurantUpdatedEvent } from '@/shared/events/restaurant-updated.event';
-import { ImageService } from '@/module/image/image.service';
-import type { CreateImageDto } from '@/module/image/dto/image.dto';
-import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
+import {
+  IMAGE_MANAGEMENT_PORT,
+  type IImageManagementPort,
+} from '@/shared/ports/image-management.port';
+import {
+  USER_DIRECTORY_PORT,
+  type IUserDirectoryPort,
+} from '@/shared/ports/user-directory.port';
+import type { IRestaurantAccessPort } from '@/shared/ports/restaurant-access.port';
+import type { UnitOfWorkContext } from '@/shared/ports/unit-of-work-context';
+import type { CreateImageDto } from '@/shared/contracts/image.dto';
 
 // ---------------------------------------------------------------------------
 // Pagination constants — enforced in all list/search endpoints (Issue #5)
@@ -27,12 +32,14 @@ const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
 @Injectable()
-export class RestaurantService {
+export class RestaurantService implements IRestaurantAccessPort {
   constructor(
     private readonly repo: RestaurantRepository,
     private readonly eventBus: EventBus,
-    private readonly imageService: ImageService,
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
+    @Inject(IMAGE_MANAGEMENT_PORT)
+    private readonly imageService: IImageManagementPort,
+    @Inject(USER_DIRECTORY_PORT)
+    private readonly userDirectory: IUserDirectoryPort,
   ) {}
 
   async findAll(
@@ -142,20 +149,26 @@ export class RestaurantService {
     // IMPORTANT: only promote 'user' → 'restaurant'. Admins must not be demoted
     // (admins can own restaurants), and existing 'restaurant' owners stay put.
     if (isApproved) {
-      await this.db
-        .update(schema.user)
-        .set({ role: 'restaurant' })
-        .where(
-          and(
-            eq(schema.user.id, updated.ownerId),
-            eq(schema.user.role, 'user'),
-          ),
-        );
+      await this.userDirectory.promoteToRestaurant(updated.ownerId);
     }
     this.publishRestaurantEvent(updated);
     return updated;
   }
 
+  async assertOwner(restaurantId: string, userId: string): Promise<void> {
+    const restaurant = await this.findOne(restaurantId);
+    if (restaurant.ownerId !== userId) {
+      throw new ForbiddenException('You do not own this restaurant');
+    }
+  }
+
+  async incrementRating(
+    restaurantId: string,
+    stars: number,
+    context?: UnitOfWorkContext,
+  ): Promise<void> {
+    await this.repo.incrementRating(restaurantId, stars, context);
+  }
   async assertOpenAndApproved(id: string): Promise<Restaurant> {
     const restaurant = await this.findOne(id);
     if (!restaurant.isApproved) {

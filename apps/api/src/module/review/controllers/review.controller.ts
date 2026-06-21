@@ -32,7 +32,7 @@ import {
   Session,
   type UserSession,
 } from '@thallesp/nestjs-better-auth';
-import { hasRole } from '@/module/auth/role.util';
+import { hasRole } from '@/shared/security/role.util';
 import {
   PublicReviewListResponseDto,
   ReviewResponseDto,

@@ -7,8 +7,9 @@ import {
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
+import { orders } from '../order/order.schema';
 import type { IOrderEligibilityPort } from '@/shared/ports/order-eligibility.port';
+import type { UnitOfWorkContext } from '@/shared/ports/unit-of-work-context';
 
 /**
  * OrderEligibilityAdapter
@@ -29,9 +30,7 @@ import type { IOrderEligibilityPort } from '@/shared/ports/order-eligibility.por
  */
 @Injectable()
 export class OrderEligibilityAdapter implements IOrderEligibilityPort {
-  constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) private readonly db: NodePgDatabase) {}
 
   async checkEligibility(
     orderId: string,
@@ -39,13 +38,13 @@ export class OrderEligibilityAdapter implements IOrderEligibilityPort {
   ): Promise<{ restaurantId: string }> {
     const rows = await this.db
       .select({
-        id: schema.orders.id,
-        customerId: schema.orders.customerId,
-        restaurantId: schema.orders.restaurantId,
-        status: schema.orders.status,
+        id: orders.id,
+        customerId: orders.customerId,
+        restaurantId: orders.restaurantId,
+        status: orders.status,
       })
-      .from(schema.orders)
-      .where(eq(schema.orders.id, orderId))
+      .from(orders)
+      .where(eq(orders.id, orderId))
       .limit(1);
 
     if (rows.length === 0) {
@@ -79,5 +78,17 @@ export class OrderEligibilityAdapter implements IOrderEligibilityPort {
     }
 
     return { restaurantId: order.restaurantId };
+  }
+
+  async markReviewed(
+    orderId: string,
+    context?: UnitOfWorkContext,
+  ): Promise<void> {
+    const database =
+      (context?.transaction as NodePgDatabase | undefined) ?? this.db;
+    await database
+      .update(orders)
+      .set({ reviewedAt: new Date(), updatedAt: new Date() })
+      .where(eq(orders.id, orderId));
   }
 }

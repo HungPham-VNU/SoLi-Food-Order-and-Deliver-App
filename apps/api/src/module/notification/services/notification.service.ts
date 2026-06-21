@@ -1,4 +1,4 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import {
   type NotificationType,
   type NotificationChannel,
@@ -8,7 +8,6 @@ import type { NotificationPreference } from '../domain/notification-preference.s
 import { DEFAULT_PREFERENCES } from '../domain/notification-preference.schema';
 import { NotificationRepository } from '../repositories/notification.repository';
 import { NotificationPreferenceRepository } from '../repositories/notification-preference.repository';
-import { UserEmailRepository } from '../repositories/user-email.repository';
 import { DeviceTokenRepository } from '../repositories/device-token.repository';
 import { NotificationTemplateService } from './notification-template.service';
 import { ChannelDispatcherService } from './channel-dispatcher.service';
@@ -32,6 +31,10 @@ import type {
   NotificationPreferenceResponseDto,
 } from '../dto/preference.dto';
 import { runObserved } from '@/observability/trace';
+import {
+  USER_DIRECTORY_PORT,
+  type IUserDirectoryPort,
+} from '@/shared/ports/user-directory.port';
 
 // ---------------------------------------------------------------------------
 // Input type for sendFromEvent
@@ -104,7 +107,8 @@ export class NotificationService {
   constructor(
     private readonly notificationRepo: NotificationRepository,
     private readonly preferenceRepo: NotificationPreferenceRepository,
-    private readonly userEmailRepo: UserEmailRepository,
+    @Inject(USER_DIRECTORY_PORT)
+    private readonly userDirectory: IUserDirectoryPort,
     private readonly deviceTokenRepo: DeviceTokenRepository,
     private readonly templateService: NotificationTemplateService,
     private readonly redisService: RedisService,
@@ -237,8 +241,7 @@ export class NotificationService {
       let resolvedEmail: string | null = prefRow?.email ?? null;
 
       if (!resolvedEmail && enabledChannels.includes('email')) {
-        const authEmail =
-          await this.userEmailRepo.findEmailByUserId(recipientId);
+        const authEmail = await this.userDirectory.findEmail(recipientId);
         if (authEmail) {
           resolvedEmail = authEmail;
           this.logger.log(

@@ -1,15 +1,23 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { restaurantApi } from '../api/restaurant.api';
 import { restaurantKeys } from './useRestaurants';
+import { useSession } from '@/lib/auth-client';
 import type { RestaurantFormValues, UpdateRestaurantFormValues } from '../schemas/restaurant.schema';
 
 export function useCreateRestaurant() {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   return useMutation({
     mutationFn: (data: RestaurantFormValues) =>
       restaurantApi.create(data).then((r) => r.data),
-    onSuccess: () => {
+    onSuccess: (created) => {
+      if (session?.user.id) {
+        queryClient.setQueryData(
+          restaurantKeys.mineForUser(session.user.id),
+          created,
+        );
+      }
       queryClient.invalidateQueries({ queryKey: restaurantKeys.all });
     },
   });

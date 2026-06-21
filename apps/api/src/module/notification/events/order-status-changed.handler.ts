@@ -3,7 +3,7 @@ import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import { OrderStatusChangedEvent } from '@/shared/events/order-status-changed.event';
 import { NotificationService } from '../services/notification.service';
 import { NotificationRestaurantAclRepository } from '../acl/notification-restaurant-acl.repository';
-import type { OrderStatus } from '../../ordering/order/order.schema';
+import type { OrderStatus } from '@/shared/contracts/order.contract';
 import type {
   NotificationType,
   NotificationChannel,

@@ -1,4 +1,4 @@
-﻿import {
+import {
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -196,7 +196,7 @@ export class PaymentService implements IPaymentInitiationPort {
     return this.txnRepo.findByCustomerId(customerId);
   }
 
-  async cancelPendingVNPayPaymentForOrder(
+  async cancelPendingPaymentForOrder(
     orderId: string,
     customerId: string,
     reason = 'Customer cancelled VNPay payment',
@@ -217,7 +217,7 @@ export class PaymentService implements IPaymentInitiationPort {
 
     if (txn.status === 'failed') {
       this.logger.log(
-        `cancelPendingVNPayPaymentForOrder: txn=${txn.id} already failed. reason=${reason}`,
+        `cancelPendingPaymentForOrder: txn=${txn.id} already failed. reason=${reason}`,
       );
       return txn;
     }

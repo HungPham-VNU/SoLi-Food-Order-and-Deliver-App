@@ -4,7 +4,6 @@ import { FaroErrorBoundary } from '@/lib/observability';
 import { PageErrorFallback } from '@/app/PageErrorFallback';
 import { RegisterPage } from '@/app/pages/auth/register/RegisterPage';
 import { RegisterLocationPage } from '@/app/pages/auth/register/RegisterBusinessPage';
-import { RegisterPendingPage } from '@/app/pages/auth/register/RegisterPendingPage';
 import { LoginPage } from '@/app/pages/auth/login/LoginPage';
 import { PendingApprovalPage } from '@/app/pages/auth/PendingApprovalPage';
 import { DashboardPage } from '@/app/pages/dashboard/DashboardPage';
@@ -19,14 +18,18 @@ import { SettingsPage } from '@/app/pages/settings/SettingsPage';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 import { RequireRestaurantAccess } from '@/components/auth/RequireRestaurantAccess';
+import {
+  RequireOnboardingStep,
+  RootRedirect,
+} from '@/components/auth/RootRedirect';
 import { PromotionsPage } from '@/app/pages/promotions/PromotionsPage';
 import { PromotionFormPage } from '@/app/pages/promotions/PromotionFormPage';
 import { LandingPage } from '@/app/pages/landing/LandingPage';
 
 export const router = withFaroRouterInstrumentation(createBrowserRouter([
   {
-    // Public marketing landing. Logged-in visitors are forwarded to their
-    // workspace by RootRedirect, which LandingPage renders when a session exists.
+    // Public marketing landing. Workspace and onboarding redirects happen only
+    // after explicit authentication actions.
     path: '/',
     element: <LandingPage />,
   },
@@ -35,24 +38,42 @@ export const router = withFaroRouterInstrumentation(createBrowserRouter([
     element: <RegisterPage />,
   },
   {
-    path: '/auth/register/business',
-    element: <RegisterLocationPage />,
-  },
-  {
-    path: '/auth/register/pending',
-    element: <RegisterPendingPage />,
-  },
-  {
     path: '/auth/login',
     element: <LoginPage />,
   },
   {
+    path: '/auth/onboarding',
+    element: <RootRedirect unauthenticatedTo="/auth/register" />,
+  },
+  {
+    path: '/auth/callback',
+    element: <RootRedirect />,
+  },
+  {
     element: <RequireAuth />,
     children: [
-      // Pending approval — accessible to any authenticated non-restaurant user.
+      // Onboarding routes are guarded by persisted restaurant ownership.
       {
-        path: 'pending-approval',
-        element: <PendingApprovalPage />,
+        element: <RequireOnboardingStep step="business" />,
+        children: [
+          {
+            path: 'auth/register/business',
+            element: <RegisterLocationPage />,
+          },
+        ],
+      },
+      {
+        path: 'auth/register/pending',
+        element: <RootRedirect />,
+      },
+      {
+        element: <RequireOnboardingStep step="pending" />,
+        children: [
+          {
+            path: 'pending-approval',
+            element: <PendingApprovalPage />,
+          },
+        ],
       },
 
       // Restaurant routes — blocked for non-restaurant roles.

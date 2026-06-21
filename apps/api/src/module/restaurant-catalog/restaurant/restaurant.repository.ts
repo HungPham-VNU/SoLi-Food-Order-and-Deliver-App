@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, eq } from 'drizzle-orm';
+import { and, asc, count, eq, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import {
   restaurants,
@@ -7,7 +7,8 @@ import {
 } from '@/module/restaurant-catalog/restaurant/restaurant.schema';
 import { CreateRestaurantDto, UpdateRestaurantDto } from './dto/restaurant.dto';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
+import { AiSearchIndexRepository } from '@/module/restaurant-catalog/search/indexing/ai-search-index.repository';
+import type { UnitOfWorkContext } from '@/shared/ports/unit-of-work-context';
 
 export interface FindAllOptions {
   offset?: number;
@@ -24,7 +25,8 @@ export interface PaginatedResult<T> {
 @Injectable()
 export class RestaurantRepository {
   constructor(
-    @Inject(DB_CONNECTION) readonly db: NodePgDatabase<typeof schema>,
+    @Inject(DB_CONNECTION) readonly db: NodePgDatabase,
+    private readonly searchIndex: AiSearchIndexRepository,
   ) {}
 
   async findAll(
@@ -81,11 +83,14 @@ export class RestaurantRepository {
   }
 
   async create(ownerId: string, dto: CreateRestaurantDto): Promise<Restaurant> {
-    const [row] = await this.db
-      .insert(restaurants)
-      .values({ ...dto, ownerId })
-      .returning();
-    return row;
+    return this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(restaurants)
+        .values({ ...dto, ownerId })
+        .returning();
+      await this.searchIndex.refreshRestaurantSearchMetadata(row.id, tx);
+      return row;
+    });
   }
 
   /**
@@ -96,14 +101,37 @@ export class RestaurantRepository {
     id: string,
     dto: UpdateRestaurantDto,
   ): Promise<Restaurant | undefined> {
-    const [row] = await this.db
-      .update(restaurants)
-      .set({ ...dto, updatedAt: new Date() })
-      .where(eq(restaurants.id, id))
-      .returning();
-    return row;
+    return this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(restaurants)
+        .set({ ...dto, updatedAt: new Date() })
+        .where(eq(restaurants.id, id))
+        .returning();
+      if (row) {
+        await this.searchIndex.refreshRestaurantSearchMetadata(row.id, tx);
+        await this.searchIndex.refreshMenuItemsForRestaurant(row.id, tx);
+      }
+      return row;
+    });
   }
 
+  async incrementRating(
+    restaurantId: string,
+    stars: number,
+    context?: UnitOfWorkContext,
+  ): Promise<void> {
+    const database =
+      (context?.transaction as NodePgDatabase | undefined) ?? this.db;
+    await database
+      .update(restaurants)
+      .set({
+        ratingSum: sql`${restaurants.ratingSum} + ${stars}`,
+        reviewCount: sql`${restaurants.reviewCount} + 1`,
+        averageRating: sql`(${restaurants.ratingSum} + ${stars})::real / (${restaurants.reviewCount} + 1)`,
+        updatedAt: new Date(),
+      })
+      .where(eq(restaurants.id, restaurantId));
+  }
   async remove(id: string): Promise<void> {
     await this.db.delete(restaurants).where(eq(restaurants.id, id));
   }

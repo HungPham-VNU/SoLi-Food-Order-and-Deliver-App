@@ -153,6 +153,9 @@ export interface RestaurantSearchSummary {
   latitude?: number | null;
   longitude?: number | null;
   distanceKm?: number | null;
+  averageRating?: number;
+  ratingSum?: number;
+  reviewCount?: number;
 }
 
 export interface SearchItemResult {
@@ -176,6 +179,45 @@ export interface UnifiedSearchResponse {
   restaurants: RestaurantSearchResult[];
   items: SearchItemResult[];
   total: UnifiedSearchTotals;
+}
+
+export interface AiSearchAppliedFilter {
+  key: string;
+  label: string;
+  source: 'request' | 'ai_inferred' | 'system_default';
+}
+
+export interface AiSearchFollowUp {
+  label: string;
+  query: string;
+}
+
+export interface AiSearchNutritionFacts {
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+  verifiedByRestaurant: boolean | null;
+}
+
+export interface AiSearchItemResult extends SearchItemResult {
+  score: number;
+  matchReasons: string[];
+  nutrition?: AiSearchNutritionFacts | null;
+}
+
+export interface AiSearchResponse {
+  mode: 'ai' | 'classic_fallback';
+  query: string;
+  interpretation: string;
+  appliedFilters: AiSearchAppliedFilter[];
+  restaurants: RestaurantSearchResult[];
+  items: AiSearchItemResult[];
+  total: UnifiedSearchTotals;
+  followUps: AiSearchFollowUp[];
+  fallback: null | {
+    reason: string;
+  };
 }
 
 // ─── Delivery Estimate Types ───────────────────────────────────────────────────

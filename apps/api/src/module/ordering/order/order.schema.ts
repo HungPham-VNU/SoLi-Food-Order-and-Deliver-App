@@ -1,4 +1,15 @@
 import {
+  ORDER_CANCELLATION_REASONS,
+  ORDER_STATUSES,
+  ORDER_TRIGGER_ROLES,
+} from '@/shared/contracts/order.contract';
+import type {
+  CancellationReason,
+  OrderStatus,
+  TriggeredByRole,
+} from '@/shared/contracts/order.contract';
+
+import {
   pgTable,
   pgEnum,
   uuid,
@@ -18,18 +29,7 @@ import {
  * All states an Order can occupy.
  * PAID is exclusive to VNPay orders (see ORDERING_CONTEXT_PROPOSAL §8.3).
  */
-export const orderStatusEnum = pgEnum('order_status', [
-  'pending',
-  'paid',
-  'confirmed',
-  'preparing',
-  'ready_for_pickup',
-  'picked_up',
-  'delivering',
-  'delivered',
-  'cancelled',
-  'refunded',
-]);
+export const orderStatusEnum = pgEnum('order_status', ORDER_STATUSES);
 
 /** Payment methods supported by the platform. */
 export const paymentMethodEnum = pgEnum('order_payment_method', [
@@ -58,34 +58,23 @@ export interface OrderModifier {
  * Actor that triggered a state transition.
  * 'system' is used for automated actions (timeout cron, PaymentContext event).
  */
-export const triggeredByRoleEnum = pgEnum('order_triggered_by_role', [
-  'customer',
-  'restaurant',
-  'shipper',
-  'admin',
-  'system',
-]);
+export const triggeredByRoleEnum = pgEnum(
+  'order_triggered_by_role',
+  ORDER_TRIGGER_ROLES,
+);
 
 /**
  * Structured cancellation/refund taxonomy. Stored on order_status_logs rows
  * whose toStatus is 'cancelled' or 'refunded'. Powers the analytics donut
  * and any future failure-taxonomy reporting.
  */
-export const cancellationReasonEnum = pgEnum('order_cancellation_reason', [
-  'kitchen_cancel',
-  'driver_no_show',
-  'out_of_stock',
-  'customer_request',
-  'payment_failed',
-  'timeout',
-  'other',
-]);
+export const cancellationReasonEnum = pgEnum(
+  'order_cancellation_reason',
+  ORDER_CANCELLATION_REASONS,
+);
 
-/** Derived TypeScript types for use across the ordering BC. */
-export type OrderStatus = (typeof orderStatusEnum.enumValues)[number];
-export type TriggeredByRole = (typeof triggeredByRoleEnum.enumValues)[number];
-export type CancellationReason =
-  (typeof cancellationReasonEnum.enumValues)[number];
+/** Public order contract types are defined outside this context's persistence schema. */
+export type { OrderStatus, TriggeredByRole, CancellationReason };
 
 // ---------------------------------------------------------------------------
 // DeliveryAddress shape (JSONB — stored inline in orders row)
@@ -168,6 +157,8 @@ export const orders = pgTable(
 
     // Optimistic locking — incremented on every status transition (Phase 5).
     // Guards concurrent pickup races and any concurrent state change.
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+
     version: integer('version').notNull().default(0),
 
     // Set during T-09 (ready_for_pickup → picked_up) when a shipper self-assigns.

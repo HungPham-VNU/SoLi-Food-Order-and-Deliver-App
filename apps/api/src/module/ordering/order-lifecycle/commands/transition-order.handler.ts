@@ -12,7 +12,6 @@ import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { and, eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import { orders, orderStatusLogs, type Order } from '../../order/order.schema';
 import { TransitionOrderCommand } from './transition-order.command';
 import { OrderRepository } from '../repositories/order.repository';
@@ -47,7 +46,7 @@ export class TransitionOrderHandler implements ICommandHandler<TransitionOrderCo
   private readonly logger = new Logger(TransitionOrderHandler.name);
 
   constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
+    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase,
     private readonly orderRepo: OrderRepository,
     private readonly lifecycleService: OrderLifecycleService,
     private readonly restaurantSnapshotRepo: RestaurantSnapshotRepository,

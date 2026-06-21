@@ -6,6 +6,7 @@ import { CartService } from './cart.service';
 import { CartRedisRepository } from './cart.redis-repository';
 import { MenuItemSnapshotRepository } from '../acl/repositories/menu-item-snapshot.repository';
 import { AppSettingsService } from '../common/app-settings.service';
+import { RedisModule } from '@/lib/redis/redis.module';
 
 /**
  * CartModule — Phase 2 implementation; extended in Phase 4 with checkout endpoint.
@@ -28,7 +29,7 @@ import { AppSettingsService } from '../common/app-settings.service';
  * provided by RedisModule (registered in AppModule) so no explicit import is needed.
  */
 @Module({
-  imports: [CqrsModule, DatabaseModule],
+  imports: [CqrsModule, DatabaseModule, RedisModule],
   controllers: [CartController],
   providers: [
     CartService,

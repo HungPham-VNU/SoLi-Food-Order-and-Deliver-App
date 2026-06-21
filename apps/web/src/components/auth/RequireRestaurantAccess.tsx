@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useSession } from '@/lib/auth-client';
+import { RootRedirect } from './RootRedirect';
 
 export function RequireRestaurantAccess() {
   const { data: session, isPending } = useSession();
@@ -20,7 +21,7 @@ export function RequireRestaurantAccess() {
 
   const role = (session.user as any)?.role;
   if (role !== 'restaurant') {
-    return <Navigate to="/pending-approval" replace />;
+    return <RootRedirect />;
   }
 
   return <Outlet />;

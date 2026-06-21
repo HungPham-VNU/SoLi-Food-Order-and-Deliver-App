@@ -2,7 +2,6 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq } from 'drizzle-orm';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import { appSettings } from './app-settings.schema';
 
 /**
@@ -28,9 +27,7 @@ import { appSettings } from './app-settings.schema';
 export class AppSettingsService {
   private readonly logger = new Logger(AppSettingsService.name);
 
-  constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) private readonly db: NodePgDatabase) {}
 
   /**
    * Returns the integer value of a setting key.

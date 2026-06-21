@@ -26,7 +26,7 @@ import {
 } from '@nestjs/swagger';
 import { CommandBus } from '@nestjs/cqrs';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
-import { hasRole } from '@/module/auth/role.util';
+import { hasRole } from '@/shared/security/role.util';
 import { TransitionOrderCommand } from '../commands/transition-order.command';
 import { OrderRepository } from '../repositories/order.repository';
 import { CancelOrderDto, RefundOrderDto } from '../dto/cancel-order.dto';

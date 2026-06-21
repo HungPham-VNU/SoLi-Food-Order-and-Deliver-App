@@ -1,7 +1,7 @@
 import type {
   OrderStatus,
   TriggeredByRole,
-} from '../../module/ordering/order/order.schema';
+} from '@/shared/contracts/order.contract';
 
 /**
  * OrderStatusChangedEvent

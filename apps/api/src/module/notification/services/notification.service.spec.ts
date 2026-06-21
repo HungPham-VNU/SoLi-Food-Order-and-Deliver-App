@@ -57,7 +57,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationService } from './notification.service';
 import { NotificationRepository } from '../repositories/notification.repository';
 import { NotificationPreferenceRepository } from '../repositories/notification-preference.repository';
-import { UserEmailRepository } from '../repositories/user-email.repository';
+import { USER_DIRECTORY_PORT } from '@/shared/ports/user-directory.port';
 import { DeviceTokenRepository } from '../repositories/device-token.repository';
 import { NotificationTemplateService } from './notification-template.service';
 import { ChannelDispatcherService } from './channel-dispatcher.service';
@@ -145,7 +145,7 @@ function makeSendParams(
 
 describe('NotificationService', () => {
   let service: NotificationService;
-  let userEmailRepo: { findEmailByUserId: jest.Mock };
+  let userEmailRepo: { findEmail: jest.Mock };
   let notificationRepo: {
     insertIfNotExists: jest.Mock;
     markRead: jest.Mock;
@@ -173,7 +173,7 @@ describe('NotificationService', () => {
 
   beforeEach(async () => {
     userEmailRepo = {
-      findEmailByUserId: jest.fn().mockResolvedValue(null),
+      findEmail: jest.fn().mockResolvedValue(null),
     };
     notificationRepo = {
       insertIfNotExists: jest.fn().mockResolvedValue(makeNotificationRow()),
@@ -219,7 +219,7 @@ describe('NotificationService', () => {
         NotificationService,
         { provide: NotificationRepository, useValue: notificationRepo },
         { provide: NotificationPreferenceRepository, useValue: preferenceRepo },
-        { provide: UserEmailRepository, useValue: userEmailRepo },
+        { provide: USER_DIRECTORY_PORT, useValue: userEmailRepo },
         { provide: DeviceTokenRepository, useValue: deviceTokenRepo },
         { provide: NotificationTemplateService, useValue: templateService },
         { provide: RedisService, useValue: redisService },
@@ -365,7 +365,7 @@ describe('NotificationService', () => {
 
     it('passes null email in context when no preference row exists and user table also has no email', async () => {
       preferenceRepo.findByUserId.mockResolvedValue(null);
-      userEmailRepo.findEmailByUserId.mockResolvedValue(null);
+      userEmailRepo.findEmail.mockResolvedValue(null);
       const row = makeNotificationRow({ channel: 'email' });
       notificationRepo.insertIfNotExists.mockResolvedValue(row);
 
@@ -381,7 +381,7 @@ describe('NotificationService', () => {
       preferenceRepo.findByUserId.mockResolvedValue(
         makePreferenceRow({ email: null }),
       );
-      userEmailRepo.findEmailByUserId.mockResolvedValue('fallback@example.com');
+      userEmailRepo.findEmail.mockResolvedValue('fallback@example.com');
       const row = makeNotificationRow({ channel: 'email' });
       notificationRepo.insertIfNotExists.mockResolvedValue(row);
 
@@ -397,7 +397,7 @@ describe('NotificationService', () => {
       preferenceRepo.findByUserId.mockResolvedValue(
         makePreferenceRow({ email: null }),
       );
-      userEmailRepo.findEmailByUserId.mockResolvedValue('backfill@example.com');
+      userEmailRepo.findEmail.mockResolvedValue('backfill@example.com');
       preferenceRepo.upsert.mockResolvedValue(undefined);
       notificationRepo.insertIfNotExists.mockResolvedValue(
         makeNotificationRow({ channel: 'email' }),
@@ -425,7 +425,7 @@ describe('NotificationService', () => {
 
       await service.sendFromEvent(makeSendParams({ channels: ['email'] }));
 
-      expect(userEmailRepo.findEmailByUserId).not.toHaveBeenCalled();
+      expect(userEmailRepo.findEmail).not.toHaveBeenCalled();
     });
 
     it('returns 0 and never throws on unexpected exception', async () => {

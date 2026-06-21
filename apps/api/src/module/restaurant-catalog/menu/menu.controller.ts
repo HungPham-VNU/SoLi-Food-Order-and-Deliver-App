@@ -28,7 +28,7 @@ import {
   UpdateMenuCategoryDto,
   UpdateMenuItemDto,
 } from './dto/menu.dto';
-import { hasRole } from '@/module/auth/role.util';
+import { hasRole } from '@/shared/security/role.util';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -43,7 +43,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { CreateImageDto } from '@/module/image/dto/image.dto';
+import { CreateImageDto } from '@/shared/contracts/image.dto';
 
 @ApiTags('Menu')
 @ApiBearerAuth()

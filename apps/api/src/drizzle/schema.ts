@@ -1,6 +1,8 @@
 export * from '../module/auth/auth.schema';
 export * from '../module/restaurant-catalog/restaurant/restaurant.schema';
 export * from '../module/restaurant-catalog/menu/menu.schema';
+export * from '../module/restaurant-catalog/search/indexing/ai-search-embedding-job.schema';
+export * from '../module/restaurant-catalog/search/ai/ai-search-ranking-stats.schema';
 export * from '../module/image/image.schema';
 
 // Ordering bounded context — Phase 1 schemas
@@ -25,4 +27,5 @@ export * from '../module/promotion/domain/promotion.schema';
 
 // Review bounded context — Phase RV-2 schemas
 export * from '../module/review/domain/review.schema';
-export * from '../module/nutrition/domain/nutrition.schema';
+export * from '../module/restaurant-catalog/nutrition/domain/nutrition.schema';
+export * from '../module/restaurant-catalog/dietary-tags/domain/dietary-tag.schema';

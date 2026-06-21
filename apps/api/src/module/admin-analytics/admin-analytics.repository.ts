@@ -14,7 +14,9 @@ import {
 } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
+// Reporting is the sole read-only exception allowed to compose context-owned tables.
+import { orders, orderStatusLogs } from '@/module/ordering/order/order.schema';
+import { restaurants } from '@/module/restaurant-catalog/restaurant/restaurant.schema';
 
 export interface PlatformScalars {
   gmv: number;
@@ -60,9 +62,7 @@ const COMMISSION_RATE = 0.15;
 
 @Injectable()
 export class AdminAnalyticsRepository {
-  constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) private readonly db: NodePgDatabase) {}
 
   // ---------------------------------------------------------------------------
   // Platform-wide scalars (GMV, order counts)
@@ -70,18 +70,18 @@ export class AdminAnalyticsRepository {
 
   async getPlatformScalars(start: Date, end: Date): Promise<PlatformScalars> {
     const windowFilter = and(
-      gte(schema.orders.createdAt, start),
-      lt(schema.orders.createdAt, end),
+      gte(orders.createdAt, start),
+      lt(orders.createdAt, end),
     );
 
     const rows = await this.db
       .select({
-        gmv: sql<number>`COALESCE(SUM(${schema.orders.totalAmount}), 0)::bigint`,
+        gmv: sql<number>`COALESCE(SUM(${orders.totalAmount}), 0)::bigint`,
         orderCount: count(),
-        deliveredCount: sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} = 'delivered')::int`,
-        failedCount: sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} IN ('cancelled', 'refunded'))::int`,
+        deliveredCount: sql<number>`COUNT(*) FILTER (WHERE ${orders.status} = 'delivered')::int`,
+        failedCount: sql<number>`COUNT(*) FILTER (WHERE ${orders.status} IN ('cancelled', 'refunded'))::int`,
       })
-      .from(schema.orders)
+      .from(orders)
       .where(windowFilter);
 
     const r = rows[0];
@@ -100,11 +100,11 @@ export class AdminAnalyticsRepository {
   async getRestaurantCounts(): Promise<RestaurantCounts> {
     const rows = await this.db
       .select({
-        online: sql<number>`COUNT(*) FILTER (WHERE ${schema.restaurants.isApproved} = true  AND ${schema.restaurants.isOpen} = true)::int`,
-        offline: sql<number>`COUNT(*) FILTER (WHERE ${schema.restaurants.isApproved} = true  AND ${schema.restaurants.isOpen} = false)::int`,
-        pending: sql<number>`COUNT(*) FILTER (WHERE ${schema.restaurants.isApproved} = false)::int`,
+        online: sql<number>`COUNT(*) FILTER (WHERE ${restaurants.isApproved} = true  AND ${restaurants.isOpen} = true)::int`,
+        offline: sql<number>`COUNT(*) FILTER (WHERE ${restaurants.isApproved} = true  AND ${restaurants.isOpen} = false)::int`,
+        pending: sql<number>`COUNT(*) FILTER (WHERE ${restaurants.isApproved} = false)::int`,
       })
-      .from(schema.restaurants);
+      .from(restaurants);
 
     const r = rows[0];
     return {
@@ -121,22 +121,15 @@ export class AdminAnalyticsRepository {
   async getHourlyLoad(start: Date, end: Date): Promise<HourlyPoint[]> {
     const rows = await this.db
       .select({
-        hour: sql<string>`date_trunc('hour', ${schema.orders.createdAt})`.as(
-          'hour',
-        ),
+        hour: sql<string>`date_trunc('hour', ${orders.createdAt})`.as('hour'),
         orders: count().as('orders'),
         revenue:
-          sql<number>`COALESCE(SUM(${schema.orders.totalAmount}), 0)::bigint`.as(
+          sql<number>`COALESCE(SUM(${orders.totalAmount}), 0)::bigint`.as(
             'revenue',
           ),
       })
-      .from(schema.orders)
-      .where(
-        and(
-          gte(schema.orders.createdAt, start),
-          lt(schema.orders.createdAt, end),
-        ),
-      )
+      .from(orders)
+      .where(and(gte(orders.createdAt, start), lt(orders.createdAt, end)))
       .groupBy(sql`hour`)
       .orderBy(asc(sql`hour`));
 
@@ -158,21 +151,21 @@ export class AdminAnalyticsRepository {
   ): Promise<TopEarnerRow[]> {
     const rows = await this.db
       .select({
-        restaurantId: schema.orders.restaurantId,
-        restaurantName: schema.orders.restaurantName,
-        gmv: sql<number>`COALESCE(SUM(${schema.orders.totalAmount}), 0)::bigint`,
+        restaurantId: orders.restaurantId,
+        restaurantName: orders.restaurantName,
+        gmv: sql<number>`COALESCE(SUM(${orders.totalAmount}), 0)::bigint`,
         orderCount: count(),
       })
-      .from(schema.orders)
+      .from(orders)
       .where(
         and(
-          gte(schema.orders.createdAt, start),
-          lt(schema.orders.createdAt, end),
-          notInArray(schema.orders.status, ['cancelled', 'refunded']),
+          gte(orders.createdAt, start),
+          lt(orders.createdAt, end),
+          notInArray(orders.status, ['cancelled', 'refunded']),
         ),
       )
-      .groupBy(schema.orders.restaurantId, schema.orders.restaurantName)
-      .orderBy(desc(sql`COALESCE(SUM(${schema.orders.totalAmount}), 0)`))
+      .groupBy(orders.restaurantId, orders.restaurantName)
+      .orderBy(desc(sql`COALESCE(SUM(${orders.totalAmount}), 0)`))
       .limit(limit);
 
     return rows.map((r) => ({
@@ -193,63 +186,50 @@ export class AdminAnalyticsRepository {
     end: Date,
     limit = 5,
   ): Promise<BottleneckRow[]> {
-    const lConf = alias(schema.orderStatusLogs, 'l_conf');
-    const lReady = alias(schema.orderStatusLogs, 'l_ready');
+    const lConf = alias(orderStatusLogs, 'l_conf');
+    const lReady = alias(orderStatusLogs, 'l_ready');
 
     // CTE 1: cancel rate per restaurant
     const orderStats = this.db.$with('order_stats').as(
       this.db
         .select({
-          restaurantId: schema.orders.restaurantId,
-          restaurantName: schema.orders.restaurantName,
+          restaurantId: orders.restaurantId,
+          restaurantName: orders.restaurantName,
           total: count().as('total'),
           failed:
-            sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} IN ('cancelled', 'refunded'))::int`.as(
+            sql<number>`COUNT(*) FILTER (WHERE ${orders.status} IN ('cancelled', 'refunded'))::int`.as(
               'failed',
             ),
         })
-        .from(schema.orders)
-        .where(
-          and(
-            gte(schema.orders.createdAt, start),
-            lt(schema.orders.createdAt, end),
-          ),
-        )
-        .groupBy(schema.orders.restaurantId, schema.orders.restaurantName),
+        .from(orders)
+        .where(and(gte(orders.createdAt, start), lt(orders.createdAt, end)))
+        .groupBy(orders.restaurantId, orders.restaurantName),
     );
 
     // CTE 2: avg prep time (confirmed → ready_for_pickup) per restaurant
     const prepLatency = this.db.$with('prep_latency').as(
       this.db
         .select({
-          restaurantId: schema.orders.restaurantId,
+          restaurantId: orders.restaurantId,
           avgPrepSeconds:
             sql<number>`AVG(EXTRACT(EPOCH FROM (${lReady.createdAt} - ${lConf.createdAt})))::float8`.as(
               'avg_prep_seconds',
             ),
         })
-        .from(schema.orders)
+        .from(orders)
         .innerJoin(
           lConf,
-          and(
-            eq(lConf.orderId, schema.orders.id),
-            eq(lConf.toStatus, 'confirmed'),
-          ),
+          and(eq(lConf.orderId, orders.id), eq(lConf.toStatus, 'confirmed')),
         )
         .innerJoin(
           lReady,
           and(
-            eq(lReady.orderId, schema.orders.id),
+            eq(lReady.orderId, orders.id),
             eq(lReady.toStatus, 'ready_for_pickup'),
           ),
         )
-        .where(
-          and(
-            gte(schema.orders.createdAt, start),
-            lt(schema.orders.createdAt, end),
-          ),
-        )
-        .groupBy(schema.orders.restaurantId),
+        .where(and(gte(orders.createdAt, start), lt(orders.createdAt, end)))
+        .groupBy(orders.restaurantId),
     );
 
     const rows = await this.db
@@ -313,18 +293,18 @@ export class AdminAnalyticsRepository {
   ): Promise<DistrictRow[]> {
     const rows = await this.db
       .select({
-        district: sql<string>`${schema.orders.deliveryAddress}->>'district'`.as(
+        district: sql<string>`${orders.deliveryAddress}->>'district'`.as(
           'district',
         ),
         orderCount: count().as('order_count'),
       })
-      .from(schema.orders)
+      .from(orders)
       .where(
         and(
-          gte(schema.orders.createdAt, start),
-          lt(schema.orders.createdAt, end),
-          sql`${schema.orders.deliveryAddress}->>'district' IS NOT NULL`,
-          ne(sql<string>`${schema.orders.deliveryAddress}->>'district'`, ''),
+          gte(orders.createdAt, start),
+          lt(orders.createdAt, end),
+          sql`${orders.deliveryAddress}->>'district' IS NOT NULL`,
+          ne(sql<string>`${orders.deliveryAddress}->>'district'`, ''),
         ),
       )
       .groupBy(sql`district`)

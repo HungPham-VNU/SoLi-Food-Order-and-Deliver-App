@@ -2,7 +2,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { count, desc } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import { images, type Image, type NewImage } from './image.schema';
 
 export interface PaginatedImages {
@@ -12,9 +11,7 @@ export interface PaginatedImages {
 
 @Injectable()
 export class ImageRepository {
-  constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) private readonly db: NodePgDatabase) {}
 
   async findAll(offset: number, limit: number): Promise<PaginatedImages> {
     const [countResult, rows] = await Promise.all([

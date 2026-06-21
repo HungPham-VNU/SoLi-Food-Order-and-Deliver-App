@@ -2,7 +2,6 @@ import { Injectable, Inject } from '@nestjs/common';
 import { eq, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
-import * as schema from '@/drizzle/schema';
 import {
   orderingMenuItemSnapshots,
   type NewOrderingMenuItemSnapshot,
@@ -37,9 +36,7 @@ type UpsertMenuItemSnapshotData = Omit<
  */
 @Injectable()
 export class MenuItemSnapshotRepository {
-  constructor(
-    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DB_CONNECTION) private readonly db: NodePgDatabase) {}
 
   async findById(menuItemId: string): Promise<OrderingMenuItemSnapshot | null> {
     const result = await this.db

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -187,9 +188,9 @@ export function RegisterForm() {
       <div className="mt-8 text-center">
         <p className="text-sm text-on-surface-variant">
           Already have an account?{' '}
-          <a href="/auth/login" className="text-primary font-bold hover:underline ml-1">
+          <Link to="/auth/login" className="text-primary font-bold hover:underline ml-1">
             Sign In
-          </a>
+          </Link>
         </p>
       </div>
     </div>

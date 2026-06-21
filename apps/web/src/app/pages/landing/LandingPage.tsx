@@ -1,7 +1,5 @@
 import { Link } from 'react-router-dom';
 import { UtensilsCrossed } from 'lucide-react';
-import { useSession } from '@/lib/auth-client';
-import { RootRedirect } from '@/components/auth/RootRedirect';
 import { cn } from '@/lib/utils';
 import { Reveal } from './components/Reveal';
 
@@ -112,7 +110,7 @@ function LandingNav() {
             Sign in
           </Link>
           <Link
-            to="/auth/register"
+            to="/auth/onboarding"
             className="inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-primary-foreground editorial-gradient transition-transform hover:-translate-y-0.5 active:translate-y-px"
           >
             Start selling
@@ -150,7 +148,7 @@ function Hero() {
             paid. Everything your kitchen needs, in one place.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link to="/auth/register" className={ctaPrimary}>
+            <Link to="/auth/onboarding" className={ctaPrimary}>
               Start selling
               <Icon name="arrow_forward" className="text-xl" />
             </Link>
@@ -463,7 +461,7 @@ function AnalyticsShowcase() {
               </li>
             ))}
           </ul>
-          <Link to="/auth/register" className={cn(ctaPrimary, 'mt-9')}>
+          <Link to="/auth/onboarding" className={cn(ctaPrimary, 'mt-9')}>
             Start selling
             <Icon name="arrow_forward" className="text-xl" />
           </Link>
@@ -564,7 +562,7 @@ function FinalCta() {
             Join the kitchens already selling on UITFood. Set up today.
           </p>
           <Link
-            to="/auth/register"
+            to="/auth/onboarding"
             className="relative mt-9 inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-card px-7 text-base font-semibold text-primary transition-transform hover:-translate-y-0.5 active:translate-y-px"
           >
             Start selling
@@ -592,7 +590,7 @@ const footerCols = [
   {
     heading: 'Get started',
     links: [
-      { label: 'Start selling', href: '/auth/register' },
+      { label: 'Start selling', href: '/auth/onboarding' },
       { label: 'Sign in', href: '/auth/login' },
     ],
   },
@@ -663,23 +661,6 @@ function LandingFooter() {
 /* ------------------------------------------------------------------ */
 
 export function LandingPage() {
-  const { data: session, isPending } = useSession();
-
-  if (isPending) {
-    return (
-      <div className="flex min-h-[100dvh] items-center justify-center">
-        <span className="material-symbols-outlined animate-spin text-4xl text-primary">
-          progress_activity
-        </span>
-      </div>
-    );
-  }
-
-  // Logged-in visitors are routed to their workspace (dashboard / onboarding).
-  if (session) {
-    return <RootRedirect />;
-  }
-
   return (
     <div className="min-h-[100dvh] bg-background">
       <LandingNav />

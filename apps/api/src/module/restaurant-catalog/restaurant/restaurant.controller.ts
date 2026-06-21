@@ -19,14 +19,14 @@ import {
   type UserSession,
 } from '@thallesp/nestjs-better-auth';
 import { RestaurantService } from './restaurant.service';
-import { hasRole } from '@/module/auth/role.util';
+import { hasRole } from '@/shared/security/role.util';
 import {
   CreateRestaurantDto,
   RestaurantListResponseDto,
   RestaurantResponseDto,
   UpdateRestaurantDto,
 } from './dto/restaurant.dto';
-import { CreateImageDto } from '@/module/image/dto/image.dto';
+import { CreateImageDto } from '@/shared/contracts/image.dto';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,

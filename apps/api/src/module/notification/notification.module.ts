@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DatabaseModule } from '@/drizzle/drizzle.module';
+import { IdentityModule } from '@/module/auth/identity.module';
+import { RedisModule } from '@/lib/redis/redis.module';
 
 // ACL
 import { NotificationRestaurantAclRepository } from './acl/notification-restaurant-acl.repository';
@@ -10,7 +12,6 @@ import { NotificationRestaurantSnapshotProjector } from './acl/notification-rest
 // Repositories
 import { NotificationRepository } from './repositories/notification.repository';
 import { NotificationPreferenceRepository } from './repositories/notification-preference.repository';
-import { UserEmailRepository } from './repositories/user-email.repository';
 import { DeviceTokenRepository } from './repositories/device-token.repository';
 import { NotificationDeliveryLogRepository } from './repositories/notification-delivery-log.repository';
 
@@ -58,7 +59,7 @@ import { ReviewSubmittedNotificationHandler } from './events/review-submitted.ha
  * NotificationModule — Phase N-4 Multi-Channel Delivery
  *
  * Implements the Notification BC as a non-global NestJS module.
- * NOT @Global() — imported explicitly in AppModule.
+ * Imported explicitly by the application composition root.
  *
  * Phase N-4 additions over N-3:
  *  - ChannelDispatcherService: routes persisted notification rows to the
@@ -97,11 +98,17 @@ import { ReviewSubmittedNotificationHandler } from './events/review-submitted.ha
  * CqrsModule: required for @EventsHandler-decorated classes.
  * ConfigModule: re-imported to make ConfigService available in factory fns.
  * DatabaseModule: provides DB_CONNECTION to all repositories.
- * RedisModule: @Global() — RedisService available without re-importing.
+ * RedisModule is imported explicitly for presence and unread-count caching.
  * ScheduleModule: imported in AppModule — @Interval on gateway works here.
  */
 @Module({
-  imports: [CqrsModule, DatabaseModule, ConfigModule],
+  imports: [
+    CqrsModule,
+    DatabaseModule,
+    ConfigModule,
+    IdentityModule,
+    RedisModule,
+  ],
   controllers: [NotificationController],
   providers: [
     // --- ACL ---
@@ -111,7 +118,6 @@ import { ReviewSubmittedNotificationHandler } from './events/review-submitted.ha
     // --- Repositories ---
     NotificationRepository,
     NotificationPreferenceRepository,
-    UserEmailRepository,
     DeviceTokenRepository,
     NotificationDeliveryLogRepository,
 
