@@ -19,6 +19,7 @@ import { PromotionModule } from './module/promotion/promotion.module';
 import { AdminAnalyticsModule } from './module/admin-analytics/admin-analytics.module';
 import { ReviewModule } from './module/review/review.module';
 import { NutritionModule } from './module/nutrition/nutrition.module';
+import { DietaryTagsModule } from './module/dietary-tags/dietary-tags.module';
 import { validate } from './config/env.schema';
 import { vnpayConfig } from './config/vnpay.config';
 import { ObservabilityInterceptor } from './observability/observability.interceptor';
@@ -43,6 +44,7 @@ import { ObservabilityInterceptor } from './observability/observability.intercep
     ImageModule,
     ReviewModule,
     NutritionModule,
+    DietaryTagsModule,
 
     AuthModule.forRoot({
       auth,

@@ -15,6 +15,13 @@
       "when": 1781253616799,
       "tag": "0001_lonely_angel",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782014830106,
+      "tag": "0002_dietary_lifestyle_tags",
+      "breakpoints": true
     }
   ]
 }
