@@ -1,27 +1,41 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1780114967708,
-      "tag": "0000_early_moonstone",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1781253616799,
-      "tag": "0001_lonely_angel",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1782014830106,
-      "tag": "0002_dietary_lifestyle_tags",
-      "breakpoints": true
-    }
-  ]
+    "version":  "7",
+    "dialect":  "postgresql",
+    "entries":  [
+                    {
+                        "idx":  0,
+                        "version":  "7",
+                        "when":  1780114967708,
+                        "tag":  "0000_early_moonstone",
+                        "breakpoints":  true
+                    },
+                    {
+                        "idx":  1,
+                        "version":  "7",
+                        "when":  1781253616799,
+                        "tag":  "0001_lonely_angel",
+                        "breakpoints":  true
+                    },
+                    {
+                        "idx":  2,
+                        "version":  "7",
+                        "when":  1782014830106,
+                        "tag":  "0002_dietary_lifestyle_tags",
+                        "breakpoints":  true
+                    },
+                    {
+                        "idx":  3,
+                        "version":  "7",
+                        "when":  1782020203361,
+                        "tag":  "0003_gifted_talon",
+                        "breakpoints":  true
+                    },
+                    {
+                        "idx":  4,
+                        "version":  "7",
+                        "when":  1782020203362,
+                        "tag":  "0007_nifty_captain_cross",
+                        "breakpoints":  true
+                    }
+                ]
 }

@@ -1,6 +1,6 @@
 {
   "id": "5721b64d-8748-4428-8d1d-9d4ccd03b80b",
-  "prevId": "da7867b6-c51c-4c5c-a73d-e16cc72a66c6",
+  "prevId": "71956e02-8e33-41e1-aa73-5d4bcd1c1067",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -544,6 +544,42 @@
           "primaryKey": false,
           "notNull": false
         },
+        "search_document": {
+          "name": "search_document",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "search_content_hash": {
+          "name": "search_content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding": {
+          "name": "embedding",
+          "type": "vector(768)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding_model": {
+          "name": "embedding_model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding_version": {
+          "name": "embedding_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding_generated_at": {
+          "name": "embedding_generated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
         "address": {
           "name": "address",
           "type": "text",
@@ -600,6 +636,27 @@
           "primaryKey": false,
           "notNull": false
         },
+        "average_rating": {
+          "name": "average_rating",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "rating_sum": {
+          "name": "rating_sum",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "review_count": {
+          "name": "review_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -627,6 +684,27 @@
             },
             {
               "expression": "is_open",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "restaurants_rating_idx": {
+          "name": "restaurants_rating_idx",
+          "columns": [
+            {
+              "expression": "average_rating",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "review_count",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -763,6 +841,42 @@
           "primaryKey": false,
           "notNull": false
         },
+        "search_document": {
+          "name": "search_document",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "search_content_hash": {
+          "name": "search_content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding": {
+          "name": "embedding",
+          "type": "vector(768)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding_model": {
+          "name": "embedding_model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding_version": {
+          "name": "embedding_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding_generated_at": {
+          "name": "embedding_generated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
         "price": {
           "name": "price",
           "type": "integer",
@@ -817,6 +931,21 @@
         }
       },
       "indexes": {
+        "menu_items_price_idx": {
+          "name": "menu_items_price_idx",
+          "columns": [
+            {
+              "expression": "price",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "menu_items_tags_gin_idx": {
           "name": "menu_items_tags_gin_idx",
           "columns": [
@@ -1036,6 +1165,309 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.ai_search_embedding_jobs": {
+      "name": "ai_search_embedding_jobs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "target_type": {
+          "name": "target_type",
+          "type": "ai_search_embedding_target_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "ai_search_embedding_job_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "available_at": {
+          "name": "available_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "locked_at": {
+          "name": "locked_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ai_search_embedding_jobs_target_uidx": {
+          "name": "ai_search_embedding_jobs_target_uidx",
+          "columns": [
+            {
+              "expression": "target_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "target_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ai_search_embedding_jobs_status_available_idx": {
+          "name": "ai_search_embedding_jobs_status_available_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "available_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ai_search_item_ranking_stats": {
+      "name": "ai_search_item_ranking_stats",
+      "schema": "",
+      "columns": {
+        "menu_item_id": {
+          "name": "menu_item_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "restaurant_id": {
+          "name": "restaurant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "delivered_order_count_30d": {
+          "name": "delivered_order_count_30d",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "delivered_order_count_90d": {
+          "name": "delivered_order_count_90d",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "ordered_quantity_30d": {
+          "name": "ordered_quantity_30d",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "ordered_quantity_90d": {
+          "name": "ordered_quantity_90d",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_ordered_at": {
+          "name": "last_ordered_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ai_search_item_ranking_stats_restaurant_idx": {
+          "name": "ai_search_item_ranking_stats_restaurant_idx",
+          "columns": [
+            {
+              "expression": "restaurant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ai_search_item_ranking_stats_updated_idx": {
+          "name": "ai_search_item_ranking_stats_updated_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ai_search_restaurant_ranking_stats": {
+      "name": "ai_search_restaurant_ranking_stats",
+      "schema": "",
+      "columns": {
+        "restaurant_id": {
+          "name": "restaurant_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "delivered_order_count_30d": {
+          "name": "delivered_order_count_30d",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "delivered_order_count_90d": {
+          "name": "delivered_order_count_90d",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "ordered_quantity_30d": {
+          "name": "ordered_quantity_30d",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "ordered_quantity_90d": {
+          "name": "ordered_quantity_90d",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_ordered_at": {
+          "name": "last_ordered_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ai_search_restaurant_ranking_stats_updated_idx": {
+          "name": "ai_search_restaurant_ranking_stats_updated_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.images": {
       "name": "images",
       "schema": "",
@@ -1221,6 +1653,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "cancellation_reason": {
+          "name": "cancellation_reason",
+          "type": "order_cancellation_reason",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1347,6 +1786,12 @@
         },
         "expires_at": {
           "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
@@ -2912,6 +3357,1215 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "public.reviews": {
+      "name": "reviews",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "customer_id": {
+          "name": "customer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "restaurant_id": {
+          "name": "restaurant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stars": {
+          "name": "stars",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "comment": {
+          "name": "comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tags": {
+          "name": "tags",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "moderation_status": {
+          "name": "moderation_status",
+          "type": "review_moderation_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'visible'"
+        },
+        "moderation_reason": {
+          "name": "moderation_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "reviews_restaurant_id_moderation_idx": {
+          "name": "reviews_restaurant_id_moderation_idx",
+          "columns": [
+            {
+              "expression": "restaurant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "moderation_status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "reviews_customer_id_idx": {
+          "name": "reviews_customer_id_idx",
+          "columns": [
+            {
+              "expression": "customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "reviews_order_id_unique": {
+          "name": "reviews_order_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "order_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "reviews_stars_check": {
+          "name": "reviews_stars_check",
+          "value": "\"reviews\".\"stars\" BETWEEN 1 AND 5"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.menu_item_nutrition": {
+      "name": "menu_item_nutrition",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "menu_item_id": {
+          "name": "menu_item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "servings": {
+          "name": "servings",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "calories": {
+          "name": "calories",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "protein": {
+          "name": "protein",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "carbs": {
+          "name": "carbs",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fat": {
+          "name": "fat",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fiber": {
+          "name": "fiber",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sugar": {
+          "name": "sugar",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sodium": {
+          "name": "sodium",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "menu_item_nutrition_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'AI_ESTIMATED'"
+        },
+        "verified_by_restaurant": {
+          "name": "verified_by_restaurant",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "menu_item_nutrition_menu_item_uidx": {
+          "name": "menu_item_nutrition_menu_item_uidx",
+          "columns": [
+            {
+              "expression": "menu_item_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "menu_item_nutrition_protein_idx": {
+          "name": "menu_item_nutrition_protein_idx",
+          "columns": [
+            {
+              "expression": "protein",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "menu_item_nutrition_calories_idx": {
+          "name": "menu_item_nutrition_calories_idx",
+          "columns": [
+            {
+              "expression": "calories",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "menu_item_nutrition_menu_item_id_menu_items_id_fk": {
+          "name": "menu_item_nutrition_menu_item_id_menu_items_id_fk",
+          "tableFrom": "menu_item_nutrition",
+          "tableTo": "menu_items",
+          "columnsFrom": [
+            "menu_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.nutrition_analysis_ingredients": {
+      "name": "nutrition_analysis_ingredients",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "analysis_session_id": {
+          "name": "analysis_session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "raw_text": {
+          "name": "raw_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "extracted_name": {
+          "name": "extracted_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "corrected_name": {
+          "name": "corrected_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity_gram": {
+          "name": "quantity_gram",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "matched_nutrition_food_id": {
+          "name": "matched_nutrition_food_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requires_confirmation": {
+          "name": "requires_confirmation",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "nutrition_analysis_ingredients_session_idx": {
+          "name": "nutrition_analysis_ingredients_session_idx",
+          "columns": [
+            {
+              "expression": "analysis_session_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nutrition_analysis_ingredients_food_idx": {
+          "name": "nutrition_analysis_ingredients_food_idx",
+          "columns": [
+            {
+              "expression": "matched_nutrition_food_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "nutrition_analysis_ingredients_analysis_session_id_nutrition_analysis_sessions_id_fk": {
+          "name": "nutrition_analysis_ingredients_analysis_session_id_nutrition_analysis_sessions_id_fk",
+          "tableFrom": "nutrition_analysis_ingredients",
+          "tableTo": "nutrition_analysis_sessions",
+          "columnsFrom": [
+            "analysis_session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "nutrition_analysis_ingredients_matched_nutrition_food_id_nutrition_foods_id_fk": {
+          "name": "nutrition_analysis_ingredients_matched_nutrition_food_id_nutrition_foods_id_fk",
+          "tableFrom": "nutrition_analysis_ingredients",
+          "tableTo": "nutrition_foods",
+          "columnsFrom": [
+            "matched_nutrition_food_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.nutrition_analysis_sessions": {
+      "name": "nutrition_analysis_sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "menu_item_id": {
+          "name": "menu_item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "restaurant_id": {
+          "name": "restaurant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "input_type": {
+          "name": "input_type",
+          "type": "nutrition_input_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'text'"
+        },
+        "raw_recipe_text": {
+          "name": "raw_recipe_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ai_extracted_json": {
+          "name": "ai_extracted_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "nutrition_analysis_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "nutrition_sessions_menu_item_idx": {
+          "name": "nutrition_sessions_menu_item_idx",
+          "columns": [
+            {
+              "expression": "menu_item_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nutrition_sessions_restaurant_idx": {
+          "name": "nutrition_sessions_restaurant_idx",
+          "columns": [
+            {
+              "expression": "restaurant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "nutrition_analysis_sessions_menu_item_id_menu_items_id_fk": {
+          "name": "nutrition_analysis_sessions_menu_item_id_menu_items_id_fk",
+          "tableFrom": "nutrition_analysis_sessions",
+          "tableTo": "menu_items",
+          "columnsFrom": [
+            "menu_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "nutrition_analysis_sessions_restaurant_id_restaurants_id_fk": {
+          "name": "nutrition_analysis_sessions_restaurant_id_restaurants_id_fk",
+          "tableFrom": "nutrition_analysis_sessions",
+          "tableTo": "restaurants",
+          "columnsFrom": [
+            "restaurant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.nutrition_food_localizations": {
+      "name": "nutrition_food_localizations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "nutrition_food_id": {
+          "name": "nutrition_food_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "locale": {
+          "name": "locale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aliases": {
+          "name": "aliases",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "nutrition_food_localizations_food_locale_uidx": {
+          "name": "nutrition_food_localizations_food_locale_uidx",
+          "columns": [
+            {
+              "expression": "nutrition_food_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "locale",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nutrition_food_localizations_food_idx": {
+          "name": "nutrition_food_localizations_food_idx",
+          "columns": [
+            {
+              "expression": "nutrition_food_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nutrition_food_localizations_locale_idx": {
+          "name": "nutrition_food_localizations_locale_idx",
+          "columns": [
+            {
+              "expression": "locale",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nutrition_food_localizations_aliases_gin_idx": {
+          "name": "nutrition_food_localizations_aliases_gin_idx",
+          "columns": [
+            {
+              "expression": "aliases",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "nutrition_food_localizations_nutrition_food_id_nutrition_foods_id_fk": {
+          "name": "nutrition_food_localizations_nutrition_food_id_nutrition_foods_id_fk",
+          "tableFrom": "nutrition_food_localizations",
+          "tableTo": "nutrition_foods",
+          "columnsFrom": [
+            "nutrition_food_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.nutrition_foods": {
+      "name": "nutrition_foods",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name_vi": {
+          "name": "name_vi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name_en": {
+          "name": "name_en",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'LEGACY'"
+        },
+        "source_food_id": {
+          "name": "source_food_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aliases": {
+          "name": "aliases",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "nutrition_food_state",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unknown'"
+        },
+        "calories_100g": {
+          "name": "calories_100g",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "protein_100g": {
+          "name": "protein_100g",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "carbs_100g": {
+          "name": "carbs_100g",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fat_100g": {
+          "name": "fat_100g",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fiber_100g": {
+          "name": "fiber_100g",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sugar_100g": {
+          "name": "sugar_100g",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sodium_100g": {
+          "name": "sodium_100g",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "nutrition_foods_name_state_uidx": {
+          "name": "nutrition_foods_name_state_uidx",
+          "columns": [
+            {
+              "expression": "name_vi",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nutrition_foods_aliases_gin_idx": {
+          "name": "nutrition_foods_aliases_gin_idx",
+          "columns": [
+            {
+              "expression": "aliases",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        },
+        "nutrition_foods_name_vi_idx": {
+          "name": "nutrition_foods_name_vi_idx",
+          "columns": [
+            {
+              "expression": "name_vi",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nutrition_foods_source_idx": {
+          "name": "nutrition_foods_source_idx",
+          "columns": [
+            {
+              "expression": "source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nutrition_foods_source_food_id_idx": {
+          "name": "nutrition_foods_source_food_id_idx",
+          "columns": [
+            {
+              "expression": "source_food_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nutrition_foods_state_idx": {
+          "name": "nutrition_foods_state_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.nutrition_ingredient_aliases": {
+      "name": "nutrition_ingredient_aliases",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "locale": {
+          "name": "locale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "original_name": {
+          "name": "original_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "normalized_name": {
+          "name": "normalized_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "english_name": {
+          "name": "english_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nutrition_food_id": {
+          "name": "nutrition_food_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'SYSTEM'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "nutrition_ingredient_aliases_locale_normalized_uidx": {
+          "name": "nutrition_ingredient_aliases_locale_normalized_uidx",
+          "columns": [
+            {
+              "expression": "locale",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "normalized_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nutrition_ingredient_aliases_food_idx": {
+          "name": "nutrition_ingredient_aliases_food_idx",
+          "columns": [
+            {
+              "expression": "nutrition_food_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nutrition_ingredient_aliases_english_name_idx": {
+          "name": "nutrition_ingredient_aliases_english_name_idx",
+          "columns": [
+            {
+              "expression": "english_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "nutrition_ingredient_aliases_nutrition_food_id_nutrition_foods_id_fk": {
+          "name": "nutrition_ingredient_aliases_nutrition_food_id_nutrition_foods_id_fk",
+          "tableFrom": "nutrition_ingredient_aliases",
+          "tableTo": "nutrition_foods",
+          "columnsFrom": [
+            "nutrition_food_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.dietary_tags": {
+      "name": "dietary_tags",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "category": {
+          "name": "category",
+          "type": "dietary_tag_category",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "dietary_tags_slug_unique": {
+          "name": "dietary_tags_slug_unique",
+          "columns": [
+            {
+              "expression": "slug",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "dietary_tags_name_lower_unique": {
+          "name": "dietary_tags_name_lower_unique",
+          "columns": [
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "dietary_tags_active_category_idx": {
+          "name": "dietary_tags_active_category_idx",
+          "columns": [
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "category",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -2922,6 +4576,37 @@
         "available",
         "unavailable",
         "out_of_stock"
+      ]
+    },
+    "public.ai_search_embedding_job_status": {
+      "name": "ai_search_embedding_job_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "processing",
+        "completed",
+        "failed"
+      ]
+    },
+    "public.ai_search_embedding_target_type": {
+      "name": "ai_search_embedding_target_type",
+      "schema": "public",
+      "values": [
+        "menu_item",
+        "restaurant"
+      ]
+    },
+    "public.order_cancellation_reason": {
+      "name": "order_cancellation_reason",
+      "schema": "public",
+      "values": [
+        "kitchen_cancel",
+        "driver_no_show",
+        "out_of_stock",
+        "customer_request",
+        "payment_failed",
+        "timeout",
+        "other"
       ]
     },
     "public.order_status": {
@@ -3020,6 +4705,7 @@
         "refund_initiated",
         "refund_completed",
         "new_order_received",
+        "new_review",
         "pickup_request",
         "system_announcement"
       ]
@@ -3107,6 +4793,63 @@
         "reserved",
         "confirmed",
         "rolled_back"
+      ]
+    },
+    "public.review_moderation_status": {
+      "name": "review_moderation_status",
+      "schema": "public",
+      "values": [
+        "visible",
+        "flagged",
+        "hidden"
+      ]
+    },
+    "public.menu_item_nutrition_source": {
+      "name": "menu_item_nutrition_source",
+      "schema": "public",
+      "values": [
+        "AI_ESTIMATED",
+        "MANUALLY_ENTERED",
+        "VERIFIED_BY_RESTAURANT"
+      ]
+    },
+    "public.nutrition_analysis_status": {
+      "name": "nutrition_analysis_status",
+      "schema": "public",
+      "values": [
+        "ANALYZED",
+        "NEEDS_REVIEW",
+        "CALCULATED",
+        "SAVED",
+        "FAILED"
+      ]
+    },
+    "public.nutrition_food_state": {
+      "name": "nutrition_food_state",
+      "schema": "public",
+      "values": [
+        "raw",
+        "cooked",
+        "fried",
+        "boiled",
+        "grilled",
+        "unknown"
+      ]
+    },
+    "public.nutrition_input_type": {
+      "name": "nutrition_input_type",
+      "schema": "public",
+      "values": [
+        "text",
+        "image"
+      ]
+    },
+    "public.dietary_tag_category": {
+      "name": "dietary_tag_category",
+      "schema": "public",
+      "values": [
+        "dietary",
+        "lifestyle"
       ]
     }
   },
