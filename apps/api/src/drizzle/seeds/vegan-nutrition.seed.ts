@@ -335,12 +335,13 @@ const restaurantsData: RestaurantSeed[] = [
     zoneId: seedId(5, 1),
     name: 'Green Leaf Vegan',
     description: '100% plant-based healthy meals near VNU.',
-    address: 'Internal Road, VNU-HCM University Village, Linh Trung, Thu Duc, HCMC',
+    address:
+      'Internal Road, VNU-HCM University Village, Linh Trung, Thu Duc, HCMC',
     phone: '0905602001',
     cuisineType: 'Vegan',
     logoUrl: seedImages.greenLeafLogo.secureUrl,
     coverImageUrl: seedImages.greenLeafCover.secureUrl,
-    latitude: TARGET_LATITUDE + 0.00010,
+    latitude: TARGET_LATITUDE + 0.0001,
     longitude: TARGET_LONGITUDE - 0.00015,
     categoryName: 'Vegan Delights',
     items: [
@@ -353,11 +354,32 @@ const restaurantsData: RestaurantSeed[] = [
         servings: 1,
         ingredients: [
           ingredient('tofuFirm', 'firm tofu', 100, 'g', 'cooked', 'main'),
-          ingredient('mushroomCooked', 'cooked mushroom', 50, 'g', 'cooked', 'main'),
-          ingredient('whiteRiceCooked', 'cooked white rice', 150, 'g', 'cooked', 'main'),
+          ingredient(
+            'mushroomCooked',
+            'cooked mushroom',
+            50,
+            'g',
+            'cooked',
+            'main',
+          ),
+          ingredient(
+            'whiteRiceCooked',
+            'cooked white rice',
+            150,
+            'g',
+            'cooked',
+            'main',
+          ),
           ingredient('lettuce', 'lettuce', 40, 'g', 'raw', 'main'),
           ingredient('carrotRaw', 'shredded carrot', 30, 'g', 'raw', 'main'),
-          ingredient('soySauce', 'soy sauce dressing', 15, 'g', 'unknown', 'sauce'),
+          ingredient(
+            'soySauce',
+            'soy sauce dressing',
+            15,
+            'g',
+            'unknown',
+            'sauce',
+          ),
         ],
       }),
       item(2, 'Vegan Tofu Banh Mi', {
@@ -368,7 +390,14 @@ const restaurantsData: RestaurantSeed[] = [
         imageUrl: seedImages.veganBanhMi.secureUrl,
         servings: 1,
         ingredients: [
-          ingredient('vietnameseBaguette', 'Vietnamese baguette', 95, 'g', 'cooked', 'main'),
+          ingredient(
+            'vietnameseBaguette',
+            'Vietnamese baguette',
+            95,
+            'g',
+            'cooked',
+            'main',
+          ),
           ingredient('tofuFirm', 'firm tofu', 80, 'g', 'cooked', 'main'),
           ingredient('cucumber', 'cucumber', 30, 'g', 'raw', 'main'),
           ingredient('carrotRaw', 'shredded carrot', 20, 'g', 'raw', 'main'),
@@ -376,14 +405,22 @@ const restaurantsData: RestaurantSeed[] = [
         ],
       }),
       item(3, 'Vegan Spring Rolls with Vermicelli', {
-        description: 'Fresh rolls with tofu, lettuce, and cucumber over rice vermicelli.',
+        description:
+          'Fresh rolls with tofu, lettuce, and cucumber over rice vermicelli.',
         price: 55000,
         tags: ['vegan', 'vermicelli', 'fresh'],
         imageUrl: seedImages.veganSpringRolls.secureUrl,
         servings: 1,
         ingredients: [
           ingredient('tofuFirm', 'firm tofu', 100, 'g', 'cooked', 'main'),
-          ingredient('riceVermicelliCooked', 'cooked rice vermicelli', 150, 'g', 'cooked', 'main'),
+          ingredient(
+            'riceVermicelliCooked',
+            'cooked rice vermicelli',
+            150,
+            'g',
+            'cooked',
+            'main',
+          ),
           ingredient('lettuce', 'lettuce', 50, 'g', 'raw', 'main'),
           ingredient('cucumber', 'cucumber', 40, 'g', 'raw', 'main'),
           ingredient('soySauce', 'soy sauce', 15, 'g', 'unknown', 'sauce'),
@@ -403,48 +440,93 @@ const restaurantsData: RestaurantSeed[] = [
     cuisineType: 'Mixed',
     logoUrl: seedImages.harmonyEatsLogo.secureUrl,
     coverImageUrl: seedImages.harmonyEatsCover.secureUrl,
-    latitude: TARGET_LATITUDE - 0.00020,
+    latitude: TARGET_LATITUDE - 0.0002,
     longitude: TARGET_LONGITUDE + 0.00025,
     categoryName: 'Mixed Menu',
     items: [
       item(4, 'Chicken Rice', {
-        description: 'Grilled chicken breast with steamed white rice, cucumber, and carrots.',
+        description:
+          'Grilled chicken breast with steamed white rice, cucumber, and carrots.',
         price: 60000,
         tags: ['chicken', 'rice', 'protein'],
         imageUrl: seedImages.chickenRice.secureUrl,
         servings: 1,
         ingredients: [
-          ingredient('chickenBreastGrilled', 'grilled chicken breast', 150, 'g', 'grilled', 'main'),
-          ingredient('whiteRiceCooked', 'cooked white rice', 180, 'g', 'cooked', 'main'),
+          ingredient(
+            'chickenBreastGrilled',
+            'grilled chicken breast',
+            150,
+            'g',
+            'grilled',
+            'main',
+          ),
+          ingredient(
+            'whiteRiceCooked',
+            'cooked white rice',
+            180,
+            'g',
+            'cooked',
+            'main',
+          ),
           ingredient('cucumber', 'cucumber', 40, 'g', 'raw', 'main'),
           ingredient('carrotRaw', 'shredded carrot', 30, 'g', 'raw', 'main'),
           ingredient('soySauce', 'soy sauce', 10, 'g', 'unknown', 'sauce'),
         ],
       }),
       item(5, 'Grilled Pork Vermicelli', {
-        description: 'Grilled pork chop over vermicelli with lettuce and cucumber.',
+        description:
+          'Grilled pork chop over vermicelli with lettuce and cucumber.',
         price: 65000,
         tags: ['pork', 'vermicelli', 'meat'],
         imageUrl: seedImages.grilledPorkVermicelli.secureUrl,
         servings: 1,
         ingredients: [
-          ingredient('porkChopGrilled', 'grilled pork chop', 140, 'g', 'grilled', 'main'),
-          ingredient('riceVermicelliCooked', 'cooked rice vermicelli', 160, 'g', 'cooked', 'main'),
+          ingredient(
+            'porkChopGrilled',
+            'grilled pork chop',
+            140,
+            'g',
+            'grilled',
+            'main',
+          ),
+          ingredient(
+            'riceVermicelliCooked',
+            'cooked rice vermicelli',
+            160,
+            'g',
+            'cooked',
+            'main',
+          ),
           ingredient('lettuce', 'lettuce', 45, 'g', 'raw', 'main'),
           ingredient('cucumber', 'cucumber', 40, 'g', 'raw', 'main'),
           ingredient('soySauce', 'soy sauce', 15, 'g', 'unknown', 'sauce'),
         ],
       }),
       item(6, 'Vegan Mushroom Pho', {
-        description: 'Vegan pho with rich mushroom broth, cooked mushrooms, and tofu.',
+        description:
+          'Vegan pho with rich mushroom broth, cooked mushrooms, and tofu.',
         price: 55000,
         tags: ['vegan', 'pho', 'soup'],
         imageUrl: seedImages.veganMushroomPho.secureUrl,
         servings: 1,
         ingredients: [
-          ingredient('mushroomCooked', 'cooked mushroom', 80, 'g', 'cooked', 'main'),
+          ingredient(
+            'mushroomCooked',
+            'cooked mushroom',
+            80,
+            'g',
+            'cooked',
+            'main',
+          ),
           ingredient('tofuFirm', 'firm tofu', 70, 'g', 'cooked', 'main'),
-          ingredient('riceVermicelliCooked', 'cooked rice noodles', 150, 'g', 'cooked', 'main'),
+          ingredient(
+            'riceVermicelliCooked',
+            'cooked rice noodles',
+            150,
+            'g',
+            'cooked',
+            'main',
+          ),
           ingredient('lettuce', 'lettuce', 30, 'g', 'raw', 'main'),
           ingredient('soySauce', 'soy sauce', 12, 'g', 'unknown', 'sauce'),
         ],
@@ -453,7 +535,9 @@ const restaurantsData: RestaurantSeed[] = [
   },
 ];
 
-const restaurantSeedNames = restaurantsData.map((restaurant) => restaurant.name);
+const restaurantSeedNames = restaurantsData.map(
+  (restaurant) => restaurant.name,
+);
 
 async function main() {
   console.log('Starting vegan nutrition seeding...');
@@ -494,26 +578,44 @@ async function cleanupExistingSeedData() {
     );
 
   if (existingRestaurants.length > 0) {
-    const restaurantIds = existingRestaurants.map((restaurant) => restaurant.id);
+    const restaurantIds = existingRestaurants.map(
+      (restaurant) => restaurant.id,
+    );
 
     await db
       .delete(schema.orderingMenuItemSnapshots)
-      .where(inArray(schema.orderingMenuItemSnapshots.restaurantId, restaurantIds));
+      .where(
+        inArray(schema.orderingMenuItemSnapshots.restaurantId, restaurantIds),
+      );
     await db
       .delete(schema.orderingDeliveryZoneSnapshots)
-      .where(inArray(schema.orderingDeliveryZoneSnapshots.restaurantId, restaurantIds));
+      .where(
+        inArray(
+          schema.orderingDeliveryZoneSnapshots.restaurantId,
+          restaurantIds,
+        ),
+      );
     await db
       .delete(schema.orderingRestaurantSnapshots)
-      .where(inArray(schema.orderingRestaurantSnapshots.restaurantId, restaurantIds));
+      .where(
+        inArray(schema.orderingRestaurantSnapshots.restaurantId, restaurantIds),
+      );
     await db
       .delete(schema.notificationRestaurantSnapshots)
-      .where(inArray(schema.notificationRestaurantSnapshots.restaurantId, restaurantIds));
+      .where(
+        inArray(
+          schema.notificationRestaurantSnapshots.restaurantId,
+          restaurantIds,
+        ),
+      );
     await db
       .delete(schema.restaurants)
       .where(inArray(schema.restaurants.id, restaurantIds));
   }
 
-  await db.delete(schema.account).where(inArray(schema.account.userId, ownerIds));
+  await db
+    .delete(schema.account)
+    .where(inArray(schema.account.userId, ownerIds));
   await db.delete(schema.user).where(inArray(schema.user.id, ownerIds));
   await db.delete(schema.images).where(
     inArray(
@@ -615,7 +717,9 @@ async function seedNutritionFoodDatabase(): Promise<Map<string, string>> {
   return foodIdsByKey;
 }
 
-async function seedNutritionFoodLocalizations(foodIdsByKey: Map<string, string>) {
+async function seedNutritionFoodLocalizations(
+  foodIdsByKey: Map<string, string>,
+) {
   const localizationRows = nutritionFoodSeeds.flatMap((food) => {
     const nutritionFoodId = foodIdsByKey.get(food.key);
     if (!nutritionFoodId) return [];
@@ -731,7 +835,10 @@ async function seedMenuCategory(restaurant: RestaurantSeed) {
   });
 }
 
-async function seedMenuItem(restaurant: RestaurantSeed, menuItem: MenuItemSeed) {
+async function seedMenuItem(
+  restaurant: RestaurantSeed,
+  menuItem: MenuItemSeed,
+) {
   await db.insert(schema.menuItems).values({
     id: menuItem.id,
     restaurantId: restaurant.id,
@@ -781,7 +888,10 @@ async function seedMenuItemNutrition(
       quantity: ingredientSeed.quantity,
       unit: ingredientSeed.unit,
       quantityGram: ingredientSeed.quantityGram,
-      matchedNutritionFoodId: requireFoodId(foodIdsByKey, ingredientSeed.foodKey),
+      matchedNutritionFoodId: requireFoodId(
+        foodIdsByKey,
+        ingredientSeed.foodKey,
+      ),
       confidence: 1,
       requiresConfirmation: false,
       notes: [],
