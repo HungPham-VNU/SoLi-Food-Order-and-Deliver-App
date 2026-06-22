@@ -1,9 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
-import { menuApi } from '../api/menu.api';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { menuApi, type MenuItemQueryParams } from '../api/menu.api';
 
 export const menuKeys = {
   all: ['menu'] as const,
   items: (restaurantId: string) => ['menu', 'items', restaurantId] as const,
+  itemList: (restaurantId: string, params: MenuItemQueryParams) =>
+    [...menuKeys.items(restaurantId), 'list', params] as const,
   item: (id: string) => ['menu', 'item', id] as const,
   categories: (restaurantId: string) => ['menu', 'categories', restaurantId] as const,
   categoryItemCount: (restaurantId: string, categoryId: string) =>
@@ -22,11 +24,15 @@ export function useDietaryTags() {
   });
 }
 
-export function useMenuItems(restaurantId: string | undefined) {
+export function useMenuItems(
+  restaurantId: string | undefined,
+  params: MenuItemQueryParams = {},
+) {
   return useQuery({
-    queryKey: menuKeys.items(restaurantId ?? ''),
-    queryFn: () => menuApi.getItems(restaurantId!),
+    queryKey: menuKeys.itemList(restaurantId ?? '', params),
+    queryFn: () => menuApi.getItems(restaurantId!, params),
     enabled: !!restaurantId,
+    placeholderData: keepPreviousData,
   });
 }
 

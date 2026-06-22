@@ -35,6 +35,13 @@ export interface UpdateMenuItemDto {
   status?: 'available' | 'unavailable' | 'out_of_stock';
 }
 
+export interface MenuItemQueryParams {
+  categoryId?: string;
+  status?: 'available' | 'unavailable' | 'out_of_stock' | 'all';
+  offset?: number;
+  limit?: number;
+}
+
 export interface DietaryTagOption {
   id: string;
   name: string;
@@ -90,10 +97,12 @@ export const menuApi = {
     apiClient
       .get<DietaryTagOption[]>('/api/dietary-tags')
       .then((response) => response.data),
-  getItems: (restaurantId: string, params?: { categoryId?: string; status?: string; offset?: number; limit?: number }) =>
-    apiClient.get<MenuItemListResponse>('/api/menu-items', {
-      params: { restaurantId, status: 'all', ...params },
-    }).then((r) => r.data),
+  getItems: (restaurantId: string, params?: MenuItemQueryParams) =>
+    apiClient
+      .get<MenuItemListResponse>('/api/menu-items', {
+        params: { restaurantId, status: 'all', ...params },
+      })
+      .then((r) => r.data),
 
   getItem: (id: string) =>
     apiClient.get<MenuItem>(`/api/menu-items/${id}`).then((r) => r.data),

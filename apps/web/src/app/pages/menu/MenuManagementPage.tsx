@@ -38,9 +38,12 @@ import {
 } from '@/features/restaurant/hooks/useRestaurants';
 import type { MenuItem } from '@/features/menu/types';
 
+const MENU_PAGE_SIZE = 10;
+
 export function MenuManagementPage() {
   const navigate = useNavigate();
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryToDeleteId, setCategoryToDeleteId] = useState<string | null>(
@@ -56,8 +59,16 @@ export function MenuManagementPage() {
   const restaurantId = restaurant?.id;
   const isOpen = restaurant?.isOpen ?? false;
 
-  const { data: itemsResponse, isLoading: itemsLoading } =
-    useMenuItems(restaurantId);
+  const {
+    data: itemsResponse,
+    isLoading: itemsLoading,
+    isFetching: itemsFetching,
+    isPlaceholderData,
+  } = useMenuItems(restaurantId, {
+    categoryId: activeCategoryId ?? undefined,
+    offset: (currentPage - 1) * MENU_PAGE_SIZE,
+    limit: MENU_PAGE_SIZE,
+  });
   const { data: categories = [] } = useMenuCategories(restaurantId);
 
   const deleteItem = useDeleteMenuItem(restaurantId ?? '');
@@ -79,9 +90,15 @@ export function MenuManagementPage() {
     isLoading: categoryItemCountLoading,
     isError: categoryItemCountError,
   } = useMenuCategoryItemCount(restaurantId, categoryToDelete?.id);
-  const filteredItems = activeCategoryId
-    ? allItems.filter((i) => i.categoryId === activeCategoryId)
-    : allItems;
+  const totalItems = itemsResponse?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / MENU_PAGE_SIZE));
+  const firstVisibleItem = totalItems
+    ? (currentPage - 1) * MENU_PAGE_SIZE + 1
+    : 0;
+  const lastVisibleItem = Math.min(
+    (currentPage - 1) * MENU_PAGE_SIZE + allItems.length,
+    totalItems,
+  );
 
   const availableItems = allItems.filter(
     (i) => i.status === 'available',
@@ -102,6 +119,11 @@ export function MenuManagementPage() {
   };
 
   const handleAddItem = () => navigate('/menu/create');
+
+  const handleCategoryChange = (categoryId: string | null) => {
+    setActiveCategoryId(categoryId);
+    setCurrentPage(1);
+  };
 
   const handleOpenAddCategory = () => {
     setNewCategoryName('');
@@ -180,7 +202,7 @@ export function MenuManagementPage() {
     deleteCategory.mutate(deletedCategory.id, {
       onSuccess: () => {
         if (activeCategoryId === deletedCategory.id) {
-          setActiveCategoryId(null);
+          handleCategoryChange(null);
         }
         setCategoryToDeleteId(null);
       },
@@ -189,7 +211,13 @@ export function MenuManagementPage() {
 
   const handleDelete = (id: string) => {
     if (confirm('Delete this menu item?')) {
-      deleteItem.mutate(id);
+      deleteItem.mutate(id, {
+        onSuccess: () => {
+          if (allItems.length === 1 && currentPage > 1) {
+            setCurrentPage((page) => page - 1);
+          }
+        },
+      });
     }
   };
 
@@ -284,7 +312,7 @@ export function MenuManagementPage() {
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => setActiveCategoryId(null)}
+                onClick={() => handleCategoryChange(null)}
                 className={`h-auto flex-shrink-0 px-6 py-3 rounded-full font-bold flex items-center gap-2 ${
                   activeCategoryId === null
                     ? 'bg-primary-fixed text-on-primary-fixed hover:bg-primary-fixed'
@@ -311,7 +339,7 @@ export function MenuManagementPage() {
                   >
                     <button
                       type="button"
-                      onClick={() => setActiveCategoryId(cat.id)}
+                      onClick={() => handleCategoryChange(cat.id)}
                       className={`px-6 py-3 pr-3 font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset ${
                         isActive
                           ? 'hover:bg-primary-fixed'
@@ -428,18 +456,20 @@ export function MenuManagementPage() {
                   Loading menu items…
                 </p>
               )}
-              {!itemsLoading && filteredItems.length === 0 && (
+              {!itemsLoading && allItems.length === 0 && (
                 <p className="text-on-surface-variant text-sm py-8 text-center">
-                  No items yet.{' '}
+                  {activeCategoryId
+                    ? 'No items in this category. '
+                    : 'No items yet. '}
                   <button
                     onClick={handleAddItem}
                     className="text-primary font-bold hover:underline"
                   >
-                    Add your first item
+                    Add an item
                   </button>
                 </p>
               )}
-              {filteredItems.map((item) => (
+              {allItems.map((item) => (
                 <MenuItemCard
                   key={item.id}
                   item={item}
@@ -448,6 +478,49 @@ export function MenuManagementPage() {
                   onToggleAvailability={handleToggleAvailability}
                 />
               ))}
+              {!itemsLoading && totalItems > 0 && (
+                <nav
+                  className="flex flex-col gap-3 rounded-2xl bg-surface-container-lowest px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  aria-label="Menu item pagination"
+                >
+                  <p
+                    className="text-sm text-on-surface-variant"
+                    aria-live="polite"
+                  >
+                    Showing {firstVisibleItem}–{lastVisibleItem} of {totalItems}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setCurrentPage((page) => Math.max(1, page - 1))
+                      }
+                      disabled={currentPage === 1 || isPlaceholderData}
+                    >
+                      Previous
+                    </Button>
+                    <span className="min-w-24 text-center text-sm font-semibold text-on-surface">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((page) => page + 1)}
+                      disabled={currentPage >= totalPages || isPlaceholderData}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                  {itemsFetching && (
+                    <span className="sr-only" role="status">
+                      Loading page {currentPage}
+                    </span>
+                  )}
+                </nav>
+              )}
             </div>
           </div>
 
