@@ -6,6 +6,8 @@ export const menuKeys = {
   items: (restaurantId: string) => ['menu', 'items', restaurantId] as const,
   item: (id: string) => ['menu', 'item', id] as const,
   categories: (restaurantId: string) => ['menu', 'categories', restaurantId] as const,
+  categoryItemCount: (restaurantId: string, categoryId: string) =>
+    [...menuKeys.items(restaurantId), 'category-count', categoryId] as const,
   nutritionAnalysis: (menuItemId: string) => ['menu', 'nutritionAnalysis', menuItemId] as const,
   modifierGroups: (menuItemId: string) => ['menu', 'modifierGroups', menuItemId] as const,
   modifierGroup: (menuItemId: string, groupId: string) => ['menu', 'modifierGroup', menuItemId, groupId] as const,
@@ -33,6 +35,23 @@ export function useMenuCategories(restaurantId: string | undefined) {
     queryKey: menuKeys.categories(restaurantId ?? ''),
     queryFn: () => menuApi.getCategories(restaurantId!),
     enabled: !!restaurantId,
+  });
+}
+
+export function useMenuCategoryItemCount(
+  restaurantId: string | undefined,
+  categoryId: string | undefined,
+) {
+  return useQuery({
+    queryKey: menuKeys.categoryItemCount(
+      restaurantId ?? '',
+      categoryId ?? '',
+    ),
+    queryFn: () =>
+      menuApi
+        .getItems(restaurantId!, { categoryId, offset: 0, limit: 1 })
+        .then((response) => response.total),
+    enabled: !!restaurantId && !!categoryId,
   });
 }
 

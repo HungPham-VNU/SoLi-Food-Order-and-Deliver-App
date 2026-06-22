@@ -53,12 +53,21 @@ export function TopNavActions() {
             {inbox?.items?.length ? (
               <div className="max-h-80 overflow-y-auto">
                 {inbox.items.map((item) => (
-                  <DropdownMenuItem key={item.id} className="flex flex-col items-start gap-1 p-3 cursor-default focus:bg-surface-container-low">
+                  <DropdownMenuItem
+                    key={item.id}
+                    className="flex flex-col items-start gap-1 p-3 cursor-default focus:bg-surface-container-low"
+                  >
                     <div className="flex justify-between w-full">
-                      <span className="font-semibold text-sm">{item.title}</span>
-                      {!item.isRead && <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-1" />}
+                      <span className="font-semibold text-sm">
+                        {item.title}
+                      </span>
+                      {!item.isRead && (
+                        <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-1" />
+                      )}
                     </div>
-                    <span className="text-xs text-muted-foreground whitespace-pre-wrap">{item.body}</span>
+                    <span className="text-xs text-muted-foreground whitespace-pre-wrap">
+                      {item.body}
+                    </span>
                   </DropdownMenuItem>
                 ))}
               </div>
@@ -93,7 +102,9 @@ export function TopNavActions() {
             className="flex items-center gap-2 rounded-full pl-1 pr-3 py-1 hover:bg-black/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
           >
             <Avatar className="h-8 w-8">
-              {user?.image && <AvatarImage src={user.image} alt={displayName} />}
+              {user?.image && (
+                <AvatarImage src={user.image} alt={displayName} />
+              )}
               <AvatarFallback className="bg-primary-foreground text-primary text-xs font-semibold">
                 {initials}
               </AvatarFallback>

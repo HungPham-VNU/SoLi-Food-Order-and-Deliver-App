@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { menuApi, type CreateMenuItemDto, type UpdateMenuItemDto, type CreateMenuCategoryDto, type CreateModifierGroupDto, type UpdateModifierGroupDto, type CreateModifierOptionDto, type UpdateModifierOptionDto } from '../api/menu.api';
+import { menuApi, type CreateMenuItemDto, type UpdateMenuItemDto, type CreateMenuCategoryDto, type UpdateMenuCategoryDto, type CreateModifierGroupDto, type UpdateModifierGroupDto, type CreateModifierOptionDto, type UpdateModifierOptionDto } from '../api/menu.api';
 import type {
   CalculateNutritionRequest,
   MenuItem,
@@ -52,6 +52,28 @@ export function useCreateCategory(restaurantId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (dto: CreateMenuCategoryDto) => menuApi.createCategory(dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: menuKeys.categories(restaurantId) });
+    },
+  });
+}
+
+export function useDeleteCategory(restaurantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => menuApi.deleteCategory(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: menuKeys.categories(restaurantId) });
+      qc.invalidateQueries({ queryKey: menuKeys.items(restaurantId) });
+    },
+  });
+}
+
+export function useUpdateCategory(restaurantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateMenuCategoryDto }) =>
+      menuApi.updateCategory(id, dto),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: menuKeys.categories(restaurantId) });
     },

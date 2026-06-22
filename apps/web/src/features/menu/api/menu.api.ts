@@ -50,6 +50,11 @@ export interface CreateMenuCategoryDto {
   displayOrder?: number;
 }
 
+export interface UpdateMenuCategoryDto {
+  name?: string;
+  displayOrder?: number;
+}
+
 export interface CreateModifierGroupDto {
   name: string;
   minSelections?: number;
@@ -112,6 +117,11 @@ export const menuApi = {
 
   createCategory: (dto: CreateMenuCategoryDto) =>
     apiClient.post<MenuCategory>('/api/menu-items/categories', dto).then((r) => r.data),
+
+  updateCategory: (id: string, dto: UpdateMenuCategoryDto) =>
+    apiClient
+      .patch<MenuCategory>(`/api/menu-items/categories/${id}`, dto)
+      .then((r) => r.data),
 
   deleteCategory: (id: string) =>
     apiClient.delete(`/api/menu-items/categories/${id}`),

@@ -25,16 +25,58 @@ export const router = createBrowserRouter([
         element: <AdminLayout />,
         children: [
           { index: true, element: <Navigate to="/dashboard" replace /> },
-          { path: 'dashboard', element: <AdminDashboardPage /> },
-          { path: 'restaurants', element: <RestaurantsPage /> },
-          { path: 'orders', element: <OrdersPage /> },
-          { path: 'promotions', element: <PromotionsPage /> },
-          { path: 'promotions/new', element: <PromotionFormPage /> },
-          { path: 'promotions/:id', element: <PromotionDetailPage /> },
-          { path: 'promotions/:id/edit', element: <PromotionFormPage /> },
-          { path: 'users', element: <UsersPage /> },
-          { path: 'dietary-tags', element: <DietaryTagsPage /> },
-          { path: 'settings', element: <SettingsPage /> },
+          {
+            path: 'dashboard',
+            element: <AdminDashboardPage />,
+            handle: { breadcrumb: 'Dashboard' },
+          },
+          {
+            path: 'restaurants',
+            element: <RestaurantsPage />,
+            handle: { breadcrumb: 'Restaurants' },
+          },
+          {
+            path: 'orders',
+            element: <OrdersPage />,
+            handle: { breadcrumb: 'Orders' },
+          },
+          {
+            path: 'promotions',
+            handle: { breadcrumb: 'Promotions' },
+            children: [
+              { index: true, element: <PromotionsPage /> },
+              {
+                path: 'new',
+                element: <PromotionFormPage />,
+                handle: { breadcrumb: 'New Promotion' },
+              },
+              {
+                path: ':id',
+                element: <PromotionDetailPage />,
+                handle: { breadcrumb: 'Promotion Details' },
+              },
+              {
+                path: ':id/edit',
+                element: <PromotionFormPage />,
+                handle: { breadcrumb: 'Edit Promotion' },
+              },
+            ],
+          },
+          {
+            path: 'users',
+            element: <UsersPage />,
+            handle: { breadcrumb: 'Users' },
+          },
+          {
+            path: 'dietary-tags',
+            element: <DietaryTagsPage />,
+            handle: { breadcrumb: 'Dietary Tags' },
+          },
+          {
+            path: 'settings',
+            element: <SettingsPage />,
+            handle: { breadcrumb: 'Settings' },
+          },
         ],
       },
     ],

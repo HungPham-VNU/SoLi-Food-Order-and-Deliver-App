@@ -1,15 +1,37 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MenuItemCard } from '@/features/menu/components/MenuItemCard';
 import { MenuSidebar } from '@/features/menu/components/MenuSidebar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { useMenuItems, useMenuCategories } from '@/features/menu/hooks/useMenu';
+import {
+  useMenuItems,
+  useMenuCategories,
+  useMenuCategoryItemCount,
+} from '@/features/menu/hooks/useMenu';
 import {
   useDeleteMenuItem,
   useUpdateMenuItem,
   useCreateCategory,
+  useDeleteCategory,
+  useUpdateCategory,
 } from '@/features/menu/hooks/useMenuMutations';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   useMyRestaurant,
   useUpdateRestaurant,
@@ -21,6 +43,13 @@ export function MenuManagementPage() {
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [categoryToDeleteId, setCategoryToDeleteId] = useState<string | null>(
+    null,
+  );
+  const [categoryToRenameId, setCategoryToRenameId] = useState<string | null>(
+    null,
+  );
+  const [categoryNameDraft, setCategoryNameDraft] = useState('');
   const categoryInputRef = useRef<HTMLInputElement>(null);
 
   const { data: restaurant } = useMyRestaurant();
@@ -34,9 +63,22 @@ export function MenuManagementPage() {
   const deleteItem = useDeleteMenuItem(restaurantId ?? '');
   const updateItem = useUpdateMenuItem(restaurantId ?? '');
   const createCategory = useCreateCategory(restaurantId ?? '');
+  const deleteCategory = useDeleteCategory(restaurantId ?? '');
+  const updateCategory = useUpdateCategory(restaurantId ?? '');
   const updateRestaurant = useUpdateRestaurant();
 
   const allItems = itemsResponse?.data ?? [];
+  const categoryToDelete = categories.find(
+    (category) => category.id === categoryToDeleteId,
+  );
+  const categoryToRename = categories.find(
+    (category) => category.id === categoryToRenameId,
+  );
+  const {
+    data: categoryItemCount,
+    isLoading: categoryItemCountLoading,
+    isError: categoryItemCountError,
+  } = useMenuCategoryItemCount(restaurantId, categoryToDelete?.id);
   const filteredItems = activeCategoryId
     ? allItems.filter((i) => i.categoryId === activeCategoryId)
     : allItems;
@@ -87,6 +129,62 @@ export function MenuManagementPage() {
   const handleCancelCategory = () => {
     setAddingCategory(false);
     setNewCategoryName('');
+  };
+
+  const handleOpenDeleteCategory = (categoryId: string) => {
+    deleteCategory.reset();
+    setCategoryToDeleteId(categoryId);
+  };
+
+  const handleOpenRenameCategory = (categoryId: string, name: string) => {
+    updateCategory.reset();
+    setCategoryNameDraft(name);
+    setCategoryToRenameId(categoryId);
+  };
+
+  const handleRenameCategoryDialogChange = (open: boolean) => {
+    if (open || updateCategory.isPending) return;
+    setCategoryToRenameId(null);
+    setCategoryNameDraft('');
+    updateCategory.reset();
+  };
+
+  const handleSubmitRenameCategory = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!categoryToRename) return;
+    const name = categoryNameDraft.trim();
+    if (!name || name === categoryToRename.name) return;
+
+    updateCategory.mutate(
+      { id: categoryToRename.id, dto: { name } },
+      {
+        onSuccess: () => {
+          setCategoryToRenameId(null);
+          setCategoryNameDraft('');
+        },
+      },
+    );
+  };
+
+  const handleDeleteCategoryDialogChange = (open: boolean) => {
+    if (open || deleteCategory.isPending) return;
+    setCategoryToDeleteId(null);
+    deleteCategory.reset();
+  };
+
+  const handleConfirmDeleteCategory = () => {
+    if (!categoryToDelete) return;
+
+    const deletedCategory = categoryToDelete;
+    deleteCategory.mutate(deletedCategory.id, {
+      onSuccess: () => {
+        if (activeCategoryId === deletedCategory.id) {
+          setActiveCategoryId(null);
+        }
+        setCategoryToDeleteId(null);
+      },
+    });
   };
 
   const handleDelete = (id: string) => {
@@ -199,21 +297,82 @@ export function MenuManagementPage() {
                 All Items
               </Button>
 
-              {categories.map((cat) => (
-                <Button
-                  type="button"
-                  key={cat.id}
-                  variant="ghost"
-                  onClick={() => setActiveCategoryId(cat.id)}
-                  className={`h-auto flex-shrink-0 px-6 py-3 rounded-full font-semibold transition-colors ${
-                    activeCategoryId === cat.id
-                      ? 'bg-primary-fixed text-on-primary-fixed hover:bg-primary-fixed'
-                      : 'bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container'
-                  }`}
-                >
-                  {cat.name}
-                </Button>
-              ))}
+              {categories.map((cat) => {
+                const isActive = activeCategoryId === cat.id;
+
+                return (
+                  <div
+                    key={cat.id}
+                    className={`flex flex-shrink-0 items-stretch overflow-hidden rounded-full transition-colors ${
+                      isActive
+                        ? 'bg-primary-fixed text-on-primary-fixed'
+                        : 'bg-surface-container-lowest text-on-surface-variant'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setActiveCategoryId(cat.id)}
+                      className={`px-6 py-3 pr-3 font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset ${
+                        isActive
+                          ? 'hover:bg-primary-fixed'
+                          : 'hover:bg-surface-container'
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className={`flex min-w-11 items-center justify-center px-3 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset ${
+                            isActive
+                              ? 'hover:bg-on-primary-fixed/10'
+                              : 'hover:bg-surface-container'
+                          }`}
+                          aria-label={`${cat.name} actions`}
+                        >
+                          <span
+                            className="material-symbols-outlined text-lg"
+                            aria-hidden="true"
+                          >
+                            more_horiz
+                          </span>
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuGroup>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleOpenRenameCategory(cat.id, cat.name)
+                            }
+                          >
+                            <span
+                              className="material-symbols-outlined"
+                              aria-hidden="true"
+                            >
+                              edit
+                            </span>
+                            Rename category
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onClick={() => handleOpenDeleteCategory(cat.id)}
+                          >
+                            <span
+                              className="material-symbols-outlined"
+                              aria-hidden="true"
+                            >
+                              delete
+                            </span>
+                            Delete category
+                          </DropdownMenuItem>
+                        </DropdownMenuGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                );
+              })}
 
               {addingCategory ? (
                 <div className="flex items-center gap-2 flex-shrink-0 bg-surface-container-lowest border border-primary/30 rounded-full px-4 py-2">
@@ -298,6 +457,104 @@ export function MenuManagementPage() {
           </div>
         </div>
       </main>
+
+      <Dialog
+        open={!!categoryToRename}
+        onOpenChange={handleRenameCategoryDialogChange}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <form onSubmit={handleSubmitRenameCategory} className="contents">
+            <DialogHeader>
+              <DialogTitle>Rename category</DialogTitle>
+              <DialogDescription>
+                Update how this category appears on your menu.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-2 py-2">
+              <label
+                htmlFor="category-name"
+                className="text-sm font-medium text-on-surface"
+              >
+                Category name
+              </label>
+              <Input
+                id="category-name"
+                value={categoryNameDraft}
+                onChange={(event) => setCategoryNameDraft(event.target.value)}
+                autoFocus
+                disabled={updateCategory.isPending}
+                aria-invalid={updateCategory.isError}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleRenameCategoryDialogChange(false)}
+                disabled={updateCategory.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  updateCategory.isPending ||
+                  !categoryNameDraft.trim() ||
+                  categoryNameDraft.trim() === categoryToRename?.name
+                }
+              >
+                {updateCategory.isPending ? 'Saving…' : 'Save name'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!categoryToDelete}
+        onOpenChange={handleDeleteCategoryDialogChange}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              Delete “{categoryToDelete?.name}”?
+            </DialogTitle>
+            <DialogDescription>
+              {categoryItemCountLoading
+                ? 'Checking the category contents…'
+                : categoryItemCountError
+                  ? 'Any menu items in this category will become uncategorized. The items themselves will not be deleted.'
+                  : categoryItemCount === 0
+                    ? 'This category is empty. Deleting it cannot be undone.'
+                    : `${categoryItemCount} menu ${categoryItemCount === 1 ? 'item' : 'items'} will become uncategorized. The ${categoryItemCount === 1 ? 'item' : 'items'} will not be deleted.`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleDeleteCategoryDialogChange(false)}
+              disabled={deleteCategory.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDeleteCategory}
+              disabled={
+                deleteCategory.isPending || categoryItemCountLoading
+              }
+            >
+              {deleteCategory.isPending ? 'Deleting…' : 'Delete category'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </>
   );
 }
