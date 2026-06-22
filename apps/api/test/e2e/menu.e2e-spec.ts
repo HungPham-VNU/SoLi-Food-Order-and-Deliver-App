@@ -414,6 +414,39 @@ describe('Menu Item & Category CRUD (E2E)', () => {
         .set(ownerHeaders());
     });
 
+    it('returns sold-out items with status=visible and excludes unavailable items', async () => {
+      await http
+        .patch(`/api/menu-items/${soupId}/sold-out`)
+        .set(ownerHeaders());
+      await http
+        .patch(`/api/menu-items/${saladId}`)
+        .set(ownerHeaders())
+        .send({ status: 'unavailable' });
+
+      const res = await http
+        .get(
+          `/api/menu-items?restaurantId=${TEST_RESTAURANT_ID}&status=visible`,
+        )
+        .set(noAuthHeaders());
+
+      expect(res.status).toBe(200);
+      const items = res.body.data as { id: string; status: string }[];
+      expect(items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: soupId, status: 'out_of_stock' }),
+        ]),
+      );
+      expect(items.some((item) => item.id === saladId)).toBe(false);
+
+      await http
+        .patch(`/api/menu-items/${soupId}/sold-out`)
+        .set(ownerHeaders());
+      await http
+        .patch(`/api/menu-items/${saladId}`)
+        .set(ownerHeaders())
+        .send({ status: 'available' });
+    });
+
     it('filters items by categoryId', async () => {
       const res = await http
         .get(
