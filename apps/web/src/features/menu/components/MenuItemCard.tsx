@@ -6,10 +6,18 @@ interface MenuItemCardProps {
   item: MenuItem;
   onEdit?: (item: MenuItem) => void;
   onDelete?: (id: string) => void;
-  onToggleAvailability?: (id: string, currentStatus: MenuItem['status']) => void;
+  onToggleAvailability?: (
+    id: string,
+    currentStatus: MenuItem['status'],
+  ) => void;
 }
 
-export function MenuItemCard({ item, onEdit, onDelete, onToggleAvailability }: MenuItemCardProps) {
+export function MenuItemCard({
+  item,
+  onEdit,
+  onDelete,
+  onToggleAvailability,
+}: MenuItemCardProps) {
   const isAvailable = item.status === 'available';
   const isSoldOut = item.status === 'out_of_stock';
 
@@ -41,17 +49,6 @@ export function MenuItemCard({ item, onEdit, onDelete, onToggleAvailability }: M
               No Image
             </div>
           )}
-          {isSoldOut ? (
-            <div className="absolute inset-0 bg-on-surface/40 flex items-center justify-center">
-              <span className="text-white text-[10px] font-bold uppercase tracking-widest bg-error px-2 py-1 rounded">
-                Sold Out
-              </span>
-            </div>
-          ) : item.tags && item.tags.length > 0 ? (
-            <div className="absolute top-2 left-2 bg-primary text-on-primary text-[10px] font-bold px-2 py-0.5 rounded-full">
-              {item.tags[0].toUpperCase()}
-            </div>
-          ) : null}
         </div>
 
         {/* Content Block */}
@@ -82,9 +79,17 @@ export function MenuItemCard({ item, onEdit, onDelete, onToggleAvailability }: M
               <span className="text-xs font-bold text-on-surface-variant">
                 Live Status:
               </span>
-              <div className={`h-2 w-2 rounded-full ${isSoldOut ? 'bg-error' : isAvailable ? 'bg-primary' : 'bg-outline'}`} />
-              <span className={`text-xs font-bold uppercase ${isSoldOut ? 'text-error' : isAvailable ? 'text-primary' : 'text-outline'}`}>
-                {isSoldOut ? 'Sold Out' : isAvailable ? 'Available' : 'Unavailable'}
+              <div
+                className={`h-2 w-2 rounded-full ${isSoldOut ? 'bg-error' : isAvailable ? 'bg-primary' : 'bg-outline'}`}
+              />
+              <span
+                className={`text-xs font-bold uppercase ${isSoldOut ? 'text-error' : isAvailable ? 'text-primary' : 'text-outline'}`}
+              >
+                {isSoldOut
+                  ? 'Sold Out'
+                  : isAvailable
+                    ? 'Available'
+                    : 'Unavailable'}
               </span>
             </div>
 

@@ -73,12 +73,18 @@ function OrderRow({ order }: { order: OrderListItem }) {
           )}
         </div>
         <div className="flex items-center gap-4 text-xs font-medium">
-          <span className={`flex items-center gap-1 ${urgent ? 'text-error' : 'text-on-surface-variant'}`}>
-            <span className="material-symbols-outlined text-[14px]">schedule</span>
+          <span
+            className={`flex items-center gap-1 ${urgent ? 'text-error' : 'text-on-surface-variant'}`}
+          >
+            <span className="material-symbols-outlined text-[14px]">
+              schedule
+            </span>
             {age === 0 ? 'Just now' : `${age} min ago`}
           </span>
           <span className="text-on-surface-variant flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]">shopping_bag</span>
+            <span className="material-symbols-outlined text-[14px]">
+              shopping_bag
+            </span>
             {order.itemCount} {order.itemCount === 1 ? 'item' : 'items'}
           </span>
         </div>
@@ -113,11 +119,22 @@ function OrderRow({ order }: { order: OrderListItem }) {
 
 export function DashboardPage() {
   const { data: restaurant, isLoading: loadingRestaurant } = useMyRestaurant();
-  const { mutate: updateRestaurant, isPending: updatingStore } = useUpdateRestaurant();
-  const { inProgress, readyForPickup, urgentReady, isLoading: loadingOrders } = useOrderCounts();
+  const { mutate: updateRestaurant, isPending: updatingStore } =
+    useUpdateRestaurant();
+  const {
+    inProgress,
+    readyForPickup,
+    urgentReady,
+    isLoading: loadingOrders,
+  } = useOrderCounts();
   const { data: activeOrders = [] } = useActiveOrders();
-  const { totalRevenue, avgOrderValue, orderCount, revenueDeltaPct, isLoading: loadingRevenue } =
-    useDashboardRevenue();
+  const {
+    totalRevenue,
+    avgOrderValue,
+    orderCount,
+    revenueDeltaPct,
+    isLoading: loadingRevenue,
+  } = useDashboardRevenue();
   const [alertDismissed, setAlertDismissed] = useState(false);
 
   const isOpen = restaurant?.isOpen ?? false;
@@ -128,7 +145,13 @@ export function DashboardPage() {
 
   // Sort: urgent first, then by createdAt desc
   const sortedOrders = [...activeOrders]
-    .filter((o) => o.status !== 'ready_for_pickup' && o.status !== 'picked_up' && o.status !== 'delivering' && o.status !== 'delivered')
+    .filter(
+      (o) =>
+        o.status !== 'ready_for_pickup' &&
+        o.status !== 'picked_up' &&
+        o.status !== 'delivering' &&
+        o.status !== 'delivered',
+    )
     .sort((a, b) => {
       if (isUrgent(a) && !isUrgent(b)) return -1;
       if (!isUrgent(a) && isUrgent(b)) return 1;
@@ -138,7 +161,6 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto w-full">
-
       {/* Eyebrow */}
       <div className="flex items-center gap-3 text-on-surface-variant/70">
         <span className="text-[10px] font-bold tracking-widest uppercase">
@@ -149,22 +171,25 @@ export function DashboardPage() {
 
       {/* ── Section 1: Global Control Bar ── */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
         {/* Store Status */}
         <div className="lg:col-span-8 bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03),0_2px_8px_-2px_rgba(0,0,0,0.02)] border border-black/[0.04] p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden transition-all hover:shadow-[0_10px_30px_-4px_rgba(0,0,0,0.05),0_4px_12px_-2px_rgba(0,0,0,0.03)] hover:-translate-y-0.5">
           <div className="absolute -left-6 -top-6 w-24 h-24 bg-primary/5 rounded-full blur-xl" />
           <div className="flex items-center gap-5 relative z-10">
             <div className="w-14 h-14 rounded-2xl bg-surface-container border border-outline-variant text-primary flex items-center justify-center shrink-0 shadow-inner">
-              <span className="material-symbols-outlined text-2xl">storefront</span>
+              <span className="material-symbols-outlined text-2xl">
+                storefront
+              </span>
             </div>
             <div>
-              <h2 className="font-headline font-bold text-xl text-on-surface">Store Status</h2>
+              <h2 className="font-headline font-bold text-xl text-on-surface">
+                Store Status
+              </h2>
               <p className="font-body text-sm text-on-surface-variant mt-1">
                 {loadingRestaurant
                   ? 'Loading…'
                   : isOpen
-                  ? 'Currently accepting orders through all channels.'
-                  : 'Store is closed. Not accepting new orders.'}
+                    ? 'Currently accepting orders through all channels.'
+                    : 'Store is closed. Not accepting new orders.'}
               </p>
             </div>
           </div>
@@ -174,7 +199,9 @@ export function DashboardPage() {
               disabled={updatingStore || loadingRestaurant}
               className={[
                 'px-6 py-2.5 rounded-full font-headline font-semibold text-sm transition-all disabled:opacity-50',
-                isOpen ? 'bg-primary text-on-primary shadow-md' : 'text-on-surface-variant hover:text-on-surface',
+                isOpen
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-on-surface-variant hover:text-on-surface',
               ].join(' ')}
             >
               Open
@@ -184,7 +211,9 @@ export function DashboardPage() {
               disabled={updatingStore || loadingRestaurant}
               className={[
                 'px-6 py-2.5 rounded-full font-headline font-semibold text-sm transition-all disabled:opacity-50',
-                !isOpen ? 'bg-primary text-on-primary shadow-md' : 'text-on-surface-variant hover:text-on-surface',
+                !isOpen
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-on-surface-variant hover:text-on-surface',
               ].join(' ')}
             >
               Closed
@@ -196,7 +225,9 @@ export function DashboardPage() {
         <div className="lg:col-span-4 bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] border border-black/[0.04] p-6 flex items-center transition-all hover:-translate-y-0.5">
           {!alertDismissed && urgentReady > 0 ? (
             <div className="flex-1 bg-[#fffaf9] border border-error/15 rounded-xl p-4 flex items-center gap-4 shadow-sm">
-              <span className="material-symbols-outlined text-error text-xl shrink-0">warning</span>
+              <span className="material-symbols-outlined text-error text-xl shrink-0">
+                warning
+              </span>
               <div className="flex-1 min-w-0">
                 <p className="font-headline font-bold text-sm text-on-error-container leading-tight">
                   {urgentReady} Urgent {urgentReady === 1 ? 'Order' : 'Orders'}
@@ -209,13 +240,19 @@ export function DashboardPage() {
                 onClick={() => setAlertDismissed(true)}
                 className="text-error/60 hover:text-error transition-colors shrink-0"
               >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <span className="material-symbols-outlined text-[18px]">
+                  close
+                </span>
               </button>
             </div>
           ) : (
             <div className="flex-1 bg-surface-container-low border border-outline-variant/30 rounded-xl p-4 flex items-center gap-3 shadow-sm">
-              <span className="material-symbols-outlined text-primary text-xl shrink-0">check_circle</span>
-              <p className="text-sm text-on-surface-variant font-medium">No pending alerts</p>
+              <span className="material-symbols-outlined text-primary text-xl shrink-0">
+                check_circle
+              </span>
+              <p className="text-sm text-on-surface-variant font-medium">
+                No pending alerts
+              </p>
             </div>
           )}
         </div>
@@ -223,13 +260,14 @@ export function DashboardPage() {
 
       {/* ── Section 2: KPI Grid ── */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-
         {/* In Progress */}
         <div className="bg-primary-container rounded-2xl p-6 relative overflow-hidden group shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_-4px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all">
           <div className="absolute inset-0 opacity-[0.08] mix-blend-overlay bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E')]" />
           <div className="relative z-10">
             <p className="font-body text-sm font-medium text-on-primary-container/80 mb-2 flex items-center gap-2">
-              <span className="material-symbols-outlined text-sm">local_dining</span>
+              <span className="material-symbols-outlined text-sm">
+                local_dining
+              </span>
               In Progress (Active)
             </p>
             <h3 className="font-mono font-bold text-5xl text-on-primary-container tracking-tight">
@@ -244,7 +282,9 @@ export function DashboardPage() {
           <div className="absolute inset-0 opacity-[0.05] mix-blend-overlay bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E')]" />
           <div className="relative z-10">
             <p className="font-body text-sm font-medium text-on-secondary-container/80 mb-2 flex items-center gap-2">
-              <span className="material-symbols-outlined text-sm">takeout_dining</span>
+              <span className="material-symbols-outlined text-sm">
+                takeout_dining
+              </span>
               Outbound (Ready)
             </p>
             <h3 className="font-mono font-bold text-5xl text-on-secondary-container tracking-tight">
@@ -257,14 +297,20 @@ export function DashboardPage() {
         {/* Today's Revenue */}
         <div className="bg-surface-container-lowest rounded-2xl p-6 border border-black/[0.04] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_-4px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all group">
           <p className="font-body text-sm font-medium text-on-surface-variant mb-2 flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm opacity-70">payments</span>
+            <span className="material-symbols-outlined text-sm opacity-70">
+              payments
+            </span>
             Today's Revenue
           </p>
-          <h3 className={`font-mono font-bold text-4xl text-on-surface tracking-tight ${loadingRevenue ? 'animate-pulse text-on-surface/30' : ''}`}>
+          <h3
+            className={`font-mono font-bold text-4xl text-on-surface tracking-tight ${loadingRevenue ? 'animate-pulse text-on-surface/30' : ''}`}
+          >
             {formatRevenue(totalRevenue)}
           </h3>
           {revenueDeltaPct !== null ? (
-            <p className={`font-body text-xs font-semibold mt-3 inline-flex items-center gap-1 px-2 py-1 rounded-md ${revenueDeltaPct >= 0 ? 'bg-primary/5 text-primary' : 'bg-error-container/40 text-error'}`}>
+            <p
+              className={`font-body text-xs font-semibold mt-3 inline-flex items-center gap-1 px-2 py-1 rounded-md ${revenueDeltaPct >= 0 ? 'bg-primary/5 text-primary' : 'bg-error-container/40 text-error'}`}
+            >
               <span className="material-symbols-outlined text-[14px]">
                 {revenueDeltaPct >= 0 ? 'trending_up' : 'trending_down'}
               </span>
@@ -282,16 +328,25 @@ export function DashboardPage() {
         {/* Avg Order Value */}
         <div className="bg-surface-container-lowest rounded-2xl p-6 border border-black/[0.04] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_-4px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all group">
           <p className="font-body text-sm font-medium text-on-surface-variant mb-2 flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm opacity-70">receipt</span>
+            <span className="material-symbols-outlined text-sm opacity-70">
+              receipt
+            </span>
             Avg Order Value
           </p>
-          <h3 className={`font-mono font-bold text-4xl text-on-surface tracking-tight ${loadingRevenue ? 'animate-pulse text-on-surface/30' : ''}`}>
+          <h3
+            className={`font-mono font-bold text-4xl text-on-surface tracking-tight ${loadingRevenue ? 'animate-pulse text-on-surface/30' : ''}`}
+          >
             {formatRevenue(avgOrderValue)}
           </h3>
           <p className="font-body text-xs text-on-surface-variant mt-3 font-medium">
-            {orderCount !== null
-              ? <>Across <span className="font-mono">{orderCount}</span> order{orderCount !== 1 ? 's' : ''} today</>
-              : 'Loading…'}
+            {orderCount !== null ? (
+              <>
+                Across <span className="font-mono">{orderCount}</span> order
+                {orderCount !== 1 ? 's' : ''} today
+              </>
+            ) : (
+              'Loading…'
+            )}
           </p>
         </div>
       </section>
@@ -311,9 +366,15 @@ export function DashboardPage() {
           <div className="p-6">
             {sortedOrders.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-                <span className="material-symbols-outlined text-4xl text-on-surface-variant/40">receipt_long</span>
-                <p className="text-sm text-on-surface-variant">No active orders right now.</p>
-                <p className="text-xs text-on-surface-variant/60">New orders will appear here automatically.</p>
+                <span className="material-symbols-outlined text-4xl text-on-surface-variant/40">
+                  receipt_long
+                </span>
+                <p className="text-sm text-on-surface-variant">
+                  No active orders right now.
+                </p>
+                <p className="text-xs text-on-surface-variant/60">
+                  New orders will appear here automatically.
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
