@@ -1,5 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
+import { Link, useMatches } from 'react-router-dom';
 import {
   Bell,
   Settings,
@@ -7,6 +7,7 @@ import {
   User,
   LogOut,
   ShieldCheck,
+  PanelLeft,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -22,47 +23,93 @@ import { Button } from '@/components/ui/button';
 import { useSession } from '@/lib/auth-client';
 import { useLogout } from '@/features/auth/hooks/useLogout';
 import { getInitials } from '@/features/users/utils/format';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 
-const PAGE_TITLES: Record<string, string> = {
-  '/restaurants': 'Restaurants',
-  '/orders': 'Platform Orders',
-  '/promotions': 'Promotions',
-  '/users': 'Users',
-  '/settings': 'Settings',
+type BreadcrumbHandle = {
+  breadcrumb?: string;
 };
 
-function deriveTitle(pathname: string): string {
-  // Match the most specific known route first
-  const sorted = Object.keys(PAGE_TITLES).sort((a, b) => b.length - a.length);
-  for (const path of sorted) {
-    if (pathname === path || pathname.startsWith(`${path}/`)) {
-      return PAGE_TITLES[path];
-    }
-  }
-  return 'Admin';
-}
+type TopNavBarProps = {
+  isSidebarOpen: boolean;
+  onToggleSidebar: () => void;
+};
 
-export function TopNavBar() {
+export function TopNavBar({
+  isSidebarOpen,
+  onToggleSidebar,
+}: TopNavBarProps) {
+  const breadcrumbs = useMatches()
+    .map((match) => {
+      const handle = match.handle as BreadcrumbHandle | undefined;
+
+      if (!handle?.breadcrumb) {
+        return null;
+      }
+
+      return {
+        href: match.pathname,
+        label: handle.breadcrumb,
+      };
+    })
+    .filter((breadcrumb): breadcrumb is { href: string; label: string } =>
+      Boolean(breadcrumb),
+    );
+
   const { data: session } = useSession();
   const { logout, isLoggingOut } = useLogout();
-  const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
 
   const user = session?.user;
   const name = user?.name ?? 'Admin';
   const email = user?.email ?? '';
-  const title = deriveTitle(location.pathname);
 
   return (
     <header className="sticky top-0 z-30 h-16 shrink-0 border-b bg-card/80 backdrop-blur-md supports-[backdrop-filter]:bg-card/70 flex items-center justify-between px-6 gap-4">
-      {/* Left: page title */}
-      <div className="min-w-0">
-        <p className="text-[10px] font-bold tracking-[0.18em] text-muted-foreground uppercase">
-          Admin Portal
-        </p>
-        <h1 className="text-base font-bold text-on-surface truncate">
-          {title}
-        </h1>
+      {/* Left: sidebar toggle and breadcrumbs */}
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="-ml-2 shrink-0"
+          onClick={onToggleSidebar}
+          aria-label={isSidebarOpen ? 'Minimize sidebar' : 'Expand sidebar'}
+          aria-expanded={isSidebarOpen}
+        >
+          <PanelLeft className="h-5 w-5" />
+        </Button>
+        <div className="min-w-0 overflow-hidden">
+          <Breadcrumb>
+            <BreadcrumbList className="flex-nowrap">
+              {breadcrumbs.map((breadcrumb) => (
+                <Fragment key={breadcrumb.href}>
+                  {breadcrumb.href !== breadcrumbs[0]?.href && (
+                    <BreadcrumbSeparator />
+                  )}
+                  <BreadcrumbItem>
+                    {breadcrumb.href ===
+                    breadcrumbs[breadcrumbs.length - 1]?.href ? (
+                      <BreadcrumbPage className="font-semibold">
+                        {breadcrumb.label}
+                      </BreadcrumbPage>
+                    ) : (
+                      <BreadcrumbLink asChild>
+                        <Link to={breadcrumb.href}>{breadcrumb.label}</Link>
+                      </BreadcrumbLink>
+                    )}
+                  </BreadcrumbItem>
+                </Fragment>
+              ))}
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
       </div>
 
       {/* Right: actions */}
@@ -148,7 +195,9 @@ export function TopNavBar() {
                 <p className="text-sm font-semibold text-on-surface truncate">
                   {name}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">{email}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {email}
+                </p>
               </div>
               <DropdownMenuItem asChild>
                 <Link to="/settings" className="flex items-center gap-2 w-full">

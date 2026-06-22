@@ -167,6 +167,7 @@ export class UpdateMenuItemDto extends PartialType(
 // 'all' bypasses filtering — useful for restaurant owners viewing their full menu.
 export const MENU_ITEM_STATUS_FILTER_VALUES = [
   ...MENU_ITEM_STATUSES,
+  'visible',
   'all',
 ] as const;
 export type MenuItemStatusFilter =
@@ -193,7 +194,8 @@ export class QueryMenuItemDto {
   @ApiPropertyOptional({
     description:
       "Filter by availability status. Defaults to 'available' for public requests. " +
-      "Pass 'all' to include unavailable and out-of-stock items (e.g. for owners).",
+      "Pass 'visible' to include available and out-of-stock items while excluding " +
+      "unavailable items, or 'all' to include every status (e.g. for owners).",
     enum: MENU_ITEM_STATUS_FILTER_VALUES,
     example: 'available',
   })

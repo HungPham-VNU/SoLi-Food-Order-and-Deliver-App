@@ -1,11 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
-import { menuApi } from '../api/menu.api';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { menuApi, type MenuItemQueryParams } from '../api/menu.api';
 
 export const menuKeys = {
   all: ['menu'] as const,
   items: (restaurantId: string) => ['menu', 'items', restaurantId] as const,
+  itemList: (restaurantId: string, params: MenuItemQueryParams) =>
+    [...menuKeys.items(restaurantId), 'list', params] as const,
   item: (id: string) => ['menu', 'item', id] as const,
   categories: (restaurantId: string) => ['menu', 'categories', restaurantId] as const,
+  categoryItemCount: (restaurantId: string, categoryId: string) =>
+    [...menuKeys.items(restaurantId), 'category-count', categoryId] as const,
   nutritionAnalysis: (menuItemId: string) => ['menu', 'nutritionAnalysis', menuItemId] as const,
   modifierGroups: (menuItemId: string) => ['menu', 'modifierGroups', menuItemId] as const,
   modifierGroup: (menuItemId: string, groupId: string) => ['menu', 'modifierGroup', menuItemId, groupId] as const,
@@ -20,11 +24,15 @@ export function useDietaryTags() {
   });
 }
 
-export function useMenuItems(restaurantId: string | undefined) {
+export function useMenuItems(
+  restaurantId: string | undefined,
+  params: MenuItemQueryParams = {},
+) {
   return useQuery({
-    queryKey: menuKeys.items(restaurantId ?? ''),
-    queryFn: () => menuApi.getItems(restaurantId!),
+    queryKey: menuKeys.itemList(restaurantId ?? '', params),
+    queryFn: () => menuApi.getItems(restaurantId!, params),
     enabled: !!restaurantId,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -33,6 +41,23 @@ export function useMenuCategories(restaurantId: string | undefined) {
     queryKey: menuKeys.categories(restaurantId ?? ''),
     queryFn: () => menuApi.getCategories(restaurantId!),
     enabled: !!restaurantId,
+  });
+}
+
+export function useMenuCategoryItemCount(
+  restaurantId: string | undefined,
+  categoryId: string | undefined,
+) {
+  return useQuery({
+    queryKey: menuKeys.categoryItemCount(
+      restaurantId ?? '',
+      categoryId ?? '',
+    ),
+    queryFn: () =>
+      menuApi
+        .getItems(restaurantId!, { categoryId, offset: 0, limit: 1 })
+        .then((response) => response.total),
+    enabled: !!restaurantId && !!categoryId,
   });
 }
 

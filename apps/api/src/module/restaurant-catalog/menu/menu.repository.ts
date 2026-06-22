@@ -1,5 +1,5 @@
 import { ConflictException, Inject, Injectable } from '@nestjs/common';
-import { eq, and, count } from 'drizzle-orm';
+import { eq, and, count, ne } from 'drizzle-orm';
 import {
   menuItems,
   menuCategories,
@@ -28,6 +28,7 @@ export interface FindMenuItemsOptions {
   /**
    * 'available' | 'unavailable' | 'out_of_stock' — filter to exact status.
    * 'all' — return every status (useful for owner/admin views).
+   * 'visible' returns available and out-of-stock items for customer menus.
    * Defaults to 'available' when not provided.
    */
   status?: MenuItemStatusFilter;
@@ -79,9 +80,10 @@ export class MenuRepository {
       conditions.push(eq(menuItems.categoryId, categoryId));
     }
 
-    // Apply status filter unless caller explicitly requests all items.
-    // Public endpoint defaults to 'available' so customers never see unavailable items.
-    if (status !== 'all') {
+    // Public customer menus include sold-out items but never hidden/unavailable items.
+    if (status === 'visible') {
+      conditions.push(ne(menuItems.status, 'unavailable'));
+    } else if (status !== 'all') {
       conditions.push(eq(menuItems.status, status));
     }
 

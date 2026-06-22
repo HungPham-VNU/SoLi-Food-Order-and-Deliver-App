@@ -134,7 +134,13 @@ export function MenuItemDetailScreen({
   };
 
   const handleAddToCart = () => {
-    if (!areRequiredModifiersSelected || isAddingToCart) return;
+    if (
+      item?.status !== 'available' ||
+      !areRequiredModifiersSelected ||
+      isAddingToCart
+    ) {
+      return;
+    }
     const optimisticSelectedModifiers: SelectedModifierResponse[] =
       selectedOptionIds.flatMap((optionId) => {
         const group = modifierGroups?.find((candidate) =>
@@ -165,7 +171,11 @@ export function MenuItemDetailScreen({
   };
 
   const isLoading = isLoadingItem || isLoadingModifiers;
-  const isAddButtonDisabled = !areRequiredModifiersSelected || !!isAddingToCart;
+  const isSoldOut = item?.status === 'out_of_stock';
+  const isAddButtonDisabled =
+    item?.status !== 'available' ||
+    !areRequiredModifiersSelected ||
+    !!isAddingToCart;
 
   if (isLoading) {
     return (
@@ -175,10 +185,14 @@ export function MenuItemDetailScreen({
     );
   }
 
-  if (!item) {
+  if (!item || item.status === 'unavailable') {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <Text className="text-on-surface">Item not found</Text>
+        <Text className="text-on-surface">
+          {item?.status === 'unavailable'
+            ? 'Item unavailable'
+            : 'Item not found'}
+        </Text>
         <TouchableOpacity onPress={onBack} className="mt-4">
           <Text className="text-primary font-bold">Go Back</Text>
         </TouchableOpacity>
@@ -241,6 +255,13 @@ export function MenuItemDetailScreen({
       {/* Product Header Information */}
       <View className="px-6 pt-6 pb-8 bg-surface rounded-t-xl -mt-6 relative z-20 flex-row justify-between items-start">
         <View className="flex-1">
+          {isSoldOut ? (
+            <View className="mb-3 self-start rounded-full bg-error-container px-3 py-1">
+              <Text className="font-jakarta-sans text-xs font-bold uppercase tracking-wide text-error">
+                Sold out
+              </Text>
+            </View>
+          ) : null}
           <Text className="font-jakarta-sans text-3xl font-bold text-on-surface mb-1">
             {item.name}
           </Text>
@@ -287,9 +308,7 @@ export function MenuItemDetailScreen({
                   </Text>
                 </View>
                 <View className="min-w-[45%] flex-1 rounded-xl bg-surface-container-low p-4">
-                  <Text className="text-xs text-on-surface-variant">
-                    Carbs
-                  </Text>
+                  <Text className="text-xs text-on-surface-variant">Carbs</Text>
                   <Text className="font-jakarta-sans text-xl font-bold text-on-surface mt-1">
                     {item.nutrition.carbs} g
                   </Text>
@@ -334,8 +353,8 @@ export function MenuItemDetailScreen({
                     <TouchableOpacity
                       key={option.id}
                       onPress={() => toggleOption(option.id, group)}
-                      disabled={!option.isAvailable}
-                      className={`flex-row items-center justify-between group py-1 ${!option.isAvailable ? 'opacity-50' : ''}`}
+                      disabled={!option.isAvailable || isSoldOut}
+                      className={`flex-row items-center justify-between group py-1 ${!option.isAvailable || isSoldOut ? 'opacity-50' : ''}`}
                     >
                       <View className="flex-row items-center space-x-4 flex-1">
                         <View
@@ -371,13 +390,18 @@ export function MenuItemDetailScreen({
           ))}
 
           {/* Quantity Section */}
-          <View className="bg-surface-container-lowest rounded-xl p-6 shadow-sm flex-row justify-between items-center mb-10">
+          <View
+            className={`bg-surface-container-lowest rounded-xl p-6 shadow-sm flex-row justify-between items-center mb-10 ${
+              isSoldOut ? 'opacity-50' : ''
+            }`}
+          >
             <Text className="font-jakarta-sans text-xl font-semibold text-on-surface">
               Quantity
             </Text>
             <View className="flex-row items-center bg-surface-container-low rounded-full px-2 py-1 h-14">
               <TouchableOpacity
                 onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                disabled={isSoldOut}
                 className="w-10 h-10 rounded-full items-center justify-center active:bg-surface-container-high"
               >
                 <Minus size={20} color="#1a1c1c" />
@@ -387,6 +411,7 @@ export function MenuItemDetailScreen({
               </Text>
               <TouchableOpacity
                 onPress={() => setQuantity(quantity + 1)}
+                disabled={isSoldOut}
                 className="w-10 h-10 rounded-full items-center justify-center bg-primary-fixed/20 active:bg-primary-fixed/40"
               >
                 <Plus size={20} color="#00490e" />
@@ -427,8 +452,9 @@ export function MenuItemDetailScreen({
                     : 'text-on-surface-variant'
                 }`}
               >
-                {isItemInCart ? 'Update Cart' : 'Add to Cart'} -{' '}
-                {formatCurrency(calculateTotal())}
+                {isSoldOut
+                  ? 'Sold out'
+                  : `${isItemInCart ? 'Update Cart' : 'Add to Cart'} - ${formatCurrency(calculateTotal())}`}
               </Text>
             )}
           </LinearGradient>

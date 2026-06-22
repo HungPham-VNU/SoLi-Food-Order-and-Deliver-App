@@ -1,7 +1,18 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { CreateMenuItemHeader } from '@/features/menu/components/create/CreateMenuItemHeader';
 import { ProductEssenceCard } from '@/features/menu/components/create/ProductEssenceCard';
 import { DietaryTagsCard } from '@/features/menu/components/create/DietaryTagsCard';
@@ -9,18 +20,21 @@ import { MediaUploadCard } from '@/features/menu/components/create/MediaUploadCa
 import { MarketVisibilityCard } from '@/features/menu/components/create/MarketVisibilityCard';
 import { ModifiersCard } from '@/features/menu/components/create/ModifiersCard';
 import { NutritionAssistantCard } from '@/features/menu/components/create/NutritionAssistantCard';
-import { CreateMenuItemFooter } from '@/features/menu/components/create/CreateMenuItemFooter';
 import {
   createMenuItemSchema,
   type CreateMenuItemFormValues,
 } from '@/features/menu/schemas/menu.schema';
-import { useUpdateMenuItem } from '@/features/menu/hooks/useMenuMutations';
+import {
+  useDeleteMenuItem,
+  useUpdateMenuItem,
+} from '@/features/menu/hooks/useMenuMutations';
 import { useMenuCategories, useMenuItem } from '@/features/menu/hooks/useMenu';
 import { useMyRestaurant } from '@/features/restaurant/hooks/useRestaurants';
 
 export default function EditMenuItemPage() {
   const navigate = useNavigate();
   const { itemId } = useParams<{ itemId: string }>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { data: restaurant, isLoading: restaurantLoading } = useMyRestaurant();
   const restaurantId = restaurant?.id;
@@ -33,6 +47,11 @@ export default function EditMenuItemPage() {
     isPending: updatePending,
     error: updateError,
   } = useUpdateMenuItem(restaurantId ?? '');
+  const {
+    mutate: deleteItem,
+    isPending: deletePending,
+    error: deleteError,
+  } = useDeleteMenuItem(restaurantId ?? '');
 
   const methods = useForm<CreateMenuItemFormValues>({
     resolver: zodResolver(createMenuItemSchema),
@@ -69,6 +88,16 @@ export default function EditMenuItemPage() {
       },
       { onSuccess: () => navigate('/menu') },
     );
+  };
+
+  const handleDeleteDialogChange = (open: boolean) => {
+    if (deletePending) return;
+    setDeleteDialogOpen(open);
+  };
+
+  const handleDelete = () => {
+    if (!itemId) return;
+    deleteItem(itemId, { onSuccess: () => navigate('/menu') });
   };
 
   if (restaurantLoading || editItemLoading) {
@@ -158,15 +187,72 @@ export default function EditMenuItemPage() {
           <div className="col-span-12 lg:col-span-4 space-y-8">
             <MediaUploadCard />
             <MarketVisibilityCard />
+            <Card className="gap-0 rounded-3xl border border-error/20 bg-error-container/20 py-0 ring-0">
+              <CardContent className="p-6">
+                <h2 className="font-headline text-lg font-bold text-on-surface">
+                  Delete item
+                </h2>
+                <p className="mt-2 text-sm leading-5 text-on-surface-variant">
+                  Permanently remove this item from your menu. This action
+                  cannot be undone.
+                </p>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="mt-4"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  disabled={updatePending || deletePending}
+                >
+                  <Trash2 aria-hidden="true" />
+                  Delete item
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
-        <CreateMenuItemFooter
-          onDiscard={() => navigate('/menu')}
-          onPublish={methods.handleSubmit(onSubmit)}
-          isPending={updatePending}
-          isEditMode={true}
-        />
+        <Dialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogChange}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete “{editItem.name}”?</DialogTitle>
+              <DialogDescription>
+                This permanently removes the item from your menu and cannot be
+                undone.
+              </DialogDescription>
+            </DialogHeader>
+
+            {deleteError ? (
+              <p className="text-sm font-medium text-error" role="alert">
+                {deleteError.message ||
+                  'Could not delete this item. Try again.'}
+              </p>
+            ) : null}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleDeleteDialogChange(false)}
+                disabled={deletePending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deletePending}
+              >
+                {deletePending ? (
+                  <Loader2 className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <Trash2 aria-hidden="true" />
+                )}
+                {deletePending ? 'Deleting…' : 'Delete permanently'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </FormProvider>
   );

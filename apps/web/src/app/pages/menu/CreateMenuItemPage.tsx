@@ -10,7 +10,6 @@ import { MediaUploadCard } from '@/features/menu/components/create/MediaUploadCa
 import { MarketVisibilityCard } from '@/features/menu/components/create/MarketVisibilityCard';
 import { ModifiersCard } from '@/features/menu/components/create/ModifiersCard';
 import { NutritionAssistantCard } from '@/features/menu/components/create/NutritionAssistantCard';
-import { CreateMenuItemFooter } from '@/features/menu/components/create/CreateMenuItemFooter';
 import {
   createMenuItemSchema,
   type CreateMenuItemFormValues,
@@ -198,13 +197,6 @@ export default function CreateMenuItemPage() {
             <MarketVisibilityCard />
           </div>
         </div>
-
-        <CreateMenuItemFooter
-          onDiscard={() => navigate('/menu')}
-          onPublish={methods.handleSubmit(onSubmit)}
-          isPending={isSaving}
-          isEditMode={!!savedItem}
-        />
       </div>
     </FormProvider>
   );

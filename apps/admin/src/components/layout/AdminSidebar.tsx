@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom';
 import {
-  ShieldCheck,
   LayoutDashboard,
   Store,
   ClipboardList,
@@ -28,7 +27,7 @@ export function AdminSidebar() {
   const email = session?.user?.email ?? '';
 
   return (
-    <aside className="w-64 shrink-0 flex flex-col bg-card border-r relative overflow-hidden">
+    <aside className="h-full w-64 shrink-0 flex flex-col bg-card border-r relative overflow-hidden">
       {/* Decorative brand gradient */}
       <div className="pointer-events-none absolute -top-20 -left-12 h-56 w-56 rounded-full bg-primary/15 blur-3xl" />
       <div className="pointer-events-none absolute top-32 -right-16 h-40 w-40 rounded-full bg-secondary/10 blur-3xl" />
@@ -36,20 +35,16 @@ export function AdminSidebar() {
       {/* Brand */}
       <div className="relative px-6 pt-6 pb-5 border-b">
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-700 shadow-lg shadow-primary/25">
-              <ShieldCheck className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-60" />
-              <span className="relative inline-flex h-3 w-3 rounded-full bg-secondary" />
+          <img
+            src="/logo.png"
+            alt="UITFood logo"
+            className="size-11 shrink-0 object-contain"
+          />
+          <div className="flex min-w-0 flex-col">
+            <span className="font-headline text-xl font-extrabold leading-none tracking-tight text-foreground">
+              UIT<span className="text-primary">Food</span>
             </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-base font-extrabold leading-tight text-on-surface font-headline">
-              SoLi
-            </span>
-            <span className="text-[10px] font-bold tracking-[0.18em] text-primary uppercase">
+            <span className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
               Admin Portal
             </span>
           </div>

@@ -17,6 +17,7 @@ import {
   Clock,
   Truck,
   Plus,
+  Ban,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -45,10 +46,7 @@ function formatReviewCount(count: number) {
   return `Based on ${count.toLocaleString('en-US')} reviews`;
 }
 
-function getDisplayRating(
-  restaurant: Restaurant,
-  reviews: PublicReviewItem[],
-) {
+function getDisplayRating(restaurant: Restaurant, reviews: PublicReviewItem[]) {
   const projectedRating =
     typeof restaurant.averageRating === 'number' && restaurant.averageRating > 0
       ? restaurant.averageRating
@@ -85,22 +83,12 @@ function RatingStars({ rating, size = 16 }: { rating: number; size?: number }) {
 
         if (hasHalfStar && value === fullStars + 1) {
           return (
-            <StarHalf
-              key={value}
-              size={size}
-              color="#ffb05f"
-              fill="#ffb05f"
-            />
+            <StarHalf key={value} size={size} color="#ffb05f" fill="#ffb05f" />
           );
         }
 
         return (
-          <Star
-            key={value}
-            size={size}
-            color="#bfcaba"
-            fill="transparent"
-          />
+          <Star key={value} size={size} color="#bfcaba" fill="transparent" />
         );
       })}
     </View>
@@ -203,10 +191,7 @@ function CustomerReviewsSection({ restaurant }: { restaurant: Restaurant }) {
       ) : reviews.length > 0 ? (
         <View className="gap-4">
           {reviews.map((review) => (
-            <CustomerReviewCard
-              key={review.id}
-              review={review}
-            />
+            <CustomerReviewCard key={review.id} review={review} />
           ))}
         </View>
       ) : (
@@ -518,67 +503,87 @@ export function RestaurantMenuScreen({
                 'Menu'}
           </Text>
           <View className="flex-col gap-6">
-            {filteredItems.map((item) => (
-              <View
-                key={item.id}
-                className="relative bg-surface-container-lowest rounded-3xl shadow-sm border border-surface-variant/20"
-              >
-                <TouchableOpacity
-                  onPress={() => onItemPress?.(item.id)}
-                  className="p-4 active:scale-[0.98]"
+            {filteredItems.map((item) => {
+              const isSoldOut = item.status === 'out_of_stock';
+
+              return (
+                <View
+                  key={item.id}
+                  className="relative bg-surface-container-lowest rounded-3xl shadow-sm border border-surface-variant/20"
                 >
-                  <View className="flex-row justify-between items-start mb-4">
-                    <View className="flex-1 pr-4">
-                      <Text className="font-jakarta-sans text-lg font-bold text-on-surface mb-1">
-                        {item.name}
-                      </Text>
-                      <Text
-                        numberOfLines={2}
-                        className="font-inter text-sm text-on-surface-variant leading-5"
-                      >
-                        {item.description}
-                      </Text>
+                  <TouchableOpacity
+                    onPress={() => onItemPress?.(item.id)}
+                    className="p-4 active:scale-[0.98]"
+                  >
+                    <View className="flex-row justify-between items-start mb-4">
+                      <View className="flex-1 pr-4">
+                        {isSoldOut ? (
+                          <View className="mb-2 self-start rounded-full bg-error-container px-3 py-1">
+                            <Text className="font-jakarta-sans text-xs font-bold uppercase tracking-wide text-error">
+                              Sold out
+                            </Text>
+                          </View>
+                        ) : null}
+                        <Text className="font-jakarta-sans text-lg font-bold text-on-surface mb-1">
+                          {item.name}
+                        </Text>
+                        <Text
+                          numberOfLines={2}
+                          className="font-inter text-sm text-on-surface-variant leading-5"
+                        >
+                          {item.description}
+                        </Text>
+                      </View>
+                      <View className="w-24 h-24 rounded-2xl bg-surface-container overflow-hidden border border-outline-variant/15">
+                        {item.imageUrl ? (
+                          <Image
+                            source={{ uri: item.imageUrl }}
+                            className="w-full h-full"
+                            contentFit="cover"
+                            transition={200}
+                            cachePolicy="memory-disk"
+                          />
+                        ) : (
+                          <View className="w-full h-full items-center justify-center">
+                            <Text className="text-xs font-medium text-on-surface-variant">
+                              No image
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
-                    <View className="w-24 h-24 rounded-2xl bg-surface-container overflow-hidden border border-outline-variant/15">
-                      {item.imageUrl ? (
-                        <Image
-                          source={{ uri: item.imageUrl }}
-                          className="w-full h-full"
-                          contentFit="cover"
-                          transition={200}
-                          cachePolicy="memory-disk"
-                        />
-                      ) : (
-                        <View className="w-full h-full items-center justify-center">
-                          <Text className="text-xs font-medium text-on-surface-variant">
-                            No image
-                          </Text>
-                        </View>
-                      )}
+                    <View className="flex-row justify-between items-center">
+                      <Text className="font-jakarta-sans font-bold text-lg text-secondary">
+                        {formatCurrency(item.price ?? 0)}
+                      </Text>
+                      <View className="w-10 h-10" />
                     </View>
-                  </View>
-                  <View className="flex-row justify-between items-center">
-                    <Text className="font-jakarta-sans font-bold text-lg text-secondary">
-                      {formatCurrency(item.price ?? 0)}
-                    </Text>
-                    <View className="w-10 h-10" />
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => onAddItem?.(item.id)}
-                  disabled={isAddingToCart}
-                  className={`absolute bottom-4 right-4 w-10 h-10 rounded-full items-center justify-center shadow-md active:scale-90 ${
-                    isAddingToCart ? 'bg-primary/60' : 'bg-primary'
-                  }`}
-                >
-                  {isAddingToCart ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <Plus size={24} color="#ffffff" />
-                  )}
-                </TouchableOpacity>
-              </View>
-            ))}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => onAddItem?.(item.id)}
+                    disabled={isAddingToCart || isSoldOut}
+                    accessibilityLabel={
+                      isSoldOut
+                        ? `${item.name} is sold out`
+                        : `Add ${item.name}`
+                    }
+                    className={`absolute bottom-4 right-4 w-10 h-10 rounded-full items-center justify-center shadow-md active:scale-90 ${
+                      isAddingToCart || isSoldOut
+                        ? 'bg-outline/50'
+                        : 'bg-primary'
+                    }`}
+                  >
+                    {isSoldOut ? (
+                      <Ban size={22} color="#ffffff" />
+                    ) : isAddingToCart ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <Plus size={24} color="#ffffff" />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
           </View>
         </View>
 

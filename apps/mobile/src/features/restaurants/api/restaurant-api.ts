@@ -28,7 +28,8 @@ export const restaurantKeys = {
     [...restaurantKeys.all, 'ai-search', { filters }] as const,
   details: () => [...restaurantKeys.all, 'detail'] as const,
   detail: (id: string) => [...restaurantKeys.details(), id] as const,
-  estimates: (id: string) => [...restaurantKeys.detail(id), 'estimates'] as const,
+  estimates: (id: string) =>
+    [...restaurantKeys.detail(id), 'estimates'] as const,
   estimate: (id: string, lat: number, lon: number) =>
     [...restaurantKeys.estimates(id), { lat, lon }] as const,
   images: () => [...restaurantKeys.all, 'image'] as const,
@@ -49,7 +50,10 @@ const getRestaurantImageUrl = (
   normalizeImageUrl(restaurant?.logoUrl);
 
 const getMenuItemImageUrl = (
-  item?: Pick<MenuItem, 'imageUrl'> | Pick<UnifiedSearchResponse['items'][number], 'imageUrl'> | null,
+  item?:
+    | Pick<MenuItem, 'imageUrl'>
+    | Pick<UnifiedSearchResponse['items'][number], 'imageUrl'>
+    | null,
 ) => normalizeImageUrl(item?.imageUrl);
 
 const buildSearchQuery = (
@@ -319,7 +323,7 @@ export function useRestaurantMenu(restaurantId: string) {
     queryKey: menuKeys.list(restaurantId),
     queryFn: () =>
       apiFetch<MenuItemListResponse>(
-        `/api/menu-items?restaurantId=${restaurantId}`,
+        `/api/menu-items?restaurantId=${restaurantId}&status=visible`,
       ),
     enabled: !!restaurantId,
   });
