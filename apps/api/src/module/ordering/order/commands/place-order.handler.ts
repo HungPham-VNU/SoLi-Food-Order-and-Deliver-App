@@ -9,7 +9,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
@@ -20,7 +20,12 @@ import { RestaurantSnapshotRepository } from '../../acl/repositories/restaurant-
 import { DeliveryZoneSnapshotRepository } from '../../acl/repositories/delivery-zone-snapshot.repository';
 import { AppSettingsService } from '../../common/app-settings.service';
 import { RedisService } from '@/lib/redis/redis.service';
-import { OrderPlacedEvent } from '@/shared/events/order-placed.event';
+import {
+  createEnvelope,
+  ORDER_PLACED_V1,
+  type OrderPlacedV1Payload,
+} from '@uitfood/contracts';
+import { OutboxWriter } from '@/messaging/outbox/outbox.writer';
 import {
   orders,
   orderItems,
@@ -138,7 +143,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     private readonly deliveryZoneSnapshotRepo: DeliveryZoneSnapshotRepository,
     private readonly appSettingsService: AppSettingsService,
     private readonly redis: RedisService,
-    private readonly eventBus: EventBus,
+    private readonly outbox: OutboxWriter,
     private readonly geo: GeoService,
     @Inject(PAYMENT_INITIATION_PORT)
     private readonly paymentPort: IPaymentInitiationPort,
@@ -474,6 +479,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
         note,
         expiresAt,
         paymentUrl,
+        distanceKm,
         items: snapshotedItems,
       });
     } catch (err) {
@@ -526,15 +532,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
       await this.saveIdempotencyResult(idempotencyKey, finalOrder.id);
     }
 
-    // -------------------------------------------------------------------------
-    // Step 12 — Publish OrderPlacedEvent (Payment + Notification contexts consume it)
-    // -------------------------------------------------------------------------
-    this.publishOrderPlacedEvent(
-      finalOrder,
-      snapshotedItems,
-      deliveryAddress,
-      distanceKm,
-    );
+    // NOTE: OrderPlacedEvent is now written inside the transaction in persistOrderAtomically
 
     // -------------------------------------------------------------------------
     // Step 13 — Clear the Redis cart (best-effort).
@@ -927,6 +925,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     note: string | undefined;
     expiresAt: Date;
     paymentUrl: string | null;
+    distanceKm: number | undefined;
     items: Array<{
       menuItemId: string;
       itemName: string;
@@ -952,6 +951,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
       note,
       expiresAt,
       paymentUrl,
+      distanceKm,
       items,
     } = params;
 
@@ -1007,6 +1007,15 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
 
         await tx.insert(orderStatusLogs).values(initialStatusLog);
 
+        // 4. Publish outbox event
+        await this.writeOrderPlacedEvent(
+          tx,
+          insertedOrder,
+          items,
+          deliveryAddress,
+          distanceKm,
+        );
+
         return insertedOrder;
       });
     } catch (err) {
@@ -1033,7 +1042,8 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
   // EventBus
   // ---------------------------------------------------------------------------
 
-  private publishOrderPlacedEvent(
+  private async writeOrderPlacedEvent(
+    tx: any,
     order: Order,
     items: Array<{
       menuItemId: string;
@@ -1043,34 +1053,46 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     }>,
     deliveryAddress: DeliveryAddress,
     distanceKm: number | undefined,
-  ): void {
-    const event = new OrderPlacedEvent(
-      order.id,
-      order.customerId,
-      order.restaurantId,
-      order.restaurantName,
-      order.totalAmount,
-      order.shippingFee,
-      order.paymentMethod,
-      items.map((i) => ({
+  ): Promise<void> {
+    const payload: OrderPlacedV1Payload = {
+      orderId: order.id,
+      customerId: order.customerId,
+      restaurantId: order.restaurantId,
+      restaurantName: order.restaurantName,
+      totalAmount: order.totalAmount,
+      shippingFee: order.shippingFee,
+      paymentMethod: order.paymentMethod,
+      items: items.map((i) => ({
         menuItemId: i.menuItemId,
         name: i.itemName,
         quantity: i.quantity,
         unitPrice: i.unitPrice,
       })),
-      {
+      deliveryAddress: {
         street: deliveryAddress.street,
         district: deliveryAddress.district,
         city: deliveryAddress.city,
         latitude: deliveryAddress.latitude,
         longitude: deliveryAddress.longitude,
       },
-      distanceKm,
-      order.estimatedDeliveryMinutes ?? undefined,
-    );
+      distanceKm: distanceKm ?? null,
+      estimatedDeliveryMinutes: order.estimatedDeliveryMinutes ?? null,
+      readyForFulfillment: order.paymentMethod === 'cod',
+      placedAt: order.createdAt.toISOString(),
+    };
 
-    this.eventBus.publish(event);
-    this.logger.log(`OrderPlacedEvent published: orderId=${order.id}`);
+    await this.outbox.write(
+      tx,
+      createEnvelope({
+        eventType: ORDER_PLACED_V1.eventType,
+        eventVersion: ORDER_PLACED_V1.eventVersion,
+        aggregateId: order.id,
+        aggregateVersion: 0,
+        producer: 'ordering',
+        payload,
+      }),
+    );
+    this.logger.log(`OrderPlaced outbox event written: orderId=${order.id}`);
   }
 
   // ---------------------------------------------------------------------------

@@ -38,6 +38,12 @@ variable "api_service_name" {
   default     = "UITFood API"
 }
 
+variable "gateway_service_name" {
+  description = "Render service name for the edge gateway."
+  type        = string
+  default     = "UITFood Gateway"
+}
+
 variable "postgres_name" {
   description = "Render Postgres instance name."
   type        = string
@@ -105,8 +111,19 @@ variable "web_image_url" {
   default     = "ghcr.io/ndtruongdanh/uitfood-web"
 }
 
+variable "gateway_image_url" {
+  description = "Container image repository for the gateway, without a tag."
+  type        = string
+  default     = "ghcr.io/ndtruongdanh/uitfood-gateway"
+}
+
 variable "api_image_tag" {
   description = "Container image tag for the API service."
+  type        = string
+}
+
+variable "gateway_image_tag" {
+  description = "Container image tag for the gateway service."
   type        = string
 }
 
@@ -131,10 +148,24 @@ variable "web_custom_domains" {
   default = null
 }
 
+variable "gateway_custom_domains" {
+  description = "Custom domains attached to the gateway service. Once cut over, the public domain points here instead of the API."
+  type = set(object({
+    name = string
+  }))
+  default = null
+}
+
 variable "api_health_check_path" {
   description = "Optional API health check path."
   type        = string
   default     = "/api/ready"
+}
+
+variable "gateway_health_check_path" {
+  description = "Gateway health check path."
+  type        = string
+  default     = "/ready"
 }
 
 variable "web_health_check_path" {
@@ -159,6 +190,19 @@ variable "web_env_vars" {
 
 variable "api_env_group_id" {
   description = "Optional existing Render environment group ID that contains API runtime secrets."
+  type        = string
+  default     = ""
+}
+
+variable "gateway_env_vars" {
+  description = "Gateway service environment variables managed by Terraform (e.g. GATEWAY_PROXY_TIMEOUT_MS). Values are stored in Terraform state."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
+}
+
+variable "gateway_monolith_upstream_url" {
+  description = "Upstream URL the gateway proxies to. When empty, defaults to the managed API service URL."
   type        = string
   default     = ""
 }

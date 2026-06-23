@@ -1,9 +1,9 @@
 # Phase 0 — Baseline, Security Fixes, and ADRs (Implementation Report)
 
-**Status:** Security & correctness fixes implemented and verified. Baseline metrics, ADRs, and OpenAPI gate are outstanding (owner actions).
-**Scope:** `apps/api`
+**Status:** Security & correctness fixes, security-regression tests, ADR set, and the OpenAPI/CI gate tooling are implemented and verified. Remaining: capture the 7-day baseline metrics, freeze + commit the OpenAPI baseline, and pin the oasdiff action SHA (owner actions).
+**Scope:** `apps/api`, `docs/adr/`, `.github/workflows/ci-validate.yml`
 **Date:** 2026-06-23
-**Relates to:** [MICROSERVICES_MIGRATION_PLAN.md](./MICROSERVICES_MIGRATION_PLAN.md) §2.4, §15 (items 1–3), Phase 0 exit criteria
+**Relates to:** [MICROSERVICES_MIGRATION_PLAN.md](./MICROSERVICES_MIGRATION_PLAN.md) §2.4, §15 (items 1–6), Phase 0 exit criteria
 
 ---
 
@@ -33,6 +33,14 @@ Guiding principle: **fail-closed**. A single source of truth for environment gat
 | `src/module/payment/services/vnpay.service.ts` | edit | New `requestRefund()` — real signed VNPay Merchant Web API call, flag-gated; simulated success when disabled |
 | `src/module/payment/events/order-cancelled-after-payment.handler.ts` | edit | Replaced stub with `requestRefund()`; failure increments `refundRetryCount` and parks in `refund_pending` instead of mismarking `refunded` |
 | `src/module/payment/events/order-cancelled-after-payment.handler.spec.ts` | edit | Updated for new constructor (VNPayService + config mocks) |
+| `test/e2e/security-phase0.e2e-spec.ts` | **new** | HTTP E2E: DevOnlyGuard 404 in prod / reachable in test; `x-test-user-id` inert on session-guarded routes |
+| `src/lib/dev-test-user.middleware.spec.ts` | **new** | Fail-closed gate across every `NODE_ENV` (cases 3a/3c) |
+| `src/lib/guards/dev-only.guard.spec.ts` | **new** | Guard allows dev/test, 404s everywhere else |
+| `src/module/payment/events/order-cancelled-after-payment.refund-states.spec.ts` | **new** | Refund states (cases 3d/3e): simulated-success path and failure→retry-count path |
+| `scripts/export-openapi.ts` | **new** | Generates the merged public OpenAPI doc (mirrors `main.ts`) without a listener |
+| `package.json` | edit | Added `openapi:export` and `openapi:check` scripts |
+| `docs/adr/` (root) | **new** | ADR index, template, and ADRs 0001–0004 |
+| `.github/workflows/ci-validate.yml` | edit | Added OpenAPI export + oasdiff breaking-change gate after E2E |
 
 ---
 
@@ -73,6 +81,77 @@ Both layers use the same fail-closed allowlist, so an unset/unknown `NODE_ENV` d
 
 ---
 
+## 3b. Security-regression tests
+
+Four test files cover the Phase 0 exit cases 3a–3e:
+
+| File | Cases | Type |
+| --- | --- | --- |
+| `test/e2e/security-phase0.e2e-spec.ts` | 3b (DevOnlyGuard 404), 3a (header inert over HTTP) | HTTP E2E |
+| `src/lib/dev-test-user.middleware.spec.ts` | 3a / 3c (fail-closed gate) | Integration |
+| `src/lib/guards/dev-only.guard.spec.ts` | 3b (every `NODE_ENV`) | Unit |
+| `src/module/payment/events/order-cancelled-after-payment.refund-states.spec.ts` | 3d / 3e (refund states) | Integration |
+
+**Design note (3a/3c):** the `x-test-user-id` fail-closed gate is verified at the
+**middleware level**, not purely as a black-box HTTP request. The notification
+routes use Better Auth's `@Session()` guard, which validates the Bearer token
+independently of `req.user`, so an HTTP probe returns 401 with or without the
+header in every environment and cannot isolate the middleware's effect. The
+middleware spec constructs `DevTestUserMiddleware` with a stubbed `ConfigService`
+across `{development, test, production, staging, '', undefined}` and asserts
+`req.user` is set only in dev/test. The E2E `§B` adds the HTTP regression that the
+header never elevates on a session-guarded route in production.
+
+The E2E boots a real production-env app in-process by toggling `NODE_ENV` around
+`Test.createTestingModule().compile()` (`ConfigModule` captures `NODE_ENV` at
+compile time). Run it with:
+
+```bash
+pnpm --filter api run test:e2e -- security-phase0
+```
+
+## 3c. ADR set (`docs/adr/`)
+
+ADRs live at the repository root in `docs/adr/`. Index + conventions in
+`docs/adr/README.md`, starter in `0000-template.md`. Four ADRs drafted at
+**Proposed** (need phase-gate sign-off to move to Accepted):
+
+| ADR | Title |
+| --- | --- |
+| 0001 | Migration boundaries & strangler strategy |
+| 0002 | Edge gateway as the only public ingress |
+| 0003 | Database-per-service isolation |
+| 0004 | Sync (Nest TCP RPC) vs async (RabbitMQ) strategy |
+
+Still to draft (per migration plan §14): authentication propagation (internal
+JWT), saga/orchestration strategy, deployment topology.
+
+## 3d. OpenAPI baseline & CI breaking-change gate
+
+`scripts/export-openapi.ts` regenerates the merged public OpenAPI document
+(NestJS controllers + Better Auth paths) exactly as `main.ts` assembles it, with
+no HTTP listener. Two npm scripts:
+
+```bash
+pnpm --filter api run openapi:export   # → apps/api/openapi/api-spec.baseline.json (freeze + commit)
+pnpm --filter api run openapi:check     # → apps/api/openapi/api-spec.current.json (CI)
+```
+
+The export boots `NestFactory`, which connects via `DATABASE_URL`; run it after
+the DB is reachable (CI: after the existing "Setup Database (Migrate)" step).
+
+`ci-validate.yml` gains two steps after the E2E run: export the current spec,
+then run **oasdiff** breaking-change detection with `fail-on: ERR`.
+
+**Two owner actions before the gate is live:**
+
+1. **Pin the action SHA.** The workflow currently has
+   `oasdiff/oasdiff-action/breaking@<PIN_TO_REAL_SHA>` — pin to a real release
+   commit (this repo pins all third-party actions by SHA). A Docker alternative
+   needing no pin is in the YAML comment.
+2. **Freeze + commit** `apps/api/openapi/api-spec.baseline.json`, and add
+   `apps/api/openapi/api-spec.current.json` to `.gitignore`.
+
 ## 4. New configuration
 
 | Env var | Default | Purpose |
@@ -91,6 +170,9 @@ Both layers use the same fail-closed allowlist, so an unset/unknown `NODE_ENV` d
 | --- | --- |
 | `pnpm --filter api run typecheck` (`tsc --noEmit`, TS 6) | ✅ Pass (exit 0) |
 | `order-cancelled-after-payment.handler.spec.ts` | ✅ 11/11 pass |
+| New Phase 0 unit/integration specs (middleware, guard, refund-states) | ✅ 18/18 pass |
+| Combined run (4 suites) | ✅ 29/29 pass |
+| `security-phase0.e2e-spec.ts` | ⏳ run under e2e config with a live DB (`test:e2e -- security-phase0`) |
 
 ---
 
@@ -98,18 +180,14 @@ Both layers use the same fail-closed allowlist, so an unset/unknown `NODE_ENV` d
 
 These are required to satisfy the migration plan's Phase 0 exit criteria; they cannot be synthesized from code alone:
 
-- [ ] **Security-regression E2E** certifying the fixes:
-  - (a) `NODE_ENV=production` + `x-test-user-id` on a protected route → 401/403, not privileged access
-  - (b) `NODE_ENV=production` `POST /api/notifications/test/{push,email}` → 404
-  - (c) `NODE_ENV=test` → both still work (dev ergonomics preserved)
-  - (d) Refund (`VNPAY_REFUND_ENABLED=false`): cancel-after-paid drives `completed → refund_pending → refunded`
-  - (e) Refund failure (flag on, mocked 5xx): stays `refund_pending`, `refundRetryCount` increments
+- [x] **Security-regression tests** written and green (cases 3a–3e) — see §3b. _Run `security-phase0.e2e-spec.ts` once against a live e2e DB to certify the HTTP layer._
+- [x] **ADRs** 0001–0004 drafted (boundaries, gateway, DB isolation, TCP vs RabbitMQ) — §3c. _Still need: auth propagation, saga strategy, deployment topology; and phase-gate sign-off to mark Accepted._
+- [x] **OpenAPI baseline tooling + CI gate** implemented — §3d. _Owner: pin the oasdiff SHA, then freeze + commit `api-spec.baseline.json`._
 - [ ] **Baseline performance/reliability report** — ≥7 representative production days: traffic, p50/p95/p99 per route, 4xx/5xx, DB connections/slow queries, Redis latency/evictions, scheduled-job durations, and per-event-type `EventBus` handler counts/failures (the "what could be lost" inventory for the Phase 2 outbox).
-- [ ] **OpenAPI baseline** committed (`/api-spec.json`) + CI breaking-change check.
-- [ ] **ADRs** for boundaries, gateway, Nest TCP vs RabbitMQ, DB isolation, auth propagation, saga strategy, deployment topology.
 - [ ] **Service ownership + data-classification matrices.**
 - [ ] Run all baseline suites twice from a clean checkout.
 - [ ] Update `.env.example` with the three new VNPay keys.
+- [ ] Pin the oasdiff action SHA and freeze + commit the OpenAPI baseline (`.gitignore` the `*current.json`).
 
 ---
 
@@ -117,9 +195,12 @@ These are required to satisfy the migration plan's Phase 0 exit criteria; they c
 
 | Criterion | Status |
 | --- | --- |
-| No production request can use the dev identity bypass | ✅ Implemented (2 layers) — pending E2E (a)/(c) |
-| Notification test endpoints disabled in production | ✅ Implemented (404 + excluded from spec) |
-| VNPay refund behaviour complete with correct failure semantics | ✅ Implemented — pending E2E (d)/(e) |
+| No production request can use the dev identity bypass | ✅ Implemented (2 layers) + tests green |
+| Notification test endpoints disabled in production | ✅ Implemented (404 + excluded from spec) + tests green |
+| VNPay refund behaviour complete with correct failure semantics | ✅ Implemented + tests green (3d/3e) |
+| Security-regression suite green | ✅ Unit/integration 18/18; ⏳ E2E run vs live DB |
+| OpenAPI baseline + breaking-change gate | ✅ Tooling + CI step; ⏳ pin SHA + commit baseline |
+| ADRs drafted | ✅ 0001–0004; ⏳ 3 more + Accepted sign-off |
 | Baseline suites pass twice from clean checkout | ⏳ Owner |
 | Agreed cutover SLOs / RTO / RPO / rollback authority | ⏳ Owner |
-| Approved ADRs + ownership map | ⏳ Owner |
+| 7-day baseline metrics + ownership/data-classification map | ⏳ Owner |

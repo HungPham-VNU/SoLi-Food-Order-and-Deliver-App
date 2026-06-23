@@ -22,6 +22,7 @@ import { ReviewModule } from './module/review/review.module';
 import { validate } from './config/env.schema';
 import { vnpayConfig } from './config/vnpay.config';
 import { ObservabilityInterceptor } from './observability/observability.interceptor';
+import { MessagingModule } from './messaging/messaging.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ObservabilityInterceptor } from './observability/observability.intercep
     DatabaseModule,
     RedisModule,
     ScheduleModule.forRoot(),
+    MessagingModule,
     RestaurantCatalogModule,
     PromotionModule,
     AdminAnalyticsModule,

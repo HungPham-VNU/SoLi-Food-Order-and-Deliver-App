@@ -1,0 +1,84 @@
+import type { ServerResponse } from 'http';
+import type { Socket } from 'net';
+import { Logger } from '@nestjs/common';
+import { createProxyMiddleware, type RequestHandler } from 'http-proxy-middleware';
+import { GATEWAY_MANAGEMENT_PATHS } from './proxy.constants';
+
+const logger = new Logger('GatewayProxy');
+
+export interface ApiProxyOptions {
+  /** Upstream monolith base URL. */
+  target: string;
+  /** End-to-end timeout (incoming socket + upstream request) in ms. */
+  proxyTimeoutMs: number;
+}
+
+/**
+ * Builds the transparent reverse proxy to the monolith.
+ *
+ * Phase 1 behaviour: forward EVERYTHING except the gateway's own management
+ * paths (/live, /ready, /metrics) to the upstream, byte-for-byte. This covers
+ * all of /api/**, plus the monolith's root-served assets (/docs,
+ * /api-spec.json, /firebase-messaging-sw.js, etc.).
+ *
+ * Fidelity guarantees (why these options matter):
+ *  - The request body is NOT parsed by the gateway (NestFactory bodyParser:false),
+ *    so the raw stream — Better Auth rawBody, VNPay signatures, multipart uploads —
+ *    reaches the monolith untouched.
+ *  - `xfwd: true` adds X-Forwarded-For/Host/Proto so the monolith can reconstruct
+ *    the public origin.
+ *  - `changeOrigin: true` sets the upstream Host to the monolith's host; the
+ *    client's Origin header is forwarded unchanged so Better Auth CORS/CSRF and
+ *    the monolith's existing `enableCors()` keep working exactly as today.
+ *  - Multiple Set-Cookie response headers (Better Auth) are preserved by default.
+ *  - `ws: true` enables Socket.IO/WebSocket upgrades (wired in main.ts).
+ *
+ * CORS is intentionally NOT handled here in Phase 1 — the monolith continues to
+ * own it, so there is no risk of duplicated Access-Control-* headers. Ownership
+ * moves to the gateway in a later phase.
+ */
+export function createApiProxy({
+  target,
+  proxyTimeoutMs,
+}: ApiProxyOptions): RequestHandler {
+  return createProxyMiddleware({
+    target,
+    changeOrigin: true,
+    xfwd: true,
+    ws: true,
+    proxyTimeout: proxyTimeoutMs,
+    timeout: proxyTimeoutMs,
+    // Anything that is NOT a management path is proxied. Returning false makes
+    // http-proxy-middleware call next(), letting the gateway's own controllers
+    // (HealthController) serve /live and /ready.
+    pathFilter: (pathname: string) =>
+      !GATEWAY_MANAGEMENT_PATHS.some(
+        (p) => pathname === p || pathname.startsWith(`${p}/`),
+      ),
+    on: {
+      error: (err: Error, req, res) => {
+        logger.error(
+          `Upstream proxy error for ${req.method ?? '?'} ${req.url ?? '?'}: ` +
+            `${(err as NodeJS.ErrnoException).code ?? ''} ${err.message}`,
+        );
+        // For HTTP, res is a ServerResponse; for a failed WS upgrade it is a
+        // raw Socket. Respond with a stable 502 envelope or close the socket.
+        const httpRes = res as ServerResponse;
+        if (typeof httpRes.writeHead === 'function') {
+          if (!httpRes.headersSent) {
+            httpRes.writeHead(502, { 'Content-Type': 'application/json' });
+          }
+          httpRes.end(
+            JSON.stringify({
+              statusCode: 502,
+              error: 'Bad Gateway',
+              message: 'Upstream service is unavailable.',
+            }),
+          );
+          return;
+        }
+        (res as Socket).destroy(err);
+      },
+    },
+  });
+}

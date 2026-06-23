@@ -203,6 +203,10 @@ export class PaymentTransactionRepository {
    * `extra` allows callers to set additional columns alongside the status change
    * (e.g. paidAt, providerTxnId, rawIpnPayload for IPN processing — Phase 8.3).
    *
+   * `executor` lets the caller run this update inside an existing transaction so
+   * the status change and an outbox insert commit atomically (Phase 2 outbox).
+   * Defaults to the base connection.
+   *
    * Returns the updated row, or null if the version check failed.
    */
   async updateStatus(
@@ -222,8 +226,9 @@ export class PaymentTransactionRepository {
         | 'refundRetryCount'
       >
     > = {},
+    executor: any = this.db,
   ): Promise<PaymentTransaction | null> {
-    const [updated] = await this.db
+    const [updated] = await executor
       .update(paymentTransactions)
       .set({
         status,

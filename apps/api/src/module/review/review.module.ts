@@ -3,6 +3,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { DatabaseModule } from '@/drizzle/drizzle.module';
 import { OrderingContractsModule } from '@/module/ordering/ordering-contracts.module';
 import { CatalogContractsModule } from '@/module/restaurant-catalog/catalog-contracts.module';
+import { MessagingModule } from '@/messaging/messaging.module';
 import { SubmitReviewHandler } from './commands/submit-review.handler';
 import { ReviewController } from './controllers/review.controller';
 import { ReviewRepository } from './repositories/review.repository';
@@ -22,6 +23,7 @@ import { ReviewService } from './services/review.service';
     CqrsModule,
     OrderingContractsModule,
     CatalogContractsModule,
+    MessagingModule,
   ],
   controllers: [ReviewController],
   providers: [ReviewService, ReviewRepository, SubmitReviewHandler],

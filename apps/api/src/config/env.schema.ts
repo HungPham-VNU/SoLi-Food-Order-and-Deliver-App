@@ -110,6 +110,16 @@ const baseEnvSchema = z.object({
   REDIS_PORT: z.coerce.number().int().positive().default(6379),
 
   // ---------------------------------------------------------------------------
+  // RabbitMQ — durable domain-event transport (Phase 2)
+  // ---------------------------------------------------------------------------
+  RABBITMQ_URL: z
+    .string()
+    .min(1, 'RABBITMQ_URL is required — e.g. amqp://guest:guest@localhost:5672')
+    .default('amqp://guest:guest@localhost:5672'),
+  RABBITMQ_EXCHANGE: z.string().min(1).default('uitfood.domain-events'),
+  RABBITMQ_PREFETCH: z.coerce.number().int().positive().default(10),
+
+  // ---------------------------------------------------------------------------
   // VNPay — all four are required; no defaults (production payment credentials)
   // ---------------------------------------------------------------------------
   VNPAY_TMN_CODE: z

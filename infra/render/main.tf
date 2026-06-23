@@ -23,6 +23,26 @@ locals {
       value = value
     }
   }
+  gateway_env_vars = merge(
+    {
+      NODE_ENV = {
+        value = "production"
+      }
+      # Where the gateway proxies. Falls back to the managed API service URL when
+      # an explicit upstream is not provided. Render injects PORT automatically.
+      MONOLITH_UPSTREAM_URL = {
+        value = coalesce(
+          trimspace(var.gateway_monolith_upstream_url),
+          render_web_service.api.url,
+        )
+      }
+    },
+    {
+      for key, value in var.gateway_env_vars : key => {
+        value = value
+      }
+    }
+  )
 }
 
 resource "render_postgres" "main" {
@@ -53,6 +73,31 @@ resource "render_web_service" "api" {
   }
 
   env_vars = local.api_env_vars
+
+  # Keep secret files in Render unless Terraform should own their full contents.
+  lifecycle {
+    ignore_changes = [
+      secret_files,
+    ]
+  }
+}
+
+resource "render_web_service" "gateway" {
+  name              = var.gateway_service_name
+  plan              = var.service_plan
+  region            = var.region
+  custom_domains    = var.gateway_custom_domains
+  environment_id    = var.project_environment_id
+  health_check_path = var.gateway_health_check_path
+
+  runtime_source = {
+    image = {
+      image_url = var.gateway_image_url
+      tag       = var.gateway_image_tag
+    }
+  }
+
+  env_vars = local.gateway_env_vars
 
   # Keep secret files in Render unless Terraform should own their full contents.
   lifecycle {

@@ -23,8 +23,30 @@ services:
     restart: unless-stopped
     command: redis-server --save 60 1 --loglevel warning
 
+  rabbitmq:
+    # -management-alpine ships the management plugin + rabbitmq-diagnostics.
+    image: rabbitmq:3.13-management-alpine
+    container_name: food_order_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?RABBITMQ_USER is required}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:?RABBITMQ_PASS is required}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    ports:
+      - '5672:5672' # AMQP
+      - '15672:15672' # Management UI (http://localhost:15672)
+    volumes:
+      - food_order_rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
 volumes:
   food_order_db:
     driver: local
   food_order_redis:
+    driver: local
+  food_order_rabbitmq:
     driver: local

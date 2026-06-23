@@ -49,6 +49,25 @@ services:
     restart: unless-stopped
     command: redis-server --save 60 1 --loglevel warning
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: food_order_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    volumes:
+      - food_order_rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   api:
     build:
       context: .
@@ -66,6 +85,8 @@ services:
       REDIS_URL: redis://redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672${RABBITMQ_VHOST:+/}${RABBITMQ_VHOST:-}
+      RABBITMQ_EXCHANGE: uitfood.domain-events
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-https://ollama.com}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gpt-oss:20b}
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
@@ -79,6 +100,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     restart: unless-stopped
 
@@ -118,6 +141,8 @@ volumes:
   food_order_db:
     driver: local
   food_order_redis:
+    driver: local
+  food_order_rabbitmq:
     driver: local
   api_nm_root:
   api_nm_app:

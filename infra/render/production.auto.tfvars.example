@@ -2,11 +2,25 @@
 # production.auto.tfvars is ignored by git and is loaded automatically by Terraform
 # when you run terraform plan/apply from this directory.
 
-api_image_tag = "sha-replace-me"
-web_image_tag = "sha-replace-me"
+api_image_tag     = "sha-replace-me"
+web_image_tag     = "sha-replace-me"
+gateway_image_tag = "sha-replace-me"
 
-api_health_check_path = "/api/ready"
-web_health_check_path = "/healthz"
+api_health_check_path     = "/api/ready"
+web_health_check_path     = "/healthz"
+gateway_health_check_path = "/ready"
+
+# Gateway upstream. Leave empty to default to the managed API service URL,
+# or pin to an internal/private URL once private networking is configured.
+gateway_monolith_upstream_url = ""
+
+# Phase 1 = staging cutover only: keep the public domain on the API until the
+# gateway is validated, then move it here.
+# gateway_custom_domains = [{ name = "app.example.com" }]
+
+gateway_env_vars = {
+  GATEWAY_PROXY_TIMEOUT_MS = "30000"
+}
 
 api_env_vars = {
   BETTER_AUTH_SECRET = "replace-me"

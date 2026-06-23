@@ -213,8 +213,8 @@ function buildHandler({
     setWithExpiry: jest.fn().mockResolvedValue(undefined),
   };
 
-  const eventBus = {
-    publish: jest.fn(),
+  const outbox = {
+    write: jest.fn().mockResolvedValue(undefined),
   };
 
   const geo = {
@@ -246,7 +246,7 @@ function buildHandler({
     deliveryZoneSnapshotRepo as never,
     appSettingsService as never,
     redis as never,
-    eventBus as never,
+    outbox as never,
     geo as never,
     paymentPort,
     promotionPort as never,
@@ -261,7 +261,7 @@ function buildHandler({
     deliveryZoneSnapshotRepo,
     appSettingsService,
     redis,
-    eventBus,
+    outbox,
     geo,
     paymentPort,
     promotionPort,
@@ -321,7 +321,7 @@ describe('PlaceOrderHandler', () => {
       );
       expect(result.id).toBe('order-cached-1');
       // Cart should NOT be mutated on cache hit
-      expect(redis.setNx).not.toHaveBeenCalled();
+      expect(outbox.write).not.toHaveBeenCalled();
     });
   });
 
@@ -523,7 +523,7 @@ describe('PlaceOrderHandler', () => {
 
       await handler.execute(makeCommand());
 
-      expect(eventBus.publish).toHaveBeenCalledTimes(1);
+      expect(outbox.write).toHaveBeenCalledTimes(1);
       const [event] = eventBus.publish.mock.calls[0] as [OrderPlacedEvent];
       expect(event.orderId).toBe('order-uuid-1');
     });

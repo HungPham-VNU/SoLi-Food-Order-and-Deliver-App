@@ -8,6 +8,16 @@ output "api_service_url" {
   value       = render_web_service.api.url
 }
 
+output "gateway_service_id" {
+  description = "Render gateway service ID."
+  value       = render_web_service.gateway.id
+}
+
+output "gateway_service_url" {
+  description = "Render gateway service URL (the future public origin)."
+  value       = render_web_service.gateway.url
+}
+
 output "web_service_id" {
   description = "Render web service ID."
   value       = render_web_service.web.id

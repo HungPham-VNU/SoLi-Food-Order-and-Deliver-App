@@ -1,68 +1,56 @@
 import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
-import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import {
+  createEnvelope,
+  REVIEW_SUBMITTED_V1,
+  type ReviewSubmittedV1Payload,
+} from '@uitfood/contracts';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
 import {
   ORDER_ELIGIBILITY_PORT,
   type IOrderEligibilityPort,
 } from '@/shared/ports/order-eligibility.port';
-import { ReviewSubmittedEvent } from '@/shared/events/review-submitted.event';
-import {
-  RESTAURANT_ACCESS_PORT,
-  type IRestaurantAccessPort,
-} from '@/shared/ports/restaurant-access.port';
+import { OutboxWriter } from '@/messaging/outbox/outbox.writer';
 import type { Review } from '../domain/review.schema';
 import { ReviewRepository } from '../repositories/review.repository';
 import { SubmitReviewCommand } from './submit-review.command';
 
 /**
- * SubmitReviewHandler
+ * SubmitReviewHandler — Phase 2 (UnitOfWork dismantled).
  *
- * Core of UC-22 (Submit Rating & Review).
+ * BEFORE: one Postgres transaction spanned Review.insert +
+ * Catalog.incrementRating + Ordering.markReviewed (cross-context UnitOfWork).
+ * That atomic write cannot cross independent databases.
  *
- * Flow (Section 10.3 of UC22 implementation proposal):
- *  1. Optimistic duplicate pre-check (BR-22.9)            → 409
- *  2. Order eligibility check via ORDER_ELIGIBILITY_PORT
- *     - 404 if missing (MSG-HIST-01)
- *     - 404 if not owned by caller (BR-22.4, BR-22.5)
- *     - 422 if status not in REVIEWABLE_STATUSES (ready_for_pickup,
- *       picked_up, delivering, delivered) (BR-22.6, BR-22.7)
- *  3. Persist the review, then update Ordering and Catalog through ports
- *  4. Catch DB UniqueConstraintViolation (23505) → 409 (BR-22.8)
- *  5. Post-commit eventBus.publish(ReviewSubmittedEvent) — failure logged only
+ * AFTER: a single LOCAL transaction writes the review row AND a
+ * `review.submitted.v1` outbox event. Catalog's rating projection and Ordering's
+ * reviewed marker are now event consumers (see messaging/consumers/*), applied
+ * idempotently via the inbox. The review is authoritative immediately; the two
+ * projections are eventually consistent. The `reviews_order_id_unique`
+ * constraint remains the final duplicate defense.
  *
- * Architecture (ADR-007 — Ports and Adapters):
- *  - Events published OUTSIDE the transaction (ADR-004; same as TransitionOrderHandler).
- *  - Order eligibility delegated to ORDER_ELIGIBILITY_PORT — no direct coupling
- *    to the Ordering BC's schema, repositories, or module internals.
- *  - Catalog owns rating writes through RESTAURANT_ACCESS_PORT.
- *  - Ordering owns the reviewed marker through ORDER_ELIGIBILITY_PORT.
- *
- * Phase: RV-2 — Review BC
+ * Note: the post-commit `EventBus.publish(ReviewSubmittedEvent)` is GONE — its
+ * delivery is now guaranteed by the outbox relay (no crash-after-commit loss).
  */
 @Injectable()
 @CommandHandler(SubmitReviewCommand)
-export class SubmitReviewHandler implements ICommandHandler<
-  SubmitReviewCommand,
-  Review
-> {
+export class SubmitReviewHandler
+  implements ICommandHandler<SubmitReviewCommand, Review>
+{
   private readonly logger = new Logger(SubmitReviewHandler.name);
 
   constructor(
     private readonly reviewRepo: ReviewRepository,
-    private readonly eventBus: EventBus,
     @Inject(ORDER_ELIGIBILITY_PORT)
     private readonly orderEligibilityPort: IOrderEligibilityPort,
-    @Inject(RESTAURANT_ACCESS_PORT)
-    private readonly restaurantAccess: IRestaurantAccessPort,
+    private readonly outbox: OutboxWriter,
     @Inject(DB_CONNECTION) private readonly db: NodePgDatabase,
   ) {}
 
   async execute(cmd: SubmitReviewCommand): Promise<Review> {
-    // -------------------------------------------------------------------------
-    // 1. Optimistic duplicate pre-check (BR-22.9)
-    //    Returns a richer 409 body than the raw DB unique violation can.
-    // -------------------------------------------------------------------------
+    // 1. Optimistic duplicate pre-check (BR-22.9) — richer 409 than the raw
+    //    unique violation.
     const existing = await this.reviewRepo.findByOrderId(cmd.orderId);
     if (existing) {
       throw new ConflictException({
@@ -75,25 +63,18 @@ export class SubmitReviewHandler implements ICommandHandler<
       });
     }
 
-    // -------------------------------------------------------------------------
-    // 2. Order eligibility check via ORDER_ELIGIBILITY_PORT (ADR-007)
-    //    The port is provided by the Ordering BC's OrderEligibilityAdapter.
-    //    Throws NotFoundException / UnprocessableEntityException on failure.
-    // -------------------------------------------------------------------------
+    // 2. Order eligibility check (read-only). Still synchronous through the port;
+    //    becomes a TCP read after Ordering is extracted. Throws 404/422 on
+    //    failure — let it propagate.
     const { restaurantId } = await this.orderEligibilityPort.checkEligibility(
       cmd.orderId,
       cmd.customerId,
     );
 
-    // -------------------------------------------------------------------------
-    // 3. Transactional INSERT + rating projection (BR-22.11, BR-22.12)
-    //    Catch 23505 (UniqueConstraintViolation) → 409 to cover the race between
-    //    two concurrent submissions that both passed step 1 (BR-22.8).
-    // -------------------------------------------------------------------------
+    // 3. ONE local transaction: persist the review AND its outbox event.
     let inserted: Review;
     try {
-      inserted = await this.db.transaction(async (transaction) => {
-        const context = { transaction };
+      inserted = await this.db.transaction(async (tx) => {
         const created = await this.reviewRepo.create(
           {
             orderId: cmd.orderId,
@@ -104,19 +85,33 @@ export class SubmitReviewHandler implements ICommandHandler<
             tags: cmd.tags ?? null,
             moderationStatus: 'visible',
           },
-          context,
+          { transaction: tx },
         );
 
-        await this.restaurantAccess.incrementRating(
-          restaurantId,
-          cmd.stars,
-          context,
+        const payload: ReviewSubmittedV1Payload = {
+          reviewId: created.id,
+          orderId: created.orderId,
+          customerId: created.customerId,
+          restaurantId: created.restaurantId,
+          stars: created.stars,
+          submittedAt: created.createdAt.toISOString(),
+        };
+
+        await this.outbox.write(
+          tx,
+          createEnvelope({
+            eventType: REVIEW_SUBMITTED_V1.eventType,
+            eventVersion: REVIEW_SUBMITTED_V1.eventVersion,
+            aggregateId: created.id,
+            aggregateVersion: 0,
+            producer: 'monolith',
+            payload,
+          }),
         );
-        await this.orderEligibilityPort.markReviewed(cmd.orderId, context);
+
         return created;
       });
     } catch (err) {
-      // PostgreSQL unique violation
       if ((err as { code?: string })?.code === '23505') {
         throw new ConflictException({
           message: 'You have already submitted a review for this order.',
@@ -126,28 +121,9 @@ export class SubmitReviewHandler implements ICommandHandler<
       throw err;
     }
 
-    // -------------------------------------------------------------------------
-    // 4. Publish ReviewSubmittedEvent AFTER the transaction commits
-    //    (consistent with TransitionOrderHandler pattern). DB state is
-    //    authoritative; downstream notification miss is observable in logs.
-    // -------------------------------------------------------------------------
-    try {
-      this.eventBus.publish(
-        new ReviewSubmittedEvent(
-          inserted.id,
-          inserted.orderId,
-          inserted.customerId,
-          inserted.restaurantId,
-          inserted.stars,
-        ),
-      );
-    } catch (err) {
-      this.logger.error(
-        `Failed to publish ReviewSubmittedEvent for reviewId=${inserted.id}: ${(err as Error).message}`,
-        (err as Error).stack,
-      );
-    }
-
+    this.logger.log(
+      `Review ${inserted.id} persisted with outbox event review.submitted.v1`,
+    );
     return inserted;
   }
 }
