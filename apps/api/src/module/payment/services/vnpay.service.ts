@@ -73,6 +73,36 @@ export interface VNPayUrlParams {
   ipAddr: string;
 }
 
+/** Parameters required to request a VNPay refund. */
+export interface VNPayRefundParams {
+  /** PaymentTransaction.id - the original vnp_TxnRef of the charge. */
+  txnRef: string;
+  /** VNPay's own transaction id (vnp_TransactionNo) captured from the IPN. */
+  providerTxnId: string | null;
+  /** Refund amount in integer VND. Multiplied by 100 before sending. */
+  amount: number;
+  /** When the original payment was captured (basis for vnp_TransactionDate). */
+  transactionDate: Date | null;
+  /** IP address attributed to the refund request. */
+  ipAddr: string;
+  /** Human-readable reason stored on the VNPay side. */
+  orderInfo: string;
+  /** Operator/system that initiated the refund. Defaults to 'system'. */
+  createBy?: string;
+}
+
+/** Typed result of a refund request. */
+export interface VNPayRefundResult {
+  /** True when the refund is considered successful (or simulated success). */
+  success: boolean;
+  /** True when no real HTTP call was made (refundEnabled = false). */
+  simulated: boolean;
+  /** VNPay vnp_ResponseCode, when a real call was made. */
+  responseCode?: string;
+  /** Human-readable message for logs/audit. Never contains secrets. */
+  message: string;
+}
+
 // ---------------------------------------------------------------------------
 // VNPayService
 // ---------------------------------------------------------------------------
@@ -106,6 +136,8 @@ export class VNPayService implements OnModuleInit {
   private vnpUrl!: string;
   private returnUrl!: string;
   private sessionTimeoutMs!: number;
+  private refundEnabled!: boolean;
+  private apiUrl!: string;
 
   constructor(
     @Inject(vnpayConfig.KEY)
@@ -125,6 +157,8 @@ export class VNPayService implements OnModuleInit {
     this.vnpUrl = this.config.url;
     this.returnUrl = this.config.returnUrl;
     this.sessionTimeoutMs = this.config.sessionTimeoutSeconds * 1_000;
+    this.refundEnabled = this.config.refundEnabled;
+    this.apiUrl = this.config.apiUrl;
 
     // Note: hashSecret intentionally omitted from the log line.
     this.logger.log(
@@ -311,6 +345,131 @@ export class VNPayService implements OnModuleInit {
       valid,
       code: query.vnp_ResponseCode ?? 'unknown',
     };
+  }
+
+  /**
+   * Requests a full refund for a previously completed VNPay transaction via the
+   * Merchant Web API (vnp_Command='refund').
+   *
+   * Gating:
+   *   - When refundEnabled = false (default / sandbox), NO HTTP call is made.
+   *     A deterministic simulated success is returned so the state machine can
+   *     still advance in dev/test/CI. This resolves the former production TODO
+   *     without pretending the sandbox supports refunds.
+   *   - When refundEnabled = true, a signed HTTP POST is sent to apiUrl and the
+   *     caller decides how to react to { success } (retry vs. mark refunded).
+   *
+   * Idempotency: VNPay deduplicates by vnp_RequestId on its side; the caller
+   * additionally guards with optimistic-locked status transitions, so a
+   * re-sent refund for an already-refunded charge is safe.
+   *
+   * This method performs NO database access and throws only on programmer
+   * error; transport/provider failures are returned as { success: false }.
+   */
+  async requestRefund(params: VNPayRefundParams): Promise<VNPayRefundResult> {
+    if (!Number.isInteger(params.amount) || params.amount <= 0) {
+      throw new Error('VNPay refund amount must be a positive integer VND value.');
+    }
+
+    if (!this.refundEnabled) {
+      this.logger.warn(
+        `[SIMULATED] VNPay refund for txnRef=${params.txnRef} amount=${params.amount} ` +
+          '(VNPAY_REFUND_ENABLED=false). No HTTP call made.',
+      );
+      return {
+        success: true,
+        simulated: true,
+        message: 'Refund simulated (VNPay refund disabled by configuration).',
+      };
+    }
+
+    const now = new Date();
+    const requestId = crypto.randomUUID();
+    // '02' = full refund. Partial refunds ('03') are out of scope for Phase 0.
+    const transactionType = '02';
+    const transactionDate = this.formatVNPayDate(params.transactionDate ?? now);
+    const createDate = this.formatVNPayDate(now);
+    const createBy = (params.createBy ?? 'system').slice(0, 255);
+    const amountX100 = String(params.amount * 100);
+    const providerTxnId = params.providerTxnId ?? '';
+    const orderInfo = params.orderInfo.replace(/[\r\n\t]/g, '').trim();
+
+    // VNPay refund checksum: pipe-joined, fixed field order (API v2.1.0).
+    const signData = [
+      requestId,
+      VNPAY_VERSION,
+      'refund',
+      this.tmnCode,
+      transactionType,
+      params.txnRef,
+      amountX100,
+      providerTxnId,
+      transactionDate,
+      createBy,
+      createDate,
+      this.sanitizeIpAddr(params.ipAddr),
+      orderInfo,
+    ].join('|');
+
+    const secureHash = this.hmacSha512(signData);
+
+    const body = {
+      vnp_RequestId: requestId,
+      vnp_Version: VNPAY_VERSION,
+      vnp_Command: 'refund',
+      vnp_TmnCode: this.tmnCode,
+      vnp_TransactionType: transactionType,
+      vnp_TxnRef: params.txnRef,
+      vnp_Amount: amountX100,
+      vnp_TransactionNo: providerTxnId,
+      vnp_TransactionDate: transactionDate,
+      vnp_CreateBy: createBy,
+      vnp_CreateDate: createDate,
+      vnp_IpAddr: this.sanitizeIpAddr(params.ipAddr),
+      vnp_OrderInfo: orderInfo,
+      vnp_SecureHash: secureHash,
+    };
+
+    try {
+      const res = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        return {
+          success: false,
+          simulated: false,
+          message: `VNPay refund HTTP ${res.status} for txnRef=${params.txnRef}.`,
+        };
+      }
+
+      const json = (await res.json()) as Record<string, unknown>;
+      const responseCode = String(json['vnp_ResponseCode'] ?? '');
+      const success = responseCode === '00';
+
+      this.logger.log(
+        `VNPay refund response for txnRef=${params.txnRef}: ` +
+          `vnp_ResponseCode=${responseCode} success=${success}`,
+      );
+
+      return {
+        success,
+        simulated: false,
+        responseCode,
+        message: success
+          ? 'VNPay refund accepted.'
+          : `VNPay refund rejected (vnp_ResponseCode=${responseCode}).`,
+      };
+    } catch (err) {
+      // Transport failure: surface as a non-success so the caller can retry.
+      return {
+        success: false,
+        simulated: false,
+        message: `VNPay refund request failed for txnRef=${params.txnRef}: ${(err as Error).message}`,
+      };
+    }
   }
 
   // ---------------------------------------------------------------------------

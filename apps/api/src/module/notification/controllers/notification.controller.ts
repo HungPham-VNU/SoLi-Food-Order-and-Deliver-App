@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -11,10 +10,12 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiExcludeEndpoint,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -22,6 +23,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { DevOnlyGuard } from '@/lib/guards/dev-only.guard';
 import {
   AllowAnonymous,
   Session,
@@ -355,15 +357,17 @@ export class NotificationController {
 
   // ---------------------------------------------------------------------------
   // POST /notifications/test/push
-  // DEV / STAGING ONLY — manual FCM integration testing
-  // TODO: Remove this endpoint before deploying to production.
+  // DEV / TEST ONLY — manual FCM integration testing.
+  // Fenced off by DevOnlyGuard (returns 404 outside the dev/test allowlist) and
+  // excluded from the public OpenAPI document.
   // ---------------------------------------------------------------------------
 
   /**
    * Send a test push notification to a specific FCM token.
    *
    * This endpoint is intentionally unauthenticated for ease of local testing.
-   * It is blocked in NODE_ENV=production to prevent misuse.
+   * DevOnlyGuard returns 404 whenever NODE_ENV is not in the dev/test
+   * allowlist, so it is inert in production (and never advertised via a 403).
    *
    * Usage: open apps/api/public/fcm-test.html, copy the displayed FCM token,
    * then POST it here to verify the full Firebase → device delivery pipeline.
@@ -375,38 +379,29 @@ export class NotificationController {
    *   "title": "Test Push",
    *   "body": "Hello from Notification BC"
    * }
-   *
-   * TODO: Remove before production deployment.
    */
   @Post('test/push')
   @HttpCode(HttpStatus.OK)
   @AllowAnonymous()
-  @ApiOperation({
-    summary: '[DEV ONLY] Send a test push notification to a specific FCM token',
-    description:
-      'Development endpoint for manual FCM integration testing. Blocked in NODE_ENV=production.',
-  })
-  @ApiBody({ type: TestPushDto })
-  @ApiOkResponse({ type: TestPushResponseDto })
+  @UseGuards(DevOnlyGuard)
+  @ApiExcludeEndpoint()
   async testPush(@Body() dto: TestPushDto): Promise<TestPushResponseDto> {
-    // Hard-block in production to prevent accidental exposure
-    if (process.env.NODE_ENV === 'production') {
-      throw new ForbiddenException('Test endpoints are disabled in production');
-    }
     return this.testPushService.send(dto.token, dto.title, dto.body);
   }
 
   // ---------------------------------------------------------------------------
   // POST /notifications/test/email
-  // DEV / STAGING ONLY — manual SMTP integration testing
-  // TODO: Remove this endpoint before deploying to production.
+  // DEV / TEST ONLY — manual SMTP integration testing.
+  // Fenced off by DevOnlyGuard (returns 404 outside the dev/test allowlist) and
+  // excluded from the public OpenAPI document.
   // ---------------------------------------------------------------------------
 
   /**
    * Send a test email to verify the SMTP configuration end-to-end.
    *
    * This endpoint is intentionally unauthenticated for ease of local testing.
-   * It is blocked in NODE_ENV=production to prevent misuse.
+   * DevOnlyGuard returns 404 whenever NODE_ENV is not in the dev/test
+   * allowlist, so it is inert in production.
    *
    * @example
    * POST /api/notifications/test/email
@@ -415,24 +410,13 @@ export class NotificationController {
    *   "subject": "SMTP test",
    *   "body": "Hello from Notification BC"
    * }
-   *
-   * TODO: Remove before production deployment.
    */
   @Post('test/email')
   @HttpCode(HttpStatus.OK)
   @AllowAnonymous()
-  @ApiOperation({
-    summary: '[DEV ONLY] Send a test email via SMTP to verify configuration',
-    description:
-      'Development endpoint for manual SMTP integration testing. Blocked in NODE_ENV=production.',
-  })
-  @ApiBody({ type: TestEmailDto })
-  @ApiOkResponse({ type: TestEmailResponseDto })
+  @UseGuards(DevOnlyGuard)
+  @ApiExcludeEndpoint()
   async testEmail(@Body() dto: TestEmailDto): Promise<TestEmailResponseDto> {
-    // Hard-block in production to prevent accidental exposure
-    if (process.env.NODE_ENV === 'production') {
-      throw new ForbiddenException('Test endpoints are disabled in production');
-    }
     return this.testEmailService.send(dto.to, dto.subject, dto.body);
   }
 }

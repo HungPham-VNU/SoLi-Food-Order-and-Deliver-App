@@ -1,7 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import { PaymentTransactionRepository } from '../repositories/payment-transaction.repository';
+import { VNPayService } from '../services/vnpay.service';
 import { OrderCancelledAfterPaymentEvent } from '@/shared/events/order-cancelled-after-payment.event';
+import { vnpayConfig } from '@/config/vnpay.config';
 
 /**
  * OrderCancelledAfterPaymentHandler
@@ -45,7 +48,12 @@ import { OrderCancelledAfterPaymentEvent } from '@/shared/events/order-cancelled
 export class OrderCancelledAfterPaymentHandler implements IEventHandler<OrderCancelledAfterPaymentEvent> {
   private readonly logger = new Logger(OrderCancelledAfterPaymentHandler.name);
 
-  constructor(private readonly txnRepo: PaymentTransactionRepository) {}
+  constructor(
+    private readonly txnRepo: PaymentTransactionRepository,
+    private readonly vnpayService: VNPayService,
+    @Inject(vnpayConfig.KEY)
+    private readonly config: ConfigType<typeof vnpayConfig>,
+  ) {}
 
   async handle(event: OrderCancelledAfterPaymentEvent): Promise<void> {
     this.logger.log(
@@ -165,36 +173,49 @@ export class OrderCancelledAfterPaymentHandler implements IEventHandler<OrderCan
     );
 
     // -------------------------------------------------------------------------
-    // Step 5: Issue VNPay refund (STUBBED — sandbox does not support refund API).
+    // Step 5: Issue the VNPay refund.
     //
-    // `txn.amount` is used here (Payment BC ground truth) rather than
+    // `txn.amount` is used (Payment BC ground truth) rather than
     // `event.paidAmount` (Ordering BC value). Both should be equal in normal
     // operation, but the Payment BC owns the canonical refund amount.
     //
-    // TODO: Replace this stub with a real VNPayService.requestRefund() call:
-    //
-    //   const refundResult = await this.vnpayService.requestRefund({
-    //     txnRef: txn.id,
-    //     transactionNo: txn.providerTxnId,
-    //     amount: txn.amount,                    ← Payment BC ground truth
-    //     transactionDate: txn.paidAt,
-    //     createdDate: now,
-    //     createBy: 'system',
-    //     orderInfo: `Refund for cancelled order ${event.orderId}`,
-    //   });
-    //
-    //   if (!refundResult.success) {
-    //     // Increment refundRetryCount and leave in `refund_pending`.
-    //     // A future PaymentRefundRetryTask (Phase 8.8) can retry these rows.
-    //     this.logger.warn(`VNPay refund failed for txn=${txn.id}: ${refundResult.message}`);
-    //     return;
-    //   }
-    //
+    // VNPayService.requestRefund() makes a real signed HTTP call when
+    // VNPAY_REFUND_ENABLED=true, and returns a deterministic simulated success
+    // when disabled (sandbox). Transport/provider failures come back as
+    // { success: false } rather than throwing.
     // -------------------------------------------------------------------------
-    this.logger.log(
-      `[STUB] VNPay Refund API call for txn=${txn.id} amount=${txn.amount} — ` +
-        `treating as success (sandbox limitation).`,
-    );
+    const refundResult = await this.vnpayService.requestRefund({
+      txnRef: txn.id,
+      providerTxnId: txn.providerTxnId,
+      amount: txn.amount,
+      transactionDate: txn.paidAt,
+      ipAddr: '127.0.0.1',
+      orderInfo: `Refund for cancelled order ${event.orderId}`,
+      createBy: 'system',
+    });
+
+    if (!refundResult.success) {
+      // Refund call failed. Leave the row in `refund_pending` and increment the
+      // retry counter so a future PaymentRefundRetryTask can re-drive it. Once
+      // the configured max is exceeded the row stays parked for manual action.
+      const attempts = (pending.refundRetryCount ?? 0) + 1;
+      await this.txnRepo.updateStatus(
+        txn.id,
+        'refund_pending',
+        pending.version,
+        { refundRetryCount: attempts },
+      );
+
+      const exhausted = attempts >= this.config.refundMaxRetries;
+      this.logger.error(
+        `VNPay refund failed for txn=${txn.id} orderId=${event.orderId} ` +
+          `(attempt ${attempts}/${this.config.refundMaxRetries}): ${refundResult.message}. ` +
+          (exhausted
+            ? 'Max retries reached — parked in refund_pending for manual intervention.'
+            : 'Will be retried by PaymentRefundRetryTask.'),
+      );
+      return;
+    }
 
     // -------------------------------------------------------------------------
     // Step 6: Transition to `refunded` (optimistic locking, new version).
@@ -212,14 +233,15 @@ export class OrderCancelledAfterPaymentHandler implements IEventHandler<OrderCan
       // Extremely unlikely: another process modified the row between steps 4 and 6.
       // Leave in `refund_pending`; a future retry task can recover.
       this.logger.error(
-        `Failed to transition txn=${txn.id} to refunded after successful stub. ` +
+        `Failed to transition txn=${txn.id} to refunded after a successful refund call. ` +
           `Leaving in refund_pending for manual recovery.`,
       );
       return;
     }
 
     this.logger.log(
-      `Refund COMPLETE (stub): txn=${txn.id} orderId=${event.orderId} amount=${txn.amount} → refunded.`,
+      `Refund COMPLETE${refundResult.simulated ? ' (simulated)' : ''}: ` +
+        `txn=${txn.id} orderId=${event.orderId} amount=${txn.amount} → refunded.`,
     );
   }
 }

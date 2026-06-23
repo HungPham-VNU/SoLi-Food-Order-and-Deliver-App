@@ -23,6 +23,8 @@
     "test:e2e": "tsx test/setup/prepare-local-e2e-db.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --forceExit --detectOpenHandles",
     "test:e2e:local": "pnpm run test:e2e",
     "typecheck": "tsc --noEmit",
+    "openapi:export": "tsx scripts/export-openapi.ts openapi/api-spec.baseline.json",
+    "openapi:check": "tsx scripts/export-openapi.ts openapi/api-spec.current.json",
     "db:generate": "drizzle-kit generate",
     "db:extensions": "tsx src/drizzle/ensure-extensions.ts",
     "db:migrate": "pnpm run db:extensions && drizzle-kit migrate",

@@ -1,7 +1,9 @@
 import { OrderCancelledAfterPaymentHandler } from './order-cancelled-after-payment.handler';
 import { PaymentTransactionRepository } from '../repositories/payment-transaction.repository';
+import { VNPayService } from '../services/vnpay.service';
 import { OrderCancelledAfterPaymentEvent } from '@/shared/events/order-cancelled-after-payment.event';
 import type { PaymentTransaction } from '../domain/payment-transaction.schema';
+import type { VNPayConfig } from '@/config/vnpay.config';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -56,9 +58,22 @@ function buildHandler() {
     updateStatus: jest.fn(),
   } as unknown as PaymentTransactionRepository;
 
-  const handler = new OrderCancelledAfterPaymentHandler(txnRepo);
+  // Default: refund succeeds (simulated). Individual tests can override.
+  const vnpayService = {
+    requestRefund: jest
+      .fn()
+      .mockResolvedValue({ success: true, simulated: true, message: 'ok' }),
+  } as unknown as VNPayService;
 
-  return { handler, txnRepo };
+  const config = { refundMaxRetries: 5 } as unknown as VNPayConfig;
+
+  const handler = new OrderCancelledAfterPaymentHandler(
+    txnRepo,
+    vnpayService,
+    config,
+  );
+
+  return { handler, txnRepo, vnpayService };
 }
 
 // ---------------------------------------------------------------------------

@@ -145,6 +145,27 @@ const baseEnvSchema = z.object({
     .default('uitfood://payment/vnpay-return'),
 
   // ---------------------------------------------------------------------------
+  // VNPay Refund / Merchant Web API (Phase 0)
+  //
+  // VNPAY_REFUND_ENABLED gates the real refund HTTP call. The sandbox does not
+  // reliably support the Refund API, so this defaults to OFF: refunds are
+  // simulated deterministically (state machine still advances) without calling
+  // VNPay. Set to true only against a production merchant account.
+  // ---------------------------------------------------------------------------
+  VNPAY_REFUND_ENABLED: stringToBoolean(false),
+  VNPAY_API_URL: z
+    .string()
+    .url(
+      'VNPAY_API_URL must be a valid URL (VNPay Merchant Web API transaction endpoint)',
+    )
+    .default(
+      'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction',
+    ),
+  // Max automatic retry attempts for a refund left in refund_pending before it
+  // is parked for manual intervention.
+  VNPAY_REFUND_MAX_RETRIES: z.coerce.number().int().positive().default(5),
+
+  // ---------------------------------------------------------------------------
   // Cloudinary — required for signed uploads
   // ---------------------------------------------------------------------------
   CLOUDINARY_CLOUD_NAME: z

@@ -1,8 +1,10 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer, Logger } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import type { Env } from './config/env.schema';
+import { isDevOrTestEnv } from './lib/environment';
 import { DatabaseModule } from './drizzle/drizzle.module';
 import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { auth } from './lib/auth';
@@ -59,7 +61,25 @@ import { ObservabilityInterceptor } from './observability/observability.intercep
   ],
 })
 export class AppModule implements NestModule {
+  private readonly logger = new Logger(AppModule.name);
+
+  constructor(private readonly config: ConfigService<Env, true>) {}
+
   configure(consumer: MiddlewareConsumer) {
+    const nodeEnv = this.config.get('NODE_ENV', { infer: true });
+
+    // SECURITY (Phase 0): only register the synthetic-auth middleware in the
+    // dev/test allowlist. In production (or any unrecognized env) the
+    // middleware is never wired into the request pipeline at all, so the
+    // x-test-user-id header has no effect. The middleware additionally
+    // self-guards (see DevTestUserMiddleware) as defense-in-depth.
+    if (!isDevOrTestEnv(nodeEnv)) {
+      this.logger.log(
+        `DevTestUserMiddleware not registered (NODE_ENV=${nodeEnv ?? '(unset)'}).`,
+      );
+      return;
+    }
+
     // DEV / TEST ONLY: populate req.user from x-test-user-id header
     consumer.apply(DevTestUserMiddleware).forRoutes('*');
   }

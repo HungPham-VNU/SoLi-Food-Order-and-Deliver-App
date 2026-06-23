@@ -46,6 +46,26 @@ export const vnpayConfig = registerAs('vnpay', () => ({
     process.env['PAYMENT_SESSION_TIMEOUT_SECONDS'] ?? '1800',
     10,
   ),
+
+  /**
+   * Whether to perform the real VNPay Refund API HTTP call. When false
+   * (default — sandbox cannot refund) the refund is simulated deterministically.
+   * Parsed from the string env var; only '1'/'true'/'yes' enable it.
+   */
+  refundEnabled: ['1', 'true', 'yes'].includes(
+    (process.env['VNPAY_REFUND_ENABLED'] ?? 'false').trim().toLowerCase(),
+  ),
+
+  /** VNPay Merchant Web API endpoint used for refund (and query) requests. */
+  apiUrl:
+    process.env['VNPAY_API_URL'] ??
+    'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction',
+
+  /** Max automatic refund retries before parking for manual intervention. */
+  refundMaxRetries: parseInt(
+    process.env['VNPAY_REFUND_MAX_RETRIES'] ?? '5',
+    10,
+  ),
 }));
 
 /** Strongly-typed VNPay config shape. */
