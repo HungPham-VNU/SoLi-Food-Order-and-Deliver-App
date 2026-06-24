@@ -10,12 +10,15 @@ export const cloudinaryProvider = {
     const apiKey = configService.get<string>('CLOUDINARY_API_KEY');
     const apiSecret = configService.get<string>('CLOUDINARY_API_SECRET');
     const nodeEnv = configService.get<string>('NODE_ENV');
+    const legacyRoutesEnabled = configService.get<boolean>(
+      'LEGACY_MEDIA_ROUTES_ENABLED',
+    );
 
     if (cloudName === 'STUB_CLOUD' || !cloudName || !apiKey || !apiSecret) {
       const logger = new Logger('CloudinaryProvider');
-      if (nodeEnv === 'test') {
+      if (nodeEnv === 'test' || !legacyRoutesEnabled) {
         logger.warn(
-          'Cloudinary credentials are missing or using STUB values. Image uploads will fail.',
+          'Legacy Cloudinary credentials are unavailable; legacy Media routes must remain disabled.',
         );
       } else {
         // Still throw in production if for some reason schema defaults were bypassed

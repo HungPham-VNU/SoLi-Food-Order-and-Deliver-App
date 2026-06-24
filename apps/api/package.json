@@ -46,6 +46,7 @@
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.21",
     "@nestjs/cqrs": "^11.0.3",
+    "@nestjs/microservices": "^11.1.21",
     "@nestjs/mapped-types": "^2.1.1",
     "@nestjs/platform-express": "^11.1.21",
     "@nestjs/platform-socket.io": "^11.1.21",

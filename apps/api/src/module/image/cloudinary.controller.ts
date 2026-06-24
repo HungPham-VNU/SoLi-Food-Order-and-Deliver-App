@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -12,10 +12,12 @@ import {
   CloudinarySignatureQueryDto,
   CloudinarySignatureResponseDto,
 } from './dto/cloudinary.dto';
+import { LegacyMediaRouteGuard } from './legacy-media-route.guard';
 
 @ApiTags('Cloudinary')
 @ApiBearerAuth()
 @Controller('cloudinary')
+@UseGuards(LegacyMediaRouteGuard)
 export class CloudinaryController {
   constructor(private readonly cloudinaryService: CloudinaryService) {}
 

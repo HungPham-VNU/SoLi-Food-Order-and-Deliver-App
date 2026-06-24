@@ -5,7 +5,7 @@ import { RestaurantService } from './restaurant.service';
 import { RestaurantRepository } from './restaurant.repository';
 import { DatabaseModule } from '@/drizzle/drizzle.module';
 import { OutboxModule } from '@/messaging/outbox/outbox.module';
-import { ImageModule } from '@/module/image/image.module';
+import { MediaClientModule } from '@/integration/media/media-client.module';
 import { AiSearchIndexModule } from '@/module/restaurant-catalog/search/indexing/ai-search-index.module';
 import { IdentityModule } from '@/module/auth/identity.module';
 import { RESTAURANT_ACCESS_PORT } from '@/shared/ports/restaurant-access.port';
@@ -15,7 +15,7 @@ import { RESTAURANT_ACCESS_PORT } from '@/shared/ports/restaurant-access.port';
     DatabaseModule,
     OutboxModule,
     CqrsModule,
-    ImageModule,
+    MediaClientModule,
     AiSearchIndexModule,
     IdentityModule,
   ],

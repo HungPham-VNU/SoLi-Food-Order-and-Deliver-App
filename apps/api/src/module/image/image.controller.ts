@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import {
   ApiBearerAuth,
@@ -16,10 +16,12 @@ import {
   ImageResponseDto,
   PaginationQueryDto,
 } from './dto/image.dto';
+import { LegacyMediaRouteGuard } from './legacy-media-route.guard';
 
 @ApiTags('Images')
 @ApiBearerAuth()
 @Controller('images')
+@UseGuards(LegacyMediaRouteGuard)
 export class ImageController {
   constructor(private readonly service: ImageService) {}
 

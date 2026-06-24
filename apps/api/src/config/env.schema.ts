@@ -120,6 +120,16 @@ const baseEnvSchema = z.object({
   RABBITMQ_PREFETCH: z.coerce.number().int().positive().default(10),
 
   // ---------------------------------------------------------------------------
+  // Media service TCP RPC and rollback controls (Phase 3)
+  // ---------------------------------------------------------------------------
+  MEDIA_TCP_HOST: z.string().min(1).default('localhost'),
+  MEDIA_TCP_PORT: z.coerce.number().int().positive().default(4001),
+  MEDIA_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(2000),
+  MEDIA_RPC_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(3).default(2),
+  MEDIA_RPC_REQUIRED: stringToBoolean(false),
+  LEGACY_MEDIA_ROUTES_ENABLED: stringToBoolean(true),
+
+  // ---------------------------------------------------------------------------
   // VNPay — all four are required; no defaults (production payment credentials)
   // ---------------------------------------------------------------------------
   VNPAY_TMN_CODE: z
@@ -168,9 +178,7 @@ const baseEnvSchema = z.object({
     .url(
       'VNPAY_API_URL must be a valid URL (VNPay Merchant Web API transaction endpoint)',
     )
-    .default(
-      'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction',
-    ),
+    .default('https://sandbox.vnpayment.vn/merchant_webapi/api/transaction'),
   // Max automatic retry attempts for a refund left in refund_pending before it
   // is parked for manual intervention.
   VNPAY_REFUND_MAX_RETRIES: z.coerce.number().int().positive().default(5),

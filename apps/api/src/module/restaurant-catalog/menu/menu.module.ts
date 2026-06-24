@@ -6,7 +6,7 @@ import { MenuRepository } from './menu.repository';
 import { DatabaseModule } from '@/drizzle/drizzle.module';
 import { OutboxModule } from '@/messaging/outbox/outbox.module';
 import { RestaurantModule } from '@/module/restaurant-catalog/restaurant/restaurant.module';
-import { ImageModule } from '@/module/image/image.module';
+import { MediaClientModule } from '@/integration/media/media-client.module';
 import { AiSearchIndexModule } from '@/module/restaurant-catalog/search/indexing/ai-search-index.module';
 
 /**
@@ -19,7 +19,7 @@ import { AiSearchIndexModule } from '@/module/restaurant-catalog/search/indexing
     DatabaseModule,
     OutboxModule,
     RestaurantModule,
-    ImageModule,
+    MediaClientModule,
     CqrsModule,
     AiSearchIndexModule,
   ],

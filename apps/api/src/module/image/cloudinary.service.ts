@@ -44,7 +44,14 @@ export class CloudinaryService {
     const apiKey = this.configService.get<string>('CLOUDINARY_API_KEY');
     const apiSecret = this.configService.get<string>('CLOUDINARY_API_SECRET');
 
-    if (!cloudName || !apiKey || !apiSecret) {
+    if (
+      !cloudName ||
+      !apiKey ||
+      !apiSecret ||
+      cloudName === 'STUB_CLOUD' ||
+      apiKey === 'STUB_KEY' ||
+      apiSecret === 'STUB_SECRET'
+    ) {
       throw new InternalServerErrorException(
         'Cloudinary configuration is missing.',
       );
