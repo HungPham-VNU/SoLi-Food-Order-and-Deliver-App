@@ -1,0 +1,2 @@
+export const MEDIA_DATABASE = Symbol('MEDIA_DATABASE');
+export const MEDIA_DATABASE_POOL = Symbol('MEDIA_DATABASE_POOL');
