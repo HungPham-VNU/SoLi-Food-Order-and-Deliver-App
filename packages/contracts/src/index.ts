@@ -16,6 +16,7 @@ import {
 
 export * from './envelope';
 export * from './event-names';
+export * from './media';
 export * from './events/review';
 export * from './events/ordering';
 export * from './events/payment';
