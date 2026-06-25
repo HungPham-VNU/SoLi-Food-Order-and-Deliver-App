@@ -11,6 +11,7 @@ import { firstValueFrom } from 'rxjs';
 import { Pool } from 'pg';
 import {
   MEDIA_RPC_PATTERNS,
+  signInternalJwt,
   type ImageRecord,
   type ListImagesResponse,
   type UploadSignatureResponse,
@@ -38,12 +39,24 @@ describe('Media TCP RPC', () => {
   let client: ClientProxy;
   let pool: Pool;
   const createdIds: string[] = [];
+  const internalAuth = () =>
+    signInternalJwt({
+      issuer: 'uitfood-gateway',
+      subject: 'user:e2e',
+      audience: 'media',
+      roles: ['admin'],
+      secret: process.env.INTERNAL_AUTH_JWT_SECRET!,
+      correlationId: randomUUID(),
+      ttlSeconds: 60,
+    });
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     process.env.CLOUDINARY_CLOUD_NAME = 'test-cloud';
     process.env.CLOUDINARY_API_KEY = 'test-key';
     process.env.CLOUDINARY_API_SECRET = 'test-secret';
+    process.env.INTERNAL_AUTH_JWT_SECRET =
+      'internal_auth_secret_for_local_dev_only_32_chars';
     const port = await freePort();
 
     service = await NestFactory.createMicroservice(AppModule, {
@@ -74,6 +87,7 @@ describe('Media TCP RPC', () => {
   it('creates once when an idempotent request is retried', async () => {
     const suffix = randomUUID();
     const request = {
+      internalAuth: internalAuth(),
       idempotencyKey: `e2e:${suffix}`,
       image: {
         publicId: `e2e/${suffix}`,
@@ -101,6 +115,7 @@ describe('Media TCP RPC', () => {
     );
     const signature = await firstValueFrom<UploadSignatureResponse>(
       client.send(MEDIA_RPC_PATTERNS.createUploadSignature, {
+        internalAuth: internalAuth(),
         folder: 'e2e-images',
       }),
     );

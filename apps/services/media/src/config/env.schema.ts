@@ -9,6 +9,13 @@ const schema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string().trim().min(1),
   CLOUDINARY_API_KEY: z.string().trim().min(1),
   CLOUDINARY_API_SECRET: z.string().trim().min(1),
+  INTERNAL_AUTH_JWT_SECRET: z
+    .string()
+    .min(32)
+    .default('internal_auth_secret_for_local_dev_only_32_chars'),
+  INTERNAL_AUTH_TRUSTED_ISSUERS: z
+    .string()
+    .default('uitfood-gateway,uitfood-api'),
 });
 
 export type Env = z.infer<typeof schema>;

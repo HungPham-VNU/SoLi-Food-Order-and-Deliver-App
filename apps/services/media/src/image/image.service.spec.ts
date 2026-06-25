@@ -38,6 +38,7 @@ describe('ImageService', () => {
   it('passes the idempotency key and metadata to the repository', async () => {
     const { service, repository } = createService();
     const input = {
+      internalAuth: 'jwt',
       idempotencyKey: 'image:test-key',
       image: {
         publicId: image.publicId,

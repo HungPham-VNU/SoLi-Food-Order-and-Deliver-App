@@ -10,6 +10,7 @@ import {
   type ListImagesRequest,
 } from '@uitfood/contracts';
 import { CloudinaryService } from '@/cloudinary/cloudinary.service';
+import { InternalAuthService } from '@/auth/internal-auth.service';
 import { ImageService } from '@/image/image.service';
 import { asMediaRpcException } from './media-rpc.errors';
 
@@ -18,6 +19,7 @@ export class MediaRpcController {
   constructor(
     private readonly images: ImageService,
     private readonly cloudinary: CloudinaryService,
+    private readonly internalAuth: InternalAuthService,
   ) {}
 
   @MessagePattern(MEDIA_RPC_PATTERNS.listImages)
@@ -32,7 +34,9 @@ export class MediaRpcController {
   @MessagePattern(MEDIA_RPC_PATTERNS.createImage)
   async createImage(@Payload() payload: CreateImageRequest) {
     try {
-      return await this.images.create(createImageRequestSchema.parse(payload));
+      const input = createImageRequestSchema.parse(payload);
+      this.internalAuth.verifyMediaToken(input.internalAuth);
+      return await this.images.create(input);
     } catch (error) {
       throw asMediaRpcException(error);
     }
@@ -42,6 +46,7 @@ export class MediaRpcController {
   createUploadSignature(@Payload() payload: CreateUploadSignatureRequest) {
     try {
       const input = createUploadSignatureRequestSchema.parse(payload);
+      this.internalAuth.verifyMediaToken(input.internalAuth);
       return this.cloudinary.getUploadSignature(input.folder);
     } catch (error) {
       throw asMediaRpcException(error);
