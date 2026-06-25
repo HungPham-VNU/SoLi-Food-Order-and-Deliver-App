@@ -2,10 +2,11 @@
 # production.auto.tfvars is ignored by git and is loaded automatically by Terraform
 # when you run terraform plan/apply from this directory.
 
-api_image_tag     = "sha-replace-me"
-web_image_tag     = "sha-replace-me"
-gateway_image_tag = "sha-replace-me"
-media_image_tag   = "sha-replace-me"
+api_image_tag          = "sha-replace-me"
+web_image_tag          = "sha-replace-me"
+gateway_image_tag      = "sha-replace-me"
+media_image_tag        = "sha-replace-me"
+notification_image_tag = "sha-replace-me"
 
 api_health_check_path     = "/api/ready"
 web_health_check_path     = "/healthz"
@@ -29,11 +30,33 @@ gateway_cors_origins = "https://app.example.com,https://admin.example.com"
 # after target-to-source synchronization reports matching hashes.
 media_routes_enabled        = false
 legacy_media_routes_enabled = true
+notification_routes_enabled         = false
+legacy_notification_routes_enabled  = true
+legacy_notification_runtime_enabled = true
+
+notification_keyvalue_plan              = "starter"
+notification_keyvalue_max_memory_policy = "allkeys_lru"
 
 media_env_vars = {
   CLOUDINARY_CLOUD_NAME = "replace-me"
   CLOUDINARY_API_KEY    = "replace-me"
   CLOUDINARY_API_SECRET = "replace-me"
+}
+
+notification_env_vars = {
+  RABBITMQ_URL                  = "amqps://replace-me"
+  RABBITMQ_EXCHANGE             = "uitfood.domain-events"
+  IDENTITY_TCP_HOST             = "replace-me"
+  IDENTITY_TCP_PORT             = "10004"
+  INTERNAL_AUTH_JWT_SECRET      = "replace-me"
+  INTERNAL_AUTH_TRUSTED_ISSUERS = "uitfood-gateway"
+  CORS_ORIGIN                   = "https://app.example.com,https://admin.example.com"
+  SMTP_HOST                     = "replace-me"
+  SMTP_PORT                     = "587"
+  SMTP_USER                     = "replace-me"
+  SMTP_PASS                     = "replace-me"
+  SMTP_FROM                     = "noreply@example.com"
+  FIREBASE_SERVICE_ACCOUNT_PATH = "/etc/secrets/firebase-service-account.json"
 }
 
 api_env_vars = {

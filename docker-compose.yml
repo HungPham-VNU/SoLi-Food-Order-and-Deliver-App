@@ -1,7 +1,7 @@
 services:
   postgres:
     image: pgvector/pgvector:0.8.2-pg18-trixie
-    container_name: food_order_db
+    container_name: uitfoodms_db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
@@ -9,24 +9,24 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - food_order_db:/var/lib/postgresql
+      - uitfoodms_db:/var/lib/postgresql
       - ./infra/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/01-init-test-db.sql:ro
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    container_name: food_order_redis
+    container_name: uitfoodms_redis
     ports:
       - '6379:6379'
     volumes:
-      - food_order_redis:/data
+      - uitfoodms_redis:/data
     restart: unless-stopped
     command: redis-server --save 60 1 --loglevel warning
 
   rabbitmq:
     # -management-alpine ships the management plugin + rabbitmq-diagnostics.
     image: rabbitmq:3.13-management-alpine
-    container_name: food_order_rabbitmq
+    container_name: uitfoodms_rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?RABBITMQ_USER is required}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:?RABBITMQ_PASS is required}
@@ -35,7 +35,7 @@ services:
       - '5672:5672' # AMQP
       - '15672:15672' # Management UI (http://localhost:15672)
     volumes:
-      - food_order_rabbitmq:/var/lib/rabbitmq
+      - uitfoodms_rabbitmq:/var/lib/rabbitmq
     healthcheck:
       test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
       interval: 10s
@@ -44,9 +44,9 @@ services:
     restart: unless-stopped
 
 volumes:
-  food_order_db:
+  uitfoodms_db:
     driver: local
-  food_order_redis:
+  uitfoodms_redis:
     driver: local
-  food_order_rabbitmq:
+  uitfoodms_rabbitmq:
     driver: local

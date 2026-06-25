@@ -29,6 +29,12 @@ locals {
       LEGACY_MEDIA_ROUTES_ENABLED = {
         value = tostring(var.legacy_media_routes_enabled)
       }
+      LEGACY_NOTIFICATION_ROUTES_ENABLED = {
+        value = tostring(var.legacy_notification_routes_enabled)
+      }
+      LEGACY_NOTIFICATION_RUNTIME_ENABLED = {
+        value = tostring(var.legacy_notification_runtime_enabled)
+      }
     },
     {
       for key, value in var.api_env_vars : key => {
@@ -69,6 +75,21 @@ locals {
       MEDIA_RPC_TIMEOUT_MS = {
         value = tostring(var.media_rpc_timeout_ms)
       }
+      NOTIFICATION_ROUTES_ENABLED = {
+        value = tostring(var.notification_routes_enabled)
+      }
+      NOTIFICATION_TCP_HOST = {
+        value = coalesce(trimspace(var.notification_tcp_host), render_private_service.notification.slug)
+      }
+      NOTIFICATION_TCP_PORT = {
+        value = tostring(var.notification_tcp_port)
+      }
+      NOTIFICATION_MANAGEMENT_PORT = {
+        value = tostring(var.notification_management_port)
+      }
+      NOTIFICATION_RPC_TIMEOUT_MS = {
+        value = tostring(var.notification_rpc_timeout_ms)
+      }
       GATEWAY_AUTH_TIMEOUT_MS = {
         value = tostring(var.gateway_auth_timeout_ms)
       }
@@ -106,6 +127,33 @@ locals {
       }
     }
   )
+  notification_env_vars = merge(
+    {
+      DATABASE_URL = {
+        value = render_postgres.notification.connection_info.internal_connection_string
+      }
+      REDIS_URL = {
+        value = render_keyvalue.notification.connection_info.internal_connection_string
+      }
+      NODE_ENV = {
+        value = "production"
+      }
+      APP_ENV = {
+        value = var.environment
+      }
+      NOTIFICATION_TCP_PORT = {
+        value = tostring(var.notification_tcp_port)
+      }
+      NOTIFICATION_MANAGEMENT_PORT = {
+        value = tostring(var.notification_management_port)
+      }
+    },
+    {
+      for key, value in var.notification_env_vars : key => {
+        value = value
+      }
+    }
+  )
 }
 
 resource "render_postgres" "main" {
@@ -130,6 +178,28 @@ resource "render_postgres" "media" {
   environment_id = var.project_environment_id
 
   ip_allow_list = var.postgres_ip_allow_list
+}
+
+resource "render_postgres" "notification" {
+  name           = var.notification_postgres_name
+  plan           = var.notification_postgres_plan
+  region         = var.region
+  version        = var.postgres_version
+  database_name  = var.notification_postgres_database_name
+  database_user  = var.notification_postgres_database_user
+  environment_id = var.project_environment_id
+
+  ip_allow_list = var.postgres_ip_allow_list
+}
+
+resource "render_keyvalue" "notification" {
+  name              = var.notification_keyvalue_name
+  plan              = var.notification_keyvalue_plan
+  region            = var.region
+  max_memory_policy = var.notification_keyvalue_max_memory_policy
+  environment_id    = var.project_environment_id
+
+  ip_allow_list = var.notification_keyvalue_ip_allow_list
 }
 
 resource "render_web_service" "api" {
@@ -196,6 +266,28 @@ resource "render_private_service" "media" {
   }
 
   env_vars = local.media_env_vars
+
+  lifecycle {
+    ignore_changes = [
+      secret_files,
+    ]
+  }
+}
+
+resource "render_private_service" "notification" {
+  name           = var.notification_service_name
+  plan           = var.notification_service_plan
+  region         = var.region
+  environment_id = var.project_environment_id
+
+  runtime_source = {
+    image = {
+      image_url = var.notification_image_url
+      tag       = var.notification_image_tag
+    }
+  }
+
+  env_vars = local.notification_env_vars
 
   lifecycle {
     ignore_changes = [

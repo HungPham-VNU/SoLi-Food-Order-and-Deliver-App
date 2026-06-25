@@ -4,9 +4,9 @@
 -- This script runs once via /docker-entrypoint-initdb.d/ and is idempotent:
 -- the SELECT guard prevents an error if the database already exists.
 
-SELECT 'CREATE DATABASE food_order_test'
+SELECT 'CREATE DATABASE uitfoodms_test'
 WHERE NOT EXISTS (
-    SELECT FROM pg_database WHERE datname = 'food_order_test'
+    SELECT FROM pg_database WHERE datname = 'uitfoodms_test'
 )\gexec
 
 -- Use a non-superuser credential for the legacy API in local Compose so the
@@ -49,8 +49,23 @@ WHERE NOT EXISTS (
 REVOKE ALL ON DATABASE uitfood_identity FROM PUBLIC;
 GRANT CONNECT, TEMPORARY ON DATABASE uitfood_identity TO uitfood_identity;
 
--- Grant the default user full access to the test database.
-GRANT ALL PRIVILEGES ON DATABASE food_order_test TO food_order;
+-- Phase 5: a separate logical database and credential for the Notification service.
+-- The legacy API credential is deliberately not granted access.
+SELECT 'CREATE ROLE uitfood_notification LOGIN PASSWORD ''notification_secret'''
+WHERE NOT EXISTS (
+    SELECT FROM pg_roles WHERE rolname = 'uitfood_notification'
+)\gexec
+
+SELECT 'CREATE DATABASE uitfood_notification OWNER uitfood_notification'
+WHERE NOT EXISTS (
+    SELECT FROM pg_database WHERE datname = 'uitfood_notification'
+)\gexec
+
+REVOKE ALL ON DATABASE uitfood_notification FROM PUBLIC;
+GRANT CONNECT, TEMPORARY ON DATABASE uitfood_notification TO uitfood_notification;
+
+-- Grant the default Compose user full access to the test database.
+SELECT format('GRANT ALL PRIVILEGES ON DATABASE %I TO %I', 'uitfoodms_test', current_user)\gexec
 
 -- Install extensions that search and semantic search require in the main DB.
 CREATE EXTENSION IF NOT EXISTS unaccent  WITH SCHEMA public;
@@ -58,7 +73,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm   WITH SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS vector    WITH SCHEMA public;
 
 -- \connect switches context so the extensions are also created inside the test DB.
-\connect food_order_test
+\connect uitfoodms_test
 
 CREATE EXTENSION IF NOT EXISTS unaccent  WITH SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS pg_trgm   WITH SCHEMA public;

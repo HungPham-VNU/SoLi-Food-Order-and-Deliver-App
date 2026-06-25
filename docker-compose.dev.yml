@@ -16,15 +16,15 @@
 services:
   postgres:
     image: pgvector/pgvector:0.8.2-pg18-trixie
-    container_name: food_order_db
+    container_name: uitfoodms_db
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-food_order}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-foodordersecret}
-      POSTGRES_DB: ${POSTGRES_DB:-food_order_db}
+      POSTGRES_USER: ${POSTGRES_USER:-uitfoodms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-uitfoodmssecret}
+      POSTGRES_DB: ${POSTGRES_DB:-uitfoodms}
     ports:
       - '5432:5432'
     volumes:
-      - food_order_db:/var/lib/postgresql
+      - uitfoodms_db:/var/lib/postgresql
       - ./infra/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/01-init-test-db.sql:ro
     healthcheck:
       # $$VAR is expanded by the container shell, not by Compose.
@@ -36,11 +36,26 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: food_order_redis
+    container_name: uitfoodms_redis
     ports:
       - '6379:6379'
     volumes:
-      - food_order_redis:/data
+      - uitfoodms_redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+
+  notification-redis:
+    image: redis:7-alpine
+    container_name: uitfoodms_notification_redis
+    ports:
+      - '6380:6379'
+    volumes:
+      - uitfoodms_notification_redis:/data
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
@@ -51,7 +66,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
-    container_name: food_order_rabbitmq
+    container_name: uitfoodms_rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
@@ -60,7 +75,7 @@ services:
       - '5672:5672'
       - '15672:15672'
     volumes:
-      - food_order_rabbitmq:/var/lib/rabbitmq
+      - uitfoodms_rabbitmq:/var/lib/rabbitmq
     healthcheck:
       test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
       interval: 10s
@@ -72,7 +87,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile.dev
-    container_name: food_order_api_dev
+    container_name: uitfoodms_api_dev
     volumes:
       - .:/app
       # Named volumes shadow the bind-mount for node_modules so the
@@ -81,7 +96,7 @@ services:
       - api_nm_app:/app/apps/api/node_modules
     environment:
       # Override localhost references so the API reaches the compose services.
-      DATABASE_URL: postgresql://uitfood_api:api_secret@postgres:5432/${POSTGRES_DB:-food_order_db}
+      DATABASE_URL: postgresql://uitfood_api:api_secret@postgres:5432/${POSTGRES_DB:-uitfoodms}
       REDIS_URL: redis://redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -94,6 +109,8 @@ services:
       IDENTITY_TCP_PORT: 4011
       IDENTITY_RPC_ENABLED: 'true'
       IDENTITY_RPC_REQUIRED: 'true'
+      LEGACY_NOTIFICATION_ROUTES_ENABLED: 'false'
+      LEGACY_NOTIFICATION_RUNTIME_ENABLED: 'false'
       INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
       INTERNAL_AUTH_JWT_ISSUER: uitfood-api
       LEGACY_MEDIA_ROUTES_ENABLED: 'true'
@@ -118,13 +135,15 @@ services:
         condition: service_started
       identity:
         condition: service_started
+      notification:
+        condition: service_started
     restart: unless-stopped
 
   identity:
     build:
       context: .
       dockerfile: apps/services/identity/Dockerfile.dev
-    container_name: food_order_identity_dev
+    container_name: uitfoodms_identity_dev
     volumes:
       - .:/app
       - identity_nm_root:/app/node_modules
@@ -149,7 +168,7 @@ services:
     build:
       context: .
       dockerfile: apps/services/media/Dockerfile.dev
-    container_name: food_order_media_dev
+    container_name: uitfoodms_media_dev
     volumes:
       - .:/app
       - media_nm_root:/app/node_modules
@@ -173,11 +192,57 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  notification:
+    build:
+      context: .
+      dockerfile: apps/services/notification/Dockerfile.dev
+    container_name: uitfoodms_notification_dev
+    volumes:
+      - .:/app
+      - notification_nm_root:/app/node_modules
+      - notification_nm_app:/app/apps/services/notification/node_modules
+    environment:
+      DATABASE_URL: postgresql://uitfood_notification:notification_secret@postgres:5432/uitfood_notification
+      REDIS_URL: redis://notification-redis:6379
+      REDIS_HOST: notification-redis
+      REDIS_PORT: 6379
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672${RABBITMQ_VHOST:+/}${RABBITMQ_VHOST:-}
+      RABBITMQ_EXCHANGE: uitfood.domain-events
+      NOTIFICATION_TCP_PORT: 4021
+      NOTIFICATION_MANAGEMENT_PORT: 4022
+      IDENTITY_TCP_HOST: identity
+      IDENTITY_TCP_PORT: 4011
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway
+      CORS_ORIGIN: http://localhost:5173,http://localhost:5174
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@soli.dev}
+      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
+      CHOKIDAR_USEPOLLING: 'true'
+    command: sh -c "pnpm --filter @uitfood/contracts build && pnpm run db:migrate && pnpm run dev"
+    ports:
+      - '4021:4021'
+      - '4022:4022'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      notification-redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      identity:
+        condition: service_started
+    restart: unless-stopped
+
   gateway:
     build:
       context: .
       dockerfile: apps/gateway/Dockerfile.dev
-    container_name: food_order_gateway_dev
+    container_name: uitfoodms_gateway_dev
     volumes:
       - .:/app
       - gateway_nm_root:/app/node_modules
@@ -192,6 +257,10 @@ services:
       IDENTITY_TCP_HOST: identity
       IDENTITY_TCP_PORT: 4011
       IDENTITY_MANAGEMENT_PORT: 4012
+      NOTIFICATION_ROUTES_ENABLED: 'true'
+      NOTIFICATION_TCP_HOST: notification
+      NOTIFICATION_TCP_PORT: 4021
+      NOTIFICATION_MANAGEMENT_PORT: 4022
       INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
       INTERNAL_AUTH_JWT_ISSUER: uitfood-gateway
       CHOKIDAR_USEPOLLING: 'true'
@@ -202,13 +271,14 @@ services:
       - api
       - media
       - identity
+      - notification
     restart: unless-stopped
 
   web:
     build:
       context: .
       dockerfile: apps/web/Dockerfile.dev
-    container_name: food_order_web_dev
+    container_name: uitfoodms_web_dev
     volumes:
       - .:/app
       - web_nm_root:/app/node_modules
@@ -227,7 +297,7 @@ services:
     build:
       context: .
       dockerfile: apps/admin/Dockerfile.dev
-    container_name: food_order_admin_dev
+    container_name: uitfoodms_admin_dev
     volumes:
       - .:/app
       - admin_nm_root:/app/node_modules
@@ -241,11 +311,13 @@ services:
     restart: unless-stopped
 
 volumes:
-  food_order_db:
+  uitfoodms_db:
     driver: local
-  food_order_redis:
+  uitfoodms_redis:
     driver: local
-  food_order_rabbitmq:
+  uitfoodms_notification_redis:
+    driver: local
+  uitfoodms_rabbitmq:
     driver: local
   api_nm_root:
   api_nm_app:
@@ -257,5 +329,7 @@ volumes:
   media_nm_app:
   identity_nm_root:
   identity_nm_app:
+  notification_nm_root:
+  notification_nm_app:
   gateway_nm_root:
   gateway_nm_app:
