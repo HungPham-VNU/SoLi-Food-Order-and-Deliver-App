@@ -10,6 +10,9 @@ import { RestaurantModule } from '@/restaurant/restaurant.module';
 import { ZonesModule } from '@/restaurant/zones/zones.module';
 import { MenuModule } from '@/menu/menu.module';
 import { ModifiersModule } from '@/menu/modifiers/modifiers.module';
+import { NutritionModule } from '@/nutrition/nutrition.module';
+import { SearchModule } from '@/search/search.module';
+import { DietaryTagsModule } from '@/dietary-tags/dietary-tags.module';
 
 /**
  * Catalog service root module — write-path extraction (Phase 6 step 3, half 1).
@@ -29,6 +32,9 @@ import { ModifiersModule } from '@/menu/modifiers/modifiers.module';
     ZonesModule,
     MenuModule,
     ModifiersModule,
+    NutritionModule,
+    SearchModule,
+    DietaryTagsModule,
     ConsumersModule,
   ],
   controllers: [ManagementController],

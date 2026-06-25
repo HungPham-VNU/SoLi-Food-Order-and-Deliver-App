@@ -315,4 +315,12 @@ CREATE INDEX "ai_search_item_ranking_stats_restaurant_idx" ON "ai_search_item_ra
 CREATE INDEX "ai_search_item_ranking_stats_updated_idx" ON "ai_search_item_ranking_stats" USING btree ("updated_at");--> statement-breakpoint
 CREATE INDEX "ai_search_restaurant_ranking_stats_updated_idx" ON "ai_search_restaurant_ranking_stats" USING btree ("updated_at");--> statement-breakpoint
 CREATE INDEX "idx_outbox_due" ON "outbox_events" USING btree ("published_at","next_attempt_at");--> statement-breakpoint
-CREATE INDEX "idx_outbox_aggregate" ON "outbox_events" USING btree ("aggregate_id","aggregate_version");
+CREATE INDEX "idx_outbox_aggregate" ON "outbox_events" USING btree ("aggregate_id","aggregate_version");--> statement-breakpoint
+-- AI search hybrid retrieval indexes (expression + pgvector HNSW). drizzle-kit
+-- cannot express these, so they are appended to the initial migration.
+CREATE INDEX IF NOT EXISTS "menu_items_search_document_fts_idx" ON "menu_items" USING gin (to_tsvector('simple', search_document));--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "restaurants_search_document_fts_idx" ON "restaurants" USING gin (to_tsvector('simple', search_document));--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "menu_items_search_document_trgm_idx" ON "menu_items" USING gin (search_document gin_trgm_ops);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "restaurants_search_document_trgm_idx" ON "restaurants" USING gin (search_document gin_trgm_ops);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "menu_items_embedding_hnsw_idx" ON "menu_items" USING hnsw (embedding vector_cosine_ops);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "restaurants_embedding_hnsw_idx" ON "restaurants" USING hnsw (embedding vector_cosine_ops);

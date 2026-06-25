@@ -75,6 +75,28 @@ const schema = z.object({
     z.string().trim().default(''),
   ),
   AI_SEARCH_ENABLED: stringToBoolean(false),
+  AI_SEARCH_MODEL: z.string().trim().min(1).default('gpt-oss:20b'),
+  AI_SEARCH_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
+  AI_SEARCH_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.65),
+  AI_SEARCH_DAILY_LIMIT_PER_USER: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(100),
+  AI_SEARCH_RANKING_V2_ENABLED: stringToBoolean(false),
+  AI_SEARCH_DIVERSITY_ENABLED: stringToBoolean(true),
+  AI_SEARCH_MAX_ITEMS_PER_RESTAURANT: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(3),
+  AI_SEARCH_RANKING_WEIGHTS: z
+    .string()
+    .trim()
+    .min(1)
+    .default(
+      '{"retrieval":0.35,"nutrition":0.15,"price":0.1,"distance":0.1,"rating":0.1,"popularity":0.1,"freshness":0.05,"availability":0.05}',
+    ),
   AI_SEARCH_EMBEDDING_BASE_URL: z
     .string()
     .trim()

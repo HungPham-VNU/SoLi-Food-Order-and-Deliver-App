@@ -57,13 +57,20 @@ export const CATALOG_RPC_PATTERNS = {
 
   // Search
   search: 'catalog.search.query.v1',
+  searchAi: 'catalog.search.ai.v1',
 
   // Nutrition
   getNutrition: 'catalog.nutrition.get.v1',
+  analyzeNutrition: 'catalog.nutrition.analyze.v1',
+  calculateNutrition: 'catalog.nutrition.calculate.v1',
   upsertNutrition: 'catalog.nutrition.upsert.v1',
 
   // Dietary tags
   listDietaryTags: 'catalog.dietary-tag.list.v1',
+  listAllDietaryTags: 'catalog.dietary-tag.list-all.v1',
+  createDietaryTag: 'catalog.dietary-tag.create.v1',
+  updateDietaryTag: 'catalog.dietary-tag.update.v1',
+  removeDietaryTag: 'catalog.dietary-tag.remove.v1',
 } as const;
 
 export type CatalogRpcPattern =
