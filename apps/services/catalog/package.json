@@ -22,6 +22,7 @@
     "@nestjs/core": "^11.1.21",
     "@nestjs/microservices": "^11.1.21",
     "@nestjs/platform-express": "^11.1.21",
+    "@nestjs/schedule": "^6.1.3",
     "@uitfood/contracts": "workspace:*",
     "amqp-connection-manager": "^4.1.14",
     "amqplib": "^0.10.5",
