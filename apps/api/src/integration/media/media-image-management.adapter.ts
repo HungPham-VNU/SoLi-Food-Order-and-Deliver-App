@@ -15,9 +15,10 @@ import {
   MEDIA_RPC_PATTERNS,
   imageRecordSchema,
   mediaRpcErrorSchema,
+  signInternalJwt,
   type CreateImageRequest,
 } from '@uitfood/contracts';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { Env } from '@/config/env.schema';
 import type { CreateImageDto } from '@/shared/contracts/image.dto';
 import type { IImageManagementPort } from '@/shared/ports/image-management.port';
@@ -46,6 +47,7 @@ export class MediaImageManagementAdapter
 
   async create(input: CreateImageDto): Promise<unknown> {
     const request: CreateImageRequest = {
+      internalAuth: this.signServiceToken(),
       idempotencyKey: `image:${createHash('sha256')
         .update(input.publicId)
         .digest('hex')}`,
@@ -84,6 +86,20 @@ export class MediaImageManagementAdapter
 
     throw new ServiceUnavailableException('Media service is unavailable.', {
       cause: lastError,
+    });
+  }
+
+  private signServiceToken(): string {
+    return signInternalJwt({
+      issuer: this.config.get('INTERNAL_AUTH_JWT_ISSUER', { infer: true }),
+      subject: 'service:api',
+      audience: 'media',
+      roles: ['service'],
+      secret: this.config.get('INTERNAL_AUTH_JWT_SECRET', { infer: true }),
+      correlationId: randomUUID(),
+      ttlSeconds: this.config.get('INTERNAL_AUTH_JWT_TTL_SECONDS', {
+        infer: true,
+      }),
     });
   }
 }

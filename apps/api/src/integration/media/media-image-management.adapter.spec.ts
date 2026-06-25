@@ -25,6 +25,11 @@ function buildAdapter() {
       if (key === 'MEDIA_RPC_REQUIRED') return false;
       if (key === 'MEDIA_RPC_MAX_ATTEMPTS') return 2;
       if (key === 'MEDIA_RPC_TIMEOUT_MS') return 100;
+      if (key === 'INTERNAL_AUTH_JWT_ISSUER') return 'uitfood-api';
+      if (key === 'INTERNAL_AUTH_JWT_SECRET') {
+        return 'internal_auth_secret_for_local_dev_only_32_chars';
+      }
+      if (key === 'INTERNAL_AUTH_JWT_TTL_SECONDS') return 60;
       return undefined;
     }),
   } as unknown as ConfigService;
@@ -43,6 +48,7 @@ describe('MediaImageManagementAdapter', () => {
     expect(client.send).toHaveBeenCalledWith(
       'media.image.create.v1',
       expect.objectContaining({
+        internalAuth: expect.any(String),
         idempotencyKey: `image:${createHash('sha256')
           .update(image.publicId)
           .digest('hex')}`,

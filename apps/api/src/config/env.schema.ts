@@ -128,6 +128,27 @@ const baseEnvSchema = z.object({
   MEDIA_RPC_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(3).default(2),
   MEDIA_RPC_REQUIRED: stringToBoolean(false),
   LEGACY_MEDIA_ROUTES_ENABLED: stringToBoolean(true),
+  INTERNAL_AUTH_JWT_SECRET: z
+    .string()
+    .min(32)
+    .default('internal_auth_secret_for_local_dev_only_32_chars'),
+  INTERNAL_AUTH_JWT_ISSUER: z.string().min(1).default('uitfood-api'),
+  INTERNAL_AUTH_JWT_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(15)
+    .max(300)
+    .default(60),
+
+  // ---------------------------------------------------------------------------
+  // Identity service TCP RPC and cutover controls (Phase 4)
+  // ---------------------------------------------------------------------------
+  IDENTITY_RPC_ENABLED: stringToBoolean(false),
+  IDENTITY_TCP_HOST: z.string().min(1).default('localhost'),
+  IDENTITY_TCP_PORT: z.coerce.number().int().positive().default(4011),
+  IDENTITY_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(3000),
+  IDENTITY_RPC_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(3).default(2),
+  IDENTITY_RPC_REQUIRED: stringToBoolean(false),
 
   // ---------------------------------------------------------------------------
   // VNPay — all four are required; no defaults (production payment credentials)
