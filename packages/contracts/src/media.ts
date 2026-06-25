@@ -29,11 +29,13 @@ export const listImagesResponseSchema = z.object({
 });
 
 export const createImageRequestSchema = z.object({
+  internalAuth: z.string().min(1),
   idempotencyKey: z.string().trim().min(1).max(200),
   image: imageMetadataSchema,
 });
 
 export const createUploadSignatureRequestSchema = z.object({
+  internalAuth: z.string().min(1),
   folder: z.string().max(120).optional(),
 });
 
