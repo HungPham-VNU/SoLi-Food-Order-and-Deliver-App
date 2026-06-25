@@ -1,12 +1,28 @@
 /**
- * Catalog database schema barrel.
+ * Catalog database schema barrel — the single owner of all Catalog tables.
  *
- * Phase 6 step 2 populates this with the extracted Drizzle tables: restaurants,
- * delivery_zones, menu_categories, menu_items, modifier_groups, modifier_options,
- * nutrition tables, dietary tags, AI-search embedding jobs / ranking stats, and
- * the per-service outbox/inbox tables.
- *
- * Kept as an (currently empty) barrel so `drizzle-kit` and the database module
- * have a stable schema entrypoint to grow into.
+ * Cross-context references (e.g. owner_id) are plain UUIDs, never foreign keys
+ * to another service's tables. Ordering stays independent through events, not
+ * shared schema.
  */
-export {};
+
+// Restaurants + delivery zones (incl. pgvector embedding columns)
+export * from '../restaurant/restaurant.schema';
+
+// Menus: categories, items (pgvector), modifier groups + options
+export * from '../menu/menu.schema';
+
+// Nutrition: foods, localizations, ingredient aliases, analysis sessions,
+// analysis ingredients, per-menu-item nutrition
+export * from '../nutrition/domain/nutrition.schema';
+
+// Dietary / lifestyle tags
+export * from '../dietary-tags/domain/dietary-tag.schema';
+
+// AI search: embedding jobs + ranking stats
+export * from '../search/indexing/ai-search-embedding-job.schema';
+export * from '../search/ai/ai-search-ranking-stats.schema';
+
+// Messaging infrastructure (per-service transactional outbox + inbox)
+export * from '../messaging/schema/outbox.schema';
+export * from '../messaging/schema/inbox.schema';
