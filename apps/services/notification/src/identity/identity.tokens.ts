@@ -1,0 +1,2 @@
+export const IDENTITY_TCP_CLIENT = Symbol('IDENTITY_TCP_CLIENT');
+export const IDENTITY_RPC_GATEWAY = Symbol('IDENTITY_RPC_GATEWAY');
