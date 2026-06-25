@@ -12,7 +12,6 @@
     "lint": "eslint \"{src,test,scripts}/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json --runInBand --forceExit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },
