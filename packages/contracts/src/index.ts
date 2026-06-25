@@ -22,6 +22,7 @@ export * from './envelope';
 export * from './event-names';
 export * from './media';
 export * from './identity';
+export * from './notification';
 export * from './internal-auth';
 export * from './events/review';
 export * from './events/ordering';
