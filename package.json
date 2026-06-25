@@ -8,6 +8,7 @@
     "dev:gateway": "pnpm --filter gateway dev",
     "dev:media": "pnpm --filter media dev",
     "dev:identity": "pnpm --filter identity dev",
+    "dev:notification": "pnpm --filter notification dev",
     "dev:mobile": "pnpm --filter mobile dev",
     "dev:web": "pnpm --filter web dev",
     "dev:admin": "pnpm --filter admin dev",
