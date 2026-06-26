@@ -64,6 +64,15 @@ const schema = z.object({
     .int()
     .positive()
     .default(3000),
+  /** Phase 6 cutover switch. False keeps all Catalog routes on the monolith. */
+  CATALOG_ROUTES_ENABLED: z
+    .string()
+    .default('false')
+    .transform((value) => ['1', 'true', 'yes'].includes(value.toLowerCase())),
+  CATALOG_TCP_HOST: z.string().min(1).default('localhost'),
+  CATALOG_TCP_PORT: z.coerce.number().int().positive().default(4031),
+  CATALOG_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4032),
+  CATALOG_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
   GATEWAY_CORS_ORIGINS: z
     .string()
     .default('http://localhost:5173,http://localhost:5174'),

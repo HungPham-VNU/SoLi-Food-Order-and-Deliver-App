@@ -22,6 +22,27 @@ export interface ApiProxyOptions {
   notificationRoutesEnabled: boolean;
   /** HTTP target for Notification Socket.IO polling/upgrade traffic. */
   notificationSocketTarget: string;
+  /** When true, Catalog-owned public routes are handled locally over TCP. */
+  catalogRoutesEnabled: boolean;
+}
+
+/**
+ * Catalog-owned public routes: restaurants (+ nested delivery zones), menu items
+ * (+ nested modifier groups), nutrition (under the singular `/api/restaurant/`
+ * prefix), search, and dietary tags.
+ */
+export function isCatalogPublicRoute(pathname: string): boolean {
+  return (
+    pathname === '/api/restaurants' ||
+    pathname.startsWith('/api/restaurants/') ||
+    pathname === '/api/menu-items' ||
+    pathname.startsWith('/api/menu-items/') ||
+    pathname.startsWith('/api/restaurant/') ||
+    pathname === '/api/search' ||
+    pathname.startsWith('/api/search/') ||
+    pathname === '/api/dietary-tags' ||
+    pathname.startsWith('/api/dietary-tags/')
+  );
 }
 
 export function isMediaPublicRoute(pathname: string): boolean {
@@ -79,6 +100,7 @@ export function createApiProxy({
   identityRoutesEnabled,
   notificationRoutesEnabled,
   notificationSocketTarget,
+  catalogRoutesEnabled,
 }: ApiProxyOptions): RequestHandler {
   return createProxyMiddleware({
     target,
@@ -100,6 +122,7 @@ export function createApiProxy({
       !(
         notificationRoutesEnabled && isNotificationPublicRoute(pathname)
       ) &&
+      !(catalogRoutesEnabled && isCatalogPublicRoute(pathname)) &&
       !GATEWAY_MANAGEMENT_PATHS.some(
         (p) => pathname === p || pathname.startsWith(`${p}/`),
       ),

@@ -8,6 +8,8 @@ import { MediaRoutesModule } from './media/media-routes.module';
 import type { MediaRouteOverrides } from './media/media.interfaces';
 import { NotificationRoutesModule } from './notification/notification-routes.module';
 import type { NotificationRouteOverrides } from './notification/notification.interfaces';
+import { CatalogRoutesModule } from './catalog/catalog-routes.module';
+import type { CatalogRouteOverrides } from './catalog/catalog.interfaces';
 
 /**
  * Gateway root module.
@@ -23,7 +25,8 @@ export class AppModule {
   static register(
     overrides: MediaRouteOverrides &
       IdentityRouteOverrides &
-      NotificationRouteOverrides = {},
+      NotificationRouteOverrides &
+      CatalogRouteOverrides = {},
   ): DynamicModule {
     return {
       module: AppModule,
@@ -31,6 +34,7 @@ export class AppModule {
         IdentityRoutesModule.register(overrides),
         MediaRoutesModule.register(overrides),
         NotificationRoutesModule.register(overrides),
+        CatalogRoutesModule.register(overrides),
       ],
     };
   }
