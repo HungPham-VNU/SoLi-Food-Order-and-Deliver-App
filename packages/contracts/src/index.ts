@@ -24,6 +24,8 @@ export * from './media';
 export * from './catalog-rpc';
 export * from './promotion-rpc';
 export * from './payment-rpc';
+export * from './ordering-rpc';
+export * from './review-rpc';
 export * from './identity';
 export * from './notification';
 export * from './internal-auth';
