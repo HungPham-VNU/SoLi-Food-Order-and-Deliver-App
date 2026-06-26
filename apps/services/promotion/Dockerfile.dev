@@ -3,9 +3,9 @@ RUN apk add --no-cache libc6-compat
 RUN npm install -g pnpm@11.1.2
 WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
-COPY apps/services/media/package.json apps/services/media/package.json
+COPY apps/services/promotion/package.json apps/services/promotion/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 RUN pnpm install --frozen-lockfile
 COPY . .
-WORKDIR /app/apps/services/media
+WORKDIR /app/apps/services/promotion
 CMD ["pnpm", "run", "dev"]
