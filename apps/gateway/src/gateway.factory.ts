@@ -15,6 +15,7 @@ import {
   isCatalogPublicRoute,
   isPromotionPublicRoute,
   isPaymentPublicRoute,
+  isReviewPublicRoute,
 } from './proxy/api-proxy.factory';
 import { createMediaCors } from './media/media-cors.middleware';
 import { createCatalogCors } from './catalog/catalog-cors.middleware';
@@ -26,6 +27,8 @@ import { IdentityHttpProxyService } from './identity/identity-http-proxy.service
 import type { NotificationRouteOverrides } from './notification/notification.interfaces';
 import { createNotificationCors } from './notification/notification-cors.middleware';
 import type { PaymentRouteOverrides } from './payment/payment.interfaces';
+import { createReviewCors } from './review/review-cors.middleware';
+import type { ReviewRouteOverrides } from './review/review.interfaces';
 
 /**
  * Builds the fully-wired gateway application WITHOUT listening.
@@ -38,12 +41,14 @@ import type { PaymentRouteOverrides } from './payment/payment.interfaces';
  * the request body so the proxy streams it upstream untouched.
  */
 export interface GatewayOverrides
-  extends MediaRouteOverrides,
+  extends
+    MediaRouteOverrides,
     IdentityRouteOverrides,
     NotificationRouteOverrides,
     CatalogRouteOverrides,
     PromotionRouteOverrides,
-    PaymentRouteOverrides {
+    PaymentRouteOverrides,
+    ReviewRouteOverrides {
   /** Override the upstream target (used by tests to point at a stub). */
   target?: string;
   /** Override the proxy timeout in ms. */
@@ -60,6 +65,8 @@ export interface GatewayOverrides
   promotionRoutesEnabled?: boolean;
   /** Override the Payment route cutover flag. */
   paymentRoutesEnabled?: boolean;
+  /** Override the Review route cutover flag. */
+  reviewRoutesEnabled?: boolean;
 }
 
 export async function createGatewayApp(
@@ -108,6 +115,10 @@ export async function createGatewayApp(
   const paymentRoutesEnabled =
     overrides.paymentRoutesEnabled ??
     config.get('PAYMENT_ROUTES_ENABLED', { infer: true }) ??
+    false;
+  const reviewRoutesEnabled =
+    overrides.reviewRoutesEnabled ??
+    config.get('REVIEW_ROUTES_ENABLED', { infer: true }) ??
     false;
 
   // 1. Strip internal/trust headers + ensure x-request-id (before proxying).
@@ -194,6 +205,22 @@ export async function createGatewayApp(
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
   }
 
+  if (reviewRoutesEnabled) {
+    const allowedOrigins = new Set(
+      config
+        .get('GATEWAY_CORS_ORIGINS', { infer: true })
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean),
+    );
+    app.use(createReviewCors(allowedOrigins));
+    const jsonParser = json({ limit: '1mb' });
+    app.use((req, res, next) =>
+      isReviewPublicRoute(req.path) ? jsonParser(req, res, next) : next(),
+    );
+    app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  }
+
   // 2. Proxy everything except the gateway's own management paths.
   const proxy = createApiProxy({
     target,
@@ -205,6 +232,7 @@ export async function createGatewayApp(
     catalogRoutesEnabled,
     promotionRoutesEnabled,
     paymentRoutesEnabled,
+    reviewRoutesEnabled,
   });
   app.use(proxy);
 

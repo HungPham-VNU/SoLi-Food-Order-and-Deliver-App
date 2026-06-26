@@ -28,6 +28,8 @@ export interface ApiProxyOptions {
   promotionRoutesEnabled: boolean;
   /** When true, Payment-owned public routes are handled locally over TCP. */
   paymentRoutesEnabled: boolean;
+  /** When true, Review-owned public routes are handled locally over TCP. */
+  reviewRoutesEnabled: boolean;
 }
 
 /**
@@ -71,6 +73,10 @@ export function isPaymentPublicRoute(pathname: string): boolean {
     pathname === '/api/payments/vnpay/return' ||
     pathname === '/api/payments/vnpay/mobile-return'
   );
+}
+
+export function isReviewPublicRoute(pathname: string): boolean {
+  return pathname === '/api/reviews' || pathname.startsWith('/api/reviews/');
 }
 
 export function isMediaPublicRoute(pathname: string): boolean {
@@ -131,6 +137,7 @@ export function createApiProxy({
   catalogRoutesEnabled,
   promotionRoutesEnabled,
   paymentRoutesEnabled,
+  reviewRoutesEnabled,
 }: ApiProxyOptions): RequestHandler {
   return createProxyMiddleware({
     target,
@@ -149,12 +156,11 @@ export function createApiProxy({
     pathFilter: (pathname: string) =>
       !(mediaRoutesEnabled && isMediaPublicRoute(pathname)) &&
       !(identityRoutesEnabled && isIdentityPublicRoute(pathname)) &&
-      !(
-        notificationRoutesEnabled && isNotificationPublicRoute(pathname)
-      ) &&
+      !(notificationRoutesEnabled && isNotificationPublicRoute(pathname)) &&
       !(catalogRoutesEnabled && isCatalogPublicRoute(pathname)) &&
       !(promotionRoutesEnabled && isPromotionPublicRoute(pathname)) &&
       !(paymentRoutesEnabled && isPaymentPublicRoute(pathname)) &&
+      !(reviewRoutesEnabled && isReviewPublicRoute(pathname)) &&
       !GATEWAY_MANAGEMENT_PATHS.some(
         (p) => pathname === p || pathname.startsWith(`${p}/`),
       ),

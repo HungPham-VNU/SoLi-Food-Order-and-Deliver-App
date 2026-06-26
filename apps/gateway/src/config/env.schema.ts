@@ -59,11 +59,7 @@ const schema = z.object({
     .int()
     .positive()
     .default(4022),
-  NOTIFICATION_RPC_TIMEOUT_MS: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(3000),
+  NOTIFICATION_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(3000),
   /** Phase 6 cutover switch. False keeps all Catalog routes on the monolith. */
   CATALOG_ROUTES_ENABLED: z
     .string()
@@ -91,6 +87,15 @@ const schema = z.object({
   PAYMENT_TCP_PORT: z.coerce.number().int().positive().default(4051),
   PAYMENT_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4052),
   PAYMENT_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+  /** Phase 8 cutover switch. False keeps Review-owned routes on the monolith. */
+  REVIEW_ROUTES_ENABLED: z
+    .string()
+    .default('false')
+    .transform((value) => ['1', 'true', 'yes'].includes(value.toLowerCase())),
+  REVIEW_TCP_HOST: z.string().min(1).default('localhost'),
+  REVIEW_TCP_PORT: z.coerce.number().int().positive().default(4061),
+  REVIEW_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4062),
+  REVIEW_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(3000),
   GATEWAY_CORS_ORIGINS: z
     .string()
     .default('http://localhost:5173,http://localhost:5174'),
