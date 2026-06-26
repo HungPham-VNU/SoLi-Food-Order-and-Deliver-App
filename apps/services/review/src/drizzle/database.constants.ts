@@ -1,0 +1,2 @@
+export const REVIEW_DATABASE = Symbol('REVIEW_DATABASE');
+export const REVIEW_DATABASE_POOL = Symbol('REVIEW_DATABASE_POOL');
