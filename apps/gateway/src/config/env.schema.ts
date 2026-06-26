@@ -96,6 +96,15 @@ const schema = z.object({
   REVIEW_TCP_PORT: z.coerce.number().int().positive().default(4061),
   REVIEW_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4062),
   REVIEW_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(3000),
+  /** Phase 9 cutover switch. False keeps Ordering-owned routes on the monolith. */
+  ORDERING_ROUTES_ENABLED: z
+    .string()
+    .default('false')
+    .transform((value) => ['1', 'true', 'yes'].includes(value.toLowerCase())),
+  ORDERING_TCP_HOST: z.string().min(1).default('localhost'),
+  ORDERING_TCP_PORT: z.coerce.number().int().positive().default(4071),
+  ORDERING_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4072),
+  ORDERING_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(6000),
   GATEWAY_CORS_ORIGINS: z
     .string()
     .default('http://localhost:5173,http://localhost:5174'),

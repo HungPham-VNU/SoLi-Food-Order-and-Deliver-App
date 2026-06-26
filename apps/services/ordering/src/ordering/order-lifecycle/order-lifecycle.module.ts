@@ -74,5 +74,9 @@ import { PromotionClientModule } from '@/integration/promotion/promotion-client.
     // import with AclModule (same pattern as OrderModule).
     RestaurantSnapshotRepository,
   ],
+  // OrderRepository exported so the TCP order RPC controller can read
+  // order+items and the status timeline; PAYMENT port re-exported for the
+  // mobile pending-payment cancellation.
+  exports: [OrderRepository, PaymentIntegrationModule],
 })
 export class OrderLifecycleModule {}

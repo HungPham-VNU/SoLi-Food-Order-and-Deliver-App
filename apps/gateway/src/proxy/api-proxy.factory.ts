@@ -28,6 +28,8 @@ export interface ApiProxyOptions {
   promotionRoutesEnabled: boolean;
   /** When true, Payment-owned public routes are handled locally over TCP. */
   paymentRoutesEnabled: boolean;
+  /** When true, Ordering-owned public routes are handled locally over TCP. */
+  orderingRoutesEnabled: boolean;
   /** When true, Review-owned public routes are handled locally over TCP. */
   reviewRoutesEnabled: boolean;
 }
@@ -66,6 +68,27 @@ export function isPromotionPublicRoute(pathname: string): boolean {
  * `/api/payments/vnpay/orders/:orderId/cancel` intentionally stays proxied to
  * Ordering because it transitions the order after cancelling the payment.
  */
+/**
+ * Ordering-owned public routes: carts + checkout, single-order reads +
+ * lifecycle transitions, the per-actor history lists, and the mobile VNPay
+ * pending-payment cancellation.
+ */
+export function isOrderingPublicRoute(pathname: string): boolean {
+  return (
+    pathname === '/api/carts' ||
+    pathname.startsWith('/api/carts/') ||
+    pathname === '/api/orders' ||
+    pathname.startsWith('/api/orders/') ||
+    pathname === '/api/restaurant/orders' ||
+    pathname.startsWith('/api/restaurant/orders/') ||
+    pathname === '/api/shipper/orders' ||
+    pathname.startsWith('/api/shipper/orders/') ||
+    pathname === '/api/admin/orders' ||
+    pathname.startsWith('/api/admin/orders/') ||
+    pathname.startsWith('/api/payments/vnpay/orders/')
+  );
+}
+
 export function isPaymentPublicRoute(pathname: string): boolean {
   return (
     pathname === '/api/payments/my' ||
@@ -138,6 +161,7 @@ export function createApiProxy({
   promotionRoutesEnabled,
   paymentRoutesEnabled,
   reviewRoutesEnabled,
+  orderingRoutesEnabled,
 }: ApiProxyOptions): RequestHandler {
   return createProxyMiddleware({
     target,
@@ -161,6 +185,7 @@ export function createApiProxy({
       !(promotionRoutesEnabled && isPromotionPublicRoute(pathname)) &&
       !(paymentRoutesEnabled && isPaymentPublicRoute(pathname)) &&
       !(reviewRoutesEnabled && isReviewPublicRoute(pathname)) &&
+      !(orderingRoutesEnabled && isOrderingPublicRoute(pathname)) &&
       !GATEWAY_MANAGEMENT_PATHS.some(
         (p) => pathname === p || pathname.startsWith(`${p}/`),
       ),

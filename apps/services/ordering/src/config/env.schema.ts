@@ -30,8 +30,8 @@ const schema = z.object({
 
   // --- Listeners ---
   PORT: z.coerce.number().int().positive().optional(),
-  ORDERING_TCP_PORT: z.coerce.number().int().positive().default(4051),
-  ORDERING_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4052),
+  ORDERING_TCP_PORT: z.coerce.number().int().positive().default(4071),
+  ORDERING_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4072),
 
   // --- RabbitMQ (durable domain events: Catalog snapshots in, ordering events out) ---
   RABBITMQ_URL: z.string().min(1).default('amqp://guest:guest@localhost:5672'),
@@ -63,7 +63,7 @@ const schema = z.object({
 
   // --- Payment TCP RPC client (checkout saga: create-attempt/mark-failed) ---
   PAYMENT_TCP_HOST: z.string().min(1).default('localhost'),
-  PAYMENT_TCP_PORT: z.coerce.number().int().positive().default(4061),
+  PAYMENT_TCP_PORT: z.coerce.number().int().positive().default(4051),
   PAYMENT_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
   PAYMENT_RPC_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(3).default(2),
   PAYMENT_RPC_REQUIRED: stringToBoolean(false),

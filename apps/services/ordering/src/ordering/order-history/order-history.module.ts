@@ -35,5 +35,7 @@ import { OrderHistoryRepository } from './repositories/order-history.repository'
     // Declared directly (not via AclModule) to avoid circular dependency.
     RestaurantSnapshotRepository,
   ],
+  // Exported so the TCP history RPC controller can delegate to it.
+  exports: [OrderHistoryService],
 })
 export class OrderHistoryModule {}

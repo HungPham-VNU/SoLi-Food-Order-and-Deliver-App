@@ -41,6 +41,6 @@ COPY --from=installer /app/packages/contracts/dist /app/packages/contracts/dist
 COPY --from=production-deps /app/node_modules /app/node_modules
 COPY --from=production-deps /app/apps/services/ordering/node_modules ./node_modules
 
-EXPOSE 4051 4052
+EXPOSE 4071 4072
 
 CMD ["node", "dist/main"]

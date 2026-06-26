@@ -1,6 +1,6 @@
 # API Modular Monolith to Microservices Migration Plan
 
-**Status:** In progress — Phases 0–8 code-complete and verified; cutover/decommission pending
+**Status:** In progress — Phases 0–9 code-complete and verified; cutover/decommission pending (all business contexts extracted; monolith retirement is the remaining deploy-time work)
 
 **Scope:** `apps/api` and the infrastructure, CI/CD, and clients that depend on it
 
@@ -26,7 +26,7 @@ cutover, and legacy decommission remain owner actions.
 | 6     | Extract Restaurant Catalog                  | Code-complete | [PHASE_6_REPORT.md](./PHASE_6_REPORT.md) |
 | 7     | Extract Promotions and Payments             | Code-complete | [PHASE_7_REPORT.md](./PHASE_7_REPORT.md) |
 | 8     | Extract Reviews                             | Code-complete | [PHASE_8_REPORT.md](./PHASE_8_REPORT.md) |
-| 9     | Extract Ordering + retire monolith          | Not started   | —                                        |
+| 9     | Extract Ordering + retire monolith          | Ordering extraction code-complete; monolith retirement pending | [PHASE_9_REPORT.md](./PHASE_9_REPORT.md) |
 
 ## 1. Executive recommendation
 
@@ -630,6 +630,8 @@ Exit criteria:
 - Review has no access to Ordering or Catalog databases.
 
 ### Phase 9 — Extract Ordering and harden the checkout saga (4–6 weeks)
+
+**Status:** Code-complete and verified — see [PHASE_9_REPORT.md](./PHASE_9_REPORT.md). The Ordering service (carts/orders/lifecycle/history + Catalog snapshot ACL), the distributed checkout saga over remote Promotion/Payment TCP, the 22-pattern `ordering.*` surface, and Gateway route ownership are implemented. Ordering data + Redis-cart backfill, Ordering infra wiring (Compose/CI/Render), the `ORDERING_ROUTES_ENABLED` cutover, and deletion of the monolith `module/ordering` remain owner actions. Completing this cutover retires the last business context from the monolith.
 
 **Objective:** Move the system's core transactional service after every dependency has a stable remote contract.
 
