@@ -26,7 +26,9 @@ const schema = z.object({
     .default('internal_auth_secret_for_local_dev_only_32_chars'),
   INTERNAL_AUTH_TRUSTED_ISSUERS: z
     .string()
-    .default('uitfood-gateway,uitfood-api'),
+    // uitfood-ordering: the extracted Ordering service signs the checkout-saga
+    // reserve/confirm/rollback service tokens with this issuer.
+    .default('uitfood-gateway,uitfood-api,uitfood-ordering'),
   INTERNAL_AUTH_JWT_ISSUER: z.string().min(1).default('uitfood-promotion'),
   INTERNAL_AUTH_JWT_TTL_SECONDS: z.coerce
     .number()

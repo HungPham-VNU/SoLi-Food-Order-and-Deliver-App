@@ -6,15 +6,18 @@ import { validate } from '@/config/env.schema';
 import { DatabaseModule } from '@/drizzle/database.module';
 import { RedisModule } from '@/lib/redis/redis.module';
 import { AuthModule } from '@/auth/auth.module';
+import { OrderingModule } from '@/ordering/ordering.module';
+import { MessagingModule } from '@/messaging/messaging.module';
+import { OrderingRpcModule } from '@/ordering/rpc/ordering-rpc.module';
 import { ManagementController } from '@/management/management.controller';
 
 /**
  * Ordering root module.
  *
- * Step 1 scaffold: validated config, CQRS, scheduling, the owned Postgres + Redis
- * connections, internal-auth, and management endpoints. The domain modules (cart,
- * order, lifecycle, history, ACL), the messaging module, the checkout-saga RPC
- * controllers, and the Catalog snapshot consumers are wired in Step 2+.
+ * Validated config + CQRS + scheduling + owned Postgres/Redis + internal-auth,
+ * the full Ordering bounded context (cart, order, lifecycle, history, analytics,
+ * ACL snapshots), the durable messaging module (Catalog snapshot consumers +
+ * outbox relay), the TCP RPC surface, and management endpoints.
  */
 @Module({
   imports: [
@@ -24,6 +27,9 @@ import { ManagementController } from '@/management/management.controller';
     DatabaseModule,
     RedisModule,
     AuthModule,
+    OrderingModule,
+    MessagingModule,
+    OrderingRpcModule,
   ],
   controllers: [ManagementController],
 })

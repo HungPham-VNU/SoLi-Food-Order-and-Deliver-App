@@ -1,0 +1,1 @@
+export const PAYMENT_TCP_CLIENT = Symbol('PAYMENT_TCP_CLIENT');
