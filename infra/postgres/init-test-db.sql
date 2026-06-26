@@ -64,6 +64,21 @@ WHERE NOT EXISTS (
 REVOKE ALL ON DATABASE uitfood_notification FROM PUBLIC;
 GRANT CONNECT, TEMPORARY ON DATABASE uitfood_notification TO uitfood_notification;
 
+-- Phase 6: a separate logical database and credential for the Catalog service.
+-- The legacy API credential is deliberately not granted access.
+SELECT 'CREATE ROLE uitfood_catalog LOGIN PASSWORD ''catalog_secret'''
+WHERE NOT EXISTS (
+    SELECT FROM pg_roles WHERE rolname = 'uitfood_catalog'
+)\gexec
+
+SELECT 'CREATE DATABASE uitfood_catalog OWNER uitfood_catalog'
+WHERE NOT EXISTS (
+    SELECT FROM pg_database WHERE datname = 'uitfood_catalog'
+)\gexec
+
+REVOKE ALL ON DATABASE uitfood_catalog FROM PUBLIC;
+GRANT CONNECT, TEMPORARY ON DATABASE uitfood_catalog TO uitfood_catalog;
+
 -- Grant the default Compose user full access to the test database.
 SELECT format('GRANT ALL PRIVILEGES ON DATABASE %I TO %I', 'uitfoodms_test', current_user)\gexec
 
@@ -74,6 +89,14 @@ CREATE EXTENSION IF NOT EXISTS vector    WITH SCHEMA public;
 
 -- \connect switches context so the extensions are also created inside the test DB.
 \connect uitfoodms_test
+
+CREATE EXTENSION IF NOT EXISTS unaccent  WITH SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS pg_trgm   WITH SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS vector    WITH SCHEMA public;
+
+-- The Catalog DB owns the restaurant/menu search + semantic-search tables, so it
+-- needs the same extensions installed inside its own database before migrations.
+\connect uitfood_catalog
 
 CREATE EXTENSION IF NOT EXISTS unaccent  WITH SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS pg_trgm   WITH SCHEMA public;

@@ -238,6 +238,48 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  catalog:
+    build:
+      context: .
+      dockerfile: apps/services/catalog/Dockerfile.dev
+    container_name: uitfoodms_catalog_dev
+    volumes:
+      - .:/app
+      - catalog_nm_root:/app/node_modules
+      - catalog_nm_app:/app/apps/services/catalog/node_modules
+    environment:
+      DATABASE_URL: postgresql://uitfood_catalog:catalog_secret@postgres:5432/uitfood_catalog
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672${RABBITMQ_VHOST:+/}${RABBITMQ_VHOST:-}
+      RABBITMQ_EXCHANGE: uitfood.domain-events
+      CATALOG_TCP_PORT: 4031
+      CATALOG_MANAGEMENT_PORT: 4032
+      IDENTITY_TCP_HOST: identity
+      IDENTITY_TCP_PORT: 4011
+      MEDIA_TCP_HOST: media
+      MEDIA_TCP_PORT: 4001
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway,uitfood-api
+      INTERNAL_AUTH_JWT_ISSUER: uitfood-catalog
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-https://ollama.com}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+      AI_SEARCH_ENABLED: ${AI_SEARCH_ENABLED:-false}
+      AI_SEARCH_EMBEDDING_WORKER_ENABLED: ${AI_SEARCH_EMBEDDING_WORKER_ENABLED:-false}
+      CHOKIDAR_USEPOLLING: 'true'
+    command: sh -c "pnpm --filter @uitfood/contracts build && pnpm run db:migrate && pnpm run dev"
+    ports:
+      - '4031:4031'
+      - '4032:4032'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      identity:
+        condition: service_started
+      media:
+        condition: service_started
+    restart: unless-stopped
+
   gateway:
     build:
       context: .
@@ -261,6 +303,10 @@ services:
       NOTIFICATION_TCP_HOST: notification
       NOTIFICATION_TCP_PORT: 4021
       NOTIFICATION_MANAGEMENT_PORT: 4022
+      CATALOG_ROUTES_ENABLED: 'true'
+      CATALOG_TCP_HOST: catalog
+      CATALOG_TCP_PORT: 4031
+      CATALOG_MANAGEMENT_PORT: 4032
       INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
       INTERNAL_AUTH_JWT_ISSUER: uitfood-gateway
       CHOKIDAR_USEPOLLING: 'true'
@@ -272,6 +318,7 @@ services:
       - media
       - identity
       - notification
+      - catalog
     restart: unless-stopped
 
   web:
@@ -331,5 +378,7 @@ volumes:
   identity_nm_app:
   notification_nm_root:
   notification_nm_app:
+  catalog_nm_root:
+  catalog_nm_app:
   gateway_nm_root:
   gateway_nm_app:

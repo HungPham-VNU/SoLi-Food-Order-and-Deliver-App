@@ -90,6 +90,21 @@ locals {
       NOTIFICATION_RPC_TIMEOUT_MS = {
         value = tostring(var.notification_rpc_timeout_ms)
       }
+      CATALOG_ROUTES_ENABLED = {
+        value = tostring(var.catalog_routes_enabled)
+      }
+      CATALOG_TCP_HOST = {
+        value = coalesce(trimspace(var.catalog_tcp_host), render_private_service.catalog.slug)
+      }
+      CATALOG_TCP_PORT = {
+        value = tostring(var.catalog_tcp_port)
+      }
+      CATALOG_MANAGEMENT_PORT = {
+        value = tostring(var.catalog_management_port)
+      }
+      CATALOG_RPC_TIMEOUT_MS = {
+        value = tostring(var.catalog_rpc_timeout_ms)
+      }
       GATEWAY_AUTH_TIMEOUT_MS = {
         value = tostring(var.gateway_auth_timeout_ms)
       }
@@ -154,6 +169,39 @@ locals {
       }
     }
   )
+  catalog_env_vars = merge(
+    {
+      DATABASE_URL = {
+        value = render_postgres.catalog.connection_info.internal_connection_string
+      }
+      NODE_ENV = {
+        value = "production"
+      }
+      APP_ENV = {
+        value = var.environment
+      }
+      CATALOG_TCP_PORT = {
+        value = tostring(var.catalog_tcp_port)
+      }
+      CATALOG_MANAGEMENT_PORT = {
+        value = tostring(var.catalog_management_port)
+      }
+      # Catalog reaches Media over the private network for image metadata + signing.
+      MEDIA_TCP_HOST = {
+        value = coalesce(trimspace(var.media_tcp_host), render_private_service.media.slug)
+      }
+      MEDIA_TCP_PORT = {
+        value = tostring(var.media_tcp_port)
+      }
+    },
+    {
+      # RABBITMQ_URL, INTERNAL_AUTH_*, IDENTITY_TCP_HOST, OLLAMA_*, AI_SEARCH_* are
+      # supplied by the operator (secrets / non-Terraform-owned services).
+      for key, value in var.catalog_env_vars : key => {
+        value = value
+      }
+    }
+  )
 }
 
 resource "render_postgres" "main" {
@@ -187,6 +235,18 @@ resource "render_postgres" "notification" {
   version        = var.postgres_version
   database_name  = var.notification_postgres_database_name
   database_user  = var.notification_postgres_database_user
+  environment_id = var.project_environment_id
+
+  ip_allow_list = var.postgres_ip_allow_list
+}
+
+resource "render_postgres" "catalog" {
+  name           = var.catalog_postgres_name
+  plan           = var.catalog_postgres_plan
+  region         = var.region
+  version        = var.postgres_version
+  database_name  = var.catalog_postgres_database_name
+  database_user  = var.catalog_postgres_database_user
   environment_id = var.project_environment_id
 
   ip_allow_list = var.postgres_ip_allow_list
@@ -288,6 +348,28 @@ resource "render_private_service" "notification" {
   }
 
   env_vars = local.notification_env_vars
+
+  lifecycle {
+    ignore_changes = [
+      secret_files,
+    ]
+  }
+}
+
+resource "render_private_service" "catalog" {
+  name           = var.catalog_service_name
+  plan           = var.catalog_service_plan
+  region         = var.region
+  environment_id = var.project_environment_id
+
+  runtime_source = {
+    image = {
+      image_url = var.catalog_image_url
+      tag       = var.catalog_image_tag
+    }
+  }
+
+  env_vars = local.catalog_env_vars
 
   lifecycle {
     ignore_changes = [

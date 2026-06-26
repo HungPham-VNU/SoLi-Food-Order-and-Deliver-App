@@ -38,6 +38,27 @@ output "notification_private_hostname" {
   value       = render_private_service.notification.slug
 }
 
+output "catalog_service_id" {
+  description = "Render private Catalog service ID."
+  value       = render_private_service.catalog.id
+}
+
+output "catalog_private_hostname" {
+  description = "Private-network hostname used by Gateway TCP clients."
+  value       = render_private_service.catalog.slug
+}
+
+output "catalog_postgres_id" {
+  description = "Catalog-owned Render Postgres ID (pgvector)."
+  value       = render_postgres.catalog.id
+}
+
+output "catalog_postgres_internal_connection_string" {
+  description = "Internal Catalog database URL; only the Catalog service receives it."
+  value       = render_postgres.catalog.connection_info.internal_connection_string
+  sensitive   = true
+}
+
 output "web_service_id" {
   description = "Render web service ID."
   value       = render_web_service.web.id

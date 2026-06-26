@@ -459,6 +459,105 @@ variable "notification_routes_enabled" {
   default     = false
 }
 
+# ---------------------------------------------------------------------------
+# Catalog service (Phase 6): restaurants, menus, modifiers, delivery zones,
+# nutrition, dietary tags, and the pgvector AI-search structures.
+# ---------------------------------------------------------------------------
+
+variable "catalog_service_name" {
+  description = "Private-network DNS/service name for the Catalog service."
+  type        = string
+  default     = "uitfood-catalog"
+}
+
+variable "catalog_service_plan" {
+  description = "Render private services require a paid compute plan."
+  type        = string
+  default     = "starter"
+
+  validation {
+    condition     = contains(["starter", "standard", "pro", "pro_plus", "pro_max", "pro_ultra"], var.catalog_service_plan)
+    error_message = "catalog_service_plan must be a private-service capable Render plan."
+  }
+}
+
+variable "catalog_postgres_name" {
+  description = "Render Postgres instance name dedicated to Catalog (pgvector enabled)."
+  type        = string
+  default     = "UITFood Catalog Postgres"
+}
+
+variable "catalog_postgres_plan" {
+  description = "Render Postgres plan for the Catalog-owned database."
+  type        = string
+  default     = "free"
+
+  validation {
+    condition     = contains(["free", "starter", "standard", "pro", "plus"], var.catalog_postgres_plan)
+    error_message = "catalog_postgres_plan must be a valid Render Postgres plan."
+  }
+}
+
+variable "catalog_postgres_database_name" {
+  description = "Immutable logical database name owned by Catalog."
+  type        = string
+  default     = "uitfood_catalog"
+}
+
+variable "catalog_postgres_database_user" {
+  description = "Immutable database user owned by Catalog."
+  type        = string
+  default     = "uitfood_catalog"
+}
+
+variable "catalog_image_url" {
+  description = "Container image repository for Catalog, without a tag."
+  type        = string
+  default     = "ghcr.io/ndtruongdanh/uitfood-catalog"
+}
+
+variable "catalog_image_tag" {
+  description = "Container image tag for the Catalog service."
+  type        = string
+}
+
+variable "catalog_env_vars" {
+  description = "Catalog-only runtime variables: RABBITMQ_URL, INTERNAL_AUTH_*, IDENTITY_TCP_HOST, OLLAMA_*, AI_SEARCH_*."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
+}
+
+variable "catalog_tcp_host" {
+  description = "Optional private DNS override; defaults to the Catalog service slug."
+  type        = string
+  default     = ""
+}
+
+variable "catalog_tcp_port" {
+  description = "Primary private Nest TCP listener port."
+  type        = number
+  default     = 10004
+}
+
+variable "catalog_management_port" {
+  description = "Secondary private HTTP management port."
+  type        = number
+  default     = 10005
+}
+
+variable "catalog_rpc_timeout_ms" {
+  description = "Gateway deadline for Catalog TCP requests."
+  type        = number
+  default     = 4000
+}
+
+variable "catalog_routes_enabled" {
+  description = "Cutover switch: Gateway owns /api/restaurants, /api/menu-items, /api/search, /api/dietary-tags."
+  type        = bool
+  default     = false
+}
+
 variable "legacy_media_routes_enabled" {
   description = "Rollback switch for legacy API Media routes. Disable at cutover."
   type        = bool
