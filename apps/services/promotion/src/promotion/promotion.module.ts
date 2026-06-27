@@ -9,10 +9,8 @@ import { PromotionService } from './services/promotion.service';
 import { PromotionReservationCleanupTask } from './tasks/promotion-reservation-cleanup.task';
 
 /**
- * Promotion bounded context. The extracted service owns the discount lifecycle
- * (preview/reserve/confirm/rollback) + the public active-promotion read. The
- * REST controllers and the restaurant/admin management surfaces are NOT part of
- * this wave; they remain in the monolith until a later cutover.
+ * Promotion service. Owns the discount lifecycle
+ * (preview/reserve/confirm/rollback) and public active-promotion reads.
  */
 @Module({
   imports: [DatabaseModule],

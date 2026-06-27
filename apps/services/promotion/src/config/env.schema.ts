@@ -19,7 +19,7 @@ const schema = z.object({
   PROMOTION_TCP_PORT: z.coerce.number().int().positive().default(4041),
   PROMOTION_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4042),
 
-  // --- Internal auth: verify inbound gateway/api JWTs on the discount lifecycle ---
+  // --- Internal auth: verify inbound gateway/service JWTs on the discount lifecycle ---
   INTERNAL_AUTH_JWT_SECRET: z
     .string()
     .min(32)
@@ -28,7 +28,7 @@ const schema = z.object({
     .string()
     // uitfood-ordering: the extracted Ordering service signs the checkout-saga
     // reserve/confirm/rollback service tokens with this issuer.
-    .default('uitfood-gateway,uitfood-api,uitfood-ordering'),
+    .default('uitfood-gateway,uitfood-ordering'),
   INTERNAL_AUTH_JWT_ISSUER: z.string().min(1).default('uitfood-promotion'),
   INTERNAL_AUTH_JWT_TTL_SECONDS: z.coerce
     .number()

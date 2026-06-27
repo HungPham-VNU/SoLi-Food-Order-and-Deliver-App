@@ -14,7 +14,7 @@ import type { Env } from './config/env.schema';
  * The RabbitMQ listener is NOT a Nest `Transport.RMQ` microservice: the platform
  * publishes raw JSON envelopes to a topic exchange, so events are consumed by a
  * self-managed `RabbitMqConsumer` (amqp-connection-manager) inside the messaging
- * module — matching the monolith and the notification service. It starts on
+ * module, matching the notification/payment/ordering services. It starts on
  * application bootstrap and needs no `connectMicroservice` call here.
  */
 async function bootstrap(): Promise<void> {

@@ -55,7 +55,7 @@ export class RestaurantService implements IRestaurantAccessPort {
       eventVersion: CATALOG_RESTAURANT_CHANGED_V1.eventVersion,
       aggregateId: restaurant.id,
       aggregateVersion: 0,
-      producer: 'monolith',
+      producer: 'catalog',
       payload: {
         restaurantId: restaurant.id,
         name: restaurant.name,

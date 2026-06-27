@@ -58,7 +58,7 @@ function buildService(timeoutSec = 1800) {
     tmnCode: 'STUB_TMN',
     hashSecret: 'STUB_SECRET',
     url: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
-    returnUrl: 'http://localhost:3000/api/payments/vnpay/return',
+    returnUrl: 'http://localhost:8080/api/payments/vnpay/return',
     mobileReturnUrl: 'uitfood://payment/vnpay-return',
     sessionTimeoutSeconds: timeoutSec,
   };

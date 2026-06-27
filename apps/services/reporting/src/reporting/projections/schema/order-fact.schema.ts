@@ -15,8 +15,7 @@ import {
  *  - `ordering.order-status.changed.v1`→ update status; stamp confirmedAt /
  *    readyAt so prep-time analytics need no order_status_logs self-join.
  *
- * This replaces the monolith's cross-context reads of the Ordering `orders`
- * table — Reporting now owns a read-optimized copy fed entirely by events.
+ * Reporting owns this read-optimized copy fed entirely by events.
  */
 export const reportingOrderFacts = pgTable(
   'reporting_order_facts',

@@ -1,9 +1,8 @@
 /**
  * IPromotionApplicationPort — the discount lifecycle contract.
  *
- * PromotionService implements this. In the monolith the Ordering BC depended on
- * this interface through DI; in the extracted topology the monolith reaches the
- * same surface over TCP RPC and the service implements it locally.
+ * PromotionService implements this locally; Ordering reaches the same surface
+ * over TCP RPC for checkout discount preview/reserve/confirm/rollback.
  */
 export const PROMOTION_APPLICATION_PORT = Symbol('PROMOTION_APPLICATION_PORT');
 

@@ -25,9 +25,8 @@ import type { IImageManagementPort } from '@/shared/ports/image-management.port'
 import { MEDIA_TCP_CLIENT } from './media-client.constants';
 
 /**
- * Remote Media adapter — implements the Catalog's image-management port by
- * calling the Media service over Nest TCP RPC. Replaces the in-process Image
- * module dependency Catalog had inside the monolith (Phase 3 contract).
+ * Remote Media adapter: implements the Catalog image-management port by
+ * calling the Media service over Nest TCP RPC.
  */
 @Injectable()
 export class MediaImageManagementAdapter

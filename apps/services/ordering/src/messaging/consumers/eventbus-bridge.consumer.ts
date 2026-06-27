@@ -44,14 +44,14 @@ import { InboxConsumer } from '../inbox/inbox.consumer';
  * message republishes the in-process event at most once.
  *
  * Delivery guarantee: producer → bus is now durable (no crash-after-commit
- * loss). Consumer-side reliability is unchanged from the legacy in-process bus
+ * loss). Consumer-side reliability is handled by the inbox dedupe key
  * until each consumer is converted to its own real RabbitMQ consumer in later
  * phases; the direct fan-out is removed only once every consumer is broker-backed.
  */
 @Injectable()
 export class EventBusBridgeConsumer implements OnApplicationBootstrap {
-  static readonly CONSUMER = 'monolith.eventbus-bridge';
-  static readonly QUEUE = 'monolith.eventbus-bridge.v1';
+  static readonly CONSUMER = 'ordering.eventbus-bridge';
+  static readonly QUEUE = 'ordering.eventbus-bridge.v1';
   private readonly logger = new Logger(EventBusBridgeConsumer.name);
 
   /** Maps a versioned event type to a factory that rebuilds the in-process event. */
@@ -202,7 +202,7 @@ export class EventBusBridgeConsumer implements OnApplicationBootstrap {
     }
 
     await this.inbox.consume(EventBusBridgeConsumer.CONSUMER, envelope, () => {
-      // Re-emit the legacy in-process event. Synchronous dispatch; existing
+      // Re-emit the in-process event. Synchronous dispatch; existing
       // @EventsHandler classes run their own work outside this inbox tx.
       this.eventBus.publish(factory(envelope.payload));
       return Promise.resolve();

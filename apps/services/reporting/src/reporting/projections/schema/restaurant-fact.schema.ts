@@ -1,9 +1,8 @@
 import { pgTable, uuid, text, boolean, timestamp } from 'drizzle-orm/pg-core';
 
 /**
- * reporting_restaurant_facts — denormalized restaurant status, maintained from
- * `catalog.restaurant.changed.v1`. Replaces the monolith's cross-context read of
- * the Catalog `restaurants` table for the online/offline/pending counts.
+ * reporting_restaurant_facts: denormalized restaurant status maintained from
+ * `catalog.restaurant.changed.v1` for online/offline/pending counts.
  */
 export const reportingRestaurantFacts = pgTable('reporting_restaurant_facts', {
   restaurantId: uuid('restaurant_id').primaryKey(),

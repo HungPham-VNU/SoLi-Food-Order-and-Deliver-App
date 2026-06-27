@@ -509,10 +509,10 @@ export class VNPayService implements OnModuleInit {
    *
    * WHY encoding is required:
    *   VNPay's server receives the URL, PHP's $_GET URL-decodes all params
-   *   (giving raw values like "http://localhost:3000/..."), then re-applies
+   *   (giving raw values like "http://localhost:8080/..."), then re-applies
    *   urlencode() on each value before computing HMAC. Our hash input must
    *   therefore also use encoded values — otherwise:
-   *     Our input:  vnp_ReturnUrl=http://localhost:3000/...
+   *     Our input:  vnp_ReturnUrl=http://localhost:8080/...
    *     VNPay's:    vnp_ReturnUrl=http%3A%2F%2Flocalhost%3A3000%2F...
    *     → MISMATCH → "Sai chữ ký"
    *

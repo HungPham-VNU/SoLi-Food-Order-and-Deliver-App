@@ -164,7 +164,7 @@ CREATE TABLE "nutrition_foods" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name_vi" text NOT NULL,
 	"name_en" text NOT NULL,
-	"source" text DEFAULT 'LEGACY' NOT NULL,
+	"source" text DEFAULT 'CUSTOM' NOT NULL,
 	"source_food_id" text,
 	"aliases" text[] DEFAULT '{}'::text[] NOT NULL,
 	"category" text,

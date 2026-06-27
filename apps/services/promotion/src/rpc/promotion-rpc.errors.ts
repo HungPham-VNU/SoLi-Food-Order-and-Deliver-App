@@ -3,8 +3,8 @@ import { RpcException } from '@nestjs/microservices';
 import { ZodError } from 'zod';
 
 /**
- * Maps any thrown error to the stable Promotion RPC error envelope. The gateway
- * (and the monolith Ordering adapter) translate this back to an HTTP status/code.
+ * Maps any thrown error to the stable Promotion RPC error envelope. Gateway and
+ * Ordering callers translate this back to an HTTP status/code.
  */
 export function asPromotionRpcException(error: unknown): RpcException {
   if (error instanceof RpcException) return error;

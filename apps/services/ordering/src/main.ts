@@ -13,7 +13,7 @@ import type { Env } from './config/env.schema';
  *
  * RabbitMQ is consumed by a self-managed `RabbitMqConsumer` inside the messaging
  * module (raw JSON envelopes on a topic exchange), not a Nest `Transport.RMQ`
- * microservice — matching the monolith, catalog, notification, and payment.
+ * microservice, matching the catalog, notification, and payment services.
  */
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);

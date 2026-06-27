@@ -1,7 +1,7 @@
 {
   "name": "reporting",
   "version": "0.0.1",
-  "description": "Private Reporting service: event-fed analytics projections (GMV, delivered counts, top earners, bottlenecks) replacing the monolith's cross-context admin-analytics joins.",
+  "description": "Private Reporting service: event-fed analytics projections for GMV, delivered counts, top earners, and bottlenecks.",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {

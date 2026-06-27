@@ -1,10 +1,8 @@
 /**
  * Minimal tracing shim for the Ordering service.
  *
- * The monolith wires OpenTelemetry spans here; the extracted service keeps the
- * same `runObserved` surface so domain code is unchanged, but executes the work
- * directly. A real OTel exporter can be reintroduced later without touching
- * callers.
+ * Keeps the `runObserved` surface so domain code can add tracing without
+ * changing callers. It currently executes the work directly.
  */
 export async function runObserved<T>(
   _name: string,
