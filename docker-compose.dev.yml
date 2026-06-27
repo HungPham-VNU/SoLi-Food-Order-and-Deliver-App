@@ -9,7 +9,7 @@
 #   docker compose -f docker-compose.dev.yml up --build
 #
 # Access:
-#   API   → http://localhost:3000
+#   API Gateway → http://localhost:8080
 #   Web   → http://localhost:5173
 #   Admin → http://localhost:5174
 
@@ -83,62 +83,6 @@ services:
       retries: 10
     restart: unless-stopped
 
-  api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile.dev
-    container_name: uitfoodms_api_dev
-    volumes:
-      - .:/app
-      # Named volumes shadow the bind-mount for node_modules so the
-      # Docker-installed packages aren't overwritten by the host directory.
-      - api_nm_root:/app/node_modules
-      - api_nm_app:/app/apps/api/node_modules
-    environment:
-      # Override localhost references so the API reaches the compose services.
-      DATABASE_URL: postgresql://uitfood_api:api_secret@postgres:5432/${POSTGRES_DB:-uitfoodms}
-      REDIS_URL: redis://redis:6379
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672${RABBITMQ_VHOST:+/}${RABBITMQ_VHOST:-}
-      RABBITMQ_EXCHANGE: uitfood.domain-events
-      MEDIA_TCP_HOST: media
-      MEDIA_TCP_PORT: 4001
-      MEDIA_RPC_REQUIRED: 'true'
-      IDENTITY_TCP_HOST: identity
-      IDENTITY_TCP_PORT: 4011
-      IDENTITY_RPC_ENABLED: 'true'
-      IDENTITY_RPC_REQUIRED: 'true'
-      LEGACY_NOTIFICATION_ROUTES_ENABLED: 'false'
-      LEGACY_NOTIFICATION_RUNTIME_ENABLED: 'false'
-      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
-      INTERNAL_AUTH_JWT_ISSUER: uitfood-api
-      LEGACY_MEDIA_ROUTES_ENABLED: 'true'
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-https://ollama.com}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-gpt-oss:20b}
-      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
-      AI_SEARCH_EMBEDDING_BASE_URL: ${AI_SEARCH_EMBEDDING_BASE_URL:-http://host.docker.internal:11434}
-      # Enable polling-based file watching for reliable hot-reload inside Docker
-      # on macOS/Windows (Docker Desktop bind mounts don't emit inotify events).
-      CHOKIDAR_USEPOLLING: 'true'
-    ports:
-      - '3000:3000'
-    command: sh -c "pnpm --filter @uitfood/contracts build && pnpm --filter api run dev"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      media:
-        condition: service_started
-      identity:
-        condition: service_started
-      notification:
-        condition: service_started
-    restart: unless-stopped
-
   identity:
     build:
       context: .
@@ -178,7 +122,7 @@ services:
       MEDIA_TCP_PORT: 4001
       MEDIA_MANAGEMENT_PORT: 4002
       INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
-      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway,uitfood-api
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-STUB_CLOUD}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-STUB_KEY}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-STUB_SECRET}
@@ -258,7 +202,7 @@ services:
       MEDIA_TCP_HOST: media
       MEDIA_TCP_PORT: 4001
       INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
-      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway,uitfood-api
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway
       INTERNAL_AUTH_JWT_ISSUER: uitfood-catalog
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-https://ollama.com}
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
@@ -280,6 +224,180 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  promotion:
+    build:
+      context: .
+      dockerfile: apps/services/promotion/Dockerfile.dev
+    container_name: uitfoodms_promotion_dev
+    volumes:
+      - .:/app
+      - promotion_nm_root:/app/node_modules
+      - promotion_nm_app:/app/apps/services/promotion/node_modules
+    environment:
+      DATABASE_URL: postgresql://uitfood_promotion:promotion_secret@postgres:5432/uitfood_promotion
+      PROMOTION_TCP_PORT: 4041
+      PROMOTION_MANAGEMENT_PORT: 4042
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway,uitfood-ordering
+      INTERNAL_AUTH_JWT_ISSUER: uitfood-promotion
+      CHOKIDAR_USEPOLLING: 'true'
+    command: sh -c "pnpm --filter @uitfood/contracts build && pnpm run db:migrate && pnpm run dev"
+    ports:
+      - '4041:4041'
+      - '4042:4042'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  payment:
+    build:
+      context: .
+      dockerfile: apps/services/payment/Dockerfile.dev
+    container_name: uitfoodms_payment_dev
+    volumes:
+      - .:/app
+      - payment_nm_root:/app/node_modules
+      - payment_nm_app:/app/apps/services/payment/node_modules
+    environment:
+      DATABASE_URL: postgresql://uitfood_payment:payment_secret@postgres:5432/uitfood_payment
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672${RABBITMQ_VHOST:+/}${RABBITMQ_VHOST:-}
+      RABBITMQ_EXCHANGE: uitfood.domain-events
+      PAYMENT_TCP_PORT: 4051
+      PAYMENT_MANAGEMENT_PORT: 4052
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway,uitfood-ordering
+      INTERNAL_AUTH_JWT_ISSUER: uitfood-payment
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-STUB_TMN}
+      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-STUB_SECRET}
+      VNPAY_URL: ${VNPAY_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      VNPAY_RETURN_URL: ${VNPAY_RETURN_URL:-http://localhost:8080/api/payments/vnpay/return}
+      MOBILE_PAYMENT_RETURN_URL: ${MOBILE_PAYMENT_RETURN_URL:-uitfood://payment/vnpay-return}
+      PAYMENT_SESSION_TIMEOUT_SECONDS: ${PAYMENT_SESSION_TIMEOUT_SECONDS:-1800}
+      VNPAY_REFUND_ENABLED: ${VNPAY_REFUND_ENABLED:-false}
+      VNPAY_API_URL: ${VNPAY_API_URL:-https://sandbox.vnpayment.vn/merchant_webapi/api/transaction}
+      VNPAY_REFUND_MAX_RETRIES: ${VNPAY_REFUND_MAX_RETRIES:-5}
+      CHOKIDAR_USEPOLLING: 'true'
+    command: sh -c "pnpm --filter @uitfood/contracts build && pnpm run db:migrate && pnpm run dev"
+    ports:
+      - '4051:4051'
+      - '4052:4052'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ordering:
+    build:
+      context: .
+      dockerfile: apps/services/ordering/Dockerfile.dev
+    container_name: uitfoodms_ordering_dev
+    volumes:
+      - .:/app
+      - ordering_nm_root:/app/node_modules
+      - ordering_nm_app:/app/apps/services/ordering/node_modules
+    environment:
+      DATABASE_URL: postgresql://uitfood_ordering:ordering_secret@postgres:5432/uitfood_ordering
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672${RABBITMQ_VHOST:+/}${RABBITMQ_VHOST:-}
+      RABBITMQ_EXCHANGE: uitfood.domain-events
+      ORDERING_TCP_PORT: 4071
+      ORDERING_MANAGEMENT_PORT: 4072
+      PROMOTION_TCP_HOST: promotion
+      PROMOTION_TCP_PORT: 4041
+      PROMOTION_RPC_REQUIRED: 'true'
+      PAYMENT_TCP_HOST: payment
+      PAYMENT_TCP_PORT: 4051
+      PAYMENT_RPC_REQUIRED: 'true'
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway,uitfood-review
+      INTERNAL_AUTH_JWT_ISSUER: uitfood-ordering
+      CHOKIDAR_USEPOLLING: 'true'
+    command: sh -c "pnpm --filter @uitfood/contracts build && pnpm run db:migrate && pnpm run dev"
+    ports:
+      - '4071:4071'
+      - '4072:4072'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      promotion:
+        condition: service_started
+      payment:
+        condition: service_started
+    restart: unless-stopped
+
+  review:
+    build:
+      context: .
+      dockerfile: apps/services/review/Dockerfile.dev
+    container_name: uitfoodms_review_dev
+    volumes:
+      - .:/app
+      - review_nm_root:/app/node_modules
+      - review_nm_app:/app/apps/services/review/node_modules
+    environment:
+      DATABASE_URL: postgresql://uitfood_review:review_secret@postgres:5432/uitfood_review
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672${RABBITMQ_VHOST:+/}${RABBITMQ_VHOST:-}
+      RABBITMQ_EXCHANGE: uitfood.domain-events
+      REVIEW_TCP_PORT: 4061
+      REVIEW_MANAGEMENT_PORT: 4062
+      ORDERING_TCP_HOST: ordering
+      ORDERING_TCP_PORT: 4071
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway
+      INTERNAL_AUTH_JWT_ISSUER: uitfood-review
+      CHOKIDAR_USEPOLLING: 'true'
+    command: sh -c "pnpm --filter @uitfood/contracts build && pnpm run db:migrate && pnpm run dev"
+    ports:
+      - '4061:4061'
+      - '4062:4062'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      ordering:
+        condition: service_started
+    restart: unless-stopped
+
+  reporting:
+    build:
+      context: .
+      dockerfile: apps/services/reporting/Dockerfile.dev
+    container_name: uitfoodms_reporting_dev
+    volumes:
+      - .:/app
+      - reporting_nm_root:/app/node_modules
+      - reporting_nm_app:/app/apps/services/reporting/node_modules
+    environment:
+      DATABASE_URL: postgresql://uitfood_reporting:reporting_secret@postgres:5432/uitfood_reporting
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672${RABBITMQ_VHOST:+/}${RABBITMQ_VHOST:-}
+      RABBITMQ_EXCHANGE: uitfood.domain-events
+      REPORTING_TCP_PORT: 4081
+      REPORTING_MANAGEMENT_PORT: 4082
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway
+      INTERNAL_AUTH_JWT_ISSUER: uitfood-reporting
+      CHOKIDAR_USEPOLLING: 'true'
+    command: sh -c "pnpm --filter @uitfood/contracts build && pnpm run db:migrate && pnpm run dev"
+    ports:
+      - '4081:4081'
+      - '4082:4082'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
   gateway:
     build:
       context: .
@@ -291,10 +409,10 @@ services:
       - gateway_nm_app:/app/apps/gateway/node_modules
     environment:
       PORT: 8080
-      MONOLITH_UPSTREAM_URL: http://api:3000
       MEDIA_ROUTES_ENABLED: 'true'
       MEDIA_TCP_HOST: media
       MEDIA_TCP_PORT: 4001
+      MEDIA_MANAGEMENT_PORT: 4002
       IDENTITY_ROUTES_ENABLED: 'true'
       IDENTITY_TCP_HOST: identity
       IDENTITY_TCP_PORT: 4011
@@ -307,6 +425,26 @@ services:
       CATALOG_TCP_HOST: catalog
       CATALOG_TCP_PORT: 4031
       CATALOG_MANAGEMENT_PORT: 4032
+      PROMOTION_ROUTES_ENABLED: 'true'
+      PROMOTION_TCP_HOST: promotion
+      PROMOTION_TCP_PORT: 4041
+      PROMOTION_MANAGEMENT_PORT: 4042
+      PAYMENT_ROUTES_ENABLED: 'true'
+      PAYMENT_TCP_HOST: payment
+      PAYMENT_TCP_PORT: 4051
+      PAYMENT_MANAGEMENT_PORT: 4052
+      REVIEW_ROUTES_ENABLED: 'true'
+      REVIEW_TCP_HOST: review
+      REVIEW_TCP_PORT: 4061
+      REVIEW_MANAGEMENT_PORT: 4062
+      ORDERING_ROUTES_ENABLED: 'true'
+      ORDERING_TCP_HOST: ordering
+      ORDERING_TCP_PORT: 4071
+      ORDERING_MANAGEMENT_PORT: 4072
+      REPORTING_ROUTES_ENABLED: 'true'
+      REPORTING_TCP_HOST: reporting
+      REPORTING_TCP_PORT: 4081
+      REPORTING_MANAGEMENT_PORT: 4082
       INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
       INTERNAL_AUTH_JWT_ISSUER: uitfood-gateway
       CHOKIDAR_USEPOLLING: 'true'
@@ -314,11 +452,15 @@ services:
       - '8080:8080'
     command: sh -c "pnpm --filter @uitfood/contracts build && pnpm run dev"
     depends_on:
-      - api
       - media
       - identity
       - notification
       - catalog
+      - promotion
+      - payment
+      - review
+      - ordering
+      - reporting
     restart: unless-stopped
 
   web:
@@ -332,7 +474,7 @@ services:
       - web_nm_app:/app/apps/web/node_modules
     environment:
       VITE_API_BASE_URL: http://localhost:8080
-    # VITE_API_BASE_URL stays at localhost:3000 — the browser talks to the
+    # VITE_API_BASE_URL stays at localhost:8080 because the browser talks to the
     # published host port, not the internal Docker network.
     ports:
       - '5173:5173'
@@ -366,8 +508,6 @@ volumes:
     driver: local
   uitfoodms_rabbitmq:
     driver: local
-  api_nm_root:
-  api_nm_app:
   web_nm_root:
   web_nm_app:
   admin_nm_root:
@@ -380,5 +520,15 @@ volumes:
   notification_nm_app:
   catalog_nm_root:
   catalog_nm_app:
+  promotion_nm_root:
+  promotion_nm_app:
+  payment_nm_root:
+  payment_nm_app:
+  review_nm_root:
+  review_nm_app:
+  ordering_nm_root:
+  ordering_nm_app:
+  reporting_nm_root:
+  reporting_nm_app:
   gateway_nm_root:
   gateway_nm_app:

@@ -35,11 +35,11 @@ Built as a **Monorepo** using Turborepo, it strictly adheres to scalable archite
 * **Data Fetching:** React Query (TanStack Query) & `react-hook-form` with Zod validation.
 * **Mapping & Visuals:** `react-leaflet` (Leaflet.js), `recharts` for analytics.
 
-### Backend (`apps/api`)
-* **Framework:** NestJS (TypeScript)
-* **Database:** PostgreSQL managed via Drizzle ORM.
-* **Architecture:** Hybrid communication. Core domains (like Ordering) use ACL snapshots for high reliability, while public APIs interface seamlessly for standard CRUD.
-* **APIs:** Comprehensive REST endpoints for menus, restaurants, geocoding, and user sessions.
+### Backend (`apps/gateway`, `apps/services/*`)
+* **Gateway:** NestJS public edge gateway on `http://localhost:8080`.
+* **Services:** Identity, Media, Notification, Catalog, Promotion, Payment, Review, Ordering, and Reporting run as independent NestJS services.
+* **Data ownership:** Each backend service owns its own PostgreSQL database boundary; Redis and RabbitMQ provide shared infrastructure where needed.
+* **Communication:** Public HTTP enters through the gateway, then uses private TCP RPC and RabbitMQ domain events between services.
 
 ### Infrastructure & Tooling
 * **Monorepo:** Turborepo (`pnpm` workspaces)
@@ -51,9 +51,9 @@ Built as a **Monorepo** using Turborepo, it strictly adheres to scalable archite
 ## 💻 Getting Started
 
 ### Prerequisites
-* Node.js (v18+)
-* pnpm (v8+)
-* PostgreSQL running locally or via Docker
+* Node.js (v22+)
+* pnpm (v11+)
+* Docker Desktop for the full local backend stack
 
 ### Installation
 
@@ -74,20 +74,23 @@ Built as a **Monorepo** using Turborepo, it strictly adheres to scalable archite
    cp .env.example .env
    ```
 
-4. **Database Migration & Seeding:**
+4. **Run the full local stack:**
    ```bash
-   pnpm --filter api db:push
-   pnpm --filter api db:seed
+   docker compose -f docker-compose.dev.yml up --build
    ```
 
-5. **Run the Development Servers:**
-   Start both the backend API and the frontend web app simultaneously via Turborepo:
+5. **Or run services individually:**
    ```bash
-   pnpm dev
+   pnpm dev:gateway
+   pnpm dev:identity
+   pnpm dev:catalog
+   pnpm dev:ordering
+   pnpm dev:web
    ```
 
    * The Web App will be available at `http://localhost:5173`
-   * The API will be available at `http://localhost:3000`
+   * The Admin App will be available at `http://localhost:5174`
+   * The Gateway will be available at `http://localhost:8080`
 
 ---
 

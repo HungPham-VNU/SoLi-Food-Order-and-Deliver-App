@@ -6,7 +6,7 @@ graph TB
         A[🖥️ Admin Panel<br/>Vite + React]
     end
 
-    subgraph API["apps/api — NestJS (Port 3000)"]
+    subgraph API["apps/gateway + apps/services/* — NestJS services"]
         direction TB
         MW[Middleware / Guards<br/>BetterAuth · CORS · Validation]
 

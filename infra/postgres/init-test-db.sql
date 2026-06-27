@@ -9,18 +9,7 @@ WHERE NOT EXISTS (
     SELECT FROM pg_database WHERE datname = 'uitfoodms_test'
 )\gexec
 
--- Use a non-superuser credential for the legacy API in local Compose so the
--- Media database isolation can be exercised rather than bypassed by Postgres.
-SELECT 'CREATE ROLE uitfood_api LOGIN PASSWORD ''api_secret'''
-WHERE NOT EXISTS (
-    SELECT FROM pg_roles WHERE rolname = 'uitfood_api'
-)\gexec
-
-SELECT format('GRANT CONNECT ON DATABASE %I TO uitfood_api', current_database())\gexec
-GRANT USAGE, CREATE ON SCHEMA public TO uitfood_api;
-
--- Phase 3: a separate logical database and credential for the Media service.
--- The legacy API credential is deliberately not granted access.
+-- Service-owned logical databases and credentials.
 SELECT 'CREATE ROLE uitfood_media LOGIN PASSWORD ''media_secret'''
 WHERE NOT EXISTS (
     SELECT FROM pg_roles WHERE rolname = 'uitfood_media'
@@ -34,8 +23,6 @@ WHERE NOT EXISTS (
 REVOKE ALL ON DATABASE uitfood_media FROM PUBLIC;
 GRANT CONNECT, TEMPORARY ON DATABASE uitfood_media TO uitfood_media;
 
--- Phase 4: a separate logical database and credential for the Identity service.
--- The legacy API credential is deliberately not granted access.
 SELECT 'CREATE ROLE uitfood_identity LOGIN PASSWORD ''identity_secret'''
 WHERE NOT EXISTS (
     SELECT FROM pg_roles WHERE rolname = 'uitfood_identity'
@@ -49,8 +36,6 @@ WHERE NOT EXISTS (
 REVOKE ALL ON DATABASE uitfood_identity FROM PUBLIC;
 GRANT CONNECT, TEMPORARY ON DATABASE uitfood_identity TO uitfood_identity;
 
--- Phase 5: a separate logical database and credential for the Notification service.
--- The legacy API credential is deliberately not granted access.
 SELECT 'CREATE ROLE uitfood_notification LOGIN PASSWORD ''notification_secret'''
 WHERE NOT EXISTS (
     SELECT FROM pg_roles WHERE rolname = 'uitfood_notification'
@@ -64,8 +49,6 @@ WHERE NOT EXISTS (
 REVOKE ALL ON DATABASE uitfood_notification FROM PUBLIC;
 GRANT CONNECT, TEMPORARY ON DATABASE uitfood_notification TO uitfood_notification;
 
--- Phase 6: a separate logical database and credential for the Catalog service.
--- The legacy API credential is deliberately not granted access.
 SELECT 'CREATE ROLE uitfood_catalog LOGIN PASSWORD ''catalog_secret'''
 WHERE NOT EXISTS (
     SELECT FROM pg_roles WHERE rolname = 'uitfood_catalog'
@@ -78,6 +61,71 @@ WHERE NOT EXISTS (
 
 REVOKE ALL ON DATABASE uitfood_catalog FROM PUBLIC;
 GRANT CONNECT, TEMPORARY ON DATABASE uitfood_catalog TO uitfood_catalog;
+
+SELECT 'CREATE ROLE uitfood_promotion LOGIN PASSWORD ''promotion_secret'''
+WHERE NOT EXISTS (
+    SELECT FROM pg_roles WHERE rolname = 'uitfood_promotion'
+)\gexec
+
+SELECT 'CREATE DATABASE uitfood_promotion OWNER uitfood_promotion'
+WHERE NOT EXISTS (
+    SELECT FROM pg_database WHERE datname = 'uitfood_promotion'
+)\gexec
+
+REVOKE ALL ON DATABASE uitfood_promotion FROM PUBLIC;
+GRANT CONNECT, TEMPORARY ON DATABASE uitfood_promotion TO uitfood_promotion;
+
+SELECT 'CREATE ROLE uitfood_payment LOGIN PASSWORD ''payment_secret'''
+WHERE NOT EXISTS (
+    SELECT FROM pg_roles WHERE rolname = 'uitfood_payment'
+)\gexec
+
+SELECT 'CREATE DATABASE uitfood_payment OWNER uitfood_payment'
+WHERE NOT EXISTS (
+    SELECT FROM pg_database WHERE datname = 'uitfood_payment'
+)\gexec
+
+REVOKE ALL ON DATABASE uitfood_payment FROM PUBLIC;
+GRANT CONNECT, TEMPORARY ON DATABASE uitfood_payment TO uitfood_payment;
+
+SELECT 'CREATE ROLE uitfood_review LOGIN PASSWORD ''review_secret'''
+WHERE NOT EXISTS (
+    SELECT FROM pg_roles WHERE rolname = 'uitfood_review'
+)\gexec
+
+SELECT 'CREATE DATABASE uitfood_review OWNER uitfood_review'
+WHERE NOT EXISTS (
+    SELECT FROM pg_database WHERE datname = 'uitfood_review'
+)\gexec
+
+REVOKE ALL ON DATABASE uitfood_review FROM PUBLIC;
+GRANT CONNECT, TEMPORARY ON DATABASE uitfood_review TO uitfood_review;
+
+SELECT 'CREATE ROLE uitfood_ordering LOGIN PASSWORD ''ordering_secret'''
+WHERE NOT EXISTS (
+    SELECT FROM pg_roles WHERE rolname = 'uitfood_ordering'
+)\gexec
+
+SELECT 'CREATE DATABASE uitfood_ordering OWNER uitfood_ordering'
+WHERE NOT EXISTS (
+    SELECT FROM pg_database WHERE datname = 'uitfood_ordering'
+)\gexec
+
+REVOKE ALL ON DATABASE uitfood_ordering FROM PUBLIC;
+GRANT CONNECT, TEMPORARY ON DATABASE uitfood_ordering TO uitfood_ordering;
+
+SELECT 'CREATE ROLE uitfood_reporting LOGIN PASSWORD ''reporting_secret'''
+WHERE NOT EXISTS (
+    SELECT FROM pg_roles WHERE rolname = 'uitfood_reporting'
+)\gexec
+
+SELECT 'CREATE DATABASE uitfood_reporting OWNER uitfood_reporting'
+WHERE NOT EXISTS (
+    SELECT FROM pg_database WHERE datname = 'uitfood_reporting'
+)\gexec
+
+REVOKE ALL ON DATABASE uitfood_reporting FROM PUBLIC;
+GRANT CONNECT, TEMPORARY ON DATABASE uitfood_reporting TO uitfood_reporting;
 
 -- Grant the default Compose user full access to the test database.
 SELECT format('GRANT ALL PRIVILEGES ON DATABASE %I TO %I', 'uitfoodms_test', current_user)\gexec
