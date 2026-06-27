@@ -6,7 +6,7 @@ FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY apps/services/review/package.json apps/services/review/package.json
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --config.confirmModulesPurge=false
 
 FROM deps AS build
 COPY packages/contracts packages/contracts

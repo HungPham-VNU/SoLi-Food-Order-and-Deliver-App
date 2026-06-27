@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
+    "db:push": "node tools/db-push-all.cjs",
     "dev": "turbo run dev",
     "dev:gateway": "pnpm --filter gateway dev",
     "dev:media": "pnpm --filter media dev",

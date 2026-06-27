@@ -150,7 +150,7 @@ services:
       REDIS_URL: redis://notification-redis:6379
       REDIS_HOST: notification-redis
       REDIS_PORT: 6379
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672${RABBITMQ_VHOST:+/}${RABBITMQ_VHOST:-}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
       RABBITMQ_EXCHANGE: uitfood.domain-events
       NOTIFICATION_TCP_PORT: 4021
       NOTIFICATION_MANAGEMENT_PORT: 4022
@@ -193,7 +193,7 @@ services:
       - catalog_nm_app:/app/apps/services/catalog/node_modules
     environment:
       DATABASE_URL: postgresql://uitfood_catalog:catalog_secret@postgres:5432/uitfood_catalog
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672${RABBITMQ_VHOST:+/}${RABBITMQ_VHOST:-}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
       RABBITMQ_EXCHANGE: uitfood.domain-events
       CATALOG_TCP_PORT: 4031
       CATALOG_MANAGEMENT_PORT: 4032
@@ -261,7 +261,7 @@ services:
       - payment_nm_app:/app/apps/services/payment/node_modules
     environment:
       DATABASE_URL: postgresql://uitfood_payment:payment_secret@postgres:5432/uitfood_payment
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672${RABBITMQ_VHOST:+/}${RABBITMQ_VHOST:-}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
       RABBITMQ_EXCHANGE: uitfood.domain-events
       PAYMENT_TCP_PORT: 4051
       PAYMENT_MANAGEMENT_PORT: 4052
@@ -303,7 +303,7 @@ services:
       REDIS_URL: redis://redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672${RABBITMQ_VHOST:+/}${RABBITMQ_VHOST:-}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
       RABBITMQ_EXCHANGE: uitfood.domain-events
       ORDERING_TCP_PORT: 4071
       ORDERING_MANAGEMENT_PORT: 4072
@@ -345,7 +345,7 @@ services:
       - review_nm_app:/app/apps/services/review/node_modules
     environment:
       DATABASE_URL: postgresql://uitfood_review:review_secret@postgres:5432/uitfood_review
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672${RABBITMQ_VHOST:+/}${RABBITMQ_VHOST:-}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
       RABBITMQ_EXCHANGE: uitfood.domain-events
       REVIEW_TCP_PORT: 4061
       REVIEW_MANAGEMENT_PORT: 4062
@@ -379,7 +379,7 @@ services:
       - reporting_nm_app:/app/apps/services/reporting/node_modules
     environment:
       DATABASE_URL: postgresql://uitfood_reporting:reporting_secret@postgres:5432/uitfood_reporting
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672${RABBITMQ_VHOST:+/}${RABBITMQ_VHOST:-}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
       RABBITMQ_EXCHANGE: uitfood.domain-events
       REPORTING_TCP_PORT: 4081
       REPORTING_MANAGEMENT_PORT: 4082

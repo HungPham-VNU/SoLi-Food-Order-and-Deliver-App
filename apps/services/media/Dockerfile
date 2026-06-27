@@ -12,7 +12,7 @@ WORKDIR /app
 COPY .gitignore .gitignore
 COPY --from=builder /app/out/json/ .
 COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --config.confirmModulesPurge=false
 COPY --from=builder /app/out/full/ .
 COPY turbo.json turbo.json
 RUN turbo run build --filter=media...
@@ -23,7 +23,7 @@ RUN npm install -g pnpm@11.1.2
 WORKDIR /app
 COPY --from=builder /app/out/json/ .
 COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-RUN pnpm install --prod --frozen-lockfile
+RUN pnpm install --prod --frozen-lockfile --config.confirmModulesPurge=false
 
 FROM node:22-alpine AS runner
 RUN apk add --no-cache ca-certificates
