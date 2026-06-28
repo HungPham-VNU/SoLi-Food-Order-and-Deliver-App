@@ -72,11 +72,11 @@ const FCM_PERMISSION_ERROR_CODES = new Set([
  *  Firebase Admin SDK only allows one app initialisation per app name.
  *  The constructor checks getApps().length before calling initializeApp().
  *
- * Service account path resolution (monorepo-aware):
+ * Service account path resolution:
  *  `serviceAccountPath` may be absolute or relative.
  *  For relative paths the following locations are tried in order:
- *   1. process.cwd()          — works when `nest start` is invoked from apps/api/
- *   2. apps/api/ root via __dirname — works when invoked from the monorepo root
+ *   1. process.cwd()
+ *   2. the notification service root via __dirname
  *
  * GCP permission requirements:
  *  The service account needs EITHER:
@@ -97,14 +97,12 @@ export class FirebasePushProvider implements IPushProvider {
    *
    * Absolute paths are returned as-is.
    * For relative paths the resolution order is:
-   *  1. process.cwd()    — correct when running `nest start` from apps/api/
-   *  2. apps/api/ root   — correct when running from the monorepo root or via
-   *                        `pnpm --filter api start` from the workspace root.
+   *  1. process.cwd()
+   *  2. apps/services/notification root from __dirname.
    *
    * __dirname in this file:
-   *   dev  → apps/api/src/module/notification/channels/push/
-   *   prod → apps/api/dist/module/notification/channels/push/
-   * Five levels up from either gives apps/api/.
+   *   dev  -> apps/services/notification/src/notification/channels/push/
+   *   prod -> apps/services/notification/dist/notification/channels/push/
    */
   private static resolveKeyPath(keyPath: string): string {
     if (path.isAbsolute(keyPath)) {
@@ -117,11 +115,11 @@ export class FirebasePushProvider implements IPushProvider {
       return fromCwd;
     }
 
-    // Candidate 2: relative to apps/api/ root (5 levels up from __dirname)
-    const apiRoot = path.resolve(__dirname, '../../../../..');
-    const fromApiRoot = path.resolve(apiRoot, keyPath);
-    if (fs.existsSync(fromApiRoot)) {
-      return fromApiRoot;
+    // Candidate 2: relative to the notification service root.
+    const serviceRoot = path.resolve(__dirname, '../../../../..');
+    const fromServiceRoot = path.resolve(serviceRoot, keyPath);
+    if (fs.existsSync(fromServiceRoot)) {
+      return fromServiceRoot;
     }
 
     // Neither candidate exists — return the process.cwd() candidate so the
@@ -160,7 +158,7 @@ export class FirebasePushProvider implements IPushProvider {
         );
       }
     } else {
-      // Another piece of code (unlikely in this monolith) initialised Firebase first.
+      // Another piece of code initialised Firebase first.
       // Reuse the existing app to avoid DuplicateApp errors.
       this.app = getApp();
       this.logger.log(
@@ -251,7 +249,7 @@ export class FirebasePushProvider implements IPushProvider {
             `[FirebasePush] OPTION C — Use the default Firebase Admin SDK service account:\n` +
             `[FirebasePush]   1. Open: https://console.firebase.google.com/project/${projectId}/settings/serviceaccounts/adminsdk\n` +
             `[FirebasePush]   2. Click "Generate new private key"\n` +
-            `[FirebasePush]   3. Save as apps/api/soli-food-delivery-FCM-key.json\n` +
+            `[FirebasePush]   3. Save as apps/services/notification/soli-food-delivery-FCM-key.json\n` +
             `[FirebasePush] ====================================================`,
         );
       }
@@ -342,7 +340,7 @@ export class FirebasePushProvider implements IPushProvider {
             // Callers should pass data.link as an absolute URL in production.
             link: data?.link
               ? String(data.link)
-              : (process.env.APP_URL ?? 'http://localhost:3000') + '/',
+              : (process.env.APP_URL ?? 'http://localhost:8080') + '/',
           },
           headers: {
             // Urgency hint — FCM/browsers may batch low-urgency pushes.

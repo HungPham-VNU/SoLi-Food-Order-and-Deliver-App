@@ -45,8 +45,8 @@ export function LoginAlternativeMethods() {
       //
       // IMPORTANT: must be an ABSOLUTE URL pointing back at the web app.
       // Better Auth's server-side redirect treats a bare path like '/' as
-      // relative to its OWN origin (the API, localhost:3000), which would
-      // bounce the user to the API server instead of the web portal.
+      // relative to its own origin, which would bounce the user to the gateway
+      // instead of the web portal.
       await authClient.signIn.social({
         provider: 'google',
         callbackURL: `${window.location.origin}/auth/onboarding`,

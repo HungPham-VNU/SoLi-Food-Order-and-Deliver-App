@@ -66,7 +66,7 @@ const postData = JSON.stringify({
 
 const options = {
   hostname: 'localhost',
-  port: 3000,
+  port: 8080,
   path: '/api/notifications/test/push',
   method: 'POST',
   headers: {
@@ -96,7 +96,7 @@ const req = http.request(options, (res) => {
 
 req.on('error', (e) => {
   console.error(`\x1b[31m✖ Connection Error:\x1b[0m ${e.message}`);
-  console.log('Ensure your API server is running on http://localhost:3000');
+  console.log('Ensure the gateway is running on http://localhost:8080');
 });
 
 req.write(postData);

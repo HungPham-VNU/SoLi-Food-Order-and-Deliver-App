@@ -1384,7 +1384,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'LEGACY'"
+          "default": "'CUSTOM'"
         },
         "source_food_id": {
           "name": "source_food_id",

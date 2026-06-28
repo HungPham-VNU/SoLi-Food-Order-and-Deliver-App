@@ -16,7 +16,7 @@ import type { GatewayRequestWithSession } from '@/identity/identity.interfaces';
 
 /**
  * Public admin analytics endpoints, translating HTTP into Reporting TCP RPC.
- * Mirrors the monolith AdminAnalyticsController surface; the admin role is
+ * Mirrors the public AdminAnalyticsController surface; the admin role is
  * re-checked inside the Reporting service.
  */
 @ApiTags('Reporting: Admin Analytics')

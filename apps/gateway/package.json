@@ -1,7 +1,7 @@
 {
   "name": "gateway",
   "version": "0.0.1",
-  "description": "Edge API gateway — single public ingress; proxies /api/** to the monolith.",
+  "description": "Edge API gateway — single public ingress for extracted backend services.",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {

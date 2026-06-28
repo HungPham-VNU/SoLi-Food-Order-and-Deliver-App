@@ -33,7 +33,7 @@ interface ValidateCouponBody {
 }
 
 /**
- * Public Promotion endpoints (Phase 7). Mirrors the monolith
+ * Public Promotion endpoints. Mirrors the public
  * PromotionPublicController surface, translating HTTP into Promotion TCP RPC.
  */
 @ApiTags('Promotions: Public')

@@ -3,7 +3,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 import type { Env } from '@/config/env.schema';
 import { IdentitySessionAuthenticator } from '@/identity/identity-session.authenticator';
-import { MonolithSessionAuthenticator } from '@/media/monolith-session.authenticator';
 import type { ReviewRouteOverrides } from './review.interfaces';
 import { NestReviewRpcClient } from './nest-review-rpc.client';
 import { ReviewSessionGuard } from './review-session.guard';
@@ -35,7 +34,6 @@ export class ReviewRoutesModule {
             }),
         },
         NestReviewRpcClient,
-        MonolithSessionAuthenticator,
         ReviewSessionGuard,
         overrides.reviewClient
           ? { provide: REVIEW_RPC_GATEWAY, useValue: overrides.reviewClient }
@@ -47,19 +45,7 @@ export class ReviewRoutesModule {
             }
           : {
               provide: REVIEW_SESSION_AUTHENTICATOR,
-              inject: [
-                ConfigService,
-                IdentitySessionAuthenticator,
-                MonolithSessionAuthenticator,
-              ],
-              useFactory: (
-                config: ConfigService<Env, true>,
-                identity: IdentitySessionAuthenticator,
-                monolith: MonolithSessionAuthenticator,
-              ) =>
-                config.get('IDENTITY_ROUTES_ENABLED', { infer: true })
-                  ? identity
-                  : monolith,
+              useExisting: IdentitySessionAuthenticator,
             },
       ],
     };

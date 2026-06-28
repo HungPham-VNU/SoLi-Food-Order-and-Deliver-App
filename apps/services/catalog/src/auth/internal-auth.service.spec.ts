@@ -13,7 +13,7 @@ import { InternalAuthService } from './internal-auth.service';
  */
 describe('InternalAuthService', () => {
   const SECRET = 'internal_auth_secret_for_local_dev_only_32_chars';
-  const TRUSTED_ISSUERS = 'uitfood-gateway,uitfood-api';
+  const TRUSTED_ISSUERS = 'uitfood-gateway';
 
   function makeService(
     overrides: Partial<Record<keyof Env, unknown>> = {},

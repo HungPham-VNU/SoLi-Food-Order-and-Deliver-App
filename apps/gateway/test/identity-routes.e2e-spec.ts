@@ -1,24 +1,9 @@
-import * as http from 'node:http';
-import type { AddressInfo } from 'node:net';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { IdentityRpcGateway } from '../src/identity/identity.interfaces';
 import { createGatewayApp } from '../src/gateway.factory';
 
-function startUpstream(): Promise<{ server: http.Server; port: number }> {
-  return new Promise((resolve) => {
-    const server = http.createServer((_req, res) => {
-      res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ upstream: 'monolith' }));
-    });
-    server.listen(0, '127.0.0.1', () => {
-      resolve({ server, port: (server.address() as AddressInfo).port });
-    });
-  });
-}
-
 describe('Gateway Identity route cutover', () => {
-  let upstream: http.Server;
   let app: INestApplication;
   let client: ReturnType<typeof request>;
 
@@ -44,10 +29,7 @@ describe('Gateway Identity route cutover', () => {
   };
 
   beforeAll(async () => {
-    const started = await startUpstream();
-    upstream = started.server;
     const built = await createGatewayApp({
-      target: `http://127.0.0.1:${started.port}`,
       proxyTimeoutMs: 5000,
       identityRoutesEnabled: true,
       identityClient,
@@ -59,7 +41,6 @@ describe('Gateway Identity route cutover', () => {
 
   afterAll(async () => {
     await app.close();
-    await new Promise<void>((resolve) => upstream.close(() => resolve()));
   });
 
   beforeEach(() => jest.clearAllMocks());
@@ -89,10 +70,10 @@ describe('Gateway Identity route cutover', () => {
     );
   });
 
-  it('GW-IDENTITY-02 keeps unrelated routes on the monolith proxy', async () => {
-    const response = await client.get('/api/restaurants');
+  it('GW-IDENTITY-02 ignores non-auth routes', async () => {
+    const response = await client.get('/not-a-route');
 
-    expect(response.body).toEqual({ upstream: 'monolith' });
+    expect(response.status).toBe(404);
     expect(identityClient.proxyAuthHttp).not.toHaveBeenCalled();
   });
 });

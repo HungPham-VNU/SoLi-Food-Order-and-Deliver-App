@@ -16,8 +16,8 @@ export interface PromotionCaller {
 /**
  * Verifies the internal JWT carried on the discount lifecycle RPCs (preview,
  * reserve, confirm, rollback). The gateway issues a user-scoped token for the
- * public preview; the monolith Ordering adapter issues a `service:api` token for
- * reserve/confirm/rollback. Both carry `aud=promotion`.
+ * public preview; Ordering issues a service token for reserve/confirm/rollback.
+ * Both carry `aud=promotion`.
  */
 @Injectable()
 export class InternalAuthService {

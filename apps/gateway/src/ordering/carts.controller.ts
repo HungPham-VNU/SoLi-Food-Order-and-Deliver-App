@@ -22,7 +22,7 @@ import { InternalJwtService } from '@/identity/internal-jwt.service';
 import type { GatewayRequestWithSession } from '@/identity/identity.interfaces';
 
 /**
- * Public cart + checkout endpoints. Mirrors the monolith CartController surface,
+ * Public cart + checkout endpoints. Mirrors the public CartController surface,
  * translating HTTP into Ordering TCP RPC. All routes require an authenticated
  * session; the customer id is taken from the minted `aud=ordering` token.
  */

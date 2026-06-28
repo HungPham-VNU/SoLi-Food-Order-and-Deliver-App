@@ -3,7 +3,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 import { IdentitySessionAuthenticator } from '@/identity/identity-session.authenticator';
 import type { Env } from '@/config/env.schema';
-import { MonolithSessionAuthenticator } from '@/media/monolith-session.authenticator';
 import type { NotificationRouteOverrides } from './notification.interfaces';
 import { NestNotificationRpcClient } from './nest-notification-rpc.client';
 import { NotificationController } from './notification.controller';
@@ -35,7 +34,6 @@ export class NotificationRoutesModule {
             }),
         },
         NestNotificationRpcClient,
-        MonolithSessionAuthenticator,
         NotificationSessionGuard,
         overrides.notificationClient
           ? {
@@ -53,19 +51,7 @@ export class NotificationRoutesModule {
             }
           : {
               provide: NOTIFICATION_SESSION_AUTHENTICATOR,
-              inject: [
-                ConfigService,
-                IdentitySessionAuthenticator,
-                MonolithSessionAuthenticator,
-              ],
-              useFactory: (
-                config: ConfigService<Env, true>,
-                identity: IdentitySessionAuthenticator,
-                monolith: MonolithSessionAuthenticator,
-              ) =>
-                config.get('IDENTITY_ROUTES_ENABLED', { infer: true })
-                  ? identity
-                  : monolith,
+              useExisting: IdentitySessionAuthenticator,
             },
       ],
     };

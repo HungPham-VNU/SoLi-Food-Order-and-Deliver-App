@@ -12,7 +12,7 @@ import {
  *     forge internal identity or the dev test-user bypass from outside.
  *  2. Every request carries an x-request-id (generated if absent), forwarded
  *     upstream and echoed back so a single id correlates client → gateway →
- *     monolith. W3C `traceparent`, if present, is left intact and forwarded.
+ *     services. W3C `traceparent`, if present, is left intact and forwarded.
  */
 export function requestContext(
   req: Request,

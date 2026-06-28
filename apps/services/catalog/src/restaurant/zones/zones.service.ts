@@ -41,7 +41,7 @@ export class ZonesService {
       eventVersion: CATALOG_DELIVERY_ZONE_CHANGED_V1.eventVersion,
       aggregateId: zone.id,
       aggregateVersion: 0,
-      producer: 'monolith',
+      producer: 'catalog',
       payload: {
         zoneId: zone.id,
         restaurantId: zone.restaurantId,

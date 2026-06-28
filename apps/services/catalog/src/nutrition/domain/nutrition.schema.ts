@@ -48,7 +48,7 @@ export const nutritionFoods = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     nameVi: text('name_vi').notNull(),
     nameEn: text('name_en').notNull(),
-    source: text('source').notNull().default('LEGACY'),
+    source: text('source').notNull().default('CUSTOM'),
     sourceFoodId: text('source_food_id'),
     aliases: text('aliases')
       .array()

@@ -14,8 +14,7 @@
     "test": "jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand --forceExit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:sync": "tsx scripts/sync-images.ts"
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.21",

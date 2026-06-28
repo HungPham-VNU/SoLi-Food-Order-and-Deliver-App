@@ -13,8 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:sync": "tsx scripts/sync-notifications.ts"
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.21",

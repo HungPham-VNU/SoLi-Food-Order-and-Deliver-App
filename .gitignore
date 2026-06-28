@@ -14,3 +14,10 @@ dist
 !*.tfvars.example
 .claude
 .github\workflows\cd-render-iac.yml
+
+.pnpm-store
+
+tsconfig.*
+dist-check
+dist-check.tsbuildinfo
+*.tsbuildinfo

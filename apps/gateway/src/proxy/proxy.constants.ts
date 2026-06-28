@@ -2,13 +2,11 @@
  * Gateway proxy constants.
  */
 
-/** Correlation header propagated to the monolith and echoed to clients. */
+/** Correlation header propagated to services and echoed to clients. */
 export const REQUEST_ID_HEADER = 'x-request-id';
 
 /**
- * Paths served by the gateway itself (NOT proxied upstream). Everything else —
- * including all of /api/**, /docs, /api-spec.json, and root static assets — is
- * forwarded to the monolith.
+ * Paths served by the gateway itself rather than service route controllers.
  */
 export const GATEWAY_MANAGEMENT_PATHS = ['/live', '/ready', '/metrics'] as const;
 

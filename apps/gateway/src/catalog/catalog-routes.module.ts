@@ -3,7 +3,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 import type { Env } from '@/config/env.schema';
 import { IdentitySessionAuthenticator } from '@/identity/identity-session.authenticator';
-import { MonolithSessionAuthenticator } from '@/media/monolith-session.authenticator';
 import type { CatalogRouteOverrides } from './catalog.interfaces';
 import { NestCatalogRpcClient } from './nest-catalog-rpc.client';
 import { CatalogSessionGuard } from './catalog-session.guard';
@@ -21,8 +20,7 @@ import { SearchController } from './search.controller';
 import { DietaryTagsController } from './dietary-tags.controller';
 
 /**
- * Catalog public-route ownership. Registered behind CATALOG_ROUTES_ENABLED;
- * when off, these paths fall through to the monolith proxy.
+ * Catalog public-route ownership. Registered behind CATALOG_ROUTES_ENABLED.
  */
 @Module({})
 export class CatalogRoutesModule {
@@ -53,7 +51,6 @@ export class CatalogRoutesModule {
             }),
         },
         NestCatalogRpcClient,
-        MonolithSessionAuthenticator,
         CatalogSessionGuard,
         overrides.catalogClient
           ? { provide: CATALOG_RPC_GATEWAY, useValue: overrides.catalogClient }
@@ -65,19 +62,7 @@ export class CatalogRoutesModule {
             }
           : {
               provide: CATALOG_SESSION_AUTHENTICATOR,
-              inject: [
-                ConfigService,
-                IdentitySessionAuthenticator,
-                MonolithSessionAuthenticator,
-              ],
-              useFactory: (
-                config: ConfigService<Env, true>,
-                identity: IdentitySessionAuthenticator,
-                monolith: MonolithSessionAuthenticator,
-              ) =>
-                config.get('IDENTITY_ROUTES_ENABLED', { infer: true })
-                  ? identity
-                  : monolith,
+              useExisting: IdentitySessionAuthenticator,
             },
       ],
     };

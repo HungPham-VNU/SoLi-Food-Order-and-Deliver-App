@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '@/config/env.schema';
 import { IDENTITY_DATABASE } from '@/drizzle/database.constants';
-import type { IdentityDatabase } from '@/drizzle/database.module';
+import { DatabaseModule, type IdentityDatabase } from '@/drizzle/database.module';
 import { createIdentityAuth, IDENTITY_AUTH } from './auth.factory';
 import { IdentityAuthHttpService } from './identity-auth-http.service';
 import { IdentityDirectoryService } from './identity-directory.service';
@@ -10,6 +10,7 @@ import { IdentityEventPublisher } from './identity-event.publisher';
 import { IdentitySessionService } from './identity-session.service';
 
 @Module({
+  imports: [DatabaseModule],
   providers: [
     IdentityEventPublisher,
     {

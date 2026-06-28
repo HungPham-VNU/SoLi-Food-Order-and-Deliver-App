@@ -64,8 +64,7 @@ const COMMISSION_RATE = 0.15;
  * projection tables (`reporting_order_facts`, `reporting_order_item_facts`,
  * `reporting_restaurant_facts`). It NEVER touches another service's database, so
  * there are no cross-service joins; the prep-time metric uses the
- * confirmedAt/readyAt columns the order-projection consumer stamps, replacing the
- * monolith's order_status_logs self-join.
+ * confirmedAt/readyAt columns the order-projection consumer stamps.
  */
 @Injectable()
 export class AdminAnalyticsRepository {

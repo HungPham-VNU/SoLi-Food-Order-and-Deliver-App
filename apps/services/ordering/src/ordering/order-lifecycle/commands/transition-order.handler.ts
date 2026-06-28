@@ -231,7 +231,7 @@ export class TransitionOrderHandler implements ICommandHandler<TransitionOrderCo
           eventVersion: ORDER_STATUS_CHANGED_V1.eventVersion,
           aggregateId: orderId,
           aggregateVersion: newVersion,
-          producer: 'monolith',
+          producer: 'ordering',
           payload: {
             orderId,
             customerId: order.customerId,
@@ -253,7 +253,7 @@ export class TransitionOrderHandler implements ICommandHandler<TransitionOrderCo
             eventVersion: ORDER_READY_FOR_PICKUP_V1.eventVersion,
             aggregateId: orderId,
             aggregateVersion: newVersion,
-            producer: 'monolith',
+            producer: 'ordering',
             payload: {
               orderId,
               restaurantId: order.restaurantId,
@@ -279,7 +279,7 @@ export class TransitionOrderHandler implements ICommandHandler<TransitionOrderCo
             eventVersion: ORDER_CANCELLED_AFTER_PAYMENT_V1.eventVersion,
             aggregateId: orderId,
             aggregateVersion: newVersion,
-            producer: 'monolith',
+            producer: 'ordering',
             payload: {
               orderId,
               customerId: order.customerId,

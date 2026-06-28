@@ -1,5 +1,3 @@
-import * as http from 'node:http';
-import type { AddressInfo } from 'node:net';
 import type { INestApplication } from '@nestjs/common';
 import { REVIEW_RPC_PATTERNS } from '@uitfood/contracts';
 import request from 'supertest';
@@ -7,20 +5,7 @@ import type { AuthenticatedGatewaySession } from '../src/identity/identity.inter
 import type { ReviewRpcGateway } from '../src/review/review.interfaces';
 import { createGatewayApp } from '../src/gateway.factory';
 
-function startUpstream(): Promise<{ server: http.Server; port: number }> {
-  return new Promise((resolve) => {
-    const server = http.createServer((req, res) => {
-      res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ upstream: 'monolith', url: req.url }));
-    });
-    server.listen(0, '127.0.0.1', () => {
-      resolve({ server, port: (server.address() as AddressInfo).port });
-    });
-  });
-}
-
 describe('Gateway Review route cutover', () => {
-  let upstream: http.Server;
   let app: INestApplication;
   let client: ReturnType<typeof request>;
   let gatewaySession: AuthenticatedGatewaySession | null;
@@ -59,8 +44,6 @@ describe('Gateway Review route cutover', () => {
   };
 
   beforeAll(async () => {
-    const started = await startUpstream();
-    upstream = started.server;
     gatewaySession = {
       userId: reviewResponse.customerId,
       roles: ['user'],
@@ -68,7 +51,6 @@ describe('Gateway Review route cutover', () => {
       sessionId: 'session-1',
     };
     const built = await createGatewayApp({
-      target: `http://127.0.0.1:${started.port}`,
       proxyTimeoutMs: 5000,
       reviewRoutesEnabled: true,
       reviewClient,
@@ -83,7 +65,6 @@ describe('Gateway Review route cutover', () => {
 
   afterAll(async () => {
     await app.close();
-    await new Promise<void>((resolve) => upstream.close(() => resolve()));
   });
 
   beforeEach(() => {
@@ -146,14 +127,6 @@ describe('Gateway Review route cutover', () => {
         tags: ['fresh_food'],
       }),
     );
-  });
-
-  it('GW-REVIEW-04 keeps unrelated routes on the monolith proxy', async () => {
-    const response = await client.get('/api/orders/my');
-    expect(response.body).toEqual({
-      upstream: 'monolith',
-      url: '/api/orders/my',
-    });
   });
 
   it('GW-REVIEW-05 handles browser CORS preflight locally', async () => {

@@ -1,1 +1,0 @@
-export const PROMOTION_TCP_CLIENT = Symbol('PROMOTION_TCP_CLIENT');

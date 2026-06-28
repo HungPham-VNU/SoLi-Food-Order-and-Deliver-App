@@ -43,8 +43,8 @@ import type { ReportingRouteOverrides } from './reporting/reporting.interfaces';
  * (which drives it via supertest). Keeping the wiring here guarantees the test
  * exercises the exact same middleware chain as production.
  *
- * `bodyParser: false` is the load-bearing setting: the gateway never consumes
- * the request body so the proxy streams it upstream untouched.
+ * `bodyParser: false` lets Identity auth requests and Socket.IO traffic keep
+ * their raw request streams where needed.
  */
 export interface GatewayOverrides
   extends
@@ -57,9 +57,7 @@ export interface GatewayOverrides
     ReviewRouteOverrides,
     OrderingRouteOverrides,
     ReportingRouteOverrides {
-  /** Override the upstream target (used by tests to point at a stub). */
-  target?: string;
-  /** Override the proxy timeout in ms. */
+  /** Override the Socket.IO proxy timeout in ms. */
   proxyTimeoutMs?: number;
   /** Override the Media route cutover flag. */
   mediaRoutesEnabled?: boolean;
@@ -81,6 +79,19 @@ export interface GatewayOverrides
   reportingRoutesEnabled?: boolean;
 }
 
+function getAllowedOrigins(config: ConfigService<Env, true>): ReadonlySet<string> {
+  const corsOrigins = config.get('GATEWAY_CORS_ORIGINS', {
+    infer: true,
+  }) as string;
+
+  return new Set<string>(
+    corsOrigins
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  );
+}
+
 export async function createGatewayApp(
   overrides: GatewayOverrides = {},
 ): Promise<{
@@ -93,14 +104,6 @@ export async function createGatewayApp(
   app.enableShutdownHooks();
 
   const config = app.get<ConfigService<Env, true>>(ConfigService);
-  // Non-null: these keys are zod-validated with defaults, so they are always set.
-  const target =
-    overrides.target ?? config.get('MONOLITH_UPSTREAM_URL', { infer: true })!;
-  if (overrides.target) {
-    // Keep local route dependencies (for example session introspection) on the
-    // same overridden upstream used by the proxy in component tests.
-    config.set('MONOLITH_UPSTREAM_URL', overrides.target);
-  }
   const proxyTimeoutMs =
     overrides.proxyTimeoutMs ??
     config.get('GATEWAY_PROXY_TIMEOUT_MS', { infer: true })!;
@@ -141,6 +144,16 @@ export async function createGatewayApp(
     config.get('REPORTING_ROUTES_ENABLED', { infer: true }) ??
     false;
 
+  config.set('MEDIA_ROUTES_ENABLED', mediaRoutesEnabled);
+  config.set('IDENTITY_ROUTES_ENABLED', identityRoutesEnabled);
+  config.set('NOTIFICATION_ROUTES_ENABLED', notificationRoutesEnabled);
+  config.set('CATALOG_ROUTES_ENABLED', catalogRoutesEnabled);
+  config.set('PROMOTION_ROUTES_ENABLED', promotionRoutesEnabled);
+  config.set('PAYMENT_ROUTES_ENABLED', paymentRoutesEnabled);
+  config.set('REVIEW_ROUTES_ENABLED', reviewRoutesEnabled);
+  config.set('ORDERING_ROUTES_ENABLED', orderingRoutesEnabled);
+  config.set('REPORTING_ROUTES_ENABLED', reportingRoutesEnabled);
+
   // 1. Strip internal/trust headers + ensure x-request-id (before proxying).
   app.use(requestContext);
 
@@ -154,13 +167,7 @@ export async function createGatewayApp(
   }
 
   if (mediaRoutesEnabled) {
-    const allowedOrigins = new Set(
-      config
-        .get('GATEWAY_CORS_ORIGINS', { infer: true })
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean),
-    );
+    const allowedOrigins = getAllowedOrigins(config);
     app.use(createMediaCors(allowedOrigins));
     const jsonParser = json({ limit: '1mb' });
     app.use((req, res, next) =>
@@ -170,13 +177,7 @@ export async function createGatewayApp(
   }
 
   if (notificationRoutesEnabled) {
-    const allowedOrigins = new Set(
-      config
-        .get('GATEWAY_CORS_ORIGINS', { infer: true })
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean),
-    );
+    const allowedOrigins = getAllowedOrigins(config);
     app.use(createNotificationCors(allowedOrigins));
     const jsonParser = json({ limit: '1mb' });
     app.use((req, res, next) =>
@@ -186,13 +187,7 @@ export async function createGatewayApp(
   }
 
   if (catalogRoutesEnabled) {
-    const allowedOrigins = new Set(
-      config
-        .get('GATEWAY_CORS_ORIGINS', { infer: true })
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean),
-    );
+    const allowedOrigins = getAllowedOrigins(config);
     app.use(createCatalogCors(allowedOrigins));
     const jsonParser = json({ limit: '1mb' });
     app.use((req, res, next) =>
@@ -202,13 +197,7 @@ export async function createGatewayApp(
   }
 
   if (promotionRoutesEnabled) {
-    const allowedOrigins = new Set(
-      config
-        .get('GATEWAY_CORS_ORIGINS', { infer: true })
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean),
-    );
+    const allowedOrigins = getAllowedOrigins(config);
     app.use(createPromotionCors(allowedOrigins));
     const jsonParser = json({ limit: '1mb' });
     app.use((req, res, next) =>
@@ -226,13 +215,7 @@ export async function createGatewayApp(
   }
 
   if (reviewRoutesEnabled) {
-    const allowedOrigins = new Set(
-      config
-        .get('GATEWAY_CORS_ORIGINS', { infer: true })
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean),
-    );
+    const allowedOrigins = getAllowedOrigins(config);
     app.use(createReviewCors(allowedOrigins));
     const jsonParser = json({ limit: '1mb' });
     app.use((req, res, next) =>
@@ -242,13 +225,7 @@ export async function createGatewayApp(
   }
 
   if (orderingRoutesEnabled) {
-    const allowedOrigins = new Set(
-      config
-        .get('GATEWAY_CORS_ORIGINS', { infer: true })
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean),
-    );
+    const allowedOrigins = getAllowedOrigins(config);
     app.use(createOrderingCors(allowedOrigins));
     const jsonParser = json({ limit: '1mb' });
     app.use((req, res, next) =>
@@ -258,13 +235,7 @@ export async function createGatewayApp(
   }
 
   if (reportingRoutesEnabled) {
-    const allowedOrigins = new Set(
-      config
-        .get('GATEWAY_CORS_ORIGINS', { infer: true })
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean),
-    );
+    const allowedOrigins = getAllowedOrigins(config);
     app.use(createReportingCors(allowedOrigins));
     const jsonParser = json({ limit: '1mb' });
     app.use((req, res, next) =>
@@ -273,19 +244,11 @@ export async function createGatewayApp(
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
   }
 
-  // 2. Proxy everything except the gateway's own management paths.
+  // 2. Proxy Notification Socket.IO traffic to the Notification service.
   const proxy = createApiProxy({
-    target,
     proxyTimeoutMs,
-    mediaRoutesEnabled,
-    identityRoutesEnabled,
     notificationRoutesEnabled,
     notificationSocketTarget: `http://${config.get('NOTIFICATION_TCP_HOST', { infer: true })}:${config.get('NOTIFICATION_MANAGEMENT_PORT', { infer: true })}`,
-    catalogRoutesEnabled,
-    promotionRoutesEnabled,
-    paymentRoutesEnabled,
-    reviewRoutesEnabled,
-    orderingRoutesEnabled,
   });
   app.use(proxy);
 

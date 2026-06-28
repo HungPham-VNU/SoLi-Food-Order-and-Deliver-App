@@ -10,8 +10,7 @@ import { reportingRestaurantFacts } from '@/reporting/projections/schema/restaur
 
 /**
  * Maintains the restaurant-status fact projection from
- * `catalog.restaurant.changed.v1`, replacing the monolith's cross-context read of
- * the Catalog `restaurants` table for the online/offline/pending counts.
+ * `catalog.restaurant.changed.v1` for online/offline/pending counts.
  */
 @Injectable()
 export class RestaurantProjectionConsumer implements OnApplicationBootstrap {

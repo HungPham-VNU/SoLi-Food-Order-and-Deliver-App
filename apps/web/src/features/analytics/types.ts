@@ -1,6 +1,6 @@
 /**
  * Response shape returned by GET /restaurant/analytics/operational.
- * Mirrors apps/api/src/module/ordering/analytics/dto/operational-analytics.dto.ts.
+ * Mirrors the reporting service operational analytics contract.
  */
 
 export type AnalyticsRange = 'today' | 'yesterday' | '7d';

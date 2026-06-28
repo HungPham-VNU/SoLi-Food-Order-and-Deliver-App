@@ -13,7 +13,7 @@ interface Auth {
   internalAuth: string;
 }
 
-function require(roles: string[], ...allowed: string[]): void {
+function requireRole(roles: string[], ...allowed: string[]): void {
   if (!roles.some((r) => allowed.includes(r))) {
     throw new ForbiddenException(
       `This action requires one of: ${allowed.join(', ')}.`,
@@ -79,7 +79,7 @@ export class OrderingHistoryRpcController {
   ) {
     try {
       const caller = this.auth.verifyOrderingToken(p.internalAuth);
-      require(caller.roles, 'restaurant', 'admin');
+      requireRole(caller.roles, 'restaurant', 'admin');
       return await this.history.getRestaurantOrders(caller.userId, p.filters);
     } catch (e) {
       throw asOrderingRpcException(e);
@@ -90,7 +90,7 @@ export class OrderingHistoryRpcController {
   async restaurantActiveOrders(@Payload() p: Auth) {
     try {
       const caller = this.auth.verifyOrderingToken(p.internalAuth);
-      require(caller.roles, 'restaurant', 'admin');
+      requireRole(caller.roles, 'restaurant', 'admin');
       return await this.history.getRestaurantActiveOrders(caller.userId);
     } catch (e) {
       throw asOrderingRpcException(e);
@@ -102,7 +102,7 @@ export class OrderingHistoryRpcController {
   async shipperAvailable(@Payload() p: Auth) {
     try {
       const caller = this.auth.verifyOrderingToken(p.internalAuth);
-      require(caller.roles, 'shipper', 'admin');
+      requireRole(caller.roles, 'shipper', 'admin');
       return await this.history.getAvailableOrders();
     } catch (e) {
       throw asOrderingRpcException(e);
@@ -113,7 +113,7 @@ export class OrderingHistoryRpcController {
   async shipperActive(@Payload() p: Auth) {
     try {
       const caller = this.auth.verifyOrderingToken(p.internalAuth);
-      require(caller.roles, 'shipper', 'admin');
+      requireRole(caller.roles, 'shipper', 'admin');
       return await this.history.getShipperActiveOrder(caller.userId);
     } catch (e) {
       throw asOrderingRpcException(e);
@@ -126,7 +126,7 @@ export class OrderingHistoryRpcController {
   ) {
     try {
       const caller = this.auth.verifyOrderingToken(p.internalAuth);
-      require(caller.roles, 'shipper', 'admin');
+      requireRole(caller.roles, 'shipper', 'admin');
       return await this.history.getShipperHistory(caller.userId, p.filters);
     } catch (e) {
       throw asOrderingRpcException(e);
@@ -138,7 +138,7 @@ export class OrderingHistoryRpcController {
   async adminOrders(@Payload() p: Auth & { filters: AdminOrderFiltersDto }) {
     try {
       const caller = this.auth.verifyOrderingToken(p.internalAuth);
-      require(caller.roles, 'admin');
+      requireRole(caller.roles, 'admin');
       return await this.history.getAllOrders(p.filters);
     } catch (e) {
       throw asOrderingRpcException(e);
@@ -149,7 +149,7 @@ export class OrderingHistoryRpcController {
   async adminOrderDetail(@Payload() p: Auth & { orderId: string }) {
     try {
       const caller = this.auth.verifyOrderingToken(p.internalAuth);
-      require(caller.roles, 'admin');
+      requireRole(caller.roles, 'admin');
       return await this.history.getAnyOrderDetail(p.orderId);
     } catch (e) {
       throw asOrderingRpcException(e);

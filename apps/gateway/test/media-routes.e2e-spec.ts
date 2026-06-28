@@ -1,33 +1,11 @@
-import * as http from 'node:http';
-import type { AddressInfo } from 'node:net';
 import { createHash } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import type { SessionAuthenticator } from '../src/identity/identity.interfaces';
 import type { MediaRpcGateway } from '../src/media/media.interfaces';
 import { createGatewayApp } from '../src/gateway.factory';
 
-function startUpstream(): Promise<{ server: http.Server; port: number }> {
-  return new Promise((resolve) => {
-    const server = http.createServer((req, res) => {
-      res.writeHead(200, { 'content-type': 'application/json' });
-      if (req.url === '/api/auth/get-session') {
-        res.end(
-          req.headers.authorization === 'Bearer valid'
-            ? JSON.stringify({ user: { id: 'user-1' }, session: { id: 's-1' } })
-            : 'null',
-        );
-        return;
-      }
-      res.end(JSON.stringify({ upstream: 'monolith' }));
-    });
-    server.listen(0, '127.0.0.1', () => {
-      resolve({ server, port: (server.address() as AddressInfo).port });
-    });
-  });
-}
-
 describe('Gateway Media route cutover', () => {
-  let upstream: http.Server;
   let app: INestApplication;
   let client: ReturnType<typeof request>;
 
@@ -50,14 +28,25 @@ describe('Gateway Media route cutover', () => {
       folder: 'menu-items',
     }),
   };
+  const sessionAuthenticator: SessionAuthenticator = {
+    authenticate: jest.fn(async (req) =>
+      req.headers.authorization === 'Bearer valid'
+        ? {
+            userId: 'user-1',
+            roles: ['user'],
+            email: 'user@example.test',
+            sessionId: 'session-1',
+          }
+        : null,
+    ),
+  };
+
   beforeAll(async () => {
-    const started = await startUpstream();
-    upstream = started.server;
     const built = await createGatewayApp({
-      target: `http://127.0.0.1:${started.port}`,
       proxyTimeoutMs: 5000,
       mediaRoutesEnabled: true,
       mediaClient,
+      sessionAuthenticator,
     });
     app = built.app;
     await app.init();
@@ -66,10 +55,11 @@ describe('Gateway Media route cutover', () => {
 
   afterAll(async () => {
     await app.close();
-    await new Promise<void>((resolve) => upstream.close(() => resolve()));
   });
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
   it('GW-MEDIA-01 serves public image reads through Media RPC', async () => {
     const response = await client.get('/api/images?offset=0&limit=20');
@@ -124,11 +114,6 @@ describe('Gateway Media route cutover', () => {
       internalAuth: expect.any(String),
       folder: 'menu-items',
     });
-  });
-
-  it('GW-MEDIA-04 keeps unrelated routes on the monolith proxy', async () => {
-    const response = await client.get('/api/restaurants');
-    expect(response.body).toEqual({ upstream: 'monolith' });
   });
 
   it('GW-MEDIA-05 handles browser CORS preflight locally', async () => {

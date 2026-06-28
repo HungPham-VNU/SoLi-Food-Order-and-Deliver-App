@@ -1,1 +1,0 @@
-export const CLOUDINARY_CLIENT = Symbol('CLOUDINARY_CLIENT');

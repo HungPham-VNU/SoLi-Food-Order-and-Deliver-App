@@ -3,7 +3,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 import type { Env } from '@/config/env.schema';
 import { IdentitySessionAuthenticator } from '@/identity/identity-session.authenticator';
-import { MonolithSessionAuthenticator } from '@/media/monolith-session.authenticator';
 import type { PaymentRouteOverrides } from './payment.interfaces';
 import { NestPaymentRpcClient } from './nest-payment-rpc.client';
 import { PaymentSessionGuard } from './payment-session.guard';
@@ -35,7 +34,6 @@ export class PaymentRoutesModule {
             }),
         },
         NestPaymentRpcClient,
-        MonolithSessionAuthenticator,
         PaymentSessionGuard,
         overrides.paymentClient
           ? { provide: PAYMENT_RPC_GATEWAY, useValue: overrides.paymentClient }
@@ -47,19 +45,7 @@ export class PaymentRoutesModule {
             }
           : {
               provide: PAYMENT_SESSION_AUTHENTICATOR,
-              inject: [
-                ConfigService,
-                IdentitySessionAuthenticator,
-                MonolithSessionAuthenticator,
-              ],
-              useFactory: (
-                config: ConfigService<Env, true>,
-                identity: IdentitySessionAuthenticator,
-                monolith: MonolithSessionAuthenticator,
-              ) =>
-                config.get('IDENTITY_ROUTES_ENABLED', { infer: true })
-                  ? identity
-                  : monolith,
+              useExisting: IdentitySessionAuthenticator,
             },
       ],
     };

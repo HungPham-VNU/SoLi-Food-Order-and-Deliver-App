@@ -3,7 +3,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 import type { Env } from '@/config/env.schema';
 import { IdentitySessionAuthenticator } from '@/identity/identity-session.authenticator';
-import { MonolithSessionAuthenticator } from '@/media/monolith-session.authenticator';
 import type { PromotionRouteOverrides } from './promotion.interfaces';
 import { NestPromotionRpcClient } from './nest-promotion-rpc.client';
 import { PromotionSessionGuard } from './promotion-session.guard';
@@ -15,8 +14,7 @@ import {
 import { PromotionsController } from './promotions.controller';
 
 /**
- * Promotion public-route ownership. Registered behind PROMOTION_ROUTES_ENABLED;
- * when off, these paths fall through to the monolith proxy.
+ * Promotion public-route ownership. Registered behind PROMOTION_ROUTES_ENABLED.
  */
 @Module({})
 export class PromotionRoutesModule {
@@ -39,7 +37,6 @@ export class PromotionRoutesModule {
             }),
         },
         NestPromotionRpcClient,
-        MonolithSessionAuthenticator,
         PromotionSessionGuard,
         overrides.promotionClient
           ? {
@@ -57,19 +54,7 @@ export class PromotionRoutesModule {
             }
           : {
               provide: PROMOTION_SESSION_AUTHENTICATOR,
-              inject: [
-                ConfigService,
-                IdentitySessionAuthenticator,
-                MonolithSessionAuthenticator,
-              ],
-              useFactory: (
-                config: ConfigService<Env, true>,
-                identity: IdentitySessionAuthenticator,
-                monolith: MonolithSessionAuthenticator,
-              ) =>
-                config.get('IDENTITY_ROUTES_ENABLED', { infer: true })
-                  ? identity
-                  : monolith,
+              useExisting: IdentitySessionAuthenticator,
             },
       ],
     };

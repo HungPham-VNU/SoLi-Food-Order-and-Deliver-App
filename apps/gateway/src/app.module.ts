@@ -24,9 +24,8 @@ import type { ReportingRouteOverrides } from './reporting/reporting.interfaces';
 /**
  * Gateway root module.
  *
- * Deliberately minimal: validated config + health endpoints. The reverse proxy
- * itself is wired in main.ts (it must run as raw Express middleware before body
- * parsing and needs the http.Server for WebSocket upgrades).
+ * Deliberately minimal: validated config + health endpoints. The Notification
+ * Socket.IO proxy is wired in main.ts so it can attach WebSocket upgrades.
  */
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true, validate }), HealthModule],

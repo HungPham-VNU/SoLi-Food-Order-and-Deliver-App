@@ -45,7 +45,7 @@ const schema = z.object({
     .default('internal_auth_secret_for_local_dev_only_32_chars'),
   INTERNAL_AUTH_TRUSTED_ISSUERS: z
     .string()
-    .default('uitfood-gateway,uitfood-api'),
+    .default('uitfood-gateway'),
   INTERNAL_AUTH_JWT_ISSUER: z.string().min(1).default('uitfood-ordering'),
   INTERNAL_AUTH_JWT_TTL_SECONDS: z.coerce
     .number()

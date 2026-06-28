@@ -1,6 +1,6 @@
 /**
- * Minimal domain-metrics shim for the Catalog service (no-ops until
- * service-level OpenTelemetry is wired). Keeps the monolith call sites intact.
+ * Minimal domain-metrics shim for the Catalog service until service-level
+ * OpenTelemetry meters are wired.
  */
 export function recordSearch(..._args: unknown[]): void {}
 export function recordAiSearch(..._args: unknown[]): void {}

@@ -36,7 +36,7 @@ const schema = z.object({
     .string()
     // uitfood-ordering: the extracted Ordering service signs the checkout-saga
     // create-attempt / mark-failed / cancel service tokens with this issuer.
-    .default('uitfood-gateway,uitfood-api,uitfood-ordering'),
+    .default('uitfood-gateway,uitfood-ordering'),
   INTERNAL_AUTH_JWT_ISSUER: z.string().min(1).default('uitfood-payment'),
   INTERNAL_AUTH_JWT_TTL_SECONDS: z.coerce
     .number()

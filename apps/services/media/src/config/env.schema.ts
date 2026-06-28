@@ -15,7 +15,7 @@ const schema = z.object({
     .default('internal_auth_secret_for_local_dev_only_32_chars'),
   INTERNAL_AUTH_TRUSTED_ISSUERS: z
     .string()
-    .default('uitfood-gateway,uitfood-api'),
+    .default('uitfood-gateway'),
 });
 
 export type Env = z.infer<typeof schema>;

@@ -256,7 +256,7 @@ export class MenuService {
       eventVersion: CATALOG_MENU_ITEM_CHANGED_V1.eventVersion,
       aggregateId: item.id,
       aggregateVersion: 0,
-      producer: 'monolith',
+      producer: 'catalog',
       payload: {
         menuItemId: item.id,
         restaurantId: item.restaurantId,

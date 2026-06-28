@@ -4,9 +4,9 @@ import { z } from 'zod';
  * Gateway environment schema. Validated at startup via
  * ConfigModule.forRoot({ validate }) so the process fails fast on misconfig.
  *
- * The gateway is deliberately thin: it needs only where to listen and where to
- * forward. No business secrets live here — those stay in the monolith (and,
- * later, in each service's own scoped secret group).
+ * The gateway is deliberately thin: it needs only where to listen and how to
+ * reach private services. Business secrets stay in each service's own scoped
+ * secret group.
  */
 const schema = z.object({
   NODE_ENV: z.string().default('development'),
@@ -14,43 +14,35 @@ const schema = z.object({
   /** Public port the gateway listens on. */
   PORT: z.coerce.number().int().positive().default(8080),
 
-  /** Base URL of the upstream monolith that all /api/** traffic proxies to. */
-  MONOLITH_UPSTREAM_URL: z
-    .string()
-    .url(
-      'MONOLITH_UPSTREAM_URL must be a valid URL (e.g. http://localhost:3000)',
-    )
-    .default('http://localhost:3000'),
-
   /**
-   * End-to-end proxy timeout in milliseconds applied to both the incoming
-   * socket and the upstream request. Bounds a slow/hung monolith.
+   * End-to-end proxy timeout in milliseconds applied to Notification Socket.IO
+   * polling/upgrade traffic.
    */
   GATEWAY_PROXY_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
 
-  /** Phase 3 cutover switch. False keeps all Media routes on the monolith. */
+  /** Route ownership switch for Media-owned public routes. */
   MEDIA_ROUTES_ENABLED: z
     .string()
-    .default('false')
+    .default('true')
     .transform((value) => ['1', 'true', 'yes'].includes(value.toLowerCase())),
   MEDIA_TCP_HOST: z.string().min(1).default('localhost'),
   MEDIA_TCP_PORT: z.coerce.number().int().positive().default(4001),
   MEDIA_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4002),
   MEDIA_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(2000),
-  /** Phase 4 cutover switch. False keeps Better Auth routes on the monolith. */
+  /** Route ownership switch for Better Auth / Identity-owned public routes. */
   IDENTITY_ROUTES_ENABLED: z
     .string()
-    .default('false')
+    .default('true')
     .transform((value) => ['1', 'true', 'yes'].includes(value.toLowerCase())),
   IDENTITY_TCP_HOST: z.string().min(1).default('localhost'),
   IDENTITY_TCP_PORT: z.coerce.number().int().positive().default(4011),
   IDENTITY_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4012),
   IDENTITY_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(3000),
   GATEWAY_AUTH_TIMEOUT_MS: z.coerce.number().int().positive().default(3000),
-  /** Phase 5 cutover switch. False keeps Notification routes/sockets on the monolith. */
+  /** Route ownership switch for Notification routes and sockets. */
   NOTIFICATION_ROUTES_ENABLED: z
     .string()
-    .default('false')
+    .default('true')
     .transform((value) => ['1', 'true', 'yes'].includes(value.toLowerCase())),
   NOTIFICATION_TCP_HOST: z.string().min(1).default('localhost'),
   NOTIFICATION_TCP_PORT: z.coerce.number().int().positive().default(4021),
@@ -60,55 +52,55 @@ const schema = z.object({
     .positive()
     .default(4022),
   NOTIFICATION_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(3000),
-  /** Phase 6 cutover switch. False keeps all Catalog routes on the monolith. */
+  /** Route ownership switch for Catalog-owned public routes. */
   CATALOG_ROUTES_ENABLED: z
     .string()
-    .default('false')
+    .default('true')
     .transform((value) => ['1', 'true', 'yes'].includes(value.toLowerCase())),
   CATALOG_TCP_HOST: z.string().min(1).default('localhost'),
   CATALOG_TCP_PORT: z.coerce.number().int().positive().default(4031),
   CATALOG_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4032),
   CATALOG_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
-  /** Phase 7 cutover switch. False keeps all Promotion routes on the monolith. */
+  /** Route ownership switch for Promotion-owned public routes. */
   PROMOTION_ROUTES_ENABLED: z
     .string()
-    .default('false')
+    .default('true')
     .transform((value) => ['1', 'true', 'yes'].includes(value.toLowerCase())),
   PROMOTION_TCP_HOST: z.string().min(1).default('localhost'),
   PROMOTION_TCP_PORT: z.coerce.number().int().positive().default(4041),
   PROMOTION_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4042),
   PROMOTION_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
-  /** Phase 7 cutover switch. False keeps Payment-owned routes on the monolith. */
+  /** Route ownership switch for Payment-owned public routes. */
   PAYMENT_ROUTES_ENABLED: z
     .string()
-    .default('false')
+    .default('true')
     .transform((value) => ['1', 'true', 'yes'].includes(value.toLowerCase())),
   PAYMENT_TCP_HOST: z.string().min(1).default('localhost'),
   PAYMENT_TCP_PORT: z.coerce.number().int().positive().default(4051),
   PAYMENT_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4052),
   PAYMENT_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
-  /** Phase 8 cutover switch. False keeps Review-owned routes on the monolith. */
+  /** Route ownership switch for Review-owned public routes. */
   REVIEW_ROUTES_ENABLED: z
     .string()
-    .default('false')
+    .default('true')
     .transform((value) => ['1', 'true', 'yes'].includes(value.toLowerCase())),
   REVIEW_TCP_HOST: z.string().min(1).default('localhost'),
   REVIEW_TCP_PORT: z.coerce.number().int().positive().default(4061),
   REVIEW_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4062),
   REVIEW_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(3000),
-  /** Phase 9 cutover switch. False keeps Ordering-owned routes on the monolith. */
+  /** Route ownership switch for Ordering-owned public routes. */
   ORDERING_ROUTES_ENABLED: z
     .string()
-    .default('false')
+    .default('true')
     .transform((value) => ['1', 'true', 'yes'].includes(value.toLowerCase())),
   ORDERING_TCP_HOST: z.string().min(1).default('localhost'),
   ORDERING_TCP_PORT: z.coerce.number().int().positive().default(4071),
   ORDERING_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4072),
   ORDERING_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(6000),
-  /** Phase 10 cutover switch. False keeps Reporting routes on the monolith. */
+  /** Route ownership switch for Reporting-owned public routes. */
   REPORTING_ROUTES_ENABLED: z
     .string()
-    .default('false')
+    .default('true')
     .transform((value) => ['1', 'true', 'yes'].includes(value.toLowerCase())),
   REPORTING_TCP_HOST: z.string().min(1).default('localhost'),
   REPORTING_TCP_PORT: z.coerce.number().int().positive().default(4081),

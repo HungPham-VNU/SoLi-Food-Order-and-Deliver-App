@@ -17,7 +17,7 @@ TCP surface (Phase 7 — Promotion wave):
 - `promotion.list-active.v1` — public active-promotion discovery (anonymous).
 
 Every lifecycle call carries a short-lived internal JWT with `aud=promotion`.
-The monolith Ordering BC drives reserve/confirm/rollback over TCP; the gateway
+The Ordering service drives reserve/confirm/rollback over TCP; the gateway
 exposes `/api/promotions/*` for the public preview/list.
 
 Local setup:

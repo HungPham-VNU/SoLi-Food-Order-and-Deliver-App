@@ -3,7 +3,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 import type { Env } from '@/config/env.schema';
 import { IdentitySessionAuthenticator } from '@/identity/identity-session.authenticator';
-import { MonolithSessionAuthenticator } from '@/media/monolith-session.authenticator';
 import type { OrderingRouteOverrides } from './ordering.interfaces';
 import { NestOrderingRpcClient } from './nest-ordering-rpc.client';
 import { OrderingSessionGuard } from './ordering-session.guard';
@@ -22,8 +21,7 @@ import {
 } from './order-actors.controllers';
 
 /**
- * Ordering public-route ownership. Registered behind ORDERING_ROUTES_ENABLED;
- * when off, these paths fall through to the monolith proxy.
+ * Ordering public-route ownership. Registered behind ORDERING_ROUTES_ENABLED.
  */
 @Module({})
 export class OrderingRoutesModule {
@@ -53,7 +51,6 @@ export class OrderingRoutesModule {
             }),
         },
         NestOrderingRpcClient,
-        MonolithSessionAuthenticator,
         OrderingSessionGuard,
         overrides.orderingClient
           ? { provide: ORDERING_RPC_GATEWAY, useValue: overrides.orderingClient }
@@ -65,19 +62,7 @@ export class OrderingRoutesModule {
             }
           : {
               provide: ORDERING_SESSION_AUTHENTICATOR,
-              inject: [
-                ConfigService,
-                IdentitySessionAuthenticator,
-                MonolithSessionAuthenticator,
-              ],
-              useFactory: (
-                config: ConfigService<Env, true>,
-                identity: IdentitySessionAuthenticator,
-                monolith: MonolithSessionAuthenticator,
-              ) =>
-                config.get('IDENTITY_ROUTES_ENABLED', { infer: true })
-                  ? identity
-                  : monolith,
+              useExisting: IdentitySessionAuthenticator,
             },
       ],
     };

@@ -11,7 +11,7 @@ import { TracingInstrumentation } from '@grafana/faro-web-tracing';
 import type { AxiosError } from 'axios';
 import { matchRoutes } from 'react-router-dom';
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 const appName = import.meta.env.VITE_GRAFANA_FARO_APP_NAME ?? 'uitfood-web';
 
 let faroClient: Faro | undefined;

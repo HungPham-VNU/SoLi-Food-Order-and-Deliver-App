@@ -1,41 +1,50 @@
 # Grafana Cloud Dashboard
 
-This repository includes a Grafana dashboard for the deployed API:
+The old single-process API dashboard was removed with the microservice cutover.
+Create backend dashboards per service, or use a `service_name` variable that can
+select the gateway and service processes.
 
 ```txt
-infra/grafana/dashboards/uitfood-api-telemetry.json
+uitfood-gateway
+uitfood-identity
+uitfood-media
+uitfood-notification
+uitfood-catalog
+uitfood-promotion
+uitfood-payment
+uitfood-review
+uitfood-ordering
+uitfood-reporting
 ```
 
 ## Import
 
 1. Open Grafana Cloud.
 2. Go to **Dashboards > New > Import**.
-3. Upload `infra/grafana/dashboards/uitfood-api-telemetry.json`.
+3. Upload the service dashboard JSON after it is created.
 4. When Grafana prompts for variables, select your Grafana Cloud data sources:
    - `DS_PROMETHEUS`: Grafana Cloud Metrics / Prometheus
    - `DS_LOKI`: Grafana Cloud Logs / Loki
    - `DS_TEMPO`: Grafana Cloud Traces / Tempo
-5. Keep `service` as `uitfood-api`.
+5. Pick the relevant `service_name`, such as `uitfood-gateway`.
 6. Start with `environment = All`; narrow it to `production` after data appears.
 
 ## What It Uses
 
-The dashboard is based on the API metrics emitted in
-`apps/api/src/observability/request-context.ts`:
+Start with gateway and service metrics emitted by the deployed processes:
 
-- `api.http.requests`
-- `api.http.errors`
-- `api.http.request.duration_ms`
-- `api.http.active_requests`
+- request count
+- request errors
+- request duration
+- active requests
 
 Grafana Cloud stores OTLP metrics with Prometheus-compatible names. The dashboard
 queries the common translated names:
 
-- `api_http_requests_total` or `api_http_requests`
-- `api_http_errors_total` or `api_http_errors`
-- `api_http_request_duration_ms_bucket`
-- `api_http_request_duration_ms_milliseconds_bucket`
-- `api_http_active_requests`
+- Service-specific HTTP request counters
+- Service-specific HTTP error counters
+- Service-specific request duration histograms
+- Runtime process metrics
 
 Logs use native OTLP/Loki fields such as `service_name`,
 `deployment_environment`, `severity_text`, `event`, and `trace_id`.
@@ -51,15 +60,15 @@ Traces use Tempo TraceQL filters:
 Use **Explore** to confirm these first:
 
 ```promql
-sort_desc(count by (__name__)({__name__=~"api_http_.*"}))
+sort_desc(count by (__name__)({service_name=~"uitfood-.*"}))
 ```
 
 ```logql
-{service_name="uitfood-api"}
+{service_name="uitfood-gateway"}
 ```
 
 ```traceql
-{ resource.service.name = "uitfood-api" }
+{ resource.service.name = "uitfood-gateway" }
 ```
 
 If the Discovery row shows different metric names, edit only the affected panel

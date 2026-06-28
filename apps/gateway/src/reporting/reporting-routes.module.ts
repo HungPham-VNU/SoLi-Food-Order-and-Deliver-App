@@ -3,7 +3,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 import type { Env } from '@/config/env.schema';
 import { IdentitySessionAuthenticator } from '@/identity/identity-session.authenticator';
-import { MonolithSessionAuthenticator } from '@/media/monolith-session.authenticator';
 import type { ReportingRouteOverrides } from './reporting.interfaces';
 import { NestReportingRpcClient } from './nest-reporting-rpc.client';
 import { ReportingSessionGuard } from './reporting-session.guard';
@@ -15,8 +14,7 @@ import {
 import { ReportsController } from './reports.controller';
 
 /**
- * Reporting public-route ownership. Registered behind REPORTING_ROUTES_ENABLED;
- * when off, these paths fall through to the monolith proxy (until retirement).
+ * Reporting public-route ownership. Registered behind REPORTING_ROUTES_ENABLED.
  */
 @Module({})
 export class ReportingRoutesModule {
@@ -39,7 +37,6 @@ export class ReportingRoutesModule {
             }),
         },
         NestReportingRpcClient,
-        MonolithSessionAuthenticator,
         ReportingSessionGuard,
         overrides.reportingClient
           ? {
@@ -57,19 +54,7 @@ export class ReportingRoutesModule {
             }
           : {
               provide: REPORTING_SESSION_AUTHENTICATOR,
-              inject: [
-                ConfigService,
-                IdentitySessionAuthenticator,
-                MonolithSessionAuthenticator,
-              ],
-              useFactory: (
-                config: ConfigService<Env, true>,
-                identity: IdentitySessionAuthenticator,
-                monolith: MonolithSessionAuthenticator,
-              ) =>
-                config.get('IDENTITY_ROUTES_ENABLED', { infer: true })
-                  ? identity
-                  : monolith,
+              useExisting: IdentitySessionAuthenticator,
             },
       ],
     };

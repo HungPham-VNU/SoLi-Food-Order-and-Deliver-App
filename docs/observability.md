@@ -2,18 +2,18 @@
 
 UITFood uses a production MVP observability setup:
 
-- OpenTelemetry exports API traces, metrics, and logs directly to Grafana Cloud over OTLP HTTP when configured.
+- OpenTelemetry exports gateway/service traces, metrics, and logs directly to Grafana Cloud over OTLP HTTP when configured.
 - Grafana Faro captures web browser errors, logs, Web Vitals, sessions, route changes, frontend traces, and source-map metadata.
 - Sentry captures mobile exceptions with release/environment tags.
-- The API emits JSON logs with request IDs, trace IDs, route template, route group, status, duration, and safe context.
-- Render health checks use API readiness and web container liveness endpoints.
+- Backend processes emit JSON logs with request IDs, trace IDs, route template, route group, status, duration, and safe context where telemetry is wired.
+- Health checks use gateway readiness and web container liveness endpoints.
 
 ## Runtime Configuration
 
-API environment variables:
+Backend environment variables:
 
 ```env
-OTEL_SERVICE_NAME=uitfood-api
+OTEL_SERVICE_NAME=uitfood-gateway
 GRAFANA_CLOUD_OTLP_ENDPOINT=https://otlp-gateway-prod-REGION.grafana.net/otlp
 GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID=<instance-id>
 GRAFANA_CLOUD_OTLP_TOKEN=<access-policy-token>
@@ -62,27 +62,26 @@ CI variables and secrets:
 - `EXPO_PUBLIC_SENTRY_DSN` and mobile sample-rate variables as GitHub variables.
 
 If `VITE_GRAFANA_FARO_COLLECTOR_URL` is empty, Web Faro is disabled. If neither
-`OTEL_EXPORTER_OTLP_ENDPOINT` nor `GRAFANA_CLOUD_OTLP_ENDPOINT` is set, API OTLP
+`OTEL_EXPORTER_OTLP_ENDPOINT` nor `GRAFANA_CLOUD_OTLP_ENDPOINT` is set, backend OTLP
 export is disabled while JSON logs and request IDs remain active.
 
 ## Health Checks
 
 Render should use:
 
-- API: `GET /api/ready`
+- Gateway: `GET /ready`
 - Web: `GET /healthz`
 
-API endpoints:
+Gateway endpoints:
 
-- `GET /api/live` returns process liveness only.
-- `GET /api/ready` checks Redis and Postgres.
-- `GET /api/health` remains a compatibility alias for readiness.
+- `GET /live` returns process liveness only.
+- `GET /ready` checks all enabled backend service management endpoints.
 
-Every API response includes `x-request-id`. Clients may send `x-request-id`; otherwise the API generates one.
+Every gateway response includes `x-request-id`. Clients may send `x-request-id`; otherwise the gateway generates one.
 
 ## Logs, Traces, and Redaction
 
-API logs are JSON written to stdout/stderr for Render log collection. Each request log includes:
+Backend logs are JSON written to stdout/stderr for container log collection. Request logs include:
 
 - `requestId`
 - `traceId` and `spanId` when OpenTelemetry is active
@@ -90,7 +89,7 @@ API logs are JSON written to stdout/stderr for Render log collection. Each reque
 - `cfRay` when Render/Cloudflare forwards it
 - user ID when already available on the request
 
-The monitored API route groups are `menu-items`, `restaurants`, `search`,
+The monitored public route groups are `menu-items`, `restaurants`, `search`,
 `promotions`, `carts`, `my`, `restaurant`, and `payments`. Metrics and traces
 also receive `app.route.group`, `app.route.monitored`, and `http.route`.
 
@@ -103,8 +102,8 @@ geolocation tracking. PostHog session replay remains disabled by default.
 
 Minimum dashboard panels:
 
-- API request rate, p95 latency, and 5xx rate.
-- API readiness failures for Redis and Postgres.
+- Gateway request rate, p95 latency, and 5xx rate.
+- Gateway readiness failures by service.
 - Payment IPN failures and payment timeout task errors.
 - Order timeout task errors.
 - Notification delivery failures and WebSocket connection errors.
@@ -113,9 +112,9 @@ Minimum dashboard panels:
 
 Minimum alerts:
 
-- `/api/ready` failing for 2 consecutive checks.
-- API 5xx rate above 2% for 5 minutes.
-- p95 API latency above 2 seconds for 10 minutes.
+- `/ready` failing for 2 consecutive checks.
+- Gateway 5xx rate above 2% for 5 minutes.
+- p95 gateway latency above 2 seconds for 10 minutes.
 - Payment IPN error spike.
 - Notification delivery failure spike.
 - New Web Faro error in production on the latest release.
@@ -126,7 +125,7 @@ Minimum alerts:
 1. Open Render service logs and filter by `requestId` if a user report includes it.
 2. Search Grafana Cloud Frontend Observability by release, environment, user ID, and request ID for web reports.
 3. Search Sentry by release and environment for mobile reports.
-4. Check `/api/ready` to determine whether the fault is dependency readiness or app logic.
+4. Check `/ready` to determine whether the fault is dependency readiness or app logic.
 5. For payment issues, inspect `command.payment.process_ipn`, `cron.payment_timeout`, and related order status logs.
 6. For realtime issues, inspect WebSocket connection logs, `ws.notifications.connection`, and notification delivery logs.
 7. If a release introduced the issue, rollback the Render image tag through Terraform or rerun the previous successful pipeline.

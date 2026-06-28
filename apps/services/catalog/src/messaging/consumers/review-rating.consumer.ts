@@ -19,8 +19,8 @@ import { InboxConsumer } from '../inbox/inbox.consumer';
 /**
  * Catalog rating projection — consumes `review.submitted.v1` and increments the
  * restaurant's rating counters idempotently (inbox dedupe + same-tx write).
- * This is the inbound event projection that keeps Catalog's denormalized rating
- * in sync now that Review lives in the (still-monolith) Review BC.
+ * This inbound event projection keeps Catalog's denormalized rating in sync
+ * with the Review service.
  */
 @Injectable()
 export class ReviewRatingConsumer implements OnApplicationBootstrap {

@@ -10,28 +10,12 @@ import { GATEWAY_MANAGEMENT_PATHS } from './proxy.constants';
 const logger = new Logger('GatewayProxy');
 
 export interface ApiProxyOptions {
-  /** Upstream monolith base URL. */
-  target: string;
   /** End-to-end timeout (incoming socket + upstream request) in ms. */
   proxyTimeoutMs: number;
-  /** When true, Media-owned public routes are handled locally over TCP. */
-  mediaRoutesEnabled: boolean;
-  /** When true, Better Auth routes are handled locally over Identity TCP. */
-  identityRoutesEnabled: boolean;
   /** When true, Notification HTTP routes are handled locally and Socket.IO targets Notification. */
   notificationRoutesEnabled: boolean;
   /** HTTP target for Notification Socket.IO polling/upgrade traffic. */
   notificationSocketTarget: string;
-  /** When true, Catalog-owned public routes are handled locally over TCP. */
-  catalogRoutesEnabled: boolean;
-  /** When true, Promotion-owned public routes are handled locally over TCP. */
-  promotionRoutesEnabled: boolean;
-  /** When true, Payment-owned public routes are handled locally over TCP. */
-  paymentRoutesEnabled: boolean;
-  /** When true, Ordering-owned public routes are handled locally over TCP. */
-  orderingRoutesEnabled: boolean;
-  /** When true, Review-owned public routes are handled locally over TCP. */
-  reviewRoutesEnabled: boolean;
 }
 
 /**
@@ -135,72 +119,49 @@ export function isSocketIoRoute(pathname: string): boolean {
 }
 
 /**
- * Builds the transparent reverse proxy to the monolith.
+ * Builds the Notification Socket.IO proxy.
  *
- * Phase 1 behaviour: forward EVERYTHING except the gateway's own management
- * paths (/live, /ready, /metrics) to the upstream, byte-for-byte. This covers
- * all of /api/**, plus the monolith's root-served assets (/docs,
- * /api-spec.json, /firebase-messaging-sw.js, etc.).
+ * HTTP API routes are translated by gateway controllers to private TCP
+ * services; unmatched routes are not proxied.
  *
  * Fidelity guarantees (why these options matter):
  *  - The request body is NOT parsed by the gateway (NestFactory bodyParser:false),
  *    so the raw stream — Better Auth rawBody, VNPay signatures, multipart uploads —
- *    reaches the monolith untouched.
- *  - `xfwd: true` adds X-Forwarded-For/Host/Proto so the monolith can reconstruct
+ *    reaches the Notification service untouched.
+ *  - `xfwd: true` adds X-Forwarded-For/Host/Proto so the service can reconstruct
  *    the public origin.
- *  - `changeOrigin: true` sets the upstream Host to the monolith's host; the
+ *  - `changeOrigin: true` sets the upstream Host to the service host; the
  *    client's Origin header is forwarded unchanged so Better Auth CORS/CSRF and
- *    the monolith's existing `enableCors()` keep working exactly as today.
+ *    service CORS/CSRF handling can use the public origin.
  *  - Multiple Set-Cookie response headers (Better Auth) are preserved by default.
  *  - `ws: true` enables Socket.IO/WebSocket upgrades (wired in main.ts).
  *
- * CORS is intentionally NOT handled here in Phase 1 — the monolith continues to
- * own it, so there is no risk of duplicated Access-Control-* headers. Ownership
- * moves to the gateway in a later phase.
+ * CORS for HTTP routes is handled by route-specific gateway middleware.
  */
 export function createApiProxy({
-  target,
   proxyTimeoutMs,
-  mediaRoutesEnabled,
-  identityRoutesEnabled,
   notificationRoutesEnabled,
   notificationSocketTarget,
-  catalogRoutesEnabled,
-  promotionRoutesEnabled,
-  paymentRoutesEnabled,
-  reviewRoutesEnabled,
-  orderingRoutesEnabled,
 }: ApiProxyOptions): RequestHandler {
   return createProxyMiddleware({
-    target,
-    router: (req) =>
-      notificationRoutesEnabled && isSocketIoRoute(req.url?.split('?')[0] ?? '')
-        ? notificationSocketTarget
-        : target,
+    target: notificationSocketTarget,
     changeOrigin: true,
     xfwd: true,
     ws: true,
     proxyTimeout: proxyTimeoutMs,
     timeout: proxyTimeoutMs,
-    // Anything that is NOT a management path is proxied. Returning false makes
-    // http-proxy-middleware call next(), letting the gateway's own controllers
-    // (HealthController) serve /live and /ready.
+    // Only service-owned Socket.IO traffic is proxied. HTTP API routes are
+    // translated by gateway controllers; unmatched routes return 404.
     pathFilter: (pathname: string) =>
-      !(mediaRoutesEnabled && isMediaPublicRoute(pathname)) &&
-      !(identityRoutesEnabled && isIdentityPublicRoute(pathname)) &&
-      !(notificationRoutesEnabled && isNotificationPublicRoute(pathname)) &&
-      !(catalogRoutesEnabled && isCatalogPublicRoute(pathname)) &&
-      !(promotionRoutesEnabled && isPromotionPublicRoute(pathname)) &&
-      !(paymentRoutesEnabled && isPaymentPublicRoute(pathname)) &&
-      !(reviewRoutesEnabled && isReviewPublicRoute(pathname)) &&
-      !(orderingRoutesEnabled && isOrderingPublicRoute(pathname)) &&
+      notificationRoutesEnabled &&
+      isSocketIoRoute(pathname) &&
       !GATEWAY_MANAGEMENT_PATHS.some(
         (p) => pathname === p || pathname.startsWith(`${p}/`),
       ),
     on: {
       error: (err: Error, req, res) => {
         logger.error(
-          `Upstream proxy error for ${req.method ?? '?'} ${req.url ?? '?'}: ` +
+          `Socket proxy error for ${req.method ?? '?'} ${req.url ?? '?'}: ` +
             `${(err as NodeJS.ErrnoException).code ?? ''} ${err.message}`,
         );
         // For HTTP, res is a ServerResponse; for a failed WS upgrade it is a
