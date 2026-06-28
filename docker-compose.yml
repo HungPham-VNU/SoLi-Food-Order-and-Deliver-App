@@ -11,6 +11,8 @@ services:
     volumes:
       - uitfoodms_db:/var/lib/postgresql
       - ./infra/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/01-init-test-db.sql:ro
+      - ./infra/postgres/pg_hba.local.conf:/etc/postgresql/pg_hba.local.conf:ro
+    command: ['postgres', '-c', 'hba_file=/etc/postgresql/pg_hba.local.conf']
     restart: unless-stopped
 
   redis:

@@ -16,3 +16,5 @@ dist
 .github\workflows\cd-render-iac.yml
 
 .pnpm-store
+
+tsconfig.*
