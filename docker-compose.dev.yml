@@ -1,18 +1,66 @@
-# Development docker-compose - starts all local services + app dev servers with hot reload.
+# Development docker-compose - starts local infrastructure plus app dev servers.
 #
 # Usage:
-#   docker compose -f docker-compose.dev.yml up --build
+#   docker compose -f docker-compose.dev.yml up --build --watch
+#   docker compose -f docker-compose.dev.yml watch
 #
-# Backend dependencies are installed once by backend-deps into Docker volumes.
-# Web and admin keep independent dependency volumes.
-#
-# After changing backend package.json files or pnpm-lock.yaml, refresh backend deps:
-#   docker compose -f docker-compose.dev.yml up --build --force-recreate backend-deps
+# Backend services share the uitfoodms-backend-dev image. Web and admin share
+# the uitfoodms-frontend-dev image. Dependencies are installed at image build
+# time by the Dockerfiles under infra/docker.
 #
 # Access:
 #   API Gateway -> http://localhost:8080
-#   Web   -> http://localhost:5173
-#   Admin -> http://localhost:5174
+#   Web         -> http://localhost:5173
+#   Admin       -> http://localhost:5174
+
+x-backend-image: &backend-image
+  image: uitfoodms-backend-dev
+  build:
+    context: .
+    dockerfile: infra/docker/backend/Dockerfile.dev
+
+x-backend-env: &backend-env
+  CHOKIDAR_USEPOLLING: 'true'
+  TSC_WATCHFILE: DynamicPriorityPolling
+  TSC_WATCHDIRECTORY: DynamicPriorityPolling
+
+x-backend-common: &backend-common
+  <<: *backend-image
+  restart: unless-stopped
+
+x-watch-root-package: &watch-root-package
+  action: rebuild
+  path: ./package.json
+
+x-watch-lockfile: &watch-lockfile
+  action: rebuild
+  path: ./pnpm-lock.yaml
+
+x-watch-workspace: &watch-workspace
+  action: rebuild
+  path: ./pnpm-workspace.yaml
+
+x-watch-backend-dockerfile: &watch-backend-dockerfile
+  action: rebuild
+  path: ./infra/docker/backend/Dockerfile.dev
+
+x-watch-contracts: &watch-contracts
+  action: rebuild
+  path: ./packages/contracts
+
+x-frontend-image: &frontend-image
+  image: uitfoodms-frontend-dev
+  build:
+    context: .
+    dockerfile: infra/docker/frontend/Dockerfile.dev
+
+x-frontend-common: &frontend-common
+  <<: *frontend-image
+  restart: unless-stopped
+
+x-watch-frontend-dockerfile: &watch-frontend-dockerfile
+  action: rebuild
+  path: ./infra/docker/frontend/Dockerfile.dev
 
 services:
   postgres:
@@ -86,77 +134,44 @@ services:
       retries: 10
     restart: unless-stopped
 
-  backend-deps:
-    build:
-      context: .
-      dockerfile: infra/docker/backend/Dockerfile.dev
-    image: uitfoodms-backend-dev
-    container_name: uitfoodms_backend_deps_dev
-    working_dir: /app
-    volumes:
-      - .:/app
-      - backend_nm_root:/app/node_modules
-      - backend_nm_contracts:/app/packages/contracts/node_modules
-      - gateway_nm_app:/app/apps/gateway/node_modules
-      - media_nm_app:/app/apps/services/media/node_modules
-      - identity_nm_app:/app/apps/services/identity/node_modules
-      - notification_nm_app:/app/apps/services/notification/node_modules
-      - catalog_nm_app:/app/apps/services/catalog/node_modules
-      - promotion_nm_app:/app/apps/services/promotion/node_modules
-      - payment_nm_app:/app/apps/services/payment/node_modules
-      - review_nm_app:/app/apps/services/review/node_modules
-      - ordering_nm_app:/app/apps/services/ordering/node_modules
-      - reporting_nm_app:/app/apps/services/reporting/node_modules
-    command:
-      - sh
-      - -c
-      - >
-        pnpm config set store-dir /app/node_modules/.pnpm-store &&
-        pnpm --filter gateway... --filter media... --filter identity...
-        --filter notification... --filter catalog... --filter promotion...
-        --filter payment... --filter review... --filter ordering...
-        --filter reporting... --filter @uitfood/contracts...
-        install --frozen-lockfile --config.confirmModulesPurge=false &&
-        pnpm --filter @uitfood/contracts build
-    restart: 'no'
-
   identity:
-    image: uitfoodms-backend-dev
+    <<: *backend-common
     container_name: uitfoodms_identity_dev
     working_dir: /app/apps/services/identity
-    volumes:
-      - .:/app
-      - backend_nm_root:/app/node_modules
-      - backend_nm_contracts:/app/packages/contracts/node_modules
-      - identity_nm_app:/app/apps/services/identity/node_modules
     environment:
+      <<: *backend-env
       DATABASE_URL: postgresql://uitfood_identity:identity_secret@postgres:5432/uitfood_identity
       IDENTITY_TCP_PORT: 4011
       IDENTITY_MANAGEMENT_PORT: 4012
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-a_very_long_secret_for_test_purposes_only_32_chars}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:8080}
-      CHOKIDAR_USEPOLLING: 'true'
     command: sh -c "pnpm run db:migrate && pnpm run dev"
     ports:
       - '4011:4011'
       - '4012:4012'
     depends_on:
-      backend-deps:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/services/identity/src
+          target: /app/apps/services/identity/src
+        - action: rebuild
+          path: ./apps/services/identity/package.json
+        - *watch-root-package
+        - *watch-lockfile
+        - *watch-workspace
+        - *watch-backend-dockerfile
+        - *watch-contracts
     restart: unless-stopped
 
   media:
-    image: uitfoodms-backend-dev
+    <<: *backend-common
     container_name: uitfoodms_media_dev
     working_dir: /app/apps/services/media
-    volumes:
-      - .:/app
-      - backend_nm_root:/app/node_modules
-      - backend_nm_contracts:/app/packages/contracts/node_modules
-      - media_nm_app:/app/apps/services/media/node_modules
     environment:
+      <<: *backend-env
       DATABASE_URL: postgresql://uitfood_media:media_secret@postgres:5432/uitfood_media
       MEDIA_TCP_PORT: 4001
       MEDIA_MANAGEMENT_PORT: 4002
@@ -165,28 +180,33 @@ services:
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-STUB_CLOUD}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-STUB_KEY}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-STUB_SECRET}
-      CHOKIDAR_USEPOLLING: 'true'
     command: sh -c "pnpm run db:migrate && pnpm run dev"
     ports:
       - '4001:4001'
       - '4002:4002'
     depends_on:
-      backend-deps:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/services/media/src
+          target: /app/apps/services/media/src
+        - action: rebuild
+          path: ./apps/services/media/package.json
+        - *watch-root-package
+        - *watch-lockfile
+        - *watch-workspace
+        - *watch-backend-dockerfile
+        - *watch-contracts
     restart: unless-stopped
 
   notification:
-    image: uitfoodms-backend-dev
+    <<: *backend-common
     container_name: uitfoodms_notification_dev
     working_dir: /app/apps/services/notification
-    volumes:
-      - .:/app
-      - backend_nm_root:/app/node_modules
-      - backend_nm_contracts:/app/packages/contracts/node_modules
-      - notification_nm_app:/app/apps/services/notification/node_modules
     environment:
+      <<: *backend-env
       DATABASE_URL: postgresql://uitfood_notification:notification_secret@postgres:5432/uitfood_notification
       REDIS_URL: redis://notification-redis:6379
       REDIS_HOST: notification-redis
@@ -207,14 +227,11 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-noreply@soli.dev}
       FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
-      CHOKIDAR_USEPOLLING: 'true'
     command: sh -c "pnpm run db:migrate && pnpm run dev"
     ports:
       - '4021:4021'
       - '4022:4022'
     depends_on:
-      backend-deps:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       notification-redis:
@@ -223,18 +240,26 @@ services:
         condition: service_healthy
       identity:
         condition: service_started
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/services/notification/src
+          target: /app/apps/services/notification/src
+        - action: rebuild
+          path: ./apps/services/notification/package.json
+        - *watch-root-package
+        - *watch-lockfile
+        - *watch-workspace
+        - *watch-backend-dockerfile
+        - *watch-contracts
     restart: unless-stopped
 
   catalog:
-    image: uitfoodms-backend-dev
+    <<: *backend-common
     container_name: uitfoodms_catalog_dev
     working_dir: /app/apps/services/catalog
-    volumes:
-      - .:/app
-      - backend_nm_root:/app/node_modules
-      - backend_nm_contracts:/app/packages/contracts/node_modules
-      - catalog_nm_app:/app/apps/services/catalog/node_modules
     environment:
+      <<: *backend-env
       DATABASE_URL: postgresql://uitfood_catalog:catalog_secret@postgres:5432/uitfood_catalog
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
       RABBITMQ_EXCHANGE: uitfood.domain-events
@@ -251,14 +276,11 @@ services:
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
       AI_SEARCH_ENABLED: ${AI_SEARCH_ENABLED:-false}
       AI_SEARCH_EMBEDDING_WORKER_ENABLED: ${AI_SEARCH_EMBEDDING_WORKER_ENABLED:-false}
-      CHOKIDAR_USEPOLLING: 'true'
     command: sh -c "pnpm run db:migrate && pnpm run dev"
     ports:
       - '4031:4031'
       - '4032:4032'
     depends_on:
-      backend-deps:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       rabbitmq:
@@ -267,46 +289,59 @@ services:
         condition: service_started
       media:
         condition: service_started
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/services/catalog/src
+          target: /app/apps/services/catalog/src
+        - action: rebuild
+          path: ./apps/services/catalog/package.json
+        - *watch-root-package
+        - *watch-lockfile
+        - *watch-workspace
+        - *watch-backend-dockerfile
+        - *watch-contracts
     restart: unless-stopped
 
   promotion:
-    image: uitfoodms-backend-dev
+    <<: *backend-common
     container_name: uitfoodms_promotion_dev
     working_dir: /app/apps/services/promotion
-    volumes:
-      - .:/app
-      - backend_nm_root:/app/node_modules
-      - backend_nm_contracts:/app/packages/contracts/node_modules
-      - promotion_nm_app:/app/apps/services/promotion/node_modules
     environment:
+      <<: *backend-env
       DATABASE_URL: postgresql://uitfood_promotion:promotion_secret@postgres:5432/uitfood_promotion
       PROMOTION_TCP_PORT: 4041
       PROMOTION_MANAGEMENT_PORT: 4042
       INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
       INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway,uitfood-ordering
       INTERNAL_AUTH_JWT_ISSUER: uitfood-promotion
-      CHOKIDAR_USEPOLLING: 'true'
     command: sh -c "pnpm run db:migrate && pnpm run dev"
     ports:
       - '4041:4041'
       - '4042:4042'
     depends_on:
-      backend-deps:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/services/promotion/src
+          target: /app/apps/services/promotion/src
+        - action: rebuild
+          path: ./apps/services/promotion/package.json
+        - *watch-root-package
+        - *watch-lockfile
+        - *watch-workspace
+        - *watch-backend-dockerfile
+        - *watch-contracts
     restart: unless-stopped
 
   payment:
-    image: uitfoodms-backend-dev
+    <<: *backend-common
     container_name: uitfoodms_payment_dev
     working_dir: /app/apps/services/payment
-    volumes:
-      - .:/app
-      - backend_nm_root:/app/node_modules
-      - backend_nm_contracts:/app/packages/contracts/node_modules
-      - payment_nm_app:/app/apps/services/payment/node_modules
     environment:
+      <<: *backend-env
       DATABASE_URL: postgresql://uitfood_payment:payment_secret@postgres:5432/uitfood_payment
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
       RABBITMQ_EXCHANGE: uitfood.domain-events
@@ -324,30 +359,35 @@ services:
       VNPAY_REFUND_ENABLED: ${VNPAY_REFUND_ENABLED:-false}
       VNPAY_API_URL: ${VNPAY_API_URL:-https://sandbox.vnpayment.vn/merchant_webapi/api/transaction}
       VNPAY_REFUND_MAX_RETRIES: ${VNPAY_REFUND_MAX_RETRIES:-5}
-      CHOKIDAR_USEPOLLING: 'true'
     command: sh -c "pnpm run db:migrate && pnpm run dev"
     ports:
       - '4051:4051'
       - '4052:4052'
     depends_on:
-      backend-deps:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/services/payment/src
+          target: /app/apps/services/payment/src
+        - action: rebuild
+          path: ./apps/services/payment/package.json
+        - *watch-root-package
+        - *watch-lockfile
+        - *watch-workspace
+        - *watch-backend-dockerfile
+        - *watch-contracts
     restart: unless-stopped
 
   ordering:
-    image: uitfoodms-backend-dev
+    <<: *backend-common
     container_name: uitfoodms_ordering_dev
     working_dir: /app/apps/services/ordering
-    volumes:
-      - .:/app
-      - backend_nm_root:/app/node_modules
-      - backend_nm_contracts:/app/packages/contracts/node_modules
-      - ordering_nm_app:/app/apps/services/ordering/node_modules
     environment:
+      <<: *backend-env
       DATABASE_URL: postgresql://uitfood_ordering:ordering_secret@postgres:5432/uitfood_ordering
       REDIS_URL: redis://redis:6379
       REDIS_HOST: redis
@@ -365,14 +405,11 @@ services:
       INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
       INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway,uitfood-review
       INTERNAL_AUTH_JWT_ISSUER: uitfood-ordering
-      CHOKIDAR_USEPOLLING: 'true'
     command: sh -c "pnpm run db:migrate && pnpm run dev"
     ports:
       - '4071:4071'
       - '4072:4072'
     depends_on:
-      backend-deps:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -383,18 +420,26 @@ services:
         condition: service_started
       payment:
         condition: service_started
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/services/ordering/src
+          target: /app/apps/services/ordering/src
+        - action: rebuild
+          path: ./apps/services/ordering/package.json
+        - *watch-root-package
+        - *watch-lockfile
+        - *watch-workspace
+        - *watch-backend-dockerfile
+        - *watch-contracts
     restart: unless-stopped
 
   review:
-    image: uitfoodms-backend-dev
+    <<: *backend-common
     container_name: uitfoodms_review_dev
     working_dir: /app/apps/services/review
-    volumes:
-      - .:/app
-      - backend_nm_root:/app/node_modules
-      - backend_nm_contracts:/app/packages/contracts/node_modules
-      - review_nm_app:/app/apps/services/review/node_modules
     environment:
+      <<: *backend-env
       DATABASE_URL: postgresql://uitfood_review:review_secret@postgres:5432/uitfood_review
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
       RABBITMQ_EXCHANGE: uitfood.domain-events
@@ -405,32 +450,37 @@ services:
       INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
       INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway
       INTERNAL_AUTH_JWT_ISSUER: uitfood-review
-      CHOKIDAR_USEPOLLING: 'true'
     command: sh -c "pnpm run db:migrate && pnpm run dev"
     ports:
       - '4061:4061'
       - '4062:4062'
     depends_on:
-      backend-deps:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
       ordering:
         condition: service_started
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/services/review/src
+          target: /app/apps/services/review/src
+        - action: rebuild
+          path: ./apps/services/review/package.json
+        - *watch-root-package
+        - *watch-lockfile
+        - *watch-workspace
+        - *watch-backend-dockerfile
+        - *watch-contracts
     restart: unless-stopped
 
   reporting:
-    image: uitfoodms-backend-dev
+    <<: *backend-common
     container_name: uitfoodms_reporting_dev
     working_dir: /app/apps/services/reporting
-    volumes:
-      - .:/app
-      - backend_nm_root:/app/node_modules
-      - backend_nm_contracts:/app/packages/contracts/node_modules
-      - reporting_nm_app:/app/apps/services/reporting/node_modules
     environment:
+      <<: *backend-env
       DATABASE_URL: postgresql://uitfood_reporting:reporting_secret@postgres:5432/uitfood_reporting
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
       RABBITMQ_EXCHANGE: uitfood.domain-events
@@ -439,30 +489,35 @@ services:
       INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
       INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway
       INTERNAL_AUTH_JWT_ISSUER: uitfood-reporting
-      CHOKIDAR_USEPOLLING: 'true'
     command: sh -c "pnpm run db:migrate && pnpm run dev"
     ports:
       - '4081:4081'
       - '4082:4082'
     depends_on:
-      backend-deps:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/services/reporting/src
+          target: /app/apps/services/reporting/src
+        - action: rebuild
+          path: ./apps/services/reporting/package.json
+        - *watch-root-package
+        - *watch-lockfile
+        - *watch-workspace
+        - *watch-backend-dockerfile
+        - *watch-contracts
     restart: unless-stopped
 
   gateway:
-    image: uitfoodms-backend-dev
+    <<: *backend-common
     container_name: uitfoodms_gateway_dev
     working_dir: /app/apps/gateway
-    volumes:
-      - .:/app
-      - backend_nm_root:/app/node_modules
-      - backend_nm_contracts:/app/packages/contracts/node_modules
-      - gateway_nm_app:/app/apps/gateway/node_modules
     environment:
+      <<: *backend-env
       PORT: 8080
       MEDIA_ROUTES_ENABLED: 'true'
       MEDIA_TCP_HOST: media
@@ -502,13 +557,10 @@ services:
       REPORTING_MANAGEMENT_PORT: 4082
       INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
       INTERNAL_AUTH_JWT_ISSUER: uitfood-gateway
-      CHOKIDAR_USEPOLLING: 'true'
     ports:
       - '8080:8080'
     command: sh -c "pnpm run dev"
     depends_on:
-      backend-deps:
-        condition: service_completed_successfully
       media:
         condition: service_started
       identity:
@@ -527,43 +579,75 @@ services:
         condition: service_started
       reporting:
         condition: service_started
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/gateway/src
+          target: /app/apps/gateway/src
+        - action: rebuild
+          path: ./apps/gateway/package.json
+        - *watch-root-package
+        - *watch-lockfile
+        - *watch-workspace
+        - *watch-backend-dockerfile
+        - *watch-contracts
     restart: unless-stopped
 
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile.dev
+    <<: *frontend-common
     container_name: uitfoodms_web_dev
-    volumes:
-      - .:/app
-      - web_nm_root:/app/node_modules
-      - web_nm_app:/app/apps/web/node_modules
+    working_dir: /app/apps/web
     environment:
       VITE_API_BASE_URL: http://localhost:8080
     # VITE_API_BASE_URL stays at localhost:8080 because the browser talks to the
     # published host port, not the internal Docker network.
     ports:
       - '5173:5173'
+    command: pnpm run dev
     depends_on:
       - gateway
-    restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/web
+          target: /app/apps/web
+          ignore:
+            - node_modules/
+            - dist/
+            - package.json
+        - action: rebuild
+          path: ./apps/web/package.json
+        - *watch-root-package
+        - *watch-lockfile
+        - *watch-workspace
+        - *watch-frontend-dockerfile
 
   admin:
-    build:
-      context: .
-      dockerfile: apps/admin/Dockerfile.dev
+    <<: *frontend-common
     container_name: uitfoodms_admin_dev
-    volumes:
-      - .:/app
-      - admin_nm_root:/app/node_modules
-      - admin_nm_app:/app/apps/admin/node_modules
+    working_dir: /app/apps/admin
     ports:
       - '5174:5174'
     environment:
       VITE_API_BASE_URL: http://localhost:8080
+    command: pnpm run dev
     depends_on:
       - gateway
-    restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/admin
+          target: /app/apps/admin
+          ignore:
+            - node_modules/
+            - dist/
+            - package.json
+        - action: rebuild
+          path: ./apps/admin/package.json
+        - *watch-root-package
+        - *watch-lockfile
+        - *watch-workspace
+        - *watch-frontend-dockerfile
 
 volumes:
   uitfoodms_db:
@@ -574,19 +658,3 @@ volumes:
     driver: local
   uitfoodms_rabbitmq:
     driver: local
-  backend_nm_root:
-  backend_nm_contracts:
-  web_nm_root:
-  web_nm_app:
-  admin_nm_root:
-  admin_nm_app:
-  media_nm_app:
-  identity_nm_app:
-  notification_nm_app:
-  catalog_nm_app:
-  promotion_nm_app:
-  payment_nm_app:
-  review_nm_app:
-  ordering_nm_app:
-  reporting_nm_app:
-  gateway_nm_app:

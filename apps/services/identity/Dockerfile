@@ -1,11 +1,11 @@
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 RUN apk add --no-cache libc6-compat
 RUN npm install -g turbo@2.9.14
 WORKDIR /app
 COPY . .
 RUN turbo prune --scope=identity --docker
 
-FROM node:22-alpine AS installer
+FROM node:24-alpine AS installer
 RUN apk add --no-cache libc6-compat
 RUN npm install -g pnpm@11.1.2 turbo@2.9.14
 WORKDIR /app
@@ -17,7 +17,7 @@ COPY --from=builder /app/out/full/ .
 COPY turbo.json turbo.json
 RUN turbo run build --filter=identity...
 
-FROM node:22-alpine AS production-deps
+FROM node:24-alpine AS production-deps
 RUN apk add --no-cache libc6-compat
 RUN npm install -g pnpm@11.1.2
 WORKDIR /app
@@ -25,7 +25,7 @@ COPY --from=builder /app/out/json/ .
 COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 RUN pnpm install --prod --frozen-lockfile --config.confirmModulesPurge=false
 
-FROM node:22-alpine AS runner
+FROM node:24-alpine AS runner
 RUN apk add --no-cache ca-certificates
 WORKDIR /app/apps/services/identity
 ENV NODE_ENV=production

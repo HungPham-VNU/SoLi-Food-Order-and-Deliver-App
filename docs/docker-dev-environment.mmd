@@ -1,15 +1,15 @@
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "40px", "fontFamily": "arial"}, "flowchart": {"subGraphTitleMargin": {"top": 60, "bottom": 10}, "nodeSpacing": 80, "rankSpacing": 100}}}%%
 graph TB
-    DEV["👩‍💻 Developer Machine\n(any OS — macOS · Windows · Linux)"]
+    DEV["Developer Machine\nmacOS / Windows / Linux"]
 
-    subgraph HOST["Host: docker compose -f docker-compose.dev.yml up --build"]
+    subgraph HOST["Host: docker compose -f docker-compose.dev.yml up --build --watch"]
         direction TB
 
-        subgraph BUILD["Image Build (Dockerfile.dev — gateway / services / web / admin)"]
+        subgraph BUILD["Image Build (shared backend + frontend dev images)"]
             direction LR
-            BASE["FROM node:22-alpine\n+ libc6-compat\n+ pnpm@11.1.2"]
-            COPY_MANIFESTS["COPY workspace manifests\npackage.json · pnpm-lock.yaml\npnpm-workspace.yaml · turbo.json\napps/*/package.json"]
-            INSTALL["RUN pnpm install\n--frozen-lockfile\n(deps baked into image)"]
+            BASE["FROM node:24-alpine\n+ libc6-compat\n+ pnpm@11.1.2"]
+            COPY_MANIFESTS["COPY workspace manifests\npackage.json / pnpm-lock.yaml\npnpm-workspace.yaml / app package.json files"]
+            INSTALL["RUN pnpm install --frozen-lockfile\n(dependencies baked into images)"]
             BASE --> COPY_MANIFESTS --> INSTALL
         end
 
@@ -17,69 +17,69 @@ graph TB
             direction TB
 
             subgraph INFRA["Infrastructure Services"]
-                PG["🐘 postgres\nimage: postgres:18\ncontainer: food_order_db\nport 5432\nhealthcheck: pg_isready"]
-                RD["⚡ redis\nimage: redis:7-alpine\ncontainer: food_order_redis\nport 6379\nhealthcheck: redis-cli ping"]
+                PG["postgres\nimage: pgvector/pgvector\nport 5432\nhealthcheck: pg_isready"]
+                RD["redis\nimage: redis:7-alpine\nport 6379\nhealthcheck: redis-cli ping"]
+                NRD["notification-redis\nimage: redis:7-alpine\nport 6380"]
+                MQ["rabbitmq\nimage: rabbitmq:3.13-management-alpine\nports 5672 / 15672"]
             end
 
-            subgraph APPS["App Services  (depends_on infra health)"]
-                GATEWAY_C["gateway\ncontainer: food_order_gateway_dev\nCMD: pnpm --filter gateway dev\nport 8080"]
-                SERVICES_C["services\nidentity, media, notification, catalog, promotion, payment, review, ordering, reporting"]
-                WEB_C["🌐 web\ncontainer: food_order_web_dev\nCMD: pnpm --filter web dev\nport 5173"]
-                ADMIN_C["🖥️ admin\ncontainer: food_order_admin_dev\nCMD: pnpm --filter admin dev\nport 5174"]
+            subgraph APPS["App Services"]
+                GATEWAY_C["gateway\nCMD: pnpm run dev\nport 8080"]
+                SERVICES_C["services\nidentity, media, notification, catalog,\npromotion, payment, review, ordering, reporting"]
+                WEB_C["web\nCMD: pnpm run dev\nport 5173"]
+                ADMIN_C["admin\nCMD: pnpm run dev\nport 5174"]
             end
 
-            SERVICES_C -- "DATABASE_URL → postgres:5432" --> PG
-            SERVICES_C -- "REDIS_HOST=redis:6379" --> RD
-            WEB_C -- "VITE_API_BASE_URL → gateway:8080" --> GATEWAY_C
-            ADMIN_C -- "VITE_API_BASE_URL → gateway:8080" --> GATEWAY_C
+            SERVICES_C -- "DATABASE_URL -> postgres:5432" --> PG
+            SERVICES_C -- "REDIS_HOST -> redis:6379" --> RD
+            SERVICES_C -- "RABBITMQ_URL -> rabbitmq:5672" --> MQ
+            WEB_C -- "browser uses localhost:8080" --> GATEWAY_C
+            ADMIN_C -- "browser uses localhost:8080" --> GATEWAY_C
             GATEWAY_C --> SERVICES_C
         end
 
-        subgraph VOLUMES["Named Volumes  (node_modules isolation)"]
-            V1["gateway_nm_root\n/app/node_modules"]
-            V2["service node_modules volumes\n/app/apps/services/*/node_modules"]
-            V3["web_nm_root · web_nm_app"]
-            V4["admin_nm_root · admin_nm_app"]
-            V5["food_order_db\nPostgres data"]
-            V6["food_order_redis\nRedis data"]
+        subgraph VOLUMES["Named Volumes"]
+            V1["Postgres data"]
+            V2["Redis data"]
+            V3["RabbitMQ data"]
         end
     end
 
-    subgraph BIND["Bind Mount  (.:/app)"]
-        SRC["📂 Repo source code\n(live — edits reflect instantly)"]
+    subgraph WATCH["Compose Watch"]
+        SRC["Repo source code\nsync src changes\nrebuild on package or Dockerfile changes"]
     end
 
-    subgraph PORTS["Published Ports (host → container)"]
-        P1["localhost:8080 → gateway:8080\n(REST + WebSocket)"]
-        P2["localhost:5173 → web:5173\n(Vite HMR)"]
-        P3["localhost:5174 → admin:5174\n(Vite HMR)"]
-        P4["localhost:5432 → postgres:5432"]
-        P5["localhost:6379 → redis:6379"]
+    subgraph PORTS["Published Ports (host -> container)"]
+        P1["localhost:8080 -> gateway:8080"]
+        P2["localhost:5173 -> web:5173"]
+        P3["localhost:5174 -> admin:5174"]
+        P4["localhost:5432 -> postgres:5432"]
+        P5["localhost:6379 -> redis:6379"]
+        P6["localhost:15672 -> rabbitmq:15672"]
     end
 
-    DEV -- "docker compose up --build" --> BUILD
-    BUILD -- "image used by" --> GATEWAY_C
-    BUILD -- "image used by" --> SERVICES_C
-    BUILD -- "image used by" --> WEB_C
-    BUILD -- "image used by" --> ADMIN_C
+    DEV -- "docker compose up --build --watch" --> BUILD
+    BUILD -- "backend image" --> GATEWAY_C
+    BUILD -- "backend image" --> SERVICES_C
+    BUILD -- "frontend image" --> WEB_C
+    BUILD -- "frontend image" --> ADMIN_C
 
-    SRC -- ".:/app bind mount\n(host code → container)" --> GATEWAY_C
-    SRC -- ".:/app bind mount" --> SERVICES_C
-    SRC -- ".:/app bind mount" --> WEB_C
-    SRC -- ".:/app bind mount" --> ADMIN_C
+    SRC -- "develop.watch sync/rebuild" --> GATEWAY_C
+    SRC -- "develop.watch sync/rebuild" --> SERVICES_C
+    SRC -- "develop.watch sync/rebuild" --> WEB_C
+    SRC -- "develop.watch sync/rebuild" --> ADMIN_C
 
-    V1 & V2 -- "shadows bind-mount\n(Docker deps ≠ host deps)" --> GATEWAY_C
-    V2 --> SERVICES_C
-    V3 -- "shadows bind-mount" --> WEB_C
-    V4 -- "shadows bind-mount" --> ADMIN_C
-    V5 --> PG
-    V6 --> RD
+    V1 --> PG
+    V2 --> RD
+    V2 --> NRD
+    V3 --> MQ
 
     GATEWAY_C --> P1
     WEB_C --> P2
     ADMIN_C --> P3
     PG --> P4
     RD --> P5
+    MQ --> P6
 
     DEV -- "opens browser" --> P1
     DEV -- "opens browser" --> P2
@@ -89,6 +89,6 @@ graph TB
     style INFRA   fill:#f0fdf4,stroke:#16a34a
     style APPS    fill:#dbeafe,stroke:#2563eb
     style VOLUMES fill:#f5f3ff,stroke:#7c3aed
-    style BIND    fill:#fff7ed,stroke:#ea580c
+    style WATCH   fill:#fff7ed,stroke:#ea580c
     style PORTS   fill:#fdf2f8,stroke:#9d174d
     style HOST    fill:#f8fafc,stroke:#475569

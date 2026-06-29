@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 RUN apk add --no-cache libc6-compat
 RUN npm install -g turbo
 WORKDIR /app
@@ -8,7 +8,7 @@ COPY . .
 RUN turbo prune --scope=admin --docker
 
 # Add lockfile and package.json's of isolated subworkspace
-FROM node:22-alpine AS installer
+FROM node:24-alpine AS installer
 RUN apk add --no-cache libc6-compat
 RUN npm install -g pnpm@11.1.2
 WORKDIR /app
