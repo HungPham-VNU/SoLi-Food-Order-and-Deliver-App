@@ -49,7 +49,7 @@ export class NutritionRpcController {
     }
   }
 
-  @MessagePattern(CATALOG_RPC_PATTERNS.startManualNutrition)
+  // @MessagePattern(CATALOG_RPC_PATTERNS.startManualNutrition)
   async startManual(@Payload() p: Mutation) {
     try {
       const c = this.auth.verifyCatalogToken(p.internalAuth);
