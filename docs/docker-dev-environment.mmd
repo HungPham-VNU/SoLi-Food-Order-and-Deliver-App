@@ -2,7 +2,7 @@
 graph TB
     DEV["Developer Machine\nmacOS / Windows / Linux"]
 
-    subgraph HOST["Host: docker compose -f docker-compose.dev.yml up --build --watch"]
+    subgraph HOST["Host: docker compose up --build --watch"]
         direction TB
 
         subgraph BUILD["Image Build (shared backend + frontend dev images)"]

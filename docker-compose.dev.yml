@@ -1,8 +1,8 @@
 # Development docker-compose - starts local infrastructure plus app dev servers.
 #
 # Usage:
-#   docker compose -f docker-compose.dev.yml up --build --watch
-#   docker compose -f docker-compose.dev.yml watch
+#   docker compose up --build --watch
+#   docker compose watch
 #
 # Backend services share the uitfoodms-backend-dev image. Web and admin share
 # the uitfoodms-frontend-dev image. Dependencies are installed at image build

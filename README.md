@@ -76,7 +76,7 @@ Built as a **Monorepo** using Turborepo, it strictly adheres to scalable archite
 
 4. **Run the full local stack:**
    ```bash
-   docker compose -f docker-compose.dev.yml up --build --watch
+   docker compose up --build --watch
    ```
 
 5. **Or run services individually:**

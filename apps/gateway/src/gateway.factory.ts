@@ -25,6 +25,7 @@ import type { CatalogRouteOverrides } from './catalog/catalog.interfaces';
 import { createPromotionCors } from './promotion/promotion-cors.middleware';
 import type { PromotionRouteOverrides } from './promotion/promotion.interfaces';
 import type { IdentityRouteOverrides } from './identity/identity.interfaces';
+import { createIdentityCors } from './identity/identity-cors.middleware';
 import { IdentityHttpProxyService } from './identity/identity-http-proxy.service';
 import type { NotificationRouteOverrides } from './notification/notification.interfaces';
 import { createNotificationCors } from './notification/notification-cors.middleware';
@@ -158,6 +159,8 @@ export async function createGatewayApp(
   app.use(requestContext);
 
   if (identityRoutesEnabled) {
+    const allowedOrigins = getAllowedOrigins(config);
+    app.use(createIdentityCors(allowedOrigins));
     const identityProxy = app.get(IdentityHttpProxyService);
     app.use((req, res, next) =>
       isIdentityPublicRoute(req.path)

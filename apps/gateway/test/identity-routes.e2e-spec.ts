@@ -48,6 +48,7 @@ describe('Gateway Identity route cutover', () => {
   it('GW-IDENTITY-01 sends auth requests to Identity RPC and preserves cookies', async () => {
     const response = await client
       .post('/api/auth/sign-in/email?redirect=false')
+      .set('origin', 'http://localhost:5173')
       .set('cookie', 'existing=1')
       .set('x-internal-jwt', 'forged')
       .send({ email: 'user@example.com', password: 'secret' });
@@ -58,6 +59,10 @@ describe('Gateway Identity route cutover', () => {
       'better-auth.session_token=abc; Path=/; HttpOnly',
       'better-auth.session_data=def; Path=/; HttpOnly',
     ]);
+    expect(response.headers['access-control-allow-origin']).toBe(
+      'http://localhost:5173',
+    );
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
     expect(identityClient.proxyAuthHttp).toHaveBeenCalledWith(
       expect.objectContaining({
         method: 'POST',
@@ -74,6 +79,20 @@ describe('Gateway Identity route cutover', () => {
     const response = await client.get('/not-a-route');
 
     expect(response.status).toBe(404);
+    expect(identityClient.proxyAuthHttp).not.toHaveBeenCalled();
+  });
+
+  it('GW-IDENTITY-03 handles browser CORS preflight locally', async () => {
+    const response = await client
+      .options('/api/auth/sign-up/email')
+      .set('origin', 'http://localhost:5173')
+      .set('access-control-request-method', 'POST');
+
+    expect(response.status).toBe(204);
+    expect(response.headers['access-control-allow-origin']).toBe(
+      'http://localhost:5173',
+    );
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
     expect(identityClient.proxyAuthHttp).not.toHaveBeenCalled();
   });
 });
