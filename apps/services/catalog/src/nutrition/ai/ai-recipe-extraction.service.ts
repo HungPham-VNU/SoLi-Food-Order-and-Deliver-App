@@ -15,7 +15,7 @@ import {
   type NutritionUnit,
 } from '../types/nutrition.types';
 
-const EXTRACTION_TIMEOUT_MS = 30_000;
+const EXTRACTION_TIMEOUT_MS = 120_000;
 const MAX_AI_ATTEMPTS = 2;
 
 interface ParsedQuantity {
