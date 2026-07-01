@@ -60,7 +60,7 @@ const schema = z.object({
   CATALOG_TCP_HOST: z.string().min(1).default('localhost'),
   CATALOG_TCP_PORT: z.coerce.number().int().positive().default(4031),
   CATALOG_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4032),
-  CATALOG_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
+  CATALOG_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(125000),
   /** Route ownership switch for Promotion-owned public routes. */
   PROMOTION_ROUTES_ENABLED: z
     .string()
