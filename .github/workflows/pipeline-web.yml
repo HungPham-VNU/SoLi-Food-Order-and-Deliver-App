@@ -37,8 +37,6 @@ jobs:
       - name: Check (Lint & Typecheck)
         run: pnpm turbo run lint typecheck --filter=web --cache-dir=".turbo"
         env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
       - name: Security Scan (Audit)
         run: pnpm audit --audit-level high
@@ -46,14 +44,10 @@ jobs:
       - name: Unit Test
         run: pnpm turbo run test --filter=web --cache-dir=".turbo"
         env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
       - name: Build
         run: pnpm turbo run build --filter=web --cache-dir=".turbo"
         env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
           VITE_APP_ENV: production
           VITE_APP_VERSION: ${{ vars.APP_VERSION || '0.1.0' }}

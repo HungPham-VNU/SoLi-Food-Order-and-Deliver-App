@@ -3,9 +3,7 @@ name: CI Validate
 on:
   workflow_call:
     secrets:
-      TURBO_TOKEN:
         required: true
-      TURBO_TEAM:
         required: true
 
 permissions:
@@ -80,8 +78,6 @@ jobs:
       - name: Check (Lint & Typecheck)
         run: pnpm turbo run lint typecheck --filter="...[$TURBO_SCM_BASE]" --cache-dir=".turbo"
         env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
       - name: Security Scan (Audit)
         run: pnpm audit --audit-level high
@@ -89,8 +85,6 @@ jobs:
       - name: Unit Test
         run: pnpm turbo run test --filter="...[$TURBO_SCM_BASE]" --cache-dir=".turbo"
         env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
           VNPAY_TMN_CODE: ${{ secrets.VNPAY_TMN_CODE }}
@@ -106,5 +100,3 @@ jobs:
       - name: Build
         run: pnpm turbo run build --filter="...[$TURBO_SCM_BASE]" --cache-dir=".turbo"
         env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}

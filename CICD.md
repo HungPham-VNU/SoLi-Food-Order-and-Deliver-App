@@ -1,4 +1,4 @@
-﻿# Turborepo CI/CD and Render Deployment
+# Turborepo CI/CD and Render Deployment
 
 This document explains how this repository builds, validates, packages, and deploys the UITFood food ordering platform. It covers the GitHub Actions CI/CD workflows, the Turborepo task model, Docker image publication to GitHub Container Registry, Render image deploy hooks, Expo mobile packaging, and the Terraform configuration that manages Render infrastructure.
 
@@ -74,16 +74,15 @@ Important task behavior:
 The reusable full validation workflow uses:
 
 ```bash
-pnpm turbo run lint typecheck --affected --cache-dir=".turbo"
-pnpm turbo run test --affected --cache-dir=".turbo"
-pnpm turbo run build --affected --cache-dir=".turbo"
-pnpm turbo run test:e2e --filter=api --cache-dir=".turbo" -- --detectOpenHandles --forceExit
+pnpm turbo run lint typecheck --affected
+pnpm turbo run test --affected
+pnpm turbo run build --affected
+pnpm turbo run test:e2e --filter=api -- --detectOpenHandles --forceExit
 ```
 
 `--affected` scopes work to packages affected by the current change set. The workflow checks out with `fetch-depth: 0` in `ci-validate.yml`, which gives Turborepo enough Git history to determine affected packages.
 
-The workflows also cache `.turbo` with `actions/cache`. Remote Turborepo caching is supported through `TURBO_TOKEN` and `TURBO_TEAM`.
-
+The workflows also cache `.turbo` with `actions/cache`.
 ## 4. Shared CI Environment Setup
 
 All major validation and packaging workflows use `.github/actions/setup-environment/action.yml`.
@@ -321,8 +320,6 @@ It then runs:
 8. API `db:push` migration sync against CI Postgres.
 9. API E2E tests.
 
-The workflow declares `TURBO_TOKEN` and `TURBO_TEAM` as required workflow-call secrets. Because of that, `pipeline-main.yml` currently needs those secrets even if remote caching is not essential. If remote cache should be optional, change those workflow-call secrets to `required: false` and keep the environment variables empty when unavailable.
-
 ## 12. Docker Image Packaging
 
 File: `.github/workflows/cd-package-docker.yml`
@@ -546,7 +543,6 @@ These are current behaviors to be aware of:
 
 - `pipeline-main.yml` is manual only. There is no full automatic pipeline for every push or pull request.
 - The API, Web, and Mobile pipelines are path-specific. Root-level changes such as `package.json`, `pnpm-lock.yaml`, `turbo.json`, or shared workflow changes may require manually running the main pipeline unless their workflow path filters are expanded.
-- `ci-validate.yml` requires `TURBO_TOKEN` and `TURBO_TEAM`. If remote caching is optional for the team, make those workflow-call secrets optional.
 - The deploy hook workflow requires each Render service's configured image URL to match the GHCR image URL used by Docker publish and deploy. If the Render image repository differs from `ghcr.io/<owner>/<repo>-<app>`, update the Render service image URL.
 - The Web and Mobile test scripts currently do not run real tests.
 - `pipeline-mobile.yml` uploads an artifact named `mobile-production-build`, but the reusable mobile package workflow builds the `preview` EAS profile.
