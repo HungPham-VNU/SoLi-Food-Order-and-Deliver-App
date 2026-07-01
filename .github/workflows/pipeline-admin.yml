@@ -36,14 +36,12 @@ jobs:
 
       - name: Check (Lint & Typecheck)
         run: pnpm turbo run lint typecheck --filter=admin --cache-dir=".turbo"
-        env:
 
       - name: Security Scan (Audit)
         run: pnpm audit --audit-level high
 
       - name: Unit Test
         run: pnpm turbo run test --filter=admin --cache-dir=".turbo"
-        env:
 
       - name: Build
         run: pnpm turbo run build --filter=admin --cache-dir=".turbo"
@@ -69,4 +67,3 @@ jobs:
       vite_app_version: ${{ vars.APP_VERSION || '0.1.0' }}
       vite_commit_sha: ${{ github.sha }}
     secrets: inherit
-

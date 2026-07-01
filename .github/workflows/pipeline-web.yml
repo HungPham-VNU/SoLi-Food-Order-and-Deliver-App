@@ -36,14 +36,12 @@ jobs:
 
       - name: Check (Lint & Typecheck)
         run: pnpm turbo run lint typecheck --filter=web --cache-dir=".turbo"
-        env:
 
       - name: Security Scan (Audit)
         run: pnpm audit --audit-level high
 
       - name: Unit Test
         run: pnpm turbo run test --filter=web --cache-dir=".turbo"
-        env:
 
       - name: Build
         run: pnpm turbo run build --filter=web --cache-dir=".turbo"

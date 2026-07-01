@@ -65,7 +65,6 @@ jobs:
 
       - name: Check (Lint & Typecheck)
         run: pnpm turbo run lint typecheck --filter="./apps/services/*" --filter="gateway" --cache-dir=".turbo"
-        env:
 
       - name: Security Scan (Audit)
         run: pnpm audit --audit-level high
@@ -85,9 +84,6 @@ jobs:
 
       - name: Build
         run: pnpm turbo run build --filter="./apps/services/*" --filter="gateway" --cache-dir=".turbo"
-        env:
-
-
 
   publish:
     name: Publish Docker Images
