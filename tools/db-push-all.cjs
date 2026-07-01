@@ -58,6 +58,7 @@ for (const serviceDir of serviceDirs) {
         DATABASE_URL: databaseUrl,
       },
       stdio: 'inherit',
+      shell: process.platform === 'win32',
     },
   );
 

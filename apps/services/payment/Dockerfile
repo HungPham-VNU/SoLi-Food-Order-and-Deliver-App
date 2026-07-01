@@ -3,7 +3,7 @@ RUN apk add --no-cache libc6-compat
 RUN npm install -g turbo@2.9.14
 WORKDIR /app
 COPY . .
-RUN turbo prune --scope=promotion --docker
+RUN turbo prune --scope=payment --docker
 
 FROM node:24-alpine AS installer
 RUN apk add --no-cache libc6-compat
@@ -15,7 +15,7 @@ COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 RUN pnpm install --frozen-lockfile --config.confirmModulesPurge=false
 COPY --from=builder /app/out/full/ .
 COPY turbo.json turbo.json
-RUN turbo run build --filter=promotion...
+RUN turbo run build --filter=payment...
 
 FROM node:24-alpine AS production-deps
 RUN apk add --no-cache libc6-compat
@@ -27,20 +27,20 @@ RUN pnpm install --prod --frozen-lockfile --config.confirmModulesPurge=false
 
 FROM node:24-alpine AS runner
 RUN apk add --no-cache ca-certificates
-WORKDIR /app/apps/services/promotion
+WORKDIR /app/apps/services/payment
 ENV NODE_ENV=production
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 --ingroup nodejs nestjs
 USER nestjs
 
-COPY --from=installer /app/apps/services/promotion/package.json ./package.json
-COPY --from=installer /app/apps/services/promotion/dist ./dist
+COPY --from=installer /app/apps/services/payment/package.json ./package.json
+COPY --from=installer /app/apps/services/payment/dist ./dist
 COPY --from=installer /app/packages/contracts/package.json /app/packages/contracts/package.json
 COPY --from=installer /app/packages/contracts/dist /app/packages/contracts/dist
 COPY --from=production-deps /app/node_modules /app/node_modules
-COPY --from=production-deps /app/apps/services/promotion/node_modules ./node_modules
+COPY --from=production-deps /app/apps/services/payment/node_modules ./node_modules
 
-EXPOSE 4041 4042
+EXPOSE 4051 4052
 
 CMD ["node", "dist/main"]
