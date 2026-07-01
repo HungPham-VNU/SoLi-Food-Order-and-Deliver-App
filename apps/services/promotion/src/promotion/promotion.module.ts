@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '@/drizzle/database.module';
+import { CatalogClientModule } from '@/integration/catalog/catalog-client.module';
 import { PROMOTION_APPLICATION_PORT } from '@/shared/ports/promotion-application.port';
 
 import { PromotionRepository } from './repositories/promotion.repository';
@@ -10,10 +11,11 @@ import { PromotionReservationCleanupTask } from './tasks/promotion-reservation-c
 
 /**
  * Promotion service. Owns the discount lifecycle
- * (preview/reserve/confirm/rollback) and public active-promotion reads.
+ * (preview/reserve/confirm/rollback), public active-promotion reads, and
+ * restaurant/admin promotion management.
  */
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, CatalogClientModule],
   providers: [
     PromotionRepository,
     CouponCodeRepository,

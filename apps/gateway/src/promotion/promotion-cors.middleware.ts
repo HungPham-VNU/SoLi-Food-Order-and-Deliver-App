@@ -13,7 +13,10 @@ export function createPromotionCors(allowedOrigins: ReadonlySet<string>) {
       response.setHeader('Access-Control-Allow-Origin', origin);
       response.setHeader('Access-Control-Allow-Credentials', 'true');
       response.setHeader('Vary', 'Origin');
-      response.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+      response.setHeader(
+        'Access-Control-Allow-Methods',
+        'GET,POST,PATCH,DELETE,OPTIONS',
+      );
       response.setHeader(
         'Access-Control-Allow-Headers',
         'Authorization,Content-Type,X-Request-Id',

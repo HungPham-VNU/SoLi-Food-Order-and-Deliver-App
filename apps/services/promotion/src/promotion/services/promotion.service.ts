@@ -1,5 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import type {
+  CreatePromotionInput,
+  UpdatePromotionInput,
+} from '@uitfood/contracts';
 import {
   IPromotionApplicationPort,
   DiscountPreviewParams,
@@ -8,11 +18,17 @@ import {
   DiscountReservationResult,
   DiscountBreakdown,
 } from '@/shared/ports/promotion-application.port';
+import { CatalogRestaurantLookupService } from '@/integration/catalog/catalog-restaurant-lookup.service';
 import { PromotionRepository } from '../repositories/promotion.repository';
 import { CouponCodeRepository } from '../repositories/coupon-code.repository';
 import { PromotionUsageRepository } from '../repositories/promotion-usage.repository';
 import { PromotionPricingEngine } from '../engine/promotion-pricing-engine';
-import type { Promotion } from '../domain/promotion.schema';
+import type {
+  CouponCode,
+  CouponStatus,
+  Promotion,
+  PromotionStatus,
+} from '../domain/promotion.schema';
 
 /**
  * PromotionService — implements IPromotionApplicationPort.
@@ -35,6 +51,7 @@ export class PromotionService implements IPromotionApplicationPort {
     private readonly promotionRepo: PromotionRepository,
     private readonly couponRepo: CouponCodeRepository,
     private readonly usageRepo: PromotionUsageRepository,
+    private readonly catalogLookup: CatalogRestaurantLookupService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -370,8 +387,380 @@ export class PromotionService implements IPromotionApplicationPort {
   }
 
   // ---------------------------------------------------------------------------
+  // Admin CRUD — promotion management
+  // ---------------------------------------------------------------------------
+
+  async adminList(filters: {
+    status?: PromotionStatus;
+    restaurantId?: string;
+    offset?: number;
+    limit?: number;
+  }): Promise<{
+    items: Promotion[];
+    total: number;
+    offset: number;
+    limit: number;
+  }> {
+    const offset = filters.offset ?? 0;
+    const limit = filters.limit ?? 20;
+    const { rows, total } = await this.promotionRepo.findAll({
+      ...filters,
+      offset,
+      limit,
+    });
+    return { items: rows, total, offset, limit };
+  }
+
+  async adminGet(id: string): Promise<Promotion> {
+    return this.promotionRepo.findByIdOrThrow(id);
+  }
+
+  async adminCreate(data: CreatePromotionInput): Promise<Promotion> {
+    if (data.scope === 'restaurant' && !data.restaurantId) {
+      throw new BadRequestException(
+        'restaurantId is required for restaurant-scoped promotions.',
+      );
+    }
+    if (data.endsAt <= data.startsAt) {
+      throw new BadRequestException('endsAt must be after startsAt.');
+    }
+
+    return this.promotionRepo.create({
+      name: data.name,
+      description: data.description ?? null,
+      type: data.type,
+      scope: data.scope,
+      trigger: data.trigger,
+      stackingMode: data.stackingMode ?? 'non_stackable',
+      restaurantId:
+        data.scope === 'platform' ? null : (data.restaurantId ?? null),
+      discountValue: data.discountValue,
+      minOrderAmount: data.minOrderAmount ?? null,
+      maxDiscountAmount: data.maxDiscountAmount ?? null,
+      maxTotalUses: data.maxTotalUses ?? null,
+      maxUsesPerUser: data.maxUsesPerUser ?? null,
+      startsAt: data.startsAt,
+      endsAt: data.endsAt,
+    });
+  }
+
+  async adminUpdate(
+    id: string,
+    data: UpdatePromotionInput,
+  ): Promise<Promotion> {
+    const existing = await this.promotionRepo.findByIdOrThrow(id);
+    const startsAt = data.startsAt ?? existing.startsAt;
+    const endsAt = data.endsAt ?? existing.endsAt;
+    if (endsAt <= startsAt) {
+      throw new BadRequestException('endsAt must be after startsAt.');
+    }
+
+    const updated = await this.promotionRepo.update(id, {
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.description !== undefined && {
+        description: data.description ?? null,
+      }),
+      ...(data.stackingMode !== undefined && {
+        stackingMode: data.stackingMode,
+      }),
+      ...(data.restaurantId !== undefined && {
+        restaurantId: data.restaurantId ?? null,
+      }),
+      ...(data.discountValue !== undefined && {
+        discountValue: data.discountValue,
+      }),
+      ...(data.minOrderAmount !== undefined && {
+        minOrderAmount: data.minOrderAmount ?? null,
+      }),
+      ...(data.maxDiscountAmount !== undefined && {
+        maxDiscountAmount: data.maxDiscountAmount ?? null,
+      }),
+      ...(data.maxTotalUses !== undefined && {
+        maxTotalUses: data.maxTotalUses ?? null,
+      }),
+      ...(data.maxUsesPerUser !== undefined && {
+        maxUsesPerUser: data.maxUsesPerUser ?? null,
+      }),
+      ...(data.startsAt !== undefined && { startsAt: data.startsAt }),
+      ...(data.endsAt !== undefined && { endsAt: data.endsAt }),
+    });
+    if (!updated) throw new NotFoundException(`Promotion ${id} not found`);
+    return updated;
+  }
+
+  async adminActivate(id: string): Promise<Promotion> {
+    return this.transitionStatus(id, ['draft', 'paused'], 'active');
+  }
+
+  async adminPause(id: string): Promise<Promotion> {
+    return this.transitionStatus(id, ['active'], 'paused');
+  }
+
+  async adminCancel(id: string): Promise<Promotion> {
+    return this.transitionStatus(
+      id,
+      ['draft', 'active', 'paused'],
+      'cancelled',
+    );
+  }
+
+  private async transitionStatus(
+    id: string,
+    allowedFrom: PromotionStatus[],
+    to: PromotionStatus,
+  ): Promise<Promotion> {
+    const promotion = await this.promotionRepo.findByIdOrThrow(id);
+    if (!allowedFrom.includes(promotion.status)) {
+      throw new BadRequestException(
+        `Cannot transition promotion from '${promotion.status}' to '${to}'.`,
+      );
+    }
+    const updated = await this.promotionRepo.update(id, { status: to });
+    if (!updated) throw new NotFoundException(`Promotion ${id} not found`);
+    return updated;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Admin CRUD — coupon code management
+  // ---------------------------------------------------------------------------
+
+  async adminListCoupons(
+    promotionId: string,
+    filters: { status?: CouponStatus; offset?: number; limit?: number },
+  ): Promise<{
+    items: CouponCode[];
+    total: number;
+    offset: number;
+    limit: number;
+  }> {
+    await this.promotionRepo.findByIdOrThrow(promotionId);
+    const offset = filters.offset ?? 0;
+    const limit = filters.limit ?? 50;
+    const { rows, total } = await this.couponRepo.findByPromotionId(
+      promotionId,
+      offset,
+      limit,
+      filters.status,
+    );
+    return { items: rows, total, offset, limit };
+  }
+
+  async adminGenerateCoupons(
+    promotionId: string,
+    dto: { codes: string[]; maxUsesPerCode?: number; expiresAt?: Date },
+  ): Promise<CouponCode[]> {
+    await this.promotionRepo.findByIdOrThrow(promotionId);
+
+    const codes = Array.from(
+      new Set(
+        dto.codes.map((code) => code.trim().toUpperCase()).filter(Boolean),
+      ),
+    );
+    if (codes.length === 0) {
+      throw new BadRequestException('At least one coupon code is required.');
+    }
+
+    return this.couponRepo.createMany(
+      codes.map((code) => ({
+        id: randomUUID(),
+        promotionId,
+        code,
+        maxUses: dto.maxUsesPerCode ?? null,
+        expiresAt: dto.expiresAt ?? null,
+      })),
+    );
+  }
+
+  async adminRevokeCoupon(
+    promotionId: string,
+    couponId: string,
+  ): Promise<CouponCode> {
+    const coupon = await this.couponRepo.findById(couponId);
+    if (!coupon || coupon.promotionId !== promotionId) {
+      throw new NotFoundException(
+        `Coupon ${couponId} not found for this promotion`,
+      );
+    }
+    const revoked = await this.couponRepo.revokeCode(couponId);
+    if (!revoked) throw new NotFoundException(`Coupon ${couponId} not found`);
+    return revoked;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Restaurant-owner CRUD — promotion management scoped to one restaurant.
+  // Every write re-verifies restaurant ownership against Catalog (unless the
+  // caller is an admin), and every read/write on an existing promotion checks
+  // it actually belongs to the given restaurantId — otherwise a restaurant
+  // owner could read/mutate another restaurant's promotion by guessing its id.
+  // ---------------------------------------------------------------------------
+
+  async restaurantList(
+    restaurantId: string,
+    filters: { offset?: number; limit?: number },
+  ): Promise<{
+    items: Promotion[];
+    total: number;
+    offset: number;
+    limit: number;
+  }> {
+    const offset = filters.offset ?? 0;
+    const limit = filters.limit ?? 20;
+    const { rows, total } = await this.promotionRepo.findByRestaurantId(
+      restaurantId,
+      offset,
+      limit,
+    );
+    return { items: rows, total, offset, limit };
+  }
+
+  async restaurantGet(restaurantId: string, id: string): Promise<Promotion> {
+    return this.findOwnedPromotion(id, restaurantId);
+  }
+
+  async restaurantCreate(
+    restaurantId: string,
+    callerId: string,
+    isAdmin: boolean,
+    data: CreatePromotionInput,
+  ): Promise<Promotion> {
+    await this.verifyRestaurantOwnership(restaurantId, callerId, isAdmin);
+    if (data.endsAt <= data.startsAt) {
+      throw new BadRequestException('endsAt must be after startsAt.');
+    }
+
+    return this.promotionRepo.create({
+      name: data.name,
+      description: data.description ?? null,
+      type: data.type,
+      // Scope and restaurantId are forced regardless of the request body —
+      // a restaurant owner can only ever create promotions for their own
+      // restaurant, never a platform-wide one.
+      scope: 'restaurant',
+      restaurantId,
+      trigger: data.trigger,
+      stackingMode: data.stackingMode ?? 'non_stackable',
+      discountValue: data.discountValue,
+      minOrderAmount: data.minOrderAmount ?? null,
+      maxDiscountAmount: data.maxDiscountAmount ?? null,
+      maxTotalUses: data.maxTotalUses ?? null,
+      maxUsesPerUser: data.maxUsesPerUser ?? null,
+      startsAt: data.startsAt,
+      endsAt: data.endsAt,
+    });
+  }
+
+  async restaurantUpdate(
+    restaurantId: string,
+    callerId: string,
+    isAdmin: boolean,
+    id: string,
+    data: UpdatePromotionInput,
+  ): Promise<Promotion> {
+    await this.verifyRestaurantOwnership(restaurantId, callerId, isAdmin);
+    const existing = await this.findOwnedPromotion(id, restaurantId);
+    const startsAt = data.startsAt ?? existing.startsAt;
+    const endsAt = data.endsAt ?? existing.endsAt;
+    if (endsAt <= startsAt) {
+      throw new BadRequestException('endsAt must be after startsAt.');
+    }
+
+    const updated = await this.promotionRepo.update(id, {
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.description !== undefined && {
+        description: data.description ?? null,
+      }),
+      ...(data.stackingMode !== undefined && {
+        stackingMode: data.stackingMode,
+      }),
+      ...(data.discountValue !== undefined && {
+        discountValue: data.discountValue,
+      }),
+      ...(data.minOrderAmount !== undefined && {
+        minOrderAmount: data.minOrderAmount ?? null,
+      }),
+      ...(data.maxDiscountAmount !== undefined && {
+        maxDiscountAmount: data.maxDiscountAmount ?? null,
+      }),
+      ...(data.maxTotalUses !== undefined && {
+        maxTotalUses: data.maxTotalUses ?? null,
+      }),
+      ...(data.maxUsesPerUser !== undefined && {
+        maxUsesPerUser: data.maxUsesPerUser ?? null,
+      }),
+      ...(data.startsAt !== undefined && { startsAt: data.startsAt }),
+      ...(data.endsAt !== undefined && { endsAt: data.endsAt }),
+      // restaurantId is intentionally never accepted here — a restaurant
+      // owner cannot reassign a promotion to a different restaurant.
+    });
+    if (!updated) throw new NotFoundException(`Promotion ${id} not found`);
+    return updated;
+  }
+
+  async restaurantActivate(
+    restaurantId: string,
+    callerId: string,
+    isAdmin: boolean,
+    id: string,
+  ): Promise<Promotion> {
+    await this.verifyRestaurantOwnership(restaurantId, callerId, isAdmin);
+    await this.findOwnedPromotion(id, restaurantId);
+    return this.transitionStatus(id, ['draft', 'paused'], 'active');
+  }
+
+  async restaurantPause(
+    restaurantId: string,
+    callerId: string,
+    isAdmin: boolean,
+    id: string,
+  ): Promise<Promotion> {
+    await this.verifyRestaurantOwnership(restaurantId, callerId, isAdmin);
+    await this.findOwnedPromotion(id, restaurantId);
+    return this.transitionStatus(id, ['active'], 'paused');
+  }
+
+  async restaurantCancel(
+    restaurantId: string,
+    callerId: string,
+    isAdmin: boolean,
+    id: string,
+  ): Promise<Promotion> {
+    await this.verifyRestaurantOwnership(restaurantId, callerId, isAdmin);
+    await this.findOwnedPromotion(id, restaurantId);
+    return this.transitionStatus(
+      id,
+      ['draft', 'active', 'paused'],
+      'cancelled',
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
+
+  /** Loads a promotion and confirms it belongs to the given restaurant. */
+  private async findOwnedPromotion(
+    id: string,
+    restaurantId: string,
+  ): Promise<Promotion> {
+    const promotion = await this.promotionRepo.findByIdOrThrow(id);
+    if (promotion.restaurantId !== restaurantId) {
+      throw new NotFoundException(`Promotion ${id} not found`);
+    }
+    return promotion;
+  }
+
+  /** Verifies restaurantId is owned by callerId, via Catalog, unless isAdmin. */
+  private async verifyRestaurantOwnership(
+    restaurantId: string,
+    callerId: string,
+    isAdmin: boolean,
+  ): Promise<void> {
+    if (isAdmin) return;
+    const ownerId = await this.catalogLookup.getOwnerId(restaurantId);
+    if (ownerId !== callerId) {
+      throw new ForbiddenException('You do not own this restaurant');
+    }
+  }
 
   private async previewAutoApply(
     restaurantId: string,

@@ -5,6 +5,7 @@ import { PROMOTION_DATABASE } from '@/drizzle/database.constants';
 import {
   couponCodes,
   type CouponCode,
+  type CouponStatus,
   type NewCouponCode,
 } from '../domain/promotion.schema';
 
@@ -144,19 +145,27 @@ export class CouponCodeRepository {
     promotionId: string,
     offset = 0,
     limit = 50,
+    status?: CouponStatus,
   ): Promise<{ rows: CouponCode[]; total: number }> {
+    const whereClause = status
+      ? and(
+          eq(couponCodes.promotionId, promotionId),
+          eq(couponCodes.status, status),
+        )
+      : eq(couponCodes.promotionId, promotionId);
+
     const [rows, countResult] = await Promise.all([
       this.db
         .select()
         .from(couponCodes)
-        .where(eq(couponCodes.promotionId, promotionId))
+        .where(whereClause)
         .orderBy(desc(couponCodes.createdAt))
         .offset(offset)
         .limit(limit),
       this.db
         .select({ count: sql<number>`COUNT(*)` })
         .from(couponCodes)
-        .where(eq(couponCodes.promotionId, promotionId)),
+        .where(whereClause),
     ]);
     return { rows, total: Number(countResult[0]?.count ?? 0) };
   }

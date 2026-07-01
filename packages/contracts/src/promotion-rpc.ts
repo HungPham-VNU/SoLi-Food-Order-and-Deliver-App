@@ -19,6 +19,26 @@ export const PROMOTION_RPC_PATTERNS = {
   confirmReservations: 'promotion.reservation.confirm.v1',
   rollbackReservations: 'promotion.reservation.rollback.v1',
   listActivePromotions: 'promotion.list-active.v1',
+
+  // Restaurant-owner promotion management
+  restaurantListPromotions: 'promotion.restaurant.list.v1',
+  restaurantGetPromotion: 'promotion.restaurant.get.v1',
+  restaurantCreatePromotion: 'promotion.restaurant.create.v1',
+  restaurantUpdatePromotion: 'promotion.restaurant.update.v1',
+  restaurantActivatePromotion: 'promotion.restaurant.activate.v1',
+  restaurantPausePromotion: 'promotion.restaurant.pause.v1',
+  restaurantCancelPromotion: 'promotion.restaurant.cancel.v1',
+
+  adminListPromotions: 'promotion.admin.list.v1',
+  adminGetPromotion: 'promotion.admin.get.v1',
+  adminCreatePromotion: 'promotion.admin.create.v1',
+  adminUpdatePromotion: 'promotion.admin.update.v1',
+  adminActivatePromotion: 'promotion.admin.activate.v1',
+  adminPausePromotion: 'promotion.admin.pause.v1',
+  adminCancelPromotion: 'promotion.admin.cancel.v1',
+  adminListCoupons: 'promotion.admin.coupons.list.v1',
+  adminGenerateCoupons: 'promotion.admin.coupons.generate.v1',
+  adminRevokeCoupon: 'promotion.admin.coupons.revoke.v1',
 } as const;
 
 export type PromotionRpcPattern =
@@ -62,11 +82,10 @@ export type DiscountPreviewParamsDto = z.infer<
   typeof discountPreviewParamsSchema
 >;
 
-export const discountReservationParamsSchema = discountPreviewParamsSchema.extend(
-  {
+export const discountReservationParamsSchema =
+  discountPreviewParamsSchema.extend({
     tempOrderId: z.string().uuid(),
-  },
-);
+  });
 export type DiscountReservationParamsDto = z.infer<
   typeof discountReservationParamsSchema
 >;
@@ -161,3 +180,173 @@ export const publicPromotionSchema = z.object({
   endsAt: z.coerce.date(),
 });
 export type PublicPromotion = z.infer<typeof publicPromotionSchema>;
+
+// ---------------------------------------------------------------------------
+// Admin management (promotion CRUD + coupon code management)
+// ---------------------------------------------------------------------------
+
+export const promotionTypeValues = [
+  'percentage',
+  'fixed_amount',
+  'free_delivery',
+  'reduced_delivery',
+  'buy_x_get_y',
+  'free_item',
+] as const;
+
+export const promotionScopeValues = ['platform', 'restaurant'] as const;
+
+export const promotionStatusValues = [
+  'draft',
+  'active',
+  'paused',
+  'cancelled',
+  'expired',
+] as const;
+
+export const promotionTriggerValues = ['auto_apply', 'coupon_code'] as const;
+
+export const stackingModeValues = [
+  'non_stackable',
+  'stackable',
+  'exclusive',
+] as const;
+
+export const couponStatusValues = [
+  'active',
+  'exhausted',
+  'expired',
+  'revoked',
+] as const;
+
+export const createPromotionInputSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().min(1).optional(),
+  type: z.enum(promotionTypeValues),
+  scope: z.enum(promotionScopeValues),
+  trigger: z.enum(promotionTriggerValues),
+  stackingMode: z.enum(stackingModeValues).optional(),
+  restaurantId: z.string().min(1).optional(),
+  discountValue: z.number().int().positive(),
+  minOrderAmount: z.number().int().nonnegative().optional(),
+  maxDiscountAmount: z.number().int().nonnegative().optional(),
+  maxTotalUses: z.number().int().positive().optional(),
+  maxUsesPerUser: z.number().int().positive().optional(),
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+});
+export type CreatePromotionInput = z.infer<typeof createPromotionInputSchema>;
+
+export const updatePromotionInputSchema = createPromotionInputSchema
+  .omit({ type: true, scope: true, trigger: true })
+  .partial();
+export type UpdatePromotionInput = z.infer<typeof updatePromotionInputSchema>;
+
+export const adminListPromotionsRequestSchema = z.object({
+  internalAuth: z.string().min(1),
+  status: z.enum(promotionStatusValues).optional(),
+  restaurantId: z.string().min(1).optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
+  limit: z.coerce.number().int().positive().max(100).optional(),
+});
+export type AdminListPromotionsRequest = z.infer<
+  typeof adminListPromotionsRequestSchema
+>;
+
+export const adminPromotionIdRequestSchema = z.object({
+  internalAuth: z.string().min(1),
+  id: z.string().min(1),
+});
+export type AdminPromotionIdRequest = z.infer<
+  typeof adminPromotionIdRequestSchema
+>;
+
+export const adminCreatePromotionRequestSchema = z.object({
+  internalAuth: z.string().min(1),
+  data: createPromotionInputSchema,
+});
+export type AdminCreatePromotionRequest = z.infer<
+  typeof adminCreatePromotionRequestSchema
+>;
+
+export const adminUpdatePromotionRequestSchema = z.object({
+  internalAuth: z.string().min(1),
+  id: z.string().min(1),
+  data: updatePromotionInputSchema,
+});
+export type AdminUpdatePromotionRequest = z.infer<
+  typeof adminUpdatePromotionRequestSchema
+>;
+
+export const adminListCouponsRequestSchema = z.object({
+  internalAuth: z.string().min(1),
+  promotionId: z.string().min(1),
+  status: z.enum(couponStatusValues).optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
+  limit: z.coerce.number().int().positive().max(200).optional(),
+});
+export type AdminListCouponsRequest = z.infer<
+  typeof adminListCouponsRequestSchema
+>;
+
+export const adminGenerateCouponsRequestSchema = z.object({
+  internalAuth: z.string().min(1),
+  promotionId: z.string().min(1),
+  codes: z.array(z.string().min(1)).min(1),
+  maxUsesPerCode: z.number().int().positive().optional(),
+  expiresAt: z.coerce.date().optional(),
+});
+export type AdminGenerateCouponsRequest = z.infer<
+  typeof adminGenerateCouponsRequestSchema
+>;
+
+export const adminRevokeCouponRequestSchema = z.object({
+  internalAuth: z.string().min(1),
+  promotionId: z.string().min(1),
+  couponId: z.string().min(1),
+});
+export type AdminRevokeCouponRequest = z.infer<
+  typeof adminRevokeCouponRequestSchema
+>;
+
+// ---------------------------------------------------------------------------
+// Restaurant-owner management (promotion CRUD scoped to one restaurant)
+// ---------------------------------------------------------------------------
+
+export const restaurantListPromotionsRequestSchema = z.object({
+  internalAuth: z.string().min(1),
+  restaurantId: z.string().min(1),
+  offset: z.coerce.number().int().nonnegative().optional(),
+  limit: z.coerce.number().int().positive().max(100).optional(),
+});
+export type RestaurantListPromotionsRequest = z.infer<
+  typeof restaurantListPromotionsRequestSchema
+>;
+
+export const restaurantPromotionIdRequestSchema = z.object({
+  internalAuth: z.string().min(1),
+  restaurantId: z.string().min(1),
+  id: z.string().min(1),
+});
+export type RestaurantPromotionIdRequest = z.infer<
+  typeof restaurantPromotionIdRequestSchema
+>;
+
+export const restaurantCreatePromotionRequestSchema = z.object({
+  internalAuth: z.string().min(1),
+  restaurantId: z.string().min(1),
+  data: createPromotionInputSchema,
+});
+export type RestaurantCreatePromotionRequest = z.infer<
+  typeof restaurantCreatePromotionRequestSchema
+>;
+
+export const restaurantUpdatePromotionRequestSchema = z.object({
+  internalAuth: z.string().min(1),
+  restaurantId: z.string().min(1),
+  id: z.string().min(1),
+  data: updatePromotionInputSchema,
+});
+export type RestaurantUpdatePromotionRequest = z.infer<
+  typeof restaurantUpdatePromotionRequestSchema
+>;

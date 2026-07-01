@@ -88,7 +88,11 @@ export default function CreateMenuItemPage() {
   };
 
   const onSubmit = (values: CreateMenuItemFormValues) => {
-    void saveMenuItem(values).catch(() => undefined);
+    void saveMenuItem(values)
+      .then((item) => {
+        if (item) navigate('/menu');
+      })
+      .catch(() => undefined);
   };
 
   const saveBeforeAnalyze = async () => {
