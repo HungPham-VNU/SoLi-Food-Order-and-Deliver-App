@@ -255,7 +255,7 @@ export class ModifiersService {
       maxSelections: g.maxSelections,
       options: g.options.map((o) => ({
         optionId: o.id,
-        name: o.name,
+        optionName: o.name,
         price: o.price,
         isDefault: o.isDefault,
         isAvailable: o.isAvailable,

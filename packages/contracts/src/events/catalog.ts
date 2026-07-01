@@ -9,7 +9,7 @@ import { EVENT_NAMES } from '../event-names';
  */
 const modifierOptionSnapshot = z.object({
   optionId: z.string(),
-  name: z.string(),
+  optionName: z.string(),
   price: z.number(),
   isDefault: z.boolean(),
   isAvailable: z.boolean(),
