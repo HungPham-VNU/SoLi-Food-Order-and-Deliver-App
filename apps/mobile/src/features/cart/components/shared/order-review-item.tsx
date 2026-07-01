@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 import { Image } from 'expo-image';
 import { Utensils } from 'lucide-react-native';
 import type { CartItem } from '../../types';
+import { calculateItemTotal } from '../../utils/price-calculations';
 
 interface OrderReviewItemProps {
   item: CartItem;
@@ -31,13 +32,26 @@ export function OrderReviewItem({ item }: OrderReviewItemProps) {
         >
           {item.name}
         </Text>
+        {item.selectedModifiers && item.selectedModifiers.length > 0 && (
+          <View className="mt-1 gap-0.5">
+            {item.selectedModifiers.map((mod) => (
+              <Text
+                key={mod.optionId}
+                className="text-on-surface-variant text-[11px]"
+                style={{ fontFamily: 'Inter_400Regular' }}
+              >
+                • {mod.optionName}
+              </Text>
+            ))}
+          </View>
+        )}
       </View>
       <View className="items-end">
         <Text
           className="font-bold text-sm text-primary"
           style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
         >
-          ${item.price.toFixed(2)}
+          ${calculateItemTotal(item).toFixed(2)}
         </Text>
         <Text
           className="text-[10px] text-on-surface-variant font-medium"
