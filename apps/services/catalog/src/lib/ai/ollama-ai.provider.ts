@@ -126,11 +126,23 @@ const normalizeLocalOllamaApiBaseURL = (baseURL: string | undefined) => {
 export const resolveOllamaRuntimeConfig = (
   raw: RawOllamaConfig,
 ): OllamaRuntimeConfig => {
+  let baseURL = raw.baseURL
+    ? normalizeLocalOllamaApiBaseURL(raw.baseURL)
+    : OLLAMA_CLOUD_API_BASE_URL;
+
+  if (
+    baseURL.startsWith('http://localhost') ||
+    baseURL.startsWith('http://127.0.0.1')
+  ) {
+    baseURL = OLLAMA_CLOUD_API_BASE_URL;
+  }
+
+  const isDirectCloud = baseURL === OLLAMA_CLOUD_API_BASE_URL;
   return {
     endpoint: {
       mode: 'native',
-      baseURL: OLLAMA_CLOUD_API_BASE_URL,
-      isDirectCloud: true,
+      baseURL,
+      isDirectCloud,
     },
     model: normalizeCloudModelName(
       trimOrDefault(raw.model, DEFAULT_OLLAMA_MODEL),
@@ -158,7 +170,8 @@ export class OllamaAiProvider {
   constructor(@Inject(ConfigService) private readonly config: ConfigService) {}
 
   isConfigured(): boolean {
-    return Boolean(this.getRuntimeConfig().apiKey);
+    const config = this.getRuntimeConfig();
+    return !config.endpoint.isDirectCloud || Boolean(config.apiKey);
   }
 
   getRuntimeConfig(modelOverride?: string): OllamaRuntimeConfig {
@@ -182,7 +195,7 @@ export class OllamaAiProvider {
   async chat(request: AiChatRequest): Promise<AiChatResponse> {
     const runtimeConfig = this.getRuntimeConfig(request.model);
 
-    if (!runtimeConfig.apiKey) {
+    if (runtimeConfig.endpoint.isDirectCloud && !runtimeConfig.apiKey) {
       throw new AiProviderNotConfiguredError(
         'AI provider is not configured. Set OLLAMA_API_KEY for Ollama Cloud.',
       );
