@@ -136,10 +136,12 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-noreply@soli.dev}
-      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
+      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-/run/secrets/firebase-service-account.json}
     ports:
       - '4021:4021'
       - '4022:4022'
+    volumes:
+      - ${FIREBASE_SERVICE_ACCOUNT_PATH_HOST:-./soli-food-delivery-FCM-key.json}:/run/secrets/firebase-service-account.json:ro
     depends_on:
       postgres:
         condition: service_healthy

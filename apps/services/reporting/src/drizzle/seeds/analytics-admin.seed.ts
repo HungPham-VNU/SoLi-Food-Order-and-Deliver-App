@@ -96,6 +96,15 @@ async function seedAnalyticsOrdersAdmin() {
 
       const numItems = randomInt(1, 3);
       let subtotal = 0;
+      const orderItemAggregate = new Map<
+        string,
+        {
+          menuItemId: string;
+          itemName: string;
+          quantity: number;
+          revenue: number;
+        }
+      >();
 
       for (let j = 0; j < numItems; j++) {
         const currentItem = randomItem(restaurantMenuItems);
@@ -103,13 +112,28 @@ async function seedAnalyticsOrdersAdmin() {
         const itemSubtotal = parseFloat(currentItem.price) * quantity;
         subtotal += itemSubtotal;
 
+        const existing = orderItemAggregate.get(currentItem.id);
+        if (existing) {
+          existing.quantity += quantity;
+          existing.revenue += itemSubtotal;
+        } else {
+          orderItemAggregate.set(currentItem.id, {
+            menuItemId: currentItem.id,
+            itemName: currentItem.name,
+            quantity,
+            revenue: itemSubtotal,
+          });
+        }
+      }
+
+      for (const aggregatedItem of orderItemAggregate.values()) {
         itemFacts.push({
           id: crypto.randomUUID(),
           orderId,
-          menuItemId: currentItem.id,
-          itemName: currentItem.name,
-          quantity,
-          revenue: itemSubtotal,
+          menuItemId: aggregatedItem.menuItemId,
+          itemName: aggregatedItem.itemName,
+          quantity: aggregatedItem.quantity,
+          revenue: aggregatedItem.revenue,
           createdAt: placedAt,
         });
       }

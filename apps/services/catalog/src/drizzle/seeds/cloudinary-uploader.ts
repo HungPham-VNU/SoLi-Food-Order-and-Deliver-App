@@ -27,8 +27,19 @@ export async function uploadSeedImages(
     !process.env.CLOUDINARY_API_KEY ||
     !process.env.CLOUDINARY_API_SECRET
   ) {
-    throw new Error(
-      'Missing Cloudinary configuration in .env (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET).',
+    console.warn(
+      'Cloudinary config missing, using source URLs directly for seed images.',
+    );
+    return new Map(
+      imageDefs.map((def) => [
+        def.publicId,
+        {
+          publicId: def.publicId,
+          secureUrl: def.sourceUrl,
+          width: def.width,
+          height: def.height,
+        },
+      ]),
     );
   }
 

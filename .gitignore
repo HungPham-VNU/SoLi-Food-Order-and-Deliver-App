@@ -23,3 +23,5 @@ dist-check.tsbuildinfo
 *.tsbuildinfo
 
 out/
+# Local Firebase service-account key
+soli-food-delivery-FCM-key.json
