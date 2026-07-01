@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signUp, useSession } from '@/lib/auth-client';
 import { ApiError } from '@/lib/api-client';
-import { trackEvent } from '@/lib/analytics';
 
 export interface SignUpInput {
   email: string;
@@ -35,7 +34,6 @@ export function useSignUp() {
         );
       }
 
-      trackEvent('signup_success', { method: 'email' });
       await refetchSession();
       navigate('/auth/register/business', { replace: true });
 
@@ -44,11 +42,6 @@ export function useSignUp() {
       const nextError =
         caught instanceof Error ? caught : new Error('Registration failed');
       setError(nextError);
-      trackEvent('signup_failure', {
-        method: 'email',
-        code: nextError instanceof ApiError ? nextError.code : 'UNKNOWN',
-        status: nextError instanceof ApiError ? nextError.status : 0,
-      });
       return null;
     } finally {
       setIsPending(false);
