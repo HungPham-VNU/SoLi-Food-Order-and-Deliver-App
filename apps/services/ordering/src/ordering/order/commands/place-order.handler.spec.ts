@@ -26,7 +26,6 @@ import type { Order, DeliveryAddress } from '../order.schema';
 import type { Cart, CartItem } from '../../cart/cart.types';
 import type { OrderingMenuItemSnapshot } from '../../acl/schemas/menu-item-snapshot.schema';
 import type { OrderingRestaurantSnapshot } from '../../acl/schemas/restaurant-snapshot.schema';
-import type { OrderPlacedEvent } from '@/shared/events/order-placed.event';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -246,7 +245,7 @@ function buildHandler({
     deliveryZoneSnapshotRepo as never,
     appSettingsService as never,
     redis as never,
-    outbox as never,
+    outbox,
     geo as never,
     paymentPort,
     promotionPort as never,

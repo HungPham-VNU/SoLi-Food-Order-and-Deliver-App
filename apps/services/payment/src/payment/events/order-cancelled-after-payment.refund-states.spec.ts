@@ -23,7 +23,9 @@ import type { VNPayRefundResult } from '../services/vnpay.service';
  * itself lives in vnpay.service and can be covered separately.)
  */
 
-function makeTxn(overrides: Partial<PaymentTransaction> = {}): PaymentTransaction {
+function makeTxn(
+  overrides: Partial<PaymentTransaction> = {},
+): PaymentTransaction {
   return {
     id: 'txn-1',
     orderId: 'order-1',
@@ -98,7 +100,11 @@ describe('OrderCancelledAfterPaymentHandler — Phase 0 refund states', () => {
       (txnRepo.updateStatus as jest.Mock)
         // completed → refund_pending
         .mockResolvedValueOnce(
-          makeTxn({ status: 'refund_pending', version: 3, refundRetryCount: null }),
+          makeTxn({
+            status: 'refund_pending',
+            version: 3,
+            refundRetryCount: null,
+          }),
         )
         // refund_pending → refunded
         .mockResolvedValueOnce(makeTxn({ status: 'refunded', version: 4 }));
@@ -145,11 +151,19 @@ describe('OrderCancelledAfterPaymentHandler — Phase 0 refund states', () => {
       (txnRepo.updateStatus as jest.Mock)
         // completed → refund_pending (refundRetryCount still null here)
         .mockResolvedValueOnce(
-          makeTxn({ status: 'refund_pending', version: 3, refundRetryCount: null }),
+          makeTxn({
+            status: 'refund_pending',
+            version: 3,
+            refundRetryCount: null,
+          }),
         )
         // retry-count bump (stays refund_pending)
         .mockResolvedValueOnce(
-          makeTxn({ status: 'refund_pending', version: 4, refundRetryCount: 1 }),
+          makeTxn({
+            status: 'refund_pending',
+            version: 4,
+            refundRetryCount: 1,
+          }),
         );
 
       await handler.handle(makeEvent());

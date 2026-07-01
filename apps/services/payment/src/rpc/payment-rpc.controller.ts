@@ -114,7 +114,9 @@ export class PaymentRpcController {
   }
 
   @MessagePattern(PAYMENT_RPC_PATTERNS.resolveMobileReturn)
-  async resolveMobileReturn(payload: unknown): Promise<{ redirectUrl: string }> {
+  async resolveMobileReturn(
+    payload: unknown,
+  ): Promise<{ redirectUrl: string }> {
     try {
       const request = paymentReturnResolveRequestSchema.parse(payload);
       const response = await this.resolveReturnUrlResponse(request.query);

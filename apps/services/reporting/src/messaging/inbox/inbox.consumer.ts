@@ -29,7 +29,9 @@ import type { DrizzleExecutor } from '../drizzle-executor';
 export class InboxConsumer {
   private readonly logger = new Logger(InboxConsumer.name);
 
-  constructor(@Inject(REPORTING_DATABASE) private readonly db: NodePgDatabase) {}
+  constructor(
+    @Inject(REPORTING_DATABASE) private readonly db: NodePgDatabase,
+  ) {}
 
   async consume(
     consumer: string,

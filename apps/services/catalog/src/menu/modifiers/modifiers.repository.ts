@@ -78,10 +78,7 @@ export class ModifierGroupRepository {
     return row;
   }
 
-  async remove(
-    id: string,
-    executor: DrizzleExecutor = this.db,
-  ): Promise<void> {
+  async remove(id: string, executor: DrizzleExecutor = this.db): Promise<void> {
     await executor.delete(modifierGroups).where(eq(modifierGroups.id, id));
   }
 }
@@ -167,10 +164,7 @@ export class ModifierOptionRepository {
       .orderBy(modifierOptions.displayOrder);
   }
 
-  async remove(
-    id: string,
-    executor: DrizzleExecutor = this.db,
-  ): Promise<void> {
+  async remove(id: string, executor: DrizzleExecutor = this.db): Promise<void> {
     await executor.delete(modifierOptions).where(eq(modifierOptions.id, id));
   }
 }

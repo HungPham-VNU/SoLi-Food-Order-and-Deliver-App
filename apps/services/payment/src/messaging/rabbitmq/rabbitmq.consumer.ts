@@ -44,9 +44,9 @@ export class RabbitMqConsumer implements OnModuleInit, OnModuleDestroy {
           await ch.bindQueue(opts.queue, DOMAIN_EVENTS_EXCHANGE, routingKey);
         }
         await ch.prefetch(opts.prefetch ?? 10);
-        await ch.consume(opts.queue, (msg) =>
-          this.handleMessage(channel, opts, msg),
-        );
+        await ch.consume(opts.queue, (msg) => {
+          void this.handleMessage(channel, opts, msg);
+        });
       },
     });
     this.channels.push(channel);

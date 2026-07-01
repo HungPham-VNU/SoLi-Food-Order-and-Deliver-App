@@ -10,10 +10,7 @@ const schema = z.object({
     .string()
     .min(32, 'BETTER_AUTH_SECRET must be at least 32 characters')
     .default('a_very_long_secret_for_test_purposes_only_32_chars'),
-  BETTER_AUTH_URL: z
-    .string()
-    .url()
-    .default('http://localhost:8080'),
+  BETTER_AUTH_URL: z.string().url().default('http://localhost:8080'),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
 });

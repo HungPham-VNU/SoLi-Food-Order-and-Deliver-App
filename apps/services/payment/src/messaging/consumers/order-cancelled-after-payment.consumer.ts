@@ -12,9 +12,7 @@ import { RabbitMqConsumer } from '../rabbitmq/rabbitmq.consumer';
 import { InboxConsumer } from '../inbox/inbox.consumer';
 
 @Injectable()
-export class OrderCancelledAfterPaymentConsumer
-  implements OnApplicationBootstrap
-{
+export class OrderCancelledAfterPaymentConsumer implements OnApplicationBootstrap {
   static readonly CONSUMER = 'payment.order-cancelled-after-payment';
   static readonly QUEUE = 'payment.order-cancelled-after-payment.v1';
 

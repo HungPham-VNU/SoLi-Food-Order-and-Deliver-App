@@ -53,7 +53,9 @@ export class RabbitMqPublisher implements OnModuleInit, OnModuleDestroy {
           'x-event-version': envelope.eventVersion,
           'x-aggregate-id': envelope.aggregateId,
           'x-aggregate-version': envelope.aggregateVersion,
-          ...(envelope.traceparent ? { traceparent: envelope.traceparent } : {}),
+          ...(envelope.traceparent
+            ? { traceparent: envelope.traceparent }
+            : {}),
           ...(envelope.causationId
             ? { 'x-causation-id': envelope.causationId }
             : {}),

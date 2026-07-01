@@ -30,7 +30,9 @@ export class IdentityRpcController {
   }
 
   @MessagePattern(IDENTITY_RPC_PATTERNS.introspectSession)
-  async introspectSession(@Payload() payload: IdentitySessionIntrospectRequest) {
+  async introspectSession(
+    @Payload() payload: IdentitySessionIntrospectRequest,
+  ) {
     try {
       return await this.sessions.introspect(payload);
     } catch (error) {

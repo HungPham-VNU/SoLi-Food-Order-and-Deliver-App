@@ -46,10 +46,7 @@ const schema = z.object({
     .default(60),
 
   // --- RabbitMQ domain-event outbox ---
-  RABBITMQ_URL: z
-    .string()
-    .min(1)
-    .default('amqp://guest:guest@localhost:5672'),
+  RABBITMQ_URL: z.string().min(1).default('amqp://guest:guest@localhost:5672'),
   RABBITMQ_EXCHANGE: z.string().min(1).default('uitfood.domain-events'),
   RABBITMQ_PREFETCH: z.coerce.number().int().positive().default(10),
 

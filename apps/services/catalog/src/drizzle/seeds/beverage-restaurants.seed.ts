@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 import * as schema from '../schema';
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
 });
 export const db = drizzle(pool, { schema });
 
@@ -12,7 +12,6 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 
 import { inArray, or, sql } from 'drizzle-orm';
-
 
 import type {
   ExtractedRecipe,
@@ -23,11 +22,7 @@ import type {
 } from '../../nutrition/types/nutrition.types';
 import { dietaryTagSlugs, type DietaryTagSlug } from './dietary-tags.data';
 
-import {
-  uploadSeedImages,
-  type SeedImage,
-  type SeedImageDef,
-} from './cloudinary-uploader';
+import { uploadSeedImages, type SeedImageDef } from './cloudinary-uploader';
 
 type SeedImageWithPlaceholder = SeedImageDef & { secureUrl: string };
 
@@ -167,7 +162,7 @@ const seedImages = {
   ),
 } satisfies Record<string, SeedImageWithPlaceholder>;
 
-const beverageImages = Object.values(seedImages);
+// unused
 
 function seedId(group: number, index: number): string {
   return `570000${group.toString().padStart(2, '0')}-0000-4000-8000-${index
@@ -536,10 +531,8 @@ async function main() {
   console.log('Starting beverage restaurants seeding...');
 
   await cleanupExistingSeedData();
-  
 
   const uploadedImagesMap = await uploadSeedImages(Object.values(seedImages));
-  
 
   for (const restaurant of restaurantsData) {
     restaurant.logoUrl =
@@ -571,7 +564,8 @@ async function main() {
   }
 
   console.log('Beverage restaurants seeding completed.');
-  await pool.end(); process.exit(0);
+  await pool.end();
+  process.exit(0);
 }
 
 async function cleanupExistingSeedData() {
@@ -589,14 +583,14 @@ async function cleanupExistingSeedData() {
     );
 
   if (existingRestaurants.length > 0) {
-    const restaurantIds = existingRestaurants.map((restaurant) => restaurant.id);
-    await db.delete(schema.restaurants).where(inArray(schema.restaurants.id, restaurantIds));
+    const restaurantIds = existingRestaurants.map(
+      (restaurant) => restaurant.id,
+    );
+    await db
+      .delete(schema.restaurants)
+      .where(inArray(schema.restaurants.id, restaurantIds));
   }
-
-  
 }
-
-
 
 async function seedNutritionFoodDatabase(): Promise<Map<string, string>> {
   const rows = await db
@@ -711,10 +705,6 @@ async function seedRestaurant(restaurant: RestaurantSeed) {
     longitude: restaurant.longitude,
   });
 
-  
-
-  
-
   console.log(`Seeded restaurant: ${restaurant.name}`);
 }
 
@@ -733,7 +723,6 @@ async function seedDeliveryZone(restaurant: RestaurantSeed) {
   };
 
   await db.insert(schema.deliveryZones).values(zone);
-  
 }
 
 async function seedMenuCategory(restaurant: RestaurantSeed) {
@@ -761,8 +750,7 @@ async function seedMenuItem(
     imageUrl: menuItem.imageUrl,
   });
 
-
-    [];
+  // unused
 
   if (menuItem.modifiers && menuItem.modifiers.length > 0) {
     let groupDisplayOrder = 0;
@@ -777,8 +765,7 @@ async function seedMenuItem(
         displayOrder: groupDisplayOrder++,
       });
 
-      const optionSnapshots: import('../../shared/events/menu-item-updated.event').ModifierOptionSnapshot[] =
-        [];
+      // unused
       let optionDisplayOrder = 0;
       for (const option of group.options) {
         const optionId = randomUUID();
@@ -791,13 +778,9 @@ async function seedMenuItem(
           isAvailable: true,
           displayOrder: optionDisplayOrder++,
         });
-        
       }
-      
     }
   }
-
-  
 }
 
 async function seedMenuItemNutrition(
@@ -1036,5 +1019,6 @@ function buildAliases(name: string, aliases: readonly string[]): string[] {
 
 main().catch(async (error) => {
   console.error('Beverage restaurants seed failed:', error);
-  await pool.end(); process.exit(1);
+  await pool.end();
+  process.exit(1);
 });

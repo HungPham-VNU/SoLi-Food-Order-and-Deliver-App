@@ -3,12 +3,11 @@ import { Pool } from 'pg';
 import * as schema from '../schema';
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
 });
 export const db = drizzle(pool, { schema });
 
 import 'dotenv/config';
-
 
 import { eq } from 'drizzle-orm';
 import { dietaryTagSeeds } from './dietary-tags.data';
@@ -50,8 +49,12 @@ async function seedDietaryTags() {
 }
 
 seedDietaryTags()
-  .then(async () => { await pool.end(); process.exit(0); })
+  .then(async () => {
+    await pool.end();
+    process.exit(0);
+  })
   .catch(async (err) => {
     console.error('❌ Dietary tags seeding failed:', err);
-    await pool.end(); process.exit(1);
+    await pool.end();
+    process.exit(1);
   });

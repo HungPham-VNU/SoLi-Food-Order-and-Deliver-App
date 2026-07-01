@@ -78,7 +78,12 @@ export class RestaurantRpcController {
   ) {
     try {
       const caller = this.auth.verifyCatalogToken(p.internalAuth);
-      return await this.service.update(p.id, caller.userId, caller.isAdmin, p.dto);
+      return await this.service.update(
+        p.id,
+        caller.userId,
+        caller.isAdmin,
+        p.dto,
+      );
     } catch (e) {
       throw asCatalogRpcException(e);
     }

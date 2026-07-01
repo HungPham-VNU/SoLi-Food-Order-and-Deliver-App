@@ -181,10 +181,7 @@ export class MenuRepository {
     return executor ? run(executor) : this.db.transaction(run);
   }
 
-  async remove(
-    id: string,
-    executor: DrizzleExecutor = this.db,
-  ): Promise<void> {
+  async remove(id: string, executor: DrizzleExecutor = this.db): Promise<void> {
     await executor.delete(menuItems).where(eq(menuItems.id, id));
   }
 

@@ -15,10 +15,7 @@ import {
 import { MenuRepository } from '@/menu/menu.repository';
 import { RestaurantService } from '@/restaurant/restaurant.service';
 import { MenuService } from '@/menu/menu.service';
-import type {
-  ModifierGroup,
-  ModifierOption,
-} from '@/menu/menu.schema';
+import type { ModifierGroup, ModifierOption } from '@/menu/menu.schema';
 import type {
   CreateModifierGroupDto,
   UpdateModifierGroupDto,

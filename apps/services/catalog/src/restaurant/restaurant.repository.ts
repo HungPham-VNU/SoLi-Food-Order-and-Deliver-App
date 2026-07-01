@@ -1,10 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, eq, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import {
-  restaurants,
-  type Restaurant,
-} from '@/restaurant/restaurant.schema';
+import { restaurants, type Restaurant } from '@/restaurant/restaurant.schema';
 import { CreateRestaurantDto, UpdateRestaurantDto } from './dto/restaurant.dto';
 import { CATALOG_DATABASE } from '@/drizzle/database.constants';
 import type { DrizzleExecutor } from '@/messaging/drizzle-executor';
@@ -140,10 +137,7 @@ export class RestaurantRepository {
       })
       .where(eq(restaurants.id, restaurantId));
   }
-  async remove(
-    id: string,
-    executor: DrizzleExecutor = this.db,
-  ): Promise<void> {
+  async remove(id: string, executor: DrizzleExecutor = this.db): Promise<void> {
     await executor.delete(restaurants).where(eq(restaurants.id, id));
   }
 }

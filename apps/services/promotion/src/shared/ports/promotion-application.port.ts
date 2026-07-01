@@ -80,7 +80,9 @@ export interface DiscountReservationResult {
 
 export interface IPromotionApplicationPort {
   /** Read-only eligibility check + discount preview (no DB writes). */
-  previewDiscount(params: DiscountPreviewParams): Promise<DiscountPreviewResult>;
+  previewDiscount(
+    params: DiscountPreviewParams,
+  ): Promise<DiscountPreviewResult>;
 
   /** Atomically reserves the discount for a pending order. */
   computeAndReserveDiscount(

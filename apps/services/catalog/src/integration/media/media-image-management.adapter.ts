@@ -63,7 +63,7 @@ export class MediaImageManagementAdapter
 
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       try {
-        const response = await firstValueFrom(
+        const response: unknown = await firstValueFrom(
           this.client
             .send(MEDIA_RPC_PATTERNS.createImage, request)
             .pipe(timeout(timeoutMs)),

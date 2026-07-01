@@ -68,7 +68,7 @@ export class PromotionApplicationAdapter
         internalAuth: this.signServiceToken(),
         params,
       });
-      return discountPreviewResultSchema.parse(response) as DiscountPreviewResult;
+      return discountPreviewResultSchema.parse(response);
     } catch (error) {
       this.rethrowClientError(error);
       this.logger.warn(
@@ -95,9 +95,7 @@ export class PromotionApplicationAdapter
         internalAuth: this.signServiceToken(),
         params,
       });
-      return discountReservationResultSchema.parse(
-        response,
-      ) as DiscountReservationResult;
+      return discountReservationResultSchema.parse(response);
     } catch (error) {
       this.rethrowClientError(error);
       this.logger.warn(
@@ -168,7 +166,9 @@ export class PromotionApplicationAdapter
       );
     }
     if (this.config.get('PROMOTION_RPC_REQUIRED', { infer: true })) {
-      throw new ServiceUnavailableException('Promotion service is unavailable.');
+      throw new ServiceUnavailableException(
+        'Promotion service is unavailable.',
+      );
     }
   }
 
