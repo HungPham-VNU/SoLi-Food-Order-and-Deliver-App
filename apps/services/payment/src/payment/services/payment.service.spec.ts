@@ -120,12 +120,7 @@ describe('PaymentService', () => {
       );
 
       await expect(
-        service.initiateVNPayPayment(
-          'order-1',
-          'cust-1',
-          120000,
-          '127.0.0.1',
-        ),
+        service.initiateVNPayPayment('order-1', 'cust-1', 120000, '127.0.0.1'),
       ).rejects.toThrow('different payment details');
 
       expect(txnRepo.create).not.toHaveBeenCalled();

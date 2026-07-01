@@ -33,7 +33,6 @@ import * as schema from '@/drizzle/schema';
 import type { OrderRepository } from '../repositories/order.repository';
 import type { OrderLifecycleService } from '../services/order-lifecycle.service';
 import type { RestaurantSnapshotRepository } from '../../acl/repositories/restaurant-snapshot.repository';
-import type { OutboxWriter } from '@/messaging/outbox/outbox.writer';
 
 type Mocked<T> = { [K in keyof T]: jest.Mock };
 
@@ -106,7 +105,7 @@ describe('TransitionOrderHandler', () => {
       orderRepo as unknown as OrderRepository,
       lifecycle as unknown as OrderLifecycleService,
       snapshotRepo as unknown as RestaurantSnapshotRepository,
-      outbox as unknown as OutboxWriter,
+      outbox,
     );
   }
 

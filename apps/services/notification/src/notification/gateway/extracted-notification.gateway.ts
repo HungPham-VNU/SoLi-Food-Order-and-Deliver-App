@@ -11,9 +11,7 @@ import { SocketSessionAuthenticator } from '@/identity/socket-session-authentica
 import { runObserved } from '@/observability/trace';
 import type { Namespace, Socket } from 'socket.io';
 import { UserPresenceService } from '../services/user-presence.service';
-import {
-  WS_NOTIFICATION_PING,
-} from './notification-payload.dto';
+import { WS_NOTIFICATION_PING } from './notification-payload.dto';
 
 @Injectable()
 @WebSocketGateway({

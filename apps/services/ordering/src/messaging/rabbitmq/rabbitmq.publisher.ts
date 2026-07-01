@@ -10,10 +10,7 @@ import amqp, {
 } from 'amqp-connection-manager';
 import type { ConfirmChannel } from 'amqplib';
 import type { DomainEventEnvelope } from '@uitfood/contracts';
-import {
-  DOMAIN_EVENTS_EXCHANGE,
-  RABBITMQ_URL,
-} from './rabbitmq.constants';
+import { DOMAIN_EVENTS_EXCHANGE, RABBITMQ_URL } from './rabbitmq.constants';
 
 /**
  * RabbitMqPublisher — durable, confirm-backed publisher for domain events.
@@ -64,21 +61,30 @@ export class RabbitMqPublisher implements OnModuleInit, OnModuleDestroy {
   async publish(envelope: DomainEventEnvelope): Promise<void> {
     const body = Buffer.from(JSON.stringify(envelope));
 
-    await this.channel.publish(DOMAIN_EVENTS_EXCHANGE, envelope.eventType, body, {
-      contentType: 'application/json',
-      persistent: true,
-      messageId: envelope.eventId,
-      correlationId: envelope.correlationId,
-      type: envelope.eventType,
-      timestamp: Date.parse(envelope.occurredAt) || Date.now(),
-      headers: {
-        'x-event-version': envelope.eventVersion,
-        'x-aggregate-id': envelope.aggregateId,
-        'x-aggregate-version': envelope.aggregateVersion,
-        ...(envelope.traceparent ? { traceparent: envelope.traceparent } : {}),
-        ...(envelope.causationId ? { 'x-causation-id': envelope.causationId } : {}),
+    await this.channel.publish(
+      DOMAIN_EVENTS_EXCHANGE,
+      envelope.eventType,
+      body,
+      {
+        contentType: 'application/json',
+        persistent: true,
+        messageId: envelope.eventId,
+        correlationId: envelope.correlationId,
+        type: envelope.eventType,
+        timestamp: Date.parse(envelope.occurredAt) || Date.now(),
+        headers: {
+          'x-event-version': envelope.eventVersion,
+          'x-aggregate-id': envelope.aggregateId,
+          'x-aggregate-version': envelope.aggregateVersion,
+          ...(envelope.traceparent
+            ? { traceparent: envelope.traceparent }
+            : {}),
+          ...(envelope.causationId
+            ? { 'x-causation-id': envelope.causationId }
+            : {}),
+        },
       },
-    });
+    );
   }
 
   async onModuleDestroy(): Promise<void> {

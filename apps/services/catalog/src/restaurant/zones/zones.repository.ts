@@ -103,10 +103,7 @@ export class ZonesRepository {
     return row;
   }
 
-  async remove(
-    id: string,
-    executor: DrizzleExecutor = this.db,
-  ): Promise<void> {
+  async remove(id: string, executor: DrizzleExecutor = this.db): Promise<void> {
     await executor.delete(deliveryZones).where(eq(deliveryZones.id, id));
   }
 }

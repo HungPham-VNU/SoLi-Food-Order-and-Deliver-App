@@ -351,8 +351,7 @@ export class AdminAnalyticsRepository {
 
     const prepQuery = this.db
       .select({
-        avgPrepSeconds:
-          sql<number>`AVG(EXTRACT(EPOCH FROM (${reportingOrderFacts.readyAt} - ${reportingOrderFacts.confirmedAt})))::float8`,
+        avgPrepSeconds: sql<number>`AVG(EXTRACT(EPOCH FROM (${reportingOrderFacts.readyAt} - ${reportingOrderFacts.confirmedAt})))::float8`,
       })
       .from(reportingOrderFacts)
       .where(

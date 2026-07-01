@@ -51,7 +51,9 @@ export class DietaryTagsRpcController {
   }
 
   @MessagePattern(CATALOG_RPC_PATTERNS.updateDietaryTag)
-  async update(@Payload() p: Mutation & { id: string; dto: UpdateDietaryTagDto }) {
+  async update(
+    @Payload() p: Mutation & { id: string; dto: UpdateDietaryTagDto },
+  ) {
     try {
       this.auth.verifyCatalogToken(p.internalAuth);
       return await this.service.update(p.id, p.dto);

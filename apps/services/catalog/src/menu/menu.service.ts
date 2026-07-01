@@ -25,10 +25,7 @@ import type {
   UpdateMenuCategoryDto,
   MenuItemStatusFilter,
 } from './dto/menu.dto';
-import type {
-  MenuItem,
-  MenuCategory,
-} from '@/menu/menu.schema';
+import type { MenuItem, MenuCategory } from '@/menu/menu.schema';
 import { RestaurantService } from '@/restaurant/restaurant.service';
 import {
   IMAGE_MANAGEMENT_PORT,

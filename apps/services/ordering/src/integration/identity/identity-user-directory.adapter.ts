@@ -74,7 +74,7 @@ export class IdentityUserDirectoryRpcAdapter
     } catch (error) {
       const rpcError = identityRpcErrorSchema.safeParse(error);
       if (rpcError.success) {
-        throw new Error(rpcError.data.message);
+        throw new Error(rpcError.data.message, { cause: error });
       }
       throw error;
     }

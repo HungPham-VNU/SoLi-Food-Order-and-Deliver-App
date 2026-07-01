@@ -29,7 +29,9 @@ export class ManagementController {
       await this.database.execute(sql`select 1`);
       return { status: 'ready', service: 'ordering' };
     } catch {
-      throw new ServiceUnavailableException('Ordering database is unavailable.');
+      throw new ServiceUnavailableException(
+        'Ordering database is unavailable.',
+      );
     }
   }
 }

@@ -3,7 +3,7 @@ import { ProcessIpnHandler } from './process-ipn.handler';
 import { ProcessIpnCommand } from './process-ipn.command';
 import { VNPayService } from '../services/vnpay.service';
 import { PaymentTransactionRepository } from '../repositories/payment-transaction.repository';
-import type { OutboxWriter } from '@/messaging/outbox/outbox.writer';
+
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { PaymentTransaction } from '../domain/payment-transaction.schema';
 
@@ -76,17 +76,12 @@ function buildHandler() {
   // db.transaction(cb) simply runs the callback with a stub tx object; the
   // repo and outbox are mocked, so the tx's identity is irrelevant.
   const db = {
-    transaction: jest.fn(
-      async (cb: (tx: object) => Promise<unknown>) => cb({}),
+    transaction: jest.fn(async (cb: (tx: object) => Promise<unknown>) =>
+      cb({}),
     ),
   } as unknown as NodePgDatabase;
 
-  const handler = new ProcessIpnHandler(
-    db,
-    vnpayService,
-    txnRepo,
-    outbox as unknown as OutboxWriter,
-  );
+  const handler = new ProcessIpnHandler(db, vnpayService, txnRepo, outbox);
 
   return { handler, vnpayService, txnRepo, outbox };
 }
@@ -288,7 +283,9 @@ describe('ProcessIpnHandler', () => {
       (vnpayService.verifyIpn as jest.Mock).mockReturnValue(
         makeSuccessVerification(),
       );
-      (txnRepo.findById as jest.Mock).mockResolvedValue(makeTxn({ version: 3 }));
+      (txnRepo.findById as jest.Mock).mockResolvedValue(
+        makeTxn({ version: 3 }),
+      );
       (txnRepo.updateStatus as jest.Mock).mockResolvedValue(
         makeTxn({ status: 'completed', version: 4 }),
       );
@@ -403,7 +400,9 @@ describe('ProcessIpnHandler', () => {
       (vnpayService.verifyIpn as jest.Mock).mockReturnValue(
         makeSuccessVerification({ responsePaid: false }),
       );
-      (txnRepo.findById as jest.Mock).mockResolvedValue(makeTxn({ version: 2 }));
+      (txnRepo.findById as jest.Mock).mockResolvedValue(
+        makeTxn({ version: 2 }),
+      );
       (txnRepo.updateStatus as jest.Mock).mockResolvedValue(
         makeTxn({ status: 'failed' }),
       );

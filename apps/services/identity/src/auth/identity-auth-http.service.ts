@@ -36,7 +36,7 @@ function bodyFor(request: IdentityHttpRequest): ArrayBuffer | undefined {
   return buffer.buffer.slice(
     buffer.byteOffset,
     buffer.byteOffset + buffer.byteLength,
-  ) as ArrayBuffer;
+  );
 }
 
 function toHeaders(headers: IdentityHttpRequest['headers']): Headers {

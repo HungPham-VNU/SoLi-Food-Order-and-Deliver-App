@@ -49,7 +49,10 @@ export class RestaurantService implements IRestaurantAccessPort {
   ) {}
 
   /** Builds the catalog.restaurant.changed.v1 envelope from a restaurant row. */
-  private restaurantEnvelope(restaurant: Restaurant, overrides?: Partial<{ isOpen: boolean; isApproved: boolean }>) {
+  private restaurantEnvelope(
+    restaurant: Restaurant,
+    overrides?: Partial<{ isOpen: boolean; isApproved: boolean }>,
+  ) {
     return createEnvelope({
       eventType: CATALOG_RESTAURANT_CHANGED_V1.eventType,
       eventVersion: CATALOG_RESTAURANT_CHANGED_V1.eventVersion,

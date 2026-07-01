@@ -368,7 +368,9 @@ export class VNPayService implements OnModuleInit {
    */
   async requestRefund(params: VNPayRefundParams): Promise<VNPayRefundResult> {
     if (!Number.isInteger(params.amount) || params.amount <= 0) {
-      throw new Error('VNPay refund amount must be a positive integer VND value.');
+      throw new Error(
+        'VNPay refund amount must be a positive integer VND value.',
+      );
     }
 
     if (!this.refundEnabled) {
@@ -446,7 +448,7 @@ export class VNPayService implements OnModuleInit {
       }
 
       const json = (await res.json()) as Record<string, unknown>;
-      const responseCode = String(json['vnp_ResponseCode'] ?? '');
+      const responseCode = String((json['vnp_ResponseCode'] as string) ?? '');
       const success = responseCode === '00';
 
       this.logger.log(
@@ -523,7 +525,7 @@ export class VNPayService implements OnModuleInit {
     // Sort by the URL-encoded key, not the raw key.
     // PHP's ksort() operates on the urlencode()'d key strings, so we must encode
     // first and sort second. For all current vnp_* parameters encodeURIComponent
-    // is a no-op, so the result is identical today — but this is correct for any
+    // is a no-op, so the result is identical today ï¿½ but this is correct for any
     // future key that contains special characters.
     return Object.keys(params)
       .map(

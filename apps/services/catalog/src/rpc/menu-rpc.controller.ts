@@ -69,7 +69,9 @@ export class MenuRpcController {
   }
 
   @MessagePattern(CATALOG_RPC_PATTERNS.updateMenuItem)
-  async update(@Payload() p: Mutation & { id: string; dto: UpdateMenuItemDto }) {
+  async update(
+    @Payload() p: Mutation & { id: string; dto: UpdateMenuItemDto },
+  ) {
     try {
       const c = this.auth.verifyCatalogToken(p.internalAuth);
       return await this.service.update(p.id, c.userId, c.isAdmin, p.dto);
@@ -140,7 +142,12 @@ export class MenuRpcController {
   ) {
     try {
       const c = this.auth.verifyCatalogToken(p.internalAuth);
-      return await this.service.updateCategory(p.id, c.userId, c.isAdmin, p.dto);
+      return await this.service.updateCategory(
+        p.id,
+        c.userId,
+        c.isAdmin,
+        p.dto,
+      );
     } catch (e) {
       throw asCatalogRpcException(e);
     }

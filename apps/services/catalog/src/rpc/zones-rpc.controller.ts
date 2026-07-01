@@ -48,7 +48,12 @@ export class ZonesRpcController {
   ) {
     try {
       const c = this.auth.verifyCatalogToken(p.internalAuth);
-      return await this.service.create(p.restaurantId, c.userId, c.isAdmin, p.dto);
+      return await this.service.create(
+        p.restaurantId,
+        c.userId,
+        c.isAdmin,
+        p.dto,
+      );
     } catch (e) {
       throw asCatalogRpcException(e);
     }
@@ -78,9 +83,7 @@ export class ZonesRpcController {
   }
 
   @MessagePattern(CATALOG_RPC_PATTERNS.removeDeliveryZone)
-  async remove(
-    @Payload() p: Mutation & { id: string; restaurantId: string },
-  ) {
+  async remove(@Payload() p: Mutation & { id: string; restaurantId: string }) {
     try {
       const c = this.auth.verifyCatalogToken(p.internalAuth);
       await this.service.remove(p.id, p.restaurantId, c.userId, c.isAdmin);

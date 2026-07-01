@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { DatabaseModule } from '@/drizzle/database.module';
 import { RestaurantSnapshotRepository } from '../acl/repositories/restaurant-snapshot.repository';
 
-
 // Service
 import { OrderHistoryService } from './services/order-history.service';
 

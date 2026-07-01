@@ -40,7 +40,8 @@ export class InternalAuthService {
         userId: claims.sub,
         roles,
         isAdmin: roles.includes('admin'),
-        isService: roles.includes('service') || claims.sub.startsWith('service:'),
+        isService:
+          roles.includes('service') || claims.sub.startsWith('service:'),
       };
     } catch (error) {
       if (error instanceof InternalJwtError) {

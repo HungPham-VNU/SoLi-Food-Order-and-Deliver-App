@@ -37,9 +37,7 @@ export const outboxEvents = pgTable(
     aggregateVersion: integer('aggregate_version').notNull().default(0),
 
     // The complete envelope (metadata + payload) published as-is.
-    envelope: jsonb('envelope')
-      .$type<DomainEventEnvelope>()
-      .notNull(),
+    envelope: jsonb('envelope').$type<DomainEventEnvelope>().notNull(),
 
     occurredAt: timestamp('occurred_at', { withTimezone: true })
       .notNull()

@@ -64,16 +64,11 @@ export class PaymentInitiationAdapter
       this.logger.error(
         `Payment createAttempt unavailable for order=${orderId}: ${this.describe(error)}`,
       );
-      throw new ServiceUnavailableException(
-        'Payment service is unavailable.',
-      );
+      throw new ServiceUnavailableException('Payment service is unavailable.');
     }
   }
 
-  async markPaymentAttemptFailed(
-    txnId: string,
-    reason: string,
-  ): Promise<void> {
+  async markPaymentAttemptFailed(txnId: string, reason: string): Promise<void> {
     try {
       await this.send(PAYMENT_RPC_PATTERNS.markAttemptFailed, {
         internalAuth: this.signServiceToken(),

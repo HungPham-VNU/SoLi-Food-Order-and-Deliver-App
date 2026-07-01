@@ -4,7 +4,6 @@ import { DatabaseModule } from '@/drizzle/database.module';
 import { OutboxModule } from '@/messaging/outbox/outbox.module';
 import { RestaurantSnapshotRepository } from '../acl/repositories/restaurant-snapshot.repository';
 
-
 // Commands
 import { TransitionOrderHandler } from './commands/transition-order.handler';
 

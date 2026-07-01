@@ -8,7 +8,9 @@ const pool = new Pool({
 });
 export const db = drizzle(pool, { schema });
 
-const catalogDatabaseUrl = process.env.CATALOG_DATABASE_URL || 'postgresql://uitfood_catalog:catalog_secret@localhost:5432/uitfood_catalog';
+const catalogDatabaseUrl =
+  process.env.CATALOG_DATABASE_URL ||
+  'postgresql://uitfood_catalog:catalog_secret@localhost:5432/uitfood_catalog';
 const catalogPool = new Pool({
   connectionString: catalogDatabaseUrl,
 });
@@ -95,7 +97,9 @@ async function seedReviews() {
   try {
     console.log('⭐ Seeding reviews for all restaurants...');
 
-    const { rows: allRestaurants } = await catalogPool.query('SELECT id FROM restaurants');
+    const { rows: allRestaurants } = await catalogPool.query(
+      'SELECT id FROM restaurants',
+    );
 
     if (allRestaurants.length === 0) {
       console.log('No restaurants found to seed reviews.');
@@ -106,8 +110,10 @@ async function seedReviews() {
 
     for (const restaurant of allRestaurants) {
       const numReviews = randomInt(5, 20);
-      const { generatedReviews, reviewCount } =
-        generateReviewsForRestaurant(restaurant.id, numReviews);
+      const { generatedReviews, reviewCount } = generateReviewsForRestaurant(
+        restaurant.id,
+        numReviews,
+      );
 
       await db.insert(schema.reviews).values(generatedReviews);
 
@@ -119,8 +125,14 @@ async function seedReviews() {
     );
   } catch (err) {
     console.error('❌ Error:', err);
-    await catalogPool.end(); await pool.end(); process.exit(1);
+    await catalogPool.end();
+    await pool.end();
+    process.exit(1);
   }
 }
 
-void seedReviews().then(async () => { await catalogPool.end(); await pool.end(); process.exit(0); });
+void seedReviews().then(async () => {
+  await catalogPool.end();
+  await pool.end();
+  process.exit(0);
+});

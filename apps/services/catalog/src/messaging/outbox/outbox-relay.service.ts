@@ -3,7 +3,7 @@ import { Interval } from '@nestjs/schedule';
 import { and, asc, eq, isNull, lte } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { CATALOG_DATABASE } from '@/drizzle/database.constants';
-import type { DomainEventEnvelope } from '@uitfood/contracts';
+
 import { outboxEvents, type OutboxEvent } from '../schema/outbox.schema';
 import { RabbitMqPublisher } from '../rabbitmq/rabbitmq.publisher';
 
@@ -91,7 +91,7 @@ export class OutboxRelayService {
     row: OutboxEvent,
   ): Promise<void> {
     try {
-      await this.publisher.publish(row.envelope as DomainEventEnvelope);
+      await this.publisher.publish(row.envelope);
       await tx
         .update(outboxEvents)
         .set({ publishedAt: new Date(), lastError: null })

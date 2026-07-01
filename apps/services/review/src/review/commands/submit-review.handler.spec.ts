@@ -1,6 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import { EVENT_NAMES } from '@uitfood/contracts';
-import type { OutboxWriter } from '@/messaging/outbox/outbox.writer';
+
 import type { ReviewRepository } from '../repositories/review.repository';
 import { SubmitReviewCommand } from './submit-review.command';
 import { SubmitReviewHandler } from './submit-review.handler';
@@ -41,8 +41,8 @@ function setup() {
   const handler = new SubmitReviewHandler(
     reviewRepo as unknown as ReviewRepository,
     orderPort,
-    outbox as unknown as OutboxWriter,
-    db as never,
+    outbox,
+    db,
   );
 
   return { handler, reviewRepo, orderPort, outbox };

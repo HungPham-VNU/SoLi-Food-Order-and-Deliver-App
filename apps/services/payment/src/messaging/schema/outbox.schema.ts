@@ -34,10 +34,7 @@ export const outboxEvents = pgTable(
   },
   (t) => [
     index('idx_payment_outbox_due').on(t.publishedAt, t.nextAttemptAt),
-    index('idx_payment_outbox_aggregate').on(
-      t.aggregateId,
-      t.aggregateVersion,
-    ),
+    index('idx_payment_outbox_aggregate').on(t.aggregateId, t.aggregateVersion),
   ],
 );
 

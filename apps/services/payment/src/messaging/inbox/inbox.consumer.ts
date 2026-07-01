@@ -7,9 +7,7 @@ import { inboxMessages } from '../schema/inbox.schema';
 
 @Injectable()
 export class InboxConsumer {
-  constructor(
-    @Inject(PAYMENT_DATABASE) private readonly db: PaymentDatabase,
-  ) {}
+  constructor(@Inject(PAYMENT_DATABASE) private readonly db: PaymentDatabase) {}
 
   async consume(
     consumer: string,

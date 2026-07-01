@@ -1,4 +1,9 @@
-import { Controller, Get, Inject, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Inject,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import { IDENTITY_DATABASE } from '@/drizzle/database.constants';
 import type { IdentityDatabase } from '@/drizzle/database.module';
@@ -20,7 +25,9 @@ export class ManagementController {
       await this.database.execute(sql`select 1`);
       return { status: 'ready', service: 'identity' };
     } catch {
-      throw new ServiceUnavailableException('Identity database is unavailable.');
+      throw new ServiceUnavailableException(
+        'Identity database is unavailable.',
+      );
     }
   }
 }

@@ -33,7 +33,8 @@ export class ModifiersRpcController {
 
   @MessagePattern(CATALOG_RPC_PATTERNS.createModifierGroup)
   async createGroup(
-    @Payload() p: Mutation & { menuItemId: string; dto: CreateModifierGroupDto },
+    @Payload()
+    p: Mutation & { menuItemId: string; dto: CreateModifierGroupDto },
   ) {
     try {
       const c = this.auth.verifyCatalogToken(p.internalAuth);
@@ -77,7 +78,12 @@ export class ModifiersRpcController {
   ) {
     try {
       const c = this.auth.verifyCatalogToken(p.internalAuth);
-      await this.service.removeGroup(p.groupId, p.menuItemId, c.userId, c.isAdmin);
+      await this.service.removeGroup(
+        p.groupId,
+        p.menuItemId,
+        c.userId,
+        c.isAdmin,
+      );
       return { id: p.groupId, removed: true };
     } catch (e) {
       throw asCatalogRpcException(e);

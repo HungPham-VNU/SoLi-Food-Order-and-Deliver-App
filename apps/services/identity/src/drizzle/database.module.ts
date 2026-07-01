@@ -9,7 +9,10 @@ import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import type { Env } from '@/config/env.schema';
 import * as schema from '@/auth/auth.schema';
-import { IDENTITY_DATABASE, IDENTITY_DATABASE_POOL } from './database.constants';
+import {
+  IDENTITY_DATABASE,
+  IDENTITY_DATABASE_POOL,
+} from './database.constants';
 
 export type IdentityDatabase = NodePgDatabase<typeof schema>;
 

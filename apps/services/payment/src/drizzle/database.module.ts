@@ -9,10 +9,7 @@ import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import type { Env } from '@/config/env.schema';
 import * as schema from './schema';
-import {
-  PAYMENT_DATABASE,
-  PAYMENT_DATABASE_POOL,
-} from './database.constants';
+import { PAYMENT_DATABASE, PAYMENT_DATABASE_POOL } from './database.constants';
 
 export type PaymentDatabase = NodePgDatabase<typeof schema>;
 
