@@ -7,8 +7,6 @@ services:
     image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-notification:${TAG:-master}
   catalog:
     image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-catalog:${TAG:-master}
-    volumes:
-      - ./apps/services/catalog/dist:/app/apps/services/catalog/dist
   promotion:
     image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-promotion:${TAG:-master}
   payment:
@@ -21,8 +19,6 @@ services:
     image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-reporting:${TAG:-master}
   gateway:
     image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-gateway:${TAG:-master}
-    volumes:
-      - ./apps/gateway/dist:/app/apps/gateway/dist
   web:
     image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-web:${TAG:-master}
   admin:

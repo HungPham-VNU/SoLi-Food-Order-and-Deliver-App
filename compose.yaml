@@ -76,6 +76,10 @@ services:
       dockerfile: apps/services/identity/Dockerfile
     container_name: uitfoodms_identity
     environment:
+      # Overrides the Dockerfile's NODE_ENV=production for local compose runs:
+      # better-auth's isProduction branch sets Secure/SameSite=None cookies,
+      # which browsers refuse to store over plain http://localhost.
+      NODE_ENV: development
       DATABASE_URL: postgresql://uitfood_identity:identity_secret@postgres:5432/uitfood_identity
       IDENTITY_TCP_PORT: 4011
       IDENTITY_MANAGEMENT_PORT: 4012
