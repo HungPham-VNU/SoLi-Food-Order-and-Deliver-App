@@ -18,5 +18,7 @@ import { AnalyticsRepository } from './analytics.repository';
     AnalyticsRepository,
     RestaurantSnapshotRepository,
   ],
+  // Exported so the TCP analytics RPC controller can delegate to it.
+  exports: [AnalyticsService],
 })
 export class AnalyticsModule {}

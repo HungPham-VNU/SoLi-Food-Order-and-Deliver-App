@@ -15,6 +15,7 @@ import { CartsController } from './carts.controller';
 import { OrdersController } from './orders.controller';
 import {
   RestaurantOrdersController,
+  RestaurantAnalyticsController,
   ShipperOrdersController,
   AdminOrdersController,
   OrderingPaymentsController,
@@ -33,6 +34,7 @@ export class OrderingRoutesModule {
         CartsController,
         OrdersController,
         RestaurantOrdersController,
+        RestaurantAnalyticsController,
         ShipperOrdersController,
         AdminOrdersController,
         OrderingPaymentsController,

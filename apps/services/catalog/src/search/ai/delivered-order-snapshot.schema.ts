@@ -11,7 +11,9 @@ export const deliveredOrderSnapshots = pgTable(
     orderId: uuid('order_id').primaryKey(),
     restaurantId: uuid('restaurant_id').notNull(),
     deliveredAt: timestamp('delivered_at', { withTimezone: true }).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
     index('delivered_order_snapshots_restaurant_idx').on(table.restaurantId),
@@ -25,7 +27,9 @@ export const deliveredOrderItemSnapshots = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     orderId: uuid('order_id')
       .notNull()
-      .references(() => deliveredOrderSnapshots.orderId, { onDelete: 'cascade' }),
+      .references(() => deliveredOrderSnapshots.orderId, {
+        onDelete: 'cascade',
+      }),
     menuItemId: uuid('menu_item_id').notNull(),
     quantity: integer('quantity').notNull(),
   },
@@ -35,5 +39,7 @@ export const deliveredOrderItemSnapshots = pgTable(
   ],
 );
 
-export type DeliveredOrderSnapshot = typeof deliveredOrderSnapshots.$inferSelect;
-export type DeliveredOrderItemSnapshot = typeof deliveredOrderItemSnapshots.$inferSelect;
+export type DeliveredOrderSnapshot =
+  typeof deliveredOrderSnapshots.$inferSelect;
+export type DeliveredOrderItemSnapshot =
+  typeof deliveredOrderItemSnapshots.$inferSelect;

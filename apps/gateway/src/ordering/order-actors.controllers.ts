@@ -53,6 +53,23 @@ export class RestaurantOrdersController extends BaseOrderingController {
   }
 }
 
+@ApiTags('Ordering: Restaurant Analytics')
+@ApiBearerAuth()
+@Controller('api/restaurant/analytics')
+@UseGuards(OrderingSessionGuard)
+export class RestaurantAnalyticsController extends BaseOrderingController {
+  @Get('operational')
+  operational(
+    @Req() req: GatewayRequestWithSession,
+    @Query('range') range?: string,
+  ) {
+    return this.ordering.send(
+      ORDERING_RPC_PATTERNS.restaurantOperationalAnalytics,
+      { internalAuth: this.token(req), range },
+    );
+  }
+}
+
 @ApiTags('Ordering: Shipper')
 @ApiBearerAuth()
 @Controller('api/shipper/orders')

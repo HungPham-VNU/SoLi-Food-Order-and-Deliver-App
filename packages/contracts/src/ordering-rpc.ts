@@ -44,6 +44,9 @@ export const ORDERING_RPC_PATTERNS = {
   adminOrders: 'ordering.history.admin-list.v1',
   adminOrderDetail: 'ordering.history.admin-detail.v1',
 
+  // Restaurant-facing analytics
+  restaurantOperationalAnalytics: 'ordering.analytics.restaurant-operational.v1',
+
   // Service-to-service read (Review service)
   getReviewEligibility: 'ordering.review-eligibility.get.v1',
 } as const;

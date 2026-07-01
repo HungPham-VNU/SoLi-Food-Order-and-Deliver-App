@@ -144,7 +144,7 @@ export function useCheckout() {
       if (data.paymentUrl) {
         try {
           session = await openVNPayPaymentSession(data.paymentUrl);
-        } catch (error) {
+        } catch {
           Toast.show({
             type: 'error',
             text1: 'Could not open VNPay',

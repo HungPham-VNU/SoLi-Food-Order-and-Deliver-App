@@ -20,7 +20,12 @@ import {
 } from '@uitfood/contracts';
 import { ORDERING_DATABASE } from '@/drizzle/database.constants';
 import { OutboxWriter } from '@/messaging/outbox/outbox.writer';
-import { orders, orderItems as orderItemsTable, orderStatusLogs, type Order } from '../../order/order.schema';
+import {
+  orders,
+  orderItems as orderItemsTable,
+  orderStatusLogs,
+  type Order,
+} from '../../order/order.schema';
 import { TransitionOrderCommand } from './transition-order.command';
 import { OrderRepository } from '../repositories/order.repository';
 import { OrderLifecycleService } from '../services/order-lifecycle.service';

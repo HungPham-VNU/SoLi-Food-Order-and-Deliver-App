@@ -6,10 +6,12 @@ import { OrderingContractsModule } from '../ordering-contracts.module';
 import { CartModule } from '../cart/cart.module';
 import { OrderHistoryModule } from '../order-history/order-history.module';
 import { OrderLifecycleModule } from '../order-lifecycle/order-lifecycle.module';
+import { AnalyticsModule } from '../analytics/analytics.module';
 import { OrderingRpcController } from './ordering-rpc.controller';
 import { OrderingCartRpcController } from './ordering-cart-rpc.controller';
 import { OrderingOrderRpcController } from './ordering-order-rpc.controller';
 import { OrderingHistoryRpcController } from './ordering-history-rpc.controller';
+import { OrderingAnalyticsRpcController } from './ordering-analytics-rpc.controller';
 
 /**
  * Ordering TCP RPC surface. The gateway translates the public cart/checkout/
@@ -29,12 +31,14 @@ import { OrderingHistoryRpcController } from './ordering-history-rpc.controller'
     CartModule,
     OrderHistoryModule,
     OrderLifecycleModule,
+    AnalyticsModule,
   ],
   controllers: [
     OrderingRpcController,
     OrderingCartRpcController,
     OrderingOrderRpcController,
     OrderingHistoryRpcController,
+    OrderingAnalyticsRpcController,
   ],
 })
 export class OrderingRpcModule {}

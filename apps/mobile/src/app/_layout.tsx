@@ -1,6 +1,7 @@
 import '@/src/lib/reanimated-logger';
 import '../global.css';
 import '@/src/lib/nativewind-interop';
+import '@/src/lib/observability';
 import { AppState, Platform, View } from 'react-native';
 import {
   QueryClient,
