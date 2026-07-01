@@ -227,19 +227,19 @@ export class OllamaAiProvider {
         },
       );
 
-      const responseBody =
-        await this.parseOllamaResponse<OllamaChatResponse>(response);
+      const responseData =
+        this.parseOllamaResponse<OllamaChatResponse>(response);
 
       if (response.status < 200 || response.status >= 300) {
         throw new AiProviderRequestError(
           `Ollama Cloud API request failed (${response.status}): ${this.ollamaErrorMessage(
-            responseBody,
+            responseData,
             response.statusText,
           )}`,
         );
       }
 
-      const content = responseBody.message?.content;
+      const content = responseData.message?.content;
       if (!content) {
         throw new AiProviderRequestError(
           'Ollama Cloud API response did not include content.',
@@ -301,19 +301,19 @@ export class OllamaAiProvider {
         },
       );
 
-      const responseBody =
-        await this.parseOllamaResponse<OllamaEmbedResponse>(response);
+      const responseData =
+        this.parseOllamaResponse<OllamaEmbedResponse>(response);
 
       if (response.status < 200 || response.status >= 300) {
         throw new AiProviderRequestError(
           `Ollama embed request failed (${response.status}): ${this.ollamaErrorMessage(
-            responseBody,
+            responseData,
             response.statusText,
           )}`,
         );
       }
 
-      const embeddings = parseEmbeddings(responseBody.embeddings);
+      const embeddings = parseEmbeddings(responseData.embeddings);
       if (embeddings.length === 0) {
         throw new AiProviderRequestError(
           'Ollama embed response did not include embeddings.',
@@ -322,7 +322,7 @@ export class OllamaAiProvider {
 
       return {
         embeddings,
-        model: responseBody.model ?? runtimeConfig.model,
+        model: responseData.model ?? runtimeConfig.model,
       };
     } catch (error) {
       if (error instanceof AiProviderRequestError) {
@@ -424,10 +424,10 @@ export class OllamaAiProvider {
     });
   }
 
-  private async parseOllamaResponse<T>(response: {
+  private parseOllamaResponse<T>(response: {
     status: number;
     text: string;
-  }): Promise<T | Record<string, never>> {
+  }): T | Record<string, never> {
     if (!response.text.trim()) {
       return {};
     }
