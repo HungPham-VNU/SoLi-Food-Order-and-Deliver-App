@@ -78,7 +78,14 @@ describe('SubmitReviewHandler', () => {
     expect(outbox.write).toHaveBeenCalledTimes(1);
     const [tx, envelope] = outbox.write.mock.calls[0] as [
       unknown,
-      { eventId: string; eventType: string; eventVersion: number; aggregateId: string; producer: string; payload: unknown }
+      {
+        eventId: string;
+        eventType: string;
+        eventVersion: number;
+        aggregateId: string;
+        producer: string;
+        payload: unknown;
+      },
     ];
     expect(tx).toEqual({ kind: 'transaction' });
     expect(envelope).toMatchObject({

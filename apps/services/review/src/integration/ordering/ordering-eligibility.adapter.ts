@@ -51,7 +51,7 @@ export class OrderingEligibilityAdapter
               this.config.get('ORDERING_RPC_TIMEOUT_MS', { infer: true }),
             ),
           ),
-      )) as { restaurantId: string };
+      )) as unknown;
       return orderingReviewEligibilityResponseSchema.parse(response);
     } catch (error) {
       const rpcError = orderingRpcErrorSchema.safeParse(error);

@@ -132,8 +132,7 @@ describe('OrderCancelledAfterPaymentHandler — Phase 0 refund states', () => {
       // 2nd: refund_pending → refunded
       expect(calls[1][1]).toBe('refunded');
       expect(calls[1][3]).toEqual(
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        expect.objectContaining({ refundedAt: expect.any(Date) }),
+        expect.objectContaining({ refundedAt: expect.any(Date) as unknown }),
       );
     });
   });
