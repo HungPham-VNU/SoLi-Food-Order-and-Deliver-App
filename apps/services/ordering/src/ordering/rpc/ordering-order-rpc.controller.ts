@@ -62,7 +62,7 @@ export class OrderingOrderRpcController {
       const req = orderTransitionRequestSchema.parse(p);
       const caller = this.auth.verifyOrderingToken(req.internalAuth);
       const actorRole = resolveActorRole(caller.roles);
-      return await this.commandBus.execute(
+      return (await this.commandBus.execute(
         new TransitionOrderCommand(
           req.orderId,
           req.toStatus,
@@ -71,7 +71,7 @@ export class OrderingOrderRpcController {
           req.note,
           req.cancellationReason as CancellationReason | undefined,
         ),
-      );
+      )) as unknown;
     } catch (e) {
       throw asOrderingRpcException(e);
     }

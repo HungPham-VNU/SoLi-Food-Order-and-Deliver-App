@@ -39,7 +39,7 @@ export class OrderingEligibilityAdapter
     customerId: string,
   ): Promise<{ restaurantId: string }> {
     try {
-      const response = await firstValueFrom(
+      const response = (await firstValueFrom(
         this.client
           .send(ORDERING_RPC_PATTERNS.getReviewEligibility, {
             internalAuth: this.signServiceToken(),
@@ -51,7 +51,7 @@ export class OrderingEligibilityAdapter
               this.config.get('ORDERING_RPC_TIMEOUT_MS', { infer: true }),
             ),
           ),
-      );
+      )) as { restaurantId: string };
       return orderingReviewEligibilityResponseSchema.parse(response);
     } catch (error) {
       const rpcError = orderingRpcErrorSchema.safeParse(error);

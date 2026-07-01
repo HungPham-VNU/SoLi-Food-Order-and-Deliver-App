@@ -97,9 +97,9 @@ async function seedReviews() {
   try {
     console.log('⭐ Seeding reviews for all restaurants...');
 
-    const { rows: allRestaurants } = await catalogPool.query(
+    const { rows: allRestaurants } = (await catalogPool.query(
       'SELECT id FROM restaurants',
-    );
+    )) as { rows: { id: string }[] };
 
     if (allRestaurants.length === 0) {
       console.log('No restaurants found to seed reviews.');

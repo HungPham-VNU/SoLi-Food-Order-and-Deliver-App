@@ -27,9 +27,9 @@ function randomInt(min: number, max: number): number {
 async function seedAnalyticsOrdersFreshBowlVnu() {
   try {
     console.log('🍽️  Fetching Fresh Bowl VNU restaurant from Catalog...');
-    const { rows: restaurants } = await catalogPool.query(
+    const { rows: restaurants } = (await catalogPool.query(
       "SELECT id, name FROM restaurants WHERE name = 'Fresh Bowl VNU'",
-    );
+    )) as { rows: { id: string; name: string }[] };
 
     if (restaurants.length === 0) {
       console.log(
@@ -39,10 +39,10 @@ async function seedAnalyticsOrdersFreshBowlVnu() {
     }
     const targetRestaurant = restaurants[0];
 
-    const { rows: menuItems } = await catalogPool.query(
+    const { rows: menuItems } = (await catalogPool.query(
       'SELECT id, name, price FROM menu_items WHERE restaurant_id = $1',
       [targetRestaurant.id],
-    );
+    )) as { rows: { id: string; name: string; price: string }[] };
     if (menuItems.length === 0) {
       console.log('❌ No menu items found for Fresh Bowl VNU.');
       return;

@@ -1,0 +1,25 @@
+services:
+  identity:
+    image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-identity:${TAG:-master}
+  media:
+    image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-media:${TAG:-master}
+  notification:
+    image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-notification:${TAG:-master}
+  catalog:
+    image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-catalog:${TAG:-master}
+  promotion:
+    image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-promotion:${TAG:-master}
+  payment:
+    image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-payment:${TAG:-master}
+  ordering:
+    image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-ordering:${TAG:-master}
+  review:
+    image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-review:${TAG:-master}
+  reporting:
+    image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-reporting:${TAG:-master}
+  gateway:
+    image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-gateway:${TAG:-master}
+  web:
+    image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-web:${TAG:-master}
+  admin:
+    image: ghcr.io/hungpham-vnu/soli-food-order-and-deliver-app-admin:${TAG:-master}

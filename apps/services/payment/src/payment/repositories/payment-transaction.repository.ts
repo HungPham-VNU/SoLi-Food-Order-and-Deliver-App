@@ -1,4 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
+import type { DrizzleExecutor } from '@/messaging/drizzle-executor';
 import { eq, and, lte, inArray, asc, desc } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { PAYMENT_DATABASE } from '@/drizzle/database.constants';
@@ -226,7 +227,7 @@ export class PaymentTransactionRepository {
         | 'refundRetryCount'
       >
     > = {},
-    executor: any = this.db,
+    executor: DrizzleExecutor = this.db,
   ): Promise<PaymentTransaction | null> {
     const [updated] = await executor
       .update(paymentTransactions)

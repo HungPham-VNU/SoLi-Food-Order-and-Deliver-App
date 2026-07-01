@@ -9,6 +9,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import type { DrizzleExecutor } from '@/messaging/drizzle-executor';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -1047,7 +1048,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
   // ---------------------------------------------------------------------------
 
   private async writeOrderPlacedEvent(
-    tx: any,
+    tx: DrizzleExecutor,
     order: Order,
     items: Array<{
       menuItemId: string;

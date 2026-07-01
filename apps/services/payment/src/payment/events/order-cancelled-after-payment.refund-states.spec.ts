@@ -120,13 +120,19 @@ describe('OrderCancelledAfterPaymentHandler — Phase 0 refund states', () => {
         }),
       );
 
-      const calls = (txnRepo.updateStatus as jest.Mock).mock.calls;
+      const calls = (txnRepo.updateStatus as jest.Mock).mock.calls as [
+        string,
+        string,
+        number,
+        Record<string, unknown>,
+      ][];
       expect(calls).toHaveLength(2);
       // 1st: completed → refund_pending
       expect(calls[0][1]).toBe('refund_pending');
       // 2nd: refund_pending → refunded
       expect(calls[1][1]).toBe('refunded');
       expect(calls[1][3]).toEqual(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         expect.objectContaining({ refundedAt: expect.any(Date) }),
       );
     });
@@ -170,7 +176,12 @@ describe('OrderCancelledAfterPaymentHandler — Phase 0 refund states', () => {
 
       expect(vnpayService.requestRefund).toHaveBeenCalledTimes(1);
 
-      const calls = (txnRepo.updateStatus as jest.Mock).mock.calls;
+      const calls = (txnRepo.updateStatus as jest.Mock).mock.calls as [
+        string,
+        string,
+        number,
+        Record<string, unknown>,
+      ][];
       expect(calls).toHaveLength(2);
 
       // 1st: completed → refund_pending

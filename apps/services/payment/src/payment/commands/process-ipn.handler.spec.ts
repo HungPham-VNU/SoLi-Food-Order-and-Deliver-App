@@ -56,8 +56,8 @@ function makeSuccessVerification(
 
 /** Returns the eventTypes recorded to the outbox across all write() calls. */
 function writtenEventTypes(outbox: { write: jest.Mock }): string[] {
-  return outbox.write.mock.calls.map(
-    (c) => (c[1] as { eventType: string }).eventType,
+  return (outbox.write.mock.calls as [unknown, { eventType: string }][]).map(
+    (c) => c[1].eventType,
   );
 }
 

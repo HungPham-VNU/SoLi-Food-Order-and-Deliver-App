@@ -26,16 +26,18 @@ function randomInt(min: number, max: number): number {
 async function seedAnalyticsOrdersAdmin() {
   try {
     console.log('🍽️  Fetching restaurants and menu items from Catalog...');
-    const { rows: allRestaurants } = await catalogPool.query(
+    const { rows: allRestaurants } = (await catalogPool.query(
       'SELECT id, name FROM restaurants',
-    );
+    )) as { rows: { id: string; name: string }[] };
     if (allRestaurants.length === 0) {
       console.log('❌ No restaurants found. Please seed restaurants first.');
       return;
     }
-    const { rows: allMenuItems } = await catalogPool.query(
+    const { rows: allMenuItems } = (await catalogPool.query(
       'SELECT id, restaurant_id as "restaurantId", name, price FROM menu_items',
-    );
+    )) as {
+      rows: { id: string; restaurantId: string; name: string; price: string }[];
+    };
     if (allMenuItems.length === 0) {
       console.log('❌ No menu items found. Please seed restaurants first.');
       return;
