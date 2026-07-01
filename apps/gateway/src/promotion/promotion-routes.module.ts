@@ -12,6 +12,8 @@ import {
   PROMOTION_TCP_CLIENT,
 } from './promotion.tokens';
 import { PromotionsController } from './promotions.controller';
+import { AdminPromotionsController } from './admin-promotions.controller';
+import { RestaurantPromotionsController } from './restaurant-promotions.controller';
 
 /**
  * Promotion public-route ownership. Registered behind PROMOTION_ROUTES_ENABLED.
@@ -22,7 +24,11 @@ export class PromotionRoutesModule {
     return {
       module: PromotionRoutesModule,
       imports: [ConfigModule],
-      controllers: [PromotionsController],
+      controllers: [
+        PromotionsController,
+        AdminPromotionsController,
+        RestaurantPromotionsController,
+      ],
       providers: [
         {
           provide: PROMOTION_TCP_CLIENT,

@@ -1,0 +1,1 @@
+export const CATALOG_TCP_CLIENT = Symbol('CATALOG_TCP_CLIENT');

@@ -19,6 +19,12 @@ const schema = z.object({
   PROMOTION_TCP_PORT: z.coerce.number().int().positive().default(4041),
   PROMOTION_MANAGEMENT_PORT: z.coerce.number().int().positive().default(4042),
 
+  // --- Catalog TCP RPC client (restaurant-ownership verification for
+  //     restaurant-scoped promotion writes) ---
+  CATALOG_TCP_HOST: z.string().min(1).default('localhost'),
+  CATALOG_TCP_PORT: z.coerce.number().int().positive().default(4031),
+  CATALOG_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
+
   // --- Internal auth: verify inbound gateway/service JWTs on the discount lifecycle ---
   INTERNAL_AUTH_JWT_SECRET: z
     .string()
