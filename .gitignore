@@ -21,3 +21,5 @@ tsconfig.*
 dist-check
 dist-check.tsbuildinfo
 *.tsbuildinfo
+
+out/
