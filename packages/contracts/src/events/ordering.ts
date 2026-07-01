@@ -109,3 +109,24 @@ export const ORDER_READY_FOR_PICKUP_V1 = {
   eventVersion: 1,
   schema: orderReadyForPickupV1Payload,
 } as const;
+
+/** ordering.order.delivered.v1 — fires when an order transitions to 'delivered'. */
+export const orderDeliveredV1Payload = z.object({
+  orderId: z.string().uuid(),
+  customerId: z.string().uuid(),
+  restaurantId: z.string().uuid(),
+  items: z.array(
+    z.object({
+      menuItemId: z.string().uuid(),
+      quantity: z.number().int().positive(),
+    }),
+  ),
+  deliveredAt: z.string(),
+});
+export type OrderDeliveredV1Payload = z.infer<typeof orderDeliveredV1Payload>;
+
+export const ORDER_DELIVERED_V1 = {
+  eventType: EVENT_NAMES.OrderingOrderDelivered,
+  eventVersion: 1,
+  schema: orderDeliveredV1Payload,
+} as const;
