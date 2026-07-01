@@ -9,6 +9,15 @@ const pnpmBin = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 
 const rootEnv = readEnvFile(path.join(rootDir, '.env'));
 
+const cloudinaryEnv = {
+  CLOUDINARY_CLOUD_NAME:
+    process.env.CLOUDINARY_CLOUD_NAME || rootEnv.CLOUDINARY_CLOUD_NAME,
+  CLOUDINARY_API_KEY:
+    process.env.CLOUDINARY_API_KEY || rootEnv.CLOUDINARY_API_KEY,
+  CLOUDINARY_API_SECRET:
+    process.env.CLOUDINARY_API_SECRET || rootEnv.CLOUDINARY_API_SECRET,
+};
+
 const serviceDirs = fs
   .readdirSync(servicesDir, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
@@ -19,7 +28,9 @@ const serviceDirs = fs
   .sort((a, b) => path.basename(a).localeCompare(path.basename(b)));
 
 if (serviceDirs.length === 0) {
-  console.error('No seed directories found under apps/services/*/src/drizzle/seeds.');
+  console.error(
+    'No seed directories found under apps/services/*/src/drizzle/seeds.',
+  );
   process.exit(1);
 }
 
@@ -30,34 +41,33 @@ for (const serviceDir of serviceDirs) {
   const serviceName = path.basename(serviceDir);
   const databaseUrl = resolveDatabaseUrl(serviceName);
   const seedsDir = path.join(serviceDir, 'src', 'drizzle', 'seeds');
-  
+
   const seedFiles = fs
     .readdirSync(seedsDir)
-    .filter(file => file.endsWith('.seed.ts'))
-    .map(file => path.join(seedsDir, file));
+    .filter((file) => file.endsWith('.seed.ts'))
+    .map((file) => path.join(seedsDir, file));
 
   if (seedFiles.length === 0) continue;
 
-  console.log(`\n> Seeding ${serviceName} database at ${redactDatabaseUrl(databaseUrl)}`);
+  console.log(
+    `\n> Seeding ${serviceName} database at ${redactDatabaseUrl(databaseUrl)}`,
+  );
 
   for (const seedFile of seedFiles) {
     console.log(`  Running ${path.basename(seedFile)}...`);
-    
+
     // We use tsx to execute the seed
-    const result = spawnSync(
-      pnpmBin,
-      ['exec', 'tsx', `"${seedFile}"`],
-      {
-        cwd: serviceDir,
-        env: {
-          ...process.env,
-          DATABASE_URL: databaseUrl,
-          CATALOG_DATABASE_URL: catalogDatabaseUrl,
-        },
-        stdio: 'inherit',
-        shell: true,
+    const result = spawnSync(pnpmBin, ['exec', 'tsx', `"${seedFile}"`], {
+      cwd: serviceDir,
+      env: {
+        ...process.env,
+        ...cloudinaryEnv,
+        DATABASE_URL: databaseUrl,
+        CATALOG_DATABASE_URL: catalogDatabaseUrl,
       },
-    );
+      stdio: 'inherit',
+      shell: true,
+    });
 
     if (result.error) {
       console.error(`Failed to run seed script ${seedFile}:`);
@@ -121,7 +131,7 @@ function readEnvFile(filePath) {
       const key = assignment.slice(0, equalsIndex).trim();
       const value = assignment.slice(equalsIndex + 1).trim();
       if (!key) return env;
-      
+
       env[key] = value;
       return env;
     }, {});
