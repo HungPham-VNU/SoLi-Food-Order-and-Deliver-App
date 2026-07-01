@@ -126,7 +126,9 @@ const normalizeLocalOllamaApiBaseURL = (baseURL: string | undefined) => {
 export const resolveOllamaRuntimeConfig = (
   raw: RawOllamaConfig,
 ): OllamaRuntimeConfig => {
-  const baseURL = raw.baseURL ? normalizeLocalOllamaApiBaseURL(raw.baseURL) : OLLAMA_CLOUD_API_BASE_URL;
+  const baseURL = raw.baseURL
+    ? normalizeLocalOllamaApiBaseURL(raw.baseURL)
+    : OLLAMA_CLOUD_API_BASE_URL;
   const isDirectCloud = baseURL === OLLAMA_CLOUD_API_BASE_URL;
   return {
     endpoint: {
