@@ -214,14 +214,14 @@ describe('CartService', () => {
           options: [
             {
               optionId: 'opt-S',
-              name: 'Small',
+              optionName: 'Small',
               price: 0,
               isDefault: true,
               isAvailable: true,
             },
             {
               optionId: 'opt-L',
-              name: 'Large',
+              optionName: 'Large',
               price: 10_000,
               isDefault: false,
               isAvailable: true,
@@ -277,7 +277,7 @@ describe('CartService', () => {
             options: [
               {
                 optionId: 'opt-S',
-                name: 'Small',
+                optionName: 'Small',
                 price: 0,
                 isDefault: true,
                 isAvailable: false,

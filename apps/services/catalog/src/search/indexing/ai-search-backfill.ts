@@ -1,3 +1,10 @@
+import { config } from 'dotenv';
+import * as path from 'path';
+config({ path: path.resolve(process.cwd(), '../../../.env') });
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL =
+    'postgresql://uitfood_catalog:catalog_secret@localhost:5432/uitfood_catalog';
+}
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -45,6 +45,7 @@ export function MenuItemDetailScreen({
   const insets = useSafeAreaInsets();
   const [quantity, setQuantity] = useState(1);
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
+  const [hasInitializedDefaults, setHasInitializedDefaults] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -61,6 +62,20 @@ export function MenuItemDetailScreen({
   const { data: modifierGroups, isLoading: isLoadingModifiers } =
     useMenuItemModifiers(itemId);
   const { data: cart } = useMyCart();
+
+  useEffect(() => {
+    if (modifierGroups && !hasInitializedDefaults) {
+      const defaultOptionIds = modifierGroups.flatMap((group) =>
+        (group.options || [])
+          .filter((opt) => opt.isDefault)
+          .map((opt) => opt.id),
+      );
+      if (defaultOptionIds.length > 0) {
+        setSelectedOptionIds(defaultOptionIds);
+      }
+      setHasInitializedDefaults(true);
+    }
+  }, [modifierGroups, hasInitializedDefaults]);
 
   const currentSelections = useMemo(() => {
     const selections: Record<string, string[]> = {};

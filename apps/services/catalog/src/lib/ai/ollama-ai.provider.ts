@@ -1,5 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as http from 'http';
+import * as https from 'https';
 
 export const OLLAMA_CLOUD_API_BASE_URL = 'https://ollama.com/api';
 export const LOCAL_OLLAMA_BASE_URL = 'http://localhost:11434';
@@ -201,39 +203,43 @@ export class OllamaAiProvider {
       );
     }
 
+    const timeoutMs = request.timeoutMs ?? DEFAULT_AI_TIMEOUT_MS;
     const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      request.timeoutMs ?? DEFAULT_AI_TIMEOUT_MS,
-    );
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(`${runtimeConfig.endpoint.baseURL}/chat`, {
-        method: 'POST',
-        headers: this.ollamaHeaders(runtimeConfig),
-        body: JSON.stringify({
-          model: runtimeConfig.model,
-          messages: request.messages,
-          stream: false,
-          think: false,
-          options: {
-            temperature: request.temperature ?? 0,
-          },
-        }),
-        signal: controller.signal,
-      });
-      const responseBody = await this.readOllamaResponse(response);
+      const response = await this.makeRequest(
+        `${runtimeConfig.endpoint.baseURL}/chat`,
+        {
+          method: 'POST',
+          headers: this.ollamaHeaders(runtimeConfig),
+          body: JSON.stringify({
+            model: runtimeConfig.model,
+            messages: request.messages,
+            stream: false,
+            think: false,
+            options: {
+              temperature: request.temperature ?? 0,
+            },
+          }),
+          timeoutMs,
+          signal: controller.signal,
+        },
+      );
 
-      if (!response.ok) {
+      const responseData =
+        this.parseOllamaResponse<OllamaChatResponse>(response);
+
+      if (response.status < 200 || response.status >= 300) {
         throw new AiProviderRequestError(
           `Ollama Cloud API request failed (${response.status}): ${this.ollamaErrorMessage(
-            responseBody,
+            responseData,
             response.statusText,
           )}`,
         );
       }
 
-      const content = responseBody.message?.content;
+      const content = responseData.message?.content;
       if (!content) {
         throw new AiProviderRequestError(
           'Ollama Cloud API response did not include content.',
@@ -274,36 +280,40 @@ export class OllamaAiProvider {
   async embed(request: AiEmbedRequest): Promise<AiEmbedResponse> {
     const runtimeConfig = this.getEmbeddingRuntimeConfig(request);
 
+    const timeoutMs = request.timeoutMs ?? DEFAULT_AI_TIMEOUT_MS;
     const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      request.timeoutMs ?? DEFAULT_AI_TIMEOUT_MS,
-    );
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(`${runtimeConfig.endpoint.baseURL}/embed`, {
-        method: 'POST',
-        headers: this.ollamaHeaders(runtimeConfig),
-        body: JSON.stringify({
-          model: runtimeConfig.model,
-          input: request.input,
-          truncate: request.truncate ?? true,
-          ...(request.dimensions ? { dimensions: request.dimensions } : {}),
-        }),
-        signal: controller.signal,
-      });
-      const responseBody = await this.readOllamaEmbedResponse(response);
+      const response = await this.makeRequest(
+        `${runtimeConfig.endpoint.baseURL}/embed`,
+        {
+          method: 'POST',
+          headers: this.ollamaHeaders(runtimeConfig),
+          body: JSON.stringify({
+            model: runtimeConfig.model,
+            input: request.input,
+            truncate: request.truncate ?? true,
+            ...(request.dimensions ? { dimensions: request.dimensions } : {}),
+          }),
+          timeoutMs,
+          signal: controller.signal,
+        },
+      );
 
-      if (!response.ok) {
+      const responseData =
+        this.parseOllamaResponse<OllamaEmbedResponse>(response);
+
+      if (response.status < 200 || response.status >= 300) {
         throw new AiProviderRequestError(
           `Ollama embed request failed (${response.status}): ${this.ollamaErrorMessage(
-            responseBody,
+            responseData,
             response.statusText,
           )}`,
         );
       }
 
-      const embeddings = parseEmbeddings(responseBody.embeddings);
+      const embeddings = parseEmbeddings(responseData.embeddings);
       if (embeddings.length === 0) {
         throw new AiProviderRequestError(
           'Ollama embed response did not include embeddings.',
@@ -312,7 +322,7 @@ export class OllamaAiProvider {
 
       return {
         embeddings,
-        model: responseBody.model ?? runtimeConfig.model,
+        model: responseData.model ?? runtimeConfig.model,
       };
     } catch (error) {
       if (error instanceof AiProviderRequestError) {
@@ -350,36 +360,83 @@ export class OllamaAiProvider {
     return headers;
   }
 
-  private async readOllamaResponse(
-    response: Response,
-  ): Promise<OllamaChatResponse> {
-    const text = await response.text();
-    if (!text.trim()) {
-      return {};
-    }
+  private makeRequest(
+    urlStr: string,
+    options: {
+      method: string;
+      headers: Record<string, string>;
+      body: string;
+      timeoutMs: number;
+      signal: AbortSignal;
+    },
+  ): Promise<{ status: number; statusText: string; text: string }> {
+    return new Promise((resolve, reject) => {
+      const url = new URL(urlStr);
+      const requestFn =
+        url.protocol === 'https:' ? https.request : http.request;
 
-    try {
-      return JSON.parse(text) as OllamaChatResponse;
-    } catch {
-      throw new AiProviderRequestError(
-        `Ollama Cloud API returned non-JSON response (${response.status}).`,
-      );
-    }
+      const reqOptions = {
+        hostname: url.hostname,
+        port: url.port || (url.protocol === 'https:' ? 443 : 80),
+        path: url.pathname + url.search,
+        method: options.method,
+        headers: {
+          ...options.headers,
+          'Content-Length': Buffer.byteLength(options.body),
+        },
+        family: 4, // Critical: Forces IPv4 to bypass Node 18 `fetch` IPv6 Happy Eyeballs hangs in Docker
+      };
+
+      const req = requestFn(reqOptions, (res) => {
+        let responseText = '';
+        res.on('data', (chunk) => {
+          responseText += chunk;
+        });
+        res.on('end', () => {
+          resolve({
+            status: res.statusCode ?? 500,
+            statusText: res.statusMessage ?? '',
+            text: responseText,
+          });
+        });
+      });
+
+      req.on('error', (err) => {
+        if (options.signal.aborted) return;
+        reject(err);
+      });
+
+      req.setTimeout(options.timeoutMs, () => {
+        req.destroy(new Error('Request timed out'));
+      });
+
+      const abortHandler = () => {
+        req.destroy(new Error('AbortError'));
+      };
+      options.signal.addEventListener('abort', abortHandler);
+
+      req.on('close', () => {
+        options.signal.removeEventListener('abort', abortHandler);
+      });
+
+      req.write(options.body);
+      req.end();
+    });
   }
 
-  private async readOllamaEmbedResponse(
-    response: Response,
-  ): Promise<OllamaEmbedResponse> {
-    const text = await response.text();
-    if (!text.trim()) {
+  private parseOllamaResponse<T>(response: {
+    status: number;
+    text: string;
+  }): T | Record<string, never> {
+    if (!response.text.trim()) {
       return {};
     }
 
     try {
-      return JSON.parse(text) as OllamaEmbedResponse;
+      return JSON.parse(response.text) as T;
     } catch {
       throw new AiProviderRequestError(
-        `Ollama embed endpoint returned non-JSON response (${response.status}).`,
+        `Ollama API returned non-JSON response (${response.status}).`,
       );
     }
   }

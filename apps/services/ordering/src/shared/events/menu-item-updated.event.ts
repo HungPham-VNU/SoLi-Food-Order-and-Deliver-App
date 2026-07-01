@@ -4,7 +4,7 @@
  */
 export interface ModifierOptionSnapshot {
   optionId: string;
-  name: string;
+  optionName: string;
   price: number;
   isDefault: boolean;
   /** Whether this option is currently available for selection. */

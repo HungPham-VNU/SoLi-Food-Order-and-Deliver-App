@@ -407,7 +407,7 @@ export class CartService {
             groupId: group.groupId,
             groupName: group.groupName,
             optionId: defaultOpt.optionId,
-            optionName: defaultOpt.name, // name (ModifierOptionSnapshot) → optionName (SelectedModifier)
+            optionName: defaultOpt.optionName, // optionName (ModifierOptionSnapshot) → optionName (SelectedModifier)
             price: defaultOpt.price,
           });
           // Register injected count so minSelections check passes for this group
@@ -462,7 +462,7 @@ export class CartService {
       // Case 11 fix: reject unavailable options at add-time
       if (!option.isAvailable) {
         throw new BadRequestException(
-          `Modifier option "${option.name}" in group "${group.groupName}" is currently unavailable.`,
+          `Modifier option "${option.optionName}" in group "${group.groupName}" is currently unavailable.`,
         );
       }
 
@@ -470,7 +470,7 @@ export class CartService {
         groupId: group.groupId,
         groupName: group.groupName,
         optionId: option.optionId,
-        optionName: option.name, // name (ModifierOptionSnapshot) → optionName (SelectedModifier)
+        optionName: option.optionName, // optionName (ModifierOptionSnapshot) → optionName (SelectedModifier)
         price: option.price,
       });
     }

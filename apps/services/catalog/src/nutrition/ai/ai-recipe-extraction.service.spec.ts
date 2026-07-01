@@ -14,17 +14,15 @@ function buildService(configValues: Partial<Record<OllamaConfigKey, string>>) {
 }
 
 function mockOllamaResponse(content: unknown) {
-  return new Response(
-    JSON.stringify({
+  return {
+    status: 200,
+    statusText: 'OK',
+    text: JSON.stringify({
       message: {
         content: JSON.stringify(content),
       },
     }),
-    {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    },
-  );
+  };
 }
 
 describe('AiRecipeExtractionService', () => {
@@ -33,23 +31,25 @@ describe('AiRecipeExtractionService', () => {
   });
 
   it('calls direct Ollama Cloud and does not send unsupported structured-output format', async () => {
-    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(
-      mockOllamaResponse({
-        recipeName: 'Com ga',
-        servings: 2,
-        ingredients: [
-          {
-            rawText: '500 g uc ga',
-            name: 'uc ga',
-            quantity: 500,
-            unit: 'g',
-            preparation: 'cooked',
-            confidence: 0.9,
-          },
-        ],
-        warnings: [],
-      }),
-    );
+    const makeRequestMock = jest
+      .spyOn(OllamaAiProvider.prototype as any, 'makeRequest')
+      .mockResolvedValue(
+        mockOllamaResponse({
+          recipeName: 'Com ga',
+          servings: 2,
+          ingredients: [
+            {
+              rawText: '500 g uc ga',
+              name: 'uc ga',
+              quantity: 500,
+              unit: 'g',
+              preparation: 'cooked',
+              confidence: 0.9,
+            },
+          ],
+          warnings: [],
+        }),
+      );
     const service = buildService({
       OLLAMA_BASE_URL: 'http://localhost:11434/v1',
       OLLAMA_MODEL: 'gemma4:31b-cloud',
@@ -59,16 +59,16 @@ describe('AiRecipeExtractionService', () => {
     const result = await service.extractRecipe('Com ga\n- 500 g uc ga');
 
     expect(result.recipeName).toBe('Com ga');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(makeRequestMock).toHaveBeenCalledTimes(1);
 
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [url, options] = makeRequestMock.mock.calls[0] as [string, any];
     expect(url).toBe('https://ollama.com/api/chat');
-    expect(init.headers).toMatchObject({
+    expect(options.headers).toMatchObject({
       'Content-Type': 'application/json',
       Authorization: 'Bearer test-key',
     });
 
-    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    const body = JSON.parse(options.body as string) as Record<string, unknown>;
     expect(body.model).toBe('gemma4:31b');
     expect(body.stream).toBe(false);
     expect(body.think).toBe(false);
@@ -76,19 +76,21 @@ describe('AiRecipeExtractionService', () => {
   });
 
   it('normalizes loose cloud JSON with review-safe defaults', async () => {
-    jest.spyOn(global, 'fetch').mockResolvedValue(
-      mockOllamaResponse({
-        recipe_name: 'Canh rau',
-        servings: 1,
-        ingredients: [
-          {
-            raw_text: 'rau muong',
-            name: 'rau muong',
-            preparation_state: 'boiled',
-          },
-        ],
-      }),
-    );
+    jest
+      .spyOn(OllamaAiProvider.prototype as any, 'makeRequest')
+      .mockResolvedValue(
+        mockOllamaResponse({
+          recipe_name: 'Canh rau',
+          servings: 1,
+          ingredients: [
+            {
+              raw_text: 'rau muong',
+              name: 'rau muong',
+              preparation_state: 'boiled',
+            },
+          ],
+        }),
+      );
     const service = buildService({
       OLLAMA_MODEL: 'gpt-oss:20b',
       OLLAMA_API_KEY: 'test-key',
@@ -114,63 +116,65 @@ describe('AiRecipeExtractionService', () => {
   });
 
   it('normalizes common Vietnamese household units before schema validation', async () => {
-    jest.spyOn(global, 'fetch').mockResolvedValue(
-      mockOllamaResponse({
-        recipeName: 'Bún chả',
-        servings: null,
-        ingredients: [
-          {
-            rawText: '5 lạng ba chỉ',
-            name: 'ba chỉ heo',
-            quantity: 5,
-            unit: 'lạng',
-            preparation: 'grilled',
-            confidence: 0.92,
-          },
-          {
-            rawText: 'nửa cân thịt vai xay',
-            name: 'thịt vai xay',
-            quantity: 'nửa',
-            unit: 'cân',
-            preparation: 'raw',
-            confidence: 0.88,
-          },
-          {
-            rawText: '3 muỗng canh nước mắm',
-            name: 'nước mắm',
-            quantity: 3,
-            unit: 'muỗng canh',
-            preparation: 'unknown',
-            confidence: 0.9,
-          },
-          {
-            rawText: '1/4 bát dấm',
-            name: 'dấm',
-            quantity: '1/4',
-            unit: 'bát',
-            preparation: 'unknown',
-            confidence: 0.82,
-          },
-          {
-            rawText: 'hai vắt bún',
-            name: 'bún',
-            quantity: null,
-            unit: null,
-            preparation: 'cooked',
-            confidence: 0.84,
-          },
-          {
-            rawText: 'vài nhánh mùi tàu',
-            name: 'mùi tàu',
-            quantity: null,
-            unit: null,
-            preparation: 'raw',
-            confidence: 0.81,
-          },
-        ],
-        warnings: [],
-      }),
-    );
+    jest
+      .spyOn(OllamaAiProvider.prototype as any, 'makeRequest')
+      .mockResolvedValue(
+        mockOllamaResponse({
+          recipeName: 'Bún chả',
+          servings: null,
+          ingredients: [
+            {
+              rawText: '5 lạng ba chỉ',
+              name: 'ba chỉ heo',
+              quantity: 5,
+              unit: 'lạng',
+              preparation: 'grilled',
+              confidence: 0.92,
+            },
+            {
+              rawText: 'nửa cân thịt vai xay',
+              name: 'thịt vai xay',
+              quantity: 'nửa',
+              unit: 'cân',
+              preparation: 'raw',
+              confidence: 0.88,
+            },
+            {
+              rawText: '3 muỗng canh nước mắm',
+              name: 'nước mắm',
+              quantity: 3,
+              unit: 'muỗng canh',
+              preparation: 'unknown',
+              confidence: 0.9,
+            },
+            {
+              rawText: '1/4 bát dấm',
+              name: 'dấm',
+              quantity: '1/4',
+              unit: 'bát',
+              preparation: 'unknown',
+              confidence: 0.82,
+            },
+            {
+              rawText: 'hai vắt bún',
+              name: 'bún',
+              quantity: null,
+              unit: null,
+              preparation: 'cooked',
+              confidence: 0.84,
+            },
+            {
+              rawText: 'vài nhánh mùi tàu',
+              name: 'mùi tàu',
+              quantity: null,
+              unit: null,
+              preparation: 'raw',
+              confidence: 0.81,
+            },
+          ],
+          warnings: [],
+        }),
+      );
     const service = buildService({
       OLLAMA_MODEL: 'gpt-oss:20b',
       OLLAMA_API_KEY: 'test-key',
@@ -217,13 +221,15 @@ describe('AiRecipeExtractionService', () => {
   });
 
   it('does not fabricate ingredients when the cloud response omits them', async () => {
-    jest.spyOn(global, 'fetch').mockResolvedValue(
-      mockOllamaResponse({
-        recipeName: 'Canh rau',
-        servings: 1,
-        warnings: [],
-      }),
-    );
+    jest
+      .spyOn(OllamaAiProvider.prototype as any, 'makeRequest')
+      .mockResolvedValue(
+        mockOllamaResponse({
+          recipeName: 'Canh rau',
+          servings: 1,
+          warnings: [],
+        }),
+      );
     const service = buildService({
       OLLAMA_MODEL: 'gpt-oss:20b',
       OLLAMA_API_KEY: 'test-key',
@@ -235,7 +241,10 @@ describe('AiRecipeExtractionService', () => {
   });
 
   it('does not call Ollama Cloud when the API key is missing', async () => {
-    const fetchMock = jest.spyOn(global, 'fetch');
+    const makeRequestMock = jest.spyOn(
+      OllamaAiProvider.prototype as any,
+      'makeRequest',
+    );
     const service = buildService({
       OLLAMA_MODEL: 'gpt-oss:20b',
       OLLAMA_API_KEY: 'ollama',
@@ -244,6 +253,6 @@ describe('AiRecipeExtractionService', () => {
     await expect(service.extractRecipe('Com ga')).rejects.toBeInstanceOf(
       ServiceUnavailableException,
     );
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(makeRequestMock).not.toHaveBeenCalled();
   });
 });
