@@ -44,6 +44,7 @@ export default function CreateMenuItemPage() {
     resolver: zodResolver(createMenuItemSchema),
     defaultValues: {
       name: '',
+      itemKind: undefined,
       description: '',
       sku: '',
       imageUrl: '',
@@ -57,6 +58,7 @@ export default function CreateMenuItemPage() {
     const itemFields = {
       name: values.name,
       price: values.price,
+      itemKind: values.itemKind,
       categoryId: values.categoryId || undefined,
       description: values.description || undefined,
       sku: values.sku || undefined,

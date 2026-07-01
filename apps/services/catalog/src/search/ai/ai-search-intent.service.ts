@@ -12,6 +12,7 @@ import {
   AI_SEARCH_DEFAULT_RADIUS_KM,
   AI_SEARCH_MIN_CONFIDENCE,
   type AiSearchIntent,
+  type AiSearchItemKind,
   type AiSearchSort,
 } from './ai-search.types';
 import { aiSearchIntentSchema } from './ai-search-intent.schema';
@@ -29,12 +30,15 @@ const AI_SEARCH_RESPONSE_SCHEMA_PROMPT = [
   '{',
   '  "rewrittenQuery": "string",',
   '  "language": "en|vi|unknown",',
+  '  "itemKinds": ["food|beverage|mixed"],',
   '  "foodTerms": ["string"],',
   '  "cuisineTerms": ["string"],',
   '  "dietaryTags": ["string"],',
   '  "excludedTerms": ["string"],',
+  '  "semanticConstraints": ["strict or nuanced constraint requiring evidence verification"],',
   '  "nutrition": {',
   '    "highProtein": "boolean | omitted",',
+  '    "lowerCalorie": "boolean | omitted",',
   '    "proteinMinG": "number | omitted",',
   '    "caloriesMax": "number | omitted",',
   '    "fatMaxG": "number | omitted",',
@@ -53,7 +57,7 @@ const AI_SEARCH_RESPONSE_SCHEMA_PROMPT = [
   '    "nearbyIntent": "boolean | omitted",',
   '    "radiusKm": "number | omitted"',
   '  },',
-  '  "sort": "relevance|distance|rating|price_asc|protein_desc",',
+  '  "sort": "relevance|distance|rating|price_asc|protein_desc|calories_asc",',
   '  "confidence": "number from 0 to 1",',
   '  "needsFallback": "boolean",',
   '  "foodNameOnly": "boolean; true only when the full query is just a dish or food name"',
@@ -70,25 +74,12 @@ const CUISINE_TERMS = new Set([
   'western',
 ]);
 
-const TAG_TERMS = new Set([
-  'spicy',
-  'vegetarian',
-  'vegan',
-  'halal',
-  'chicken',
-  'beef',
-  'pork',
-  'seafood',
-  'grilled',
-  'soup',
-  'noodle',
-  'rice',
-  'sandwich',
-  'banh',
-  'mi',
-  'pho',
-  'bun',
-  'com',
+const DIETARY_TAG_ALIASES = new Map<string, string>([
+  ['vegan', 'vegan'],
+  ['vegetarian', 'vegetarian'],
+  ['halal', 'halal'],
+  ['gluten free', 'gluten-free'],
+  ['dairy free', 'dairy-free'],
 ]);
 
 const STOP_WORDS = new Set([
@@ -97,12 +88,18 @@ const STOP_WORDS = new Set([
   'and',
   'ask',
   'best',
+  'beverage',
+  'beverages',
   'budget',
+  'calorie',
+  'calories',
   'cheap',
   'close',
   'dinner',
   'dish',
   'dishes',
+  'drink',
+  'drinks',
   'food',
   'foods',
   'for',
@@ -112,16 +109,21 @@ const STOP_WORDS = new Set([
   'in',
   'km',
   'lunch',
+  'lose',
+  'loss',
+  'lost',
   'meal',
   'meals',
   'me',
   'near',
   'nearby',
   'nearest',
+  'no',
   'now',
   'open',
   'option',
   'options',
+  'please',
   'protein',
   'rated',
   'rating',
@@ -134,9 +136,18 @@ const STOP_WORDS = new Set([
   'vnd',
   'with',
   'within',
+  'without',
+  'weight',
 ]);
 
-const GENERIC_FOOD_TERMS = new Set(['dish', 'food', 'meal', 'option']);
+const GENERIC_FOOD_TERMS = new Set([
+  'beverage',
+  'dish',
+  'drink',
+  'food',
+  'meal',
+  'option',
+]);
 
 const FOOD_NAME_ONLY_TERMS = new Set([
   'banh',
@@ -223,40 +234,62 @@ export class AiSearchIntentService {
     const trimmed = query.trim().slice(0, 300);
     const normalized = normalizeText(trimmed);
 
-    const highProtein = /\b(high protein|protein rich|protein|lean)\b/.test(
-      normalized,
-    );
-    const budgetIntent =
-      /\b(budget|cheap|affordable|inexpensive|gia re)\b/.test(normalized);
-    const highlyRated =
-      /\b(highly rated|best rated|top rated|rating|review|best)\b/.test(
+    const highProtein =
+      /\b(high protein|protein rich|protein|lean|post[ -]?workout)\b/.test(
         normalized,
       );
+    const explicitCaloriesMax = extractExplicitCaloriesMax(normalized);
+    const lowerCalorie =
+      isLowerCalorieIntent(normalized) || explicitCaloriesMax !== undefined;
+    const lowFat = /\b(low fat|lower fat|lean meal)\b/.test(normalized);
+    const itemKinds = inferItemKinds(normalized);
+    const budgetIntent =
+      /\b(budget|cheap|cheapest|affordable|inexpensive|gia re)\b/.test(
+        normalized,
+      );
+    const explicitRatingMin = extractExplicitRatingMin(normalized);
+    const highlyRated =
+      /\b(highly rated|best rated|top rated|rating|review|reviews|best|good reviews)\b/.test(
+        normalized,
+      ) || explicitRatingMin !== undefined;
     const nearbyIntent =
       /\b(nearby|near me|near|close|nearest|gan day|gan toi)\b/.test(
         normalized,
       );
 
-    const explicitPriceMax = extractExplicitPriceMax(normalized);
+    const explicitPriceRange = extractExplicitPriceRange(normalized);
+    const explicitPriceMax =
+      explicitPriceRange?.max ?? extractExplicitPriceMax(normalized);
+    const explicitPriceMin = explicitPriceRange?.min;
     const explicitProteinMin = extractExplicitProteinMin(normalized);
-    const foodTerms = extractFoodTerms(normalized);
+    const excludedTerms = extractExcludedTerms(normalized);
+    const foodTerms = extractFoodTerms(normalized).filter(
+      (term) => !excludedTerms.includes(term),
+    );
     const cuisineTerms = unique(
       foodTerms.filter((term) => CUISINE_TERMS.has(term)),
     );
-    const dietaryTags = unique(foodTerms.filter((term) => TAG_TERMS.has(term)));
+    const dietaryTags = extractDietaryTags(normalized);
+    const semanticConstraints = extractSemanticConstraints(normalized);
     const genericFoodIntent = isGenericFoodSearchQuery(normalized);
     const foodNameOnly = isFoodNameOnlySearchQuery(normalized);
 
     const hasPriceIntent = budgetIntent || explicitPriceMax !== undefined;
     const hasAnySignal =
       highProtein ||
+      lowerCalorie ||
+      itemKinds.length > 0 ||
       hasPriceIntent ||
       highlyRated ||
       nearbyIntent ||
+      excludedTerms.length > 0 ||
+      dietaryTags.length > 0 ||
+      semanticConstraints.length > 0 ||
       foodTerms.length > 0 ||
       genericFoodIntent;
     const sort = pickSort({
       highProtein,
+      lowerCalorie,
       hasPriceIntent,
       highlyRated,
       nearbyIntent,
@@ -270,11 +303,19 @@ export class AiSearchIntentService {
     const rawIntent: AiSearchIntent = {
       rewrittenQuery: trimmed,
       language: detectLanguage(normalized),
+      itemKinds,
       foodTerms,
       cuisineTerms,
       dietaryTags,
-      excludedTerms: [],
+      excludedTerms,
+      semanticConstraints,
       nutrition: {
+        ...(lowerCalorie ? { lowerCalorie: true } : {}),
+        ...(explicitCaloriesMax !== undefined
+          ? { caloriesMax: explicitCaloriesMax }
+          : lowerCalorie
+            ? { caloriesMax: 500 }
+            : {}),
         ...(highProtein
           ? {
               highProtein: true,
@@ -282,6 +323,7 @@ export class AiSearchIntentService {
                 explicitProteinMin ?? AI_SEARCH_DEFAULT_HIGH_PROTEIN_MIN_G,
             }
           : {}),
+        ...(lowFat ? { fatMaxG: 15 } : {}),
       },
       price: {
         ...(hasPriceIntent
@@ -290,12 +332,18 @@ export class AiSearchIntentService {
               budgetIntent,
             }
           : {}),
+        ...(explicitPriceMin !== undefined
+          ? { minPriceVnd: explicitPriceMin }
+          : {}),
       },
       rating: {
         ...(highlyRated
           ? {
-              minAverageRating: AI_SEARCH_DEFAULT_HIGH_RATING_MIN,
-              minReviewCount: AI_SEARCH_DEFAULT_MIN_REVIEW_COUNT,
+              minAverageRating:
+                explicitRatingMin ?? AI_SEARCH_DEFAULT_HIGH_RATING_MIN,
+              ...(explicitRatingMin === undefined
+                ? { minReviewCount: AI_SEARCH_DEFAULT_MIN_REVIEW_COUNT }
+                : {}),
             }
           : {}),
       },
@@ -406,9 +454,30 @@ export class AiSearchIntentService {
     const rating = asRecord(source.rating);
     const geo = asRecord(source.geo);
     const highProtein = readOptionalBoolean(nutrition.highProtein);
+    const normalizedQuery = normalizeText(trimmed);
+    const inferredItemKinds = inferItemKinds(normalizedQuery);
+    const providerItemKinds = readItemKinds(source.itemKinds);
+    const lowerCalorie = Boolean(
+      readOptionalBoolean(nutrition.lowerCalorie) ||
+      isLowerCalorieIntent(normalizedQuery) ||
+      extractExplicitCaloriesMax(normalizedQuery) !== undefined,
+    );
     const budgetIntent = readOptionalBoolean(price.budgetIntent);
     const nearbyIntent = readOptionalBoolean(geo.nearbyIntent);
     const explicitSort = readSort(source.sort);
+    const providerFoodTerms = readTermArray(source.foodTerms, 20);
+    const excludedTerms = unique([
+      ...readTermArray(source.excludedTerms, 20),
+      ...extractExcludedTerms(normalizedQuery),
+    ]);
+    const dietaryTags = unique(
+      [
+        ...readTermArray(source.dietaryTags, 20),
+        ...extractDietaryTags(normalizedQuery),
+      ]
+        .map(canonicalizeDietaryTag)
+        .filter((tag): tag is string => Boolean(tag)),
+    );
     const foodNameOnly =
       readOptionalBoolean(source.foodNameOnly) ??
       isFoodNameOnlySearchQuery(trimmed);
@@ -419,12 +488,25 @@ export class AiSearchIntentService {
         source.language,
         detectLanguage(normalizeText(trimmed)),
       ),
-      foodTerms: readTermArray(source.foodTerms, 20),
+      itemKinds:
+        inferredItemKinds.length > 0
+          ? inferredItemKinds
+          : isAmbiguousCourseOnlyIntent(normalizedQuery)
+            ? []
+            : providerItemKinds,
+      foodTerms: providerFoodTerms.filter(
+        (term) => !excludedTerms.includes(term),
+      ),
       cuisineTerms: readTermArray(source.cuisineTerms, 10),
-      dietaryTags: readTermArray(source.dietaryTags, 20),
-      excludedTerms: readTermArray(source.excludedTerms, 20),
+      dietaryTags,
+      excludedTerms,
+      semanticConstraints: unique([
+        ...readTermArray(source.semanticConstraints, 10),
+        ...extractSemanticConstraints(normalizedQuery),
+      ]),
       nutrition: {
         ...(highProtein !== undefined ? { highProtein } : {}),
+        ...(lowerCalorie ? { lowerCalorie: true } : {}),
         ...readOptionalNumberProperty(nutrition.proteinMinG, 'proteinMinG', {
           min: 0,
           max: 300,
@@ -486,11 +568,42 @@ export class AiSearchIntentService {
       foodNameOnly,
     };
 
+    const explicitCaloriesMax = extractExplicitCaloriesMax(normalizedQuery);
+    if (explicitCaloriesMax !== undefined) {
+      rawIntent.nutrition.caloriesMax = explicitCaloriesMax;
+    } else if (rawIntent.nutrition.lowerCalorie) {
+      rawIntent.nutrition.caloriesMax = Math.min(
+        rawIntent.nutrition.caloriesMax ?? 500,
+        500,
+      );
+    }
+
+    if (
+      rawIntent.nutrition.fatMaxG === undefined &&
+      /\b(low fat|lower fat|lean meal)\b/.test(normalizedQuery)
+    ) {
+      rawIntent.nutrition.fatMaxG = 15;
+    }
+
+    const explicitProteinMin = extractExplicitProteinMin(normalizedQuery);
+    if (explicitProteinMin !== undefined) {
+      rawIntent.nutrition.proteinMinG = explicitProteinMin;
+    }
+
     if (
       rawIntent.nutrition.highProtein &&
       rawIntent.nutrition.proteinMinG === undefined
     ) {
       rawIntent.nutrition.proteinMinG = AI_SEARCH_DEFAULT_HIGH_PROTEIN_MIN_G;
+    }
+
+    const explicitPriceRange = extractExplicitPriceRange(normalizedQuery);
+    const explicitPriceMax = extractExplicitPriceMax(normalizedQuery);
+    if (explicitPriceRange) {
+      rawIntent.price.minPriceVnd = explicitPriceRange.min;
+      rawIntent.price.maxPriceVnd = explicitPriceRange.max;
+    } else if (explicitPriceMax !== undefined) {
+      rawIntent.price.maxPriceVnd = explicitPriceMax;
     }
 
     if (
@@ -500,6 +613,22 @@ export class AiSearchIntentService {
       rawIntent.price.maxPriceVnd = AI_SEARCH_DEFAULT_BUDGET_MAX_VND;
     }
 
+    const explicitRatingMin = extractExplicitRatingMin(normalizedQuery);
+    const highlyRated =
+      /\b(highly rated|best rated|top rated|rating|review|reviews|best|good reviews)\b/.test(
+        normalizedQuery,
+      );
+    if (explicitRatingMin !== undefined) {
+      rawIntent.rating.minAverageRating = explicitRatingMin;
+    }
+    if (highlyRated && explicitRatingMin === undefined) {
+      rawIntent.rating.minAverageRating = Math.max(
+        rawIntent.rating.minAverageRating ?? AI_SEARCH_DEFAULT_HIGH_RATING_MIN,
+        AI_SEARCH_DEFAULT_HIGH_RATING_MIN,
+      );
+      rawIntent.rating.minReviewCount ??= AI_SEARCH_DEFAULT_MIN_REVIEW_COUNT;
+    }
+
     if (rawIntent.geo.nearbyIntent && rawIntent.geo.radiusKm === undefined) {
       rawIntent.geo.radiusKm = options.radiusKm ?? AI_SEARCH_DEFAULT_RADIUS_KM;
     }
@@ -507,6 +636,7 @@ export class AiSearchIntentService {
     if (!explicitSort) {
       rawIntent.sort = pickSort({
         highProtein: Boolean(rawIntent.nutrition.highProtein),
+        lowerCalorie: Boolean(rawIntent.nutrition.lowerCalorie),
         hasPriceIntent:
           Boolean(rawIntent.price.budgetIntent) ||
           rawIntent.price.maxPriceVnd !== undefined,
@@ -615,6 +745,16 @@ function readTermArray(value: unknown, maxLength: number): string[] {
   ).slice(0, maxLength);
 }
 
+function readItemKinds(value: unknown): AiSearchItemKind[] {
+  if (!Array.isArray(value)) return [];
+  return unique(
+    value.filter(
+      (item): item is AiSearchItemKind =>
+        item === 'food' || item === 'beverage' || item === 'mixed',
+    ),
+  );
+}
+
 function normalizeIntentTerm(value: string): string | null {
   const normalized = normalizeText(value)
     .replace(/[^a-z0-9\s]/g, ' ')
@@ -680,7 +820,8 @@ function readSort(value: unknown): AiSearchSort | undefined {
     value === 'distance' ||
     value === 'rating' ||
     value === 'price_asc' ||
-    value === 'protein_desc'
+    value === 'protein_desc' ||
+    value === 'calories_asc'
     ? value
     : undefined;
 }
@@ -688,9 +829,13 @@ function readSort(value: unknown): AiSearchSort | undefined {
 function hasIntentSignal(intent: AiSearchIntent): boolean {
   return (
     intent.foodTerms.length > 0 ||
+    intent.itemKinds.length > 0 ||
     intent.dietaryTags.length > 0 ||
+    intent.excludedTerms.length > 0 ||
+    (intent.semanticConstraints?.length ?? 0) > 0 ||
     intent.cuisineTerms.length > 0 ||
     intent.nutrition.proteinMinG !== undefined ||
+    Boolean(intent.nutrition.lowerCalorie) ||
     intent.nutrition.caloriesMax !== undefined ||
     intent.nutrition.fatMaxG !== undefined ||
     intent.nutrition.carbsMaxG !== undefined ||
@@ -703,10 +848,12 @@ function hasIntentSignal(intent: AiSearchIntent): boolean {
 
 function pickSort(flags: {
   highProtein: boolean;
+  lowerCalorie: boolean;
   hasPriceIntent: boolean;
   highlyRated: boolean;
   nearbyIntent: boolean;
 }): AiSearchSort {
+  if (flags.lowerCalorie) return 'calories_asc';
   if (flags.highProtein) return 'protein_desc';
   if (flags.nearbyIntent) return 'distance';
   if (flags.highlyRated) return 'rating';
@@ -714,10 +861,99 @@ function pickSort(flags: {
   return 'relevance';
 }
 
+function extractDietaryTags(normalized: string): string[] {
+  const canonicalText = normalized.replace(/-/g, ' ');
+  const tags: string[] = [];
+
+  for (const [alias, tag] of DIETARY_TAG_ALIASES) {
+    const escapedAlias = escapeRegExp(alias);
+    const positivePattern = new RegExp(`\\b${escapedAlias}\\b`);
+    const negatedPattern = new RegExp(
+      `\\b(?:no|without|exclude|avoid)\\s+${escapedAlias}\\b`,
+    );
+    if (
+      positivePattern.test(canonicalText) &&
+      !negatedPattern.test(canonicalText)
+    ) {
+      tags.push(tag);
+    }
+  }
+
+  return unique(tags);
+}
+
+function canonicalizeDietaryTag(value: string): string | null {
+  const normalized = value.replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
+  return DIETARY_TAG_ALIASES.get(normalized) ?? null;
+}
+
+function extractExcludedTerms(normalized: string): string[] {
+  const terms: string[] = [];
+  const pattern =
+    /\b(?:no|without|exclude|excluding|avoid|avoiding|free of)\s+(?:any\s+)?([a-z][a-z-]*(?:\s+[a-z][a-z-]*)?)/g;
+  const trailingWords = new Set([
+    'and',
+    'dish',
+    'dishes',
+    'food',
+    'meal',
+    'or',
+    'please',
+  ]);
+
+  for (const match of normalized.matchAll(pattern)) {
+    const words = (match[1] ?? '').replace(/-/g, ' ').trim().split(/\s+/);
+    while (words.length > 1 && trailingWords.has(words.at(-1) ?? '')) {
+      words.pop();
+    }
+    const term = singularize(words.join(' '));
+    if (term.length > 1) terms.push(term);
+  }
+
+  return unique(terms).slice(0, 20);
+}
+
+function extractSemanticConstraints(normalized: string): string[] {
+  const requiresEvidence =
+    /\b(no|without|exclude|excluding|avoid|avoiding|free|allergy|allergic|vegan|vegetarian|halal|healthy|balanced|filling|greasy|oily|low fat|low sugar|post[ -]?workout|weight loss|lose weight)\b/.test(
+      normalized,
+    );
+  return requiresEvidence ? [normalized.trim().slice(0, 160)] : [];
+}
+
+function extractExplicitPriceRange(
+  normalized: string,
+): { min: number; max: number } | undefined {
+  const match = normalized.match(
+    /\b(?:from|between)\s*(\d[\d.,]*)\s*(k|nghin|ngan|vnd)?\s*(?:to|and|-)\s*(\d[\d.,]*)\s*(k|nghin|ngan|vnd)?\b/,
+  );
+  if (!match) return undefined;
+
+  const first = parseVndAmount(match[1], match[2]);
+  const second = parseVndAmount(match[3], match[4]);
+  if (first === undefined || second === undefined) return undefined;
+  return { min: Math.min(first, second), max: Math.max(first, second) };
+}
+
+function extractExplicitRatingMin(normalized: string): number | undefined {
+  const patterns = [
+    /\b(?:rated|rating(?: of)?)\s*(\d(?:\.\d)?)\s*(?:\+|or higher|or above|and above)?\b/,
+    /\b(?:at least|minimum)\s*(\d(?:\.\d)?)\s*(?:stars?|rating)\b/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = normalized.match(pattern);
+    if (!match) continue;
+    const value = Number(match[1]);
+    if (Number.isFinite(value) && value > 0 && value <= 5) return value;
+  }
+  return undefined;
+}
+
 function extractExplicitPriceMax(normalized: string): number | undefined {
   const patterns = [
-    /\b(?:under|below|less than|max|maximum|duoi)\s*(\d[\d.,]*)\s*(k|nghin|ngan|vnd)?\b/,
-    /<=?\s*(\d[\d.,]*)\s*(k|nghin|ngan|vnd)?\b/,
+    /\b(?:under|below|less than|max|maximum|duoi)\s*(\d[\d.,]*)\s*(k|nghin|ngan|vnd)?\b(?!\s*(?:calorie|calories|kcal)\b)/,
+    /<=?\s*(\d[\d.,]*)\s*(k|nghin|ngan|vnd)?\b(?!\s*(?:calorie|calories|kcal)\b)/,
   ];
 
   for (const pattern of patterns) {
@@ -731,6 +967,17 @@ function extractExplicitPriceMax(normalized: string): number | undefined {
   }
 
   return undefined;
+}
+
+function extractExplicitCaloriesMax(normalized: string): number | undefined {
+  const match = normalized.match(
+    /\b(?:under|below|less than|max|maximum|duoi)\s*(\d{1,4})\s*(?:calorie|calories|kcal)\b/,
+  );
+  if (!match) return undefined;
+  const value = Number(match[1]);
+  return Number.isFinite(value) && value > 0 && value <= 5000
+    ? value
+    : undefined;
 }
 
 function extractExplicitProteinMin(normalized: string): number | undefined {
@@ -776,6 +1023,47 @@ function extractFoodTerms(normalized: string): string[] {
   return unique(terms).slice(0, 20);
 }
 
+function isLowerCalorieIntent(normalized: string): boolean {
+  return /\b(weight loss|weight lost|lose weight|losing weight|low calorie|lower calorie|slimming|giam can)\b/.test(
+    normalized,
+  );
+}
+
+function inferItemKinds(normalized: string): AiSearchItemKind[] {
+  const explicitFood = /\b(food|foods|dish|dishes|do an|mon an|thuc an)\b/.test(
+    normalized,
+  );
+  const meal =
+    /\b(meal|meals|breakfast|lunch|dinner|bua an|bua sang|bua trua|bua toi)\b/.test(
+      normalized,
+    );
+  const beverage =
+    /\b(drink|drinks|beverage|beverages|do uong|nuoc uong)\b/.test(normalized);
+
+  if ((explicitFood || meal) && beverage) {
+    return ['food', 'beverage', 'mixed'];
+  }
+  if (explicitFood) return ['food'];
+  if (meal) return ['food', 'mixed'];
+  if (beverage) return ['beverage'];
+  return [];
+}
+
+function isAmbiguousCourseOnlyIntent(normalized: string): boolean {
+  const meaningfulTerms = normalized
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .map((term) => term.trim())
+    .filter((term) => term.length > 0 && !STOP_WORDS.has(term))
+    .map(singularize)
+    .filter((term) => !STOP_WORDS.has(term));
+
+  return (
+    meaningfulTerms.length > 0 &&
+    meaningfulTerms.every((term) => term === 'dessert' || term === 'appetizer')
+  );
+}
+
 export function isGenericFoodSearchQuery(query: string): boolean {
   const normalized = normalizeText(query)
     .replace(/[^a-z0-9\s]/g, ' ')
@@ -814,6 +1102,8 @@ export function isFoodNameOnlySearchQuery(query: string): boolean {
 }
 
 function singularize(term: string): string {
+  if (term === 'beverages') return 'beverage';
+  if (term.endsWith('ss')) return term;
   if (term.endsWith('ies') && term.length > 4) {
     return `${term.slice(0, -3)}y`;
   }
@@ -829,8 +1119,12 @@ function singularize(term: string): string {
   return term;
 }
 
-function unique(values: string[]): string[] {
+function unique<T extends string>(values: T[]): T[] {
   return Array.from(new Set(values));
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function normalizeText(value: string): string {

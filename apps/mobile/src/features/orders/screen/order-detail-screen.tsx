@@ -26,6 +26,10 @@ import {
 } from '@/src/features/restaurants/api';
 import type { OrderItemResponse } from '../types';
 
+function firstRouteParam(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
+}
+
 function OrderDetailItemRow({ item }: { item: OrderItemResponse }) {
   const { data: menuItemImageUrl } = useMenuItemImage(item.menuItemId);
 
@@ -68,12 +72,13 @@ function OrderDetailItemRow({ item }: { item: OrderItemResponse }) {
 }
 
 export function OrderDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams<{ id?: string | string[] }>();
+  const orderId = firstRouteParam(id);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [isOpeningPayment, setIsOpeningPayment] = useState(false);
 
-  const { data: order, isLoading, isError } = useMyOrderDetail(id || '');
+  const { data: order, isLoading, isError } = useMyOrderDetail(orderId);
   const { data: restaurantImageUrl } = useRestaurantImage(
     order?.restaurantId || '',
   );

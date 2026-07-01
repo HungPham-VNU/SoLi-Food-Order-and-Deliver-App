@@ -7,8 +7,7 @@ export default function OrderReviewRoute() {
     // In a real app, this would call an API to place the order
     // and then navigate to a success screen or back to home.
     console.log('Order placed successfully!');
-    router.dismissAll();
-    router.replace('/(customer)/(tabs)');
+    router.navigate('/(customer)/(tabs)');
   };
 
   return <OrderReviewScreen onPlaceOrder={handlePlaceOrder} />;

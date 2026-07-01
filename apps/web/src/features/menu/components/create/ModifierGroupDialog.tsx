@@ -35,9 +35,9 @@ export function ModifierGroupDialog({
   onOpenChange,
 }: ModifierGroupDialogProps) {
   const [newOptions, setNewOptions] = useState<ModifierOptionFormData[]>([]);
-  const [newOptionInput, setNewOptionInput] = useState<ModifierOptionFormData>({
+  const [newOptionInput, setNewOptionInput] = useState<{name: string; price: number | undefined}>({
     name: '',
-    price: 0,
+    price: undefined,
   });
   const [isSavingOptions, setIsSavingOptions] = useState(false);
 
@@ -76,7 +76,7 @@ export function ModifierGroupDialog({
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setNewOptions([]);
-      setNewOptionInput({ name: '', price: 0 });
+      setNewOptionInput({ name: '', price: undefined });
     }
     onOpenChange(newOpen);
   };
@@ -150,8 +150,8 @@ export function ModifierGroupDialog({
 
   const handleAddOption = () => {
     if (newOptionInput.name.trim()) {
-      setNewOptions([...newOptions, newOptionInput]);
-      setNewOptionInput({ name: '', price: 0 });
+      setNewOptions([...newOptions, { ...newOptionInput, price: newOptionInput.price || 0 }]);
+      setNewOptionInput({ name: '', price: undefined });
     }
   };
 
@@ -185,7 +185,7 @@ export function ModifierGroupDialog({
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form id="group-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* Name */}
             <div>
               <label className="block text-sm font-bold mb-2">Group Name</label>
@@ -221,23 +221,14 @@ export function ModifierGroupDialog({
               </div>
             </div>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={isCreating || isUpdating || isSavingOptions}
-              className="w-full"
-            >
-              {isCreating || isUpdating || isSavingOptions ? 'Saving...' : group ? 'Update Group' : 'Create Group'}
-            </Button>
           </form>
 
           {/* Options Section */}
-          {group && (
-            <div className="border-t pt-6 space-y-4">
-              <h3 className="font-bold">Options</h3>
+          <div className="border-t pt-6 space-y-4">
+            <h3 className="font-bold">Options</h3>
 
-              {/* Existing Options */}
-              {group.options.map((option) => (
+            {/* Existing Options */}
+            {group?.options.map((option) => (
                 <div key={option.id} className="flex items-center justify-between bg-muted/30 p-3 rounded-lg">
                   <div className="text-sm">
                     <p className="font-medium">{option.name}</p>
@@ -246,6 +237,7 @@ export function ModifierGroupDialog({
                     </p>
                   </div>
                   <button
+                    type="button"
                     onClick={() => handleDeleteExistingOption(option.id)}
                     disabled={isDeletingOption}
                     className="p-1 hover:bg-destructive/10 rounded text-destructive transition-colors disabled:opacity-50"
@@ -265,6 +257,7 @@ export function ModifierGroupDialog({
                     </p>
                   </div>
                   <button
+                    type="button"
                     onClick={() => handleRemoveNewOption(index)}
                     className="p-1 hover:bg-destructive/10 rounded text-destructive transition-colors"
                   >
@@ -292,7 +285,7 @@ export function ModifierGroupDialog({
                 <div className="flex gap-2">
                   <PriceInput
                     value={newOptionInput.price}
-                    onChange={(val) => setNewOptionInput({ ...newOptionInput, price: val || 0 })}
+                    onChange={(val) => setNewOptionInput({ ...newOptionInput, price: val })}
                     placeholder="Price adjustment"
                     min={0}
                     className="flex-1 px-3 py-2 rounded-lg border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
@@ -308,7 +301,16 @@ export function ModifierGroupDialog({
                 </div>
               </div>
             </div>
-          )}
+
+          {/* Submit Button */}
+          <Button
+            type="submit"
+            form="group-form"
+            disabled={isCreating || isUpdating || isSavingOptions}
+            className="w-full"
+          >
+            {isCreating || isUpdating || isSavingOptions ? 'Saving...' : group ? 'Update Group' : 'Create Group'}
+          </Button>
         </div>
       </div>
     </div>

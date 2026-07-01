@@ -2,16 +2,18 @@ import React from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StatusBar,
   TouchableOpacity,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Tag } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useCheckout } from '../hooks';
 import { useCheckoutStore } from '../store/checkout-store';
 import { useValidateCoupon } from '@/src/features/promotions';
+import { keyboardAvoidingBehavior } from '@/src/lib/keyboard';
+import { KeyboardAwareScrollView } from '@/src/components/keyboard-aware-scroll-view';
 import {
   CheckoutHeader,
   CheckoutDeliverySection,
@@ -124,12 +126,15 @@ export function SingleScreenCheckout() {
   }
 
   return (
-    <View className="flex-1 bg-surface">
+    <KeyboardAvoidingView
+      behavior={keyboardAvoidingBehavior}
+      className="flex-1 bg-surface"
+    >
       <StatusBar barStyle="dark-content" />
 
       <CheckoutHeader title="Checkout" onBack={handleBack} />
 
-      <ScrollView
+      <KeyboardAwareScrollView
         className="flex-1"
         contentContainerStyle={{
           paddingTop: insets.top + 80,
@@ -186,7 +191,7 @@ export function SingleScreenCheckout() {
         <CheckoutPaymentSection
           paymentMethod={selectedPaymentMethod ?? undefined}
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <CheckoutBottomBar
         total={summary.total}
@@ -194,6 +199,6 @@ export function SingleScreenCheckout() {
         paddingBottom={Math.max(insets.bottom, 16)}
         isPlacingOrder={isPlacingOrder}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }

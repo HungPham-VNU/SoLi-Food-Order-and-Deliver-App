@@ -11,7 +11,10 @@ import {
   REVIEW_SESSION_AUTHENTICATOR,
   REVIEW_TCP_CLIENT,
 } from './review.tokens';
-import { ReviewsController } from './reviews.controller';
+import {
+  AdminReviewsController,
+  ReviewsController,
+} from './reviews.controller';
 
 @Module({})
 export class ReviewRoutesModule {
@@ -19,7 +22,7 @@ export class ReviewRoutesModule {
     return {
       module: ReviewRoutesModule,
       imports: [ConfigModule],
-      controllers: [ReviewsController],
+      controllers: [ReviewsController, AdminReviewsController],
       providers: [
         {
           provide: REVIEW_TCP_CLIENT,

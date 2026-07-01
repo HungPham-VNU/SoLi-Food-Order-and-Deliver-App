@@ -24,7 +24,7 @@ export function HomeTopBar({ insetsTop }: HomeTopBarProps) {
       className="absolute top-0 w-full z-50 bg-surface-container-lowest/90 shadow-sm"
       style={{ paddingTop: Math.max(insetsTop, 12), paddingBottom: 12 }}
     >
-      <View className="flex-row items-center px-6 gap-2 w-full max-w-md mx-auto">
+      <View className="flex-row items-center px-6 gap-4 w-full max-w-md mx-auto">
         <TouchableOpacity 
           className="text-on-background p-2 -ml-2 rounded-full active:bg-surface-variant"
           onPress={() => router.navigate('/(customer)/(tabs)/profile')}

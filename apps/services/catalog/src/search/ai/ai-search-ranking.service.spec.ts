@@ -16,6 +16,7 @@ function makeIntent(overrides: Partial<AiSearchIntent> = {}): AiSearchIntent {
   return {
     rewrittenQuery: 'chicken rice',
     language: 'en',
+    itemKinds: [],
     foodTerms: ['chicken'],
     cuisineTerms: [],
     dietaryTags: [],
@@ -40,6 +41,7 @@ function makeItem(
     name: 'Grilled Chicken Rice',
     description: 'Chicken and rice',
     price: 60_000,
+    itemKind: 'food',
     imageUrl: null,
     tags: ['chicken', 'rice'],
     categoryName: 'Rice',

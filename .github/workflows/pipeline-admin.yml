@@ -37,8 +37,6 @@ jobs:
       - name: Check (Lint & Typecheck)
         run: pnpm turbo run lint typecheck --filter=admin --cache-dir=".turbo"
         env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
       - name: Security Scan (Audit)
         run: pnpm audit --audit-level high
@@ -46,14 +44,10 @@ jobs:
       - name: Unit Test
         run: pnpm turbo run test --filter=admin --cache-dir=".turbo"
         env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
       - name: Build
         run: pnpm turbo run build --filter=admin --cache-dir=".turbo"
         env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
           VITE_APP_ENV: production
           VITE_APP_VERSION: ${{ vars.APP_VERSION || '0.1.0' }}
@@ -74,18 +68,5 @@ jobs:
       vite_app_env: production
       vite_app_version: ${{ vars.APP_VERSION || '0.1.0' }}
       vite_commit_sha: ${{ github.sha }}
-      vite_grafana_faro_app_name: uitfood-admin
     secrets: inherit
 
-  deploy-render:
-    name: Deploy Admin Image to Render
-    needs: publish
-    if: github.ref == 'refs/heads/master'
-    permissions:
-      contents: read
-    uses: ./.github/workflows/cd-render-image.yml
-    with:
-      app: admin
-      gh_repository: ${{ github.repository }}
-    secrets:
-      RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_ADMIN_DEPLOY_HOOK }}

@@ -27,7 +27,7 @@ export class TestEmailDto {
 
   @ApiProperty({
     description: 'Email subject line',
-    example: 'SoLi Food — SMTP integration test',
+    example: 'UITFood — SMTP integration test',
     maxLength: 200,
     required: false,
   })
@@ -38,7 +38,7 @@ export class TestEmailDto {
 
   @ApiProperty({
     description: 'Email body text',
-    example: 'This is a test email from the SoLi Notification BC.',
+    example: 'This is a test email from the UITFood Notification BC.',
     maxLength: 2000,
     required: false,
   })

@@ -14,12 +14,8 @@
   "dependencies": {
     "@base-ui/react": "^1.4.1",
     "@fontsource-variable/geist": "^5.2.9",
-    "@grafana/faro-react": "^2.7.0",
-    "@grafana/faro-web-sdk": "^2.7.0",
-    "@grafana/faro-web-tracing": "^2.7.0",
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.2.2",
-    "@posthog/react": "^1.9.1",
     "@tanstack/react-query": "^5.100.10",
     "axios": "^1.16.1",
     "better-auth": "^1.6.11",
@@ -27,7 +23,6 @@
     "clsx": "^2.1.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.16.0",
-    "posthog-js": "^1.376.0",
     "radix-ui": "^1.4.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -42,7 +37,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@grafana/faro-rollup-plugin": "^0.10.1",
     "@tailwindcss/vite": "^4.3.0",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^24.12.4",

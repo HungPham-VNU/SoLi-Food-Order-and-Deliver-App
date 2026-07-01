@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { X, Share2, Heart, Check, Minus, Plus } from 'lucide-react-native';
@@ -46,6 +46,16 @@ export function MenuItemDetailScreen({
   const [quantity, setQuantity] = useState(1);
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
   const [isFavorited, setIsFavorited] = useState(false);
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const SPACER_HEIGHT = insets.top + 70;
+  const stickyThreshold = 288 - SPACER_HEIGHT; // h-72 is 288px
+
+  const spacerBackgroundOpacity = scrollY.interpolate({
+    inputRange: [stickyThreshold - 20, stickyThreshold],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
 
   const { data: item, isLoading: isLoadingItem } = useMenuItem(itemId);
   const { data: modifierGroups, isLoading: isLoadingModifiers } =
@@ -204,87 +214,115 @@ export function MenuItemDetailScreen({
     <View className="flex-1 bg-background font-inter text-on-surface">
       <StatusBar barStyle="dark-content" />
 
-      {/* Hero Image Area with Overlaid Navigation */}
-      <View className="relative w-full h-72 shrink-0">
-        {item.imageUrl ? (
-          <Image
-            source={{ uri: item.imageUrl }}
-            className="w-full h-full rounded-b-xl"
-            contentFit="cover"
-            transition={200}
-            cachePolicy="memory-disk"
-          />
-        ) : (
-          <View className="w-full h-full rounded-b-xl bg-surface-container items-center justify-center">
-            <Text className="text-on-surface-variant font-medium">
-              No image
-            </Text>
-          </View>
-        )}
-        <View
-          className="absolute top-0 w-full flex-row justify-between items-start px-4 py-6"
-          style={{ paddingTop: insets.top + 10 }}
+      {/* Absolute Overlaid Navigation (Fixed at top) */}
+      <View
+        className="absolute top-0 w-full flex-row justify-between items-start px-4 z-50"
+        style={{ paddingTop: insets.top + 10, paddingBottom: 24 }}
+        pointerEvents="box-none"
+      >
+        <TouchableOpacity
+          onPress={onBack}
+          className="bg-surface/80 backdrop-blur-md rounded-full p-2 shadow-sm active:bg-surface-container-highest"
         >
+          <X size={24} color="#1a1c1c" />
+        </TouchableOpacity>
+        <View className="flex-row gap-2" pointerEvents="box-none">
+          <TouchableOpacity className="bg-surface/80 backdrop-blur-md rounded-full p-2 shadow-sm active:bg-surface-container-highest">
+            <Share2 size={24} color="#1a1c1c" />
+          </TouchableOpacity>
           <TouchableOpacity
-            onPress={onBack}
+            onPress={() => {
+              setIsFavorited(!isFavorited);
+              onFavoriteToggle?.(itemId);
+            }}
             className="bg-surface/80 backdrop-blur-md rounded-full p-2 shadow-sm active:bg-surface-container-highest"
           >
-            <X size={24} color="#1a1c1c" />
+            <Heart
+              size={24}
+              color={isFavorited ? '#ba1a1a' : '#1a1c1c'}
+              fill={isFavorited ? '#ba1a1a' : 'none'}
+            />
           </TouchableOpacity>
-          <View className="flex-row gap-2">
-            <TouchableOpacity className="bg-surface/80 backdrop-blur-md rounded-full p-2 shadow-sm active:bg-surface-container-highest">
-              <Share2 size={24} color="#1a1c1c" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
-                setIsFavorited(!isFavorited);
-                onFavoriteToggle?.(itemId);
-              }}
-              className="bg-surface/80 backdrop-blur-md rounded-full p-2 shadow-sm active:bg-surface-container-highest"
-            >
-              <Heart
-                size={24}
-                color={isFavorited ? '#ba1a1a' : '#1a1c1c'}
-                fill={isFavorited ? '#ba1a1a' : 'none'}
-              />
-            </TouchableOpacity>
-          </View>
         </View>
       </View>
 
-      {/* Product Header Information */}
-      <View className="px-6 pt-6 pb-8 bg-surface rounded-t-xl -mt-6 relative z-20 flex-row justify-between items-start">
-        <View className="flex-1">
-          {isSoldOut ? (
-            <View className="mb-3 self-start rounded-full bg-error-container px-3 py-1">
-              <Text className="font-jakarta-sans text-xs font-bold uppercase tracking-wide text-error">
-                Sold out
-              </Text>
-            </View>
-          ) : null}
-          <Text className="font-jakarta-sans text-3xl font-bold text-on-surface mb-1">
-            {item.name}
-          </Text>
-          <Text className="text-on-surface-variant font-inter text-sm">
-            {item.description}
-          </Text>
-        </View>
-        <View className="text-right flex flex-col items-end">
-          <Text className="font-jakarta-sans text-2xl font-bold text-primary">
-            {formatCurrency(item.price)}
-          </Text>
-          <Text className="text-on-surface-variant text-xs mt-1">
-            Base Price
-          </Text>
-        </View>
-      </View>
-
-      <ScrollView
-        className="flex-1 px-4 pt-4"
+      <Animated.ScrollView
+        className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        stickyHeaderIndices={[1]}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true },
+        )}
+        scrollEventThrottle={16}
       >
-        <View className="flex-col gap-6">
+        {/* Item 0: Hero Image */}
+        <View className="relative w-full h-72 shrink-0 z-10">
+          {item.imageUrl ? (
+            <Image
+              source={{ uri: item.imageUrl }}
+              className="w-full h-full rounded-b-xl"
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <View className="w-full h-full rounded-b-xl bg-surface-container items-center justify-center">
+              <Text className="text-on-surface-variant font-medium">
+                No image
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Item 1: Sticky Product Header Container */}
+        <View
+          style={{ marginTop: -SPACER_HEIGHT, zIndex: 20, elevation: 20 }}
+          className="z-20"
+          pointerEvents="box-none"
+        >
+          {/* Transparent spacer that fades in background when stuck */}
+          <View style={{ height: SPACER_HEIGHT }} pointerEvents="none">
+            <Animated.View
+              className="flex-1 bg-surface"
+              style={{ opacity: spacerBackgroundOpacity }}
+            />
+          </View>
+
+          {/* Product Header Information */}
+          <View className="px-6 pt-6 pb-8 bg-surface rounded-t-xl -mt-6 relative flex-row justify-between items-start">
+            <View className="flex-1">
+              {isSoldOut ? (
+                <View className="mb-3 self-start rounded-full bg-error-container px-3 py-1">
+                  <Text className="font-jakarta-sans text-xs font-bold uppercase tracking-wide text-error">
+                    Sold out
+                  </Text>
+                </View>
+              ) : null}
+              <Text className="font-jakarta-sans text-3xl font-bold text-on-surface mb-1">
+                {item.name}
+              </Text>
+              <Text className="text-on-surface-variant font-inter text-sm">
+                {item.description}
+              </Text>
+            </View>
+            <View className="text-right flex flex-col items-end pl-4">
+              <Text className="font-jakarta-sans text-2xl font-bold text-primary">
+                {formatCurrency(item.price)}
+              </Text>
+              <Text className="text-on-surface-variant text-xs mt-1">
+                Base Price
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Item 2: Rest of Content */}
+        <View
+          className="px-4 pt-4 flex-col gap-6"
+          style={{ zIndex: 1, elevation: 1 }}
+        >
           {item.nutrition && (
             <View className="bg-surface-container-lowest rounded-xl p-6 shadow-sm">
               <Text className="font-jakarta-sans text-xl font-semibold text-on-surface mb-4">
@@ -419,7 +457,7 @@ export function MenuItemDetailScreen({
             </View>
           </View>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Sticky Bottom Action Bar */}
       <View

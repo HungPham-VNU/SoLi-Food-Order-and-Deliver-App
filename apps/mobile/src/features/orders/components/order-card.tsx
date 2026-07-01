@@ -40,7 +40,6 @@ export function OrderCard({ order, onPress, onActionPress }: OrderProps) {
     year: 'numeric',
   });
 
-  const actionText = isProcessing ? 'Track Order' : 'Reorder';
   const handleActionPress = onActionPress ?? onPress;
 
   return (
@@ -143,20 +142,22 @@ export function OrderCard({ order, onPress, onActionPress }: OrderProps) {
               {formatCurrency(order.totalAmount)}
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={handleActionPress}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel={`${actionText} for order ${order.orderId.slice(0, 8).toUpperCase()}`}
-            className="bg-primary px-6 py-3 rounded-full shadow-md items-center justify-center min-w-[120px]"
-          >
-            <Text
-              className="text-on-primary text-sm"
-              style={{ fontFamily: 'Inter_700Bold' }}
+          {isProcessing && (
+            <TouchableOpacity
+              onPress={handleActionPress}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={`Track order ${order.orderId.slice(0, 8).toUpperCase()}`}
+              className="bg-primary px-6 py-3 rounded-full shadow-md items-center justify-center min-w-[120px]"
             >
-              {actionText}
-            </Text>
-          </TouchableOpacity>
+              <Text
+                className="text-on-primary text-sm"
+                style={{ fontFamily: 'Inter_700Bold' }}
+              >
+                Track Order
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </TouchableOpacity>

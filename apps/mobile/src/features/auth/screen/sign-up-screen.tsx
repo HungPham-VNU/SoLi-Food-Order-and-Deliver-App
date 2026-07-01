@@ -2,9 +2,9 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
   StatusBar,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,8 +22,13 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { SignUpField } from '@/src/features/auth/components';
-import type { SignUpScreenProps, SignUpFormData } from '@/src/features/auth/types';
+import type {
+  SignUpScreenProps,
+  SignUpFormData,
+} from '@/src/features/auth/types';
 import { signUpSchema } from '@/src/features/auth/types';
+import { keyboardAvoidingBehavior } from '@/src/lib/keyboard';
+import { KeyboardAwareScrollView } from '@/src/components/keyboard-aware-scroll-view';
 import { useState } from 'react';
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -61,7 +66,10 @@ export function SignUpScreen({
   };
 
   return (
-    <View className="flex-1 bg-surface">
+    <KeyboardAvoidingView
+      behavior={keyboardAvoidingBehavior}
+      className="flex-1 bg-surface"
+    >
       <StatusBar
         translucent
         backgroundColor="transparent"
@@ -85,7 +93,7 @@ export function SignUpScreen({
           }}
           pointerEvents="none"
         >
-          Harvest Market
+          UIT Food
         </Text>
 
         {/* Symmetry spacer */}
@@ -93,14 +101,13 @@ export function SignUpScreen({
       </View>
 
       {/* ── Scrollable Body ──────────────────────────────────────────── */}
-      <ScrollView
+      <KeyboardAwareScrollView
         className="flex-1"
         contentContainerStyle={{
           paddingHorizontal: 24,
           paddingBottom: insets.bottom + 32,
         }}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
       >
         {/* Hero / Branding */}
         <View className="items-center mb-10 mt-6">
@@ -275,13 +282,13 @@ export function SignUpScreen({
                     >
                       Privacy Policy
                     </Text>{' '}
-                    of Harvest Market.
+                    of UIT Food.
                   </Text>
                 </View>
                 {!!errors.termsAccepted && (
                   <Text
                     className="text-[#ff4d4d] text-xs ml-9"
-                    style={{ fontFamily: "Inter_500Medium" }}
+                    style={{ fontFamily: 'Inter_500Medium' }}
                   >
                     {errors.termsAccepted.message}
                   </Text>
@@ -349,7 +356,7 @@ export function SignUpScreen({
             </Text>
           </Text>
         </View>
-      </ScrollView>
-    </View>
+      </KeyboardAwareScrollView>
+    </KeyboardAvoidingView>
   );
 }

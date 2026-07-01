@@ -283,7 +283,7 @@ export function AdminDashboardPage() {
               onClick={() => setRange(r.key)}
               className={[
                 'px-3 py-1.5 rounded-md text-[11px] font-bold transition-colors',
-                range === r.key ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-on-surface',
+                range === r.key ? 'bg-primary text-white' : 'text-on-surface-variant hover:text-on-surface',
               ].join(' ')}
             >
               {r.label}

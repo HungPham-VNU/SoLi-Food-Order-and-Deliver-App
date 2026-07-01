@@ -79,3 +79,30 @@ export class ReviewsController {
     });
   }
 }
+
+@ApiTags('Review: Admin')
+@ApiBearerAuth()
+@Controller('api/admin/restaurants')
+@UseGuards(ReviewSessionGuard)
+export class AdminReviewsController {
+  constructor(
+    @Inject(REVIEW_RPC_GATEWAY)
+    private readonly review: ReviewRpcGateway,
+    private readonly internalJwt: InternalJwtService,
+  ) {}
+
+  @Get(':restaurantId/reviews')
+  listRestaurantReviewsAdmin(
+    @Req() req: GatewayRequestWithSession,
+    @Param('restaurantId') restaurantId: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.review.send(REVIEW_RPC_PATTERNS.listRestaurantReviewsAdmin, {
+      internalAuth: this.internalJwt.issueForRequest(req, 'review'),
+      restaurantId,
+      page: page < 1 ? 1 : page,
+      limit: limit < 1 ? 1 : Math.min(limit, 50),
+    });
+  }
+}

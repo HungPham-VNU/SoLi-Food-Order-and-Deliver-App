@@ -2,9 +2,11 @@ import { Controller, ForbiddenException } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
   REVIEW_RPC_PATTERNS,
+  adminReviewListRequestSchema,
   getMyReviewRequestSchema,
   listRestaurantReviewsRequestSchema,
   submitReviewRequestSchema,
+  type AdminReviewListRequest,
   type GetMyReviewRequest,
   type ListRestaurantReviewsRequest,
   type SubmitReviewRequest,
@@ -50,6 +52,18 @@ export class ReviewRpcController {
     }
   }
 
+  @MessagePattern(REVIEW_RPC_PATTERNS.listRestaurantReviewsAdmin)
+  async listRestaurantReviewsAdmin(@Payload() p: AdminReviewListRequest) {
+    try {
+      const request = adminReviewListRequestSchema.parse(p);
+      const caller = this.auth.verifyReviewToken(request.internalAuth);
+      this.assertAdmin(caller.roles);
+      return await this.service.listRestaurantReviewsAdmin(request);
+    } catch (e) {
+      throw asReviewRpcException(e);
+    }
+  }
+
   @MessagePattern(REVIEW_RPC_PATTERNS.getMyReview)
   async getMyReview(@Payload() p: GetMyReviewRequest) {
     try {
@@ -68,6 +82,13 @@ export class ReviewRpcController {
       throw new ForbiddenException(
         'Only customers can submit or view their own reviews.',
       );
+    }
+  }
+
+  private assertAdmin(roles: readonly string[]): void {
+    const normalized = roles.map((role) => role.toLowerCase());
+    if (!normalized.includes('admin')) {
+      throw new ForbiddenException('Admin role required.');
     }
   }
 }

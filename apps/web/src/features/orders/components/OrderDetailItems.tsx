@@ -31,9 +31,13 @@ export function OrderDetailItems({ items }: OrderDetailItemsProps) {
             <li key={item.orderItemId}>
               <div className="flex items-start gap-4">
                 <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container flex items-center justify-center">
-                  <span className="material-symbols-outlined text-outline text-2xl" aria-hidden="true">
-                    restaurant
-                  </span>
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.itemName} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="material-symbols-outlined text-outline text-2xl" aria-hidden="true">
+                      restaurant
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex-1 min-w-0">

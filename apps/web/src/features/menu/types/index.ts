@@ -1,4 +1,5 @@
 export type MenuItemStatus = 'available' | 'unavailable' | 'out_of_stock';
+export type MenuItemKind = 'food' | 'beverage' | 'mixed';
 export type NutritionUnit =
   | 'g'
   | 'kg'
@@ -56,6 +57,7 @@ export interface MenuItem {
   name: string;
   description?: string | null;
   price: number;
+  itemKind: MenuItemKind;
   sku?: string | null;
   categoryId?: string | null;
   status: MenuItemStatus;
@@ -144,13 +146,6 @@ export interface CalculateNutritionResponse {
 
 export interface SaveNutritionRequest {
   analysisSessionId: string;
-  servings: number;
-  nutrition: NutritionAmount;
-  ingredients: Array<{
-    name: string;
-    quantityGram: number;
-    matchedFoodId: string | null;
-  }>;
   verifiedByRestaurant: true;
 }
 

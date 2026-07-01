@@ -62,6 +62,7 @@ export default function EditMenuItemPage() {
     if (editItem) {
       methods.reset({
         name: editItem.name,
+        itemKind: editItem.itemKind,
         description: editItem.description || '',
         price: editItem.price,
         categoryId: editItem.categoryId || '',
@@ -79,6 +80,7 @@ export default function EditMenuItemPage() {
         dto: {
           name: values.name,
           price: values.price,
+          itemKind: values.itemKind,
           categoryId: values.categoryId,
           description: values.description || undefined,
           sku: values.sku || undefined,

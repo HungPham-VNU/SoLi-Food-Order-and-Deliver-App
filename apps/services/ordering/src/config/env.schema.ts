@@ -54,6 +54,12 @@ const schema = z.object({
     .max(300)
     .default(60),
 
+  // --- Identity TCP RPC client (customer contact data for order detail) ---
+  IDENTITY_TCP_HOST: z.string().min(1).default('localhost'),
+  IDENTITY_TCP_PORT: z.coerce.number().int().positive().default(4011),
+  IDENTITY_RPC_TIMEOUT_MS: z.coerce.number().int().positive().default(3000),
+  IDENTITY_RPC_REQUIRED: stringToBoolean(false),
+
   // --- Promotion TCP RPC client (checkout saga: reserve/confirm/rollback) ---
   PROMOTION_TCP_HOST: z.string().min(1).default('localhost'),
   PROMOTION_TCP_PORT: z.coerce.number().int().positive().default(4041),

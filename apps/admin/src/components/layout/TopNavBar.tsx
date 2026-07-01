@@ -41,10 +41,7 @@ type TopNavBarProps = {
   onToggleSidebar: () => void;
 };
 
-export function TopNavBar({
-  isSidebarOpen,
-  onToggleSidebar,
-}: TopNavBarProps) {
+export function TopNavBar({ isSidebarOpen, onToggleSidebar }: TopNavBarProps) {
   const breadcrumbs = useMatches()
     .map((match) => {
       const handle = match.handle as BreadcrumbHandle | undefined;
@@ -127,7 +124,7 @@ export function TopNavBar({
               aria-label="Notifications"
             >
               <Bell className="h-5 w-5" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-card" />
+              {/* TODO: Add unread notifications state to show indicator */}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">

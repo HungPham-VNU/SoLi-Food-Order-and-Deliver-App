@@ -99,7 +99,7 @@ export function DeliveryZonesPage() {
                 <button
                   type="button"
                   onClick={openNew}
-                  className="inline-flex items-center gap-2 bg-primary text-on-primary px-5 py-2.5 rounded-full font-bold text-sm active:scale-95 transition-all"
+                  className="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-full font-bold text-sm active:scale-95 transition-all"
                 >
                   <span className="material-symbols-outlined text-sm">
                     add_location

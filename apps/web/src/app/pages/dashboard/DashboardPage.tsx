@@ -102,7 +102,7 @@ function OrderRow({ order }: { order: OrderListItem }) {
           className={[
             'font-bold text-sm px-5 py-2.5 rounded-xl shadow-sm transition-all active:scale-95',
             urgent
-              ? 'bg-primary text-on-primary hover:bg-primary/90'
+              ? 'bg-primary text-white hover:bg-primary/90'
               : 'border border-primary/20 text-primary hover:bg-primary/5',
           ].join(' ')}
         >

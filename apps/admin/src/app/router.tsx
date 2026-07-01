@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { LoginPage } from '@/app/pages/auth/LoginPage';
 import { AdminDashboardPage } from '@/app/pages/dashboard/AdminDashboardPage';
 import { RestaurantsPage } from '@/app/pages/restaurants/RestaurantsPage';
+import { RestaurantDetailPage } from '@/app/pages/restaurants/RestaurantDetailPage';
 import { OrdersPage } from '@/app/pages/orders/OrdersPage';
 import { PromotionsPage } from '@/app/pages/promotions/PromotionsPage';
 import { PromotionFormPage } from '@/app/pages/promotions/PromotionFormPage';
@@ -32,8 +33,15 @@ export const router = createBrowserRouter([
           },
           {
             path: 'restaurants',
-            element: <RestaurantsPage />,
             handle: { breadcrumb: 'Restaurants' },
+            children: [
+              { index: true, element: <RestaurantsPage /> },
+              {
+                path: ':id',
+                element: <RestaurantDetailPage />,
+                handle: { breadcrumb: 'Restaurant Details' },
+              },
+            ],
           },
           {
             path: 'orders',

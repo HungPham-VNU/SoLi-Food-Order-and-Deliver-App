@@ -180,6 +180,18 @@ export function useAnalyzeNutrition(defaultMenuItemId?: string) {
   });
 }
 
+export function useStartManualNutritionSession(defaultMenuItemId?: string) {
+  return useMutation({
+    mutationFn: (menuItemId?: string) => {
+      const targetMenuItemId = menuItemId ?? defaultMenuItemId;
+      if (!targetMenuItemId) {
+        throw new Error('Save this item before entering ingredients.');
+      }
+      return menuApi.startManualNutritionSession(targetMenuItemId);
+    },
+  });
+}
+
 export function useCalculateNutrition(menuItemId: string) {
   return useMutation({
     mutationFn: (dto: CalculateNutritionRequest) =>

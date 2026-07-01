@@ -119,6 +119,9 @@ export class OrderItemResponseDto {
   @ApiProperty({ description: 'Item name (frozen snapshot)' })
   itemName!: string;
 
+  @ApiPropertyOptional({ description: 'Image URL (snapshotted)' })
+  imageUrl?: string | null;
+
   @ApiProperty({
     description: 'Base unit price (frozen snapshot, excludes modifiers)',
   })

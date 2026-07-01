@@ -86,8 +86,7 @@ export function UsersPage() {
       const q = search.toLowerCase();
       result = result.filter(
         (u) =>
-          u.name.toLowerCase().includes(q) ||
-          u.email.toLowerCase().includes(q),
+          u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q),
       );
     }
     return result;
@@ -115,7 +114,7 @@ export function UsersPage() {
       <PageHero
         eyebrow="Identity"
         title="Users"
-        subtitle="Manage accounts, roles, and access across the SoLi platform."
+        subtitle="Manage accounts, roles, and access across the UITFood platform."
         icon={<UsersIcon className="h-6 w-6" />}
       />
 
@@ -168,7 +167,9 @@ export function UsersPage() {
         <select
           className="rounded-lg border bg-card px-3 py-2 text-sm font-medium text-on-surface"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as 'all' | UserStatus)}
+          onChange={(e) =>
+            setStatusFilter(e.target.value as 'all' | UserStatus)
+          }
         >
           <option value="all">All statuses</option>
           <option value="active">Active</option>
@@ -206,17 +207,30 @@ export function UsersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-surface-container/40">
-                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">User</th>
-                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Role</th>
-                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left font-semibold text-muted-foreground hidden md:table-cell">Joined</th>
-                <th className="px-4 py-3 text-right font-semibold text-muted-foreground">Actions</th>
+                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                  User
+                </th>
+                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                  Role
+                </th>
+                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left font-semibold text-muted-foreground hidden md:table-cell">
+                  Joined
+                </th>
+                <th className="px-4 py-3 text-right font-semibold text-muted-foreground">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="py-16 text-center text-muted-foreground">
+                  <td
+                    colSpan={5}
+                    className="py-16 text-center text-muted-foreground"
+                  >
                     <span className="material-symbols-outlined animate-spin text-3xl">
                       progress_activity
                     </span>
@@ -224,7 +238,10 @@ export function UsersPage() {
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-16 text-center text-muted-foreground">
+                  <td
+                    colSpan={5}
+                    className="py-16 text-center text-muted-foreground"
+                  >
                     No users match the current filters
                   </td>
                 </tr>
@@ -330,7 +347,9 @@ function UserRow({
         <Badge
           className={`${STATUS_META[status].badge} hover:${STATUS_META[status].badge} gap-1.5`}
         >
-          <span className={`h-1.5 w-1.5 rounded-full ${STATUS_META[status].dot}`} />
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${STATUS_META[status].dot}`}
+          />
           {STATUS_META[status].label}
         </Badge>
       </td>
@@ -417,7 +436,9 @@ function SummaryCard({ icon, label, value, tone }: SummaryCardProps) {
     purple: 'bg-purple-50 border-purple-200',
   };
   return (
-    <div className={`rounded-xl border p-4 flex items-center gap-3 ${bg[tone]}`}>
+    <div
+      className={`rounded-xl border p-4 flex items-center gap-3 ${bg[tone]}`}
+    >
       <div className="shrink-0">{icon}</div>
       <div className="min-w-0">
         <p className="text-xl font-bold text-on-surface truncate">{value}</p>

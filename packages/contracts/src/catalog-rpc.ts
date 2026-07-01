@@ -62,6 +62,7 @@ export const CATALOG_RPC_PATTERNS = {
   // Nutrition
   getNutrition: 'catalog.nutrition.get.v1',
   analyzeNutrition: 'catalog.nutrition.analyze.v1',
+  startManualNutrition: 'catalog.nutrition.manual-session.v1',
   calculateNutrition: 'catalog.nutrition.calculate.v1',
   upsertNutrition: 'catalog.nutrition.upsert.v1',
 

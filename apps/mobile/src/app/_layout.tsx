@@ -1,7 +1,7 @@
 import '@/src/lib/reanimated-logger';
 import '../global.css';
 import '@/src/lib/nativewind-interop';
-import { AppState, Platform, ActivityIndicator, View } from 'react-native';
+import { AppState, Platform, View } from 'react-native';
 import {
   QueryClient,
   QueryClientProvider,
@@ -10,7 +10,8 @@ import {
 } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { useEffect, useState } from 'react';
+import * as SplashScreen from 'expo-splash-screen';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from '@/src/lib/auth-client';
 import { LocationInitializer } from '@/src/features/location';
 import {
@@ -19,14 +20,9 @@ import {
   useNotificationHandler,
 } from '@/src/features/notification';
 import Toast from 'react-native-toast-message';
-import { initMobileObservability, Sentry } from '@/src/lib/observability';
-import {
-  identifyMobileUser,
-  MobileAnalyticsProvider,
-  resetMobileAnalyticsIdentity,
-} from '@/src/lib/analytics';
+import { AppLoadingScreen } from '@/src/components/app-loading-screen';
 
-initMobileObservability();
+void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 function RootNavigation() {
   const { data: session, isPending } = useSession();
@@ -43,13 +39,8 @@ function RootNavigation() {
     if (isPending) return;
 
     if (userId) {
-      identifyMobileUser(userId);
-      Sentry.setUser({ id: userId });
       return;
     }
-
-    resetMobileAnalyticsIdentity();
-    Sentry.setUser(null);
   }, [userId, isPending]);
 
   useEffect(() => {
@@ -67,11 +58,7 @@ function RootNavigation() {
   }, [session, isPending, segments, router]);
 
   if (isPending) {
-    return (
-      <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="large" color="#0d631b" />
-      </View>
-    );
+    return <AppLoadingScreen />;
   }
 
   return (
@@ -84,6 +71,8 @@ function RootNavigation() {
 }
 
 function AppLayout() {
+  const splashHiddenRef = useRef(false);
+
   // 1. Create the client (stable across renders)
   const [queryClient] = useState(
     () =>
@@ -117,13 +106,20 @@ function AppLayout() {
     return () => subscription.remove();
   }, []);
 
+  const handleRootLayout = useCallback(() => {
+    if (splashHiddenRef.current) return;
+
+    splashHiddenRef.current = true;
+    void SplashScreen.hideAsync().catch(() => undefined);
+  }, []);
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <MobileAnalyticsProvider>
+    <View style={{ flex: 1 }} onLayout={handleRootLayout}>
+      <QueryClientProvider client={queryClient}>
         <RootNavigation />
-      </MobileAnalyticsProvider>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </View>
   );
 }
 
-export default Sentry.wrap(AppLayout);
+export default AppLayout;

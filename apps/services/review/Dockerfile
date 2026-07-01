@@ -1,22 +1,46 @@
-FROM node:24-alpine AS base
+FROM node:24-alpine AS builder
+RUN apk add --no-cache libc6-compat
+RUN npm install -g turbo@2.9.14
 WORKDIR /app
-RUN corepack enable
+COPY . .
+RUN turbo prune --scope=review --docker
 
-FROM base AS deps
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages/contracts/package.json packages/contracts/package.json
-COPY apps/services/review/package.json apps/services/review/package.json
+FROM node:24-alpine AS installer
+RUN apk add --no-cache libc6-compat
+RUN npm install -g pnpm@11.1.2 turbo@2.9.14
+WORKDIR /app
+COPY .gitignore .gitignore
+COPY --from=builder /app/out/json/ .
+COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 RUN pnpm install --frozen-lockfile --config.confirmModulesPurge=false
+COPY --from=builder /app/out/full/ .
+COPY turbo.json turbo.json
+RUN turbo run build --filter=review...
 
-FROM deps AS build
-COPY packages/contracts packages/contracts
-COPY apps/services/review apps/services/review
-RUN pnpm --filter @uitfood/contracts build && pnpm --filter review build
+FROM node:24-alpine AS production-deps
+RUN apk add --no-cache libc6-compat
+RUN npm install -g pnpm@11.1.2
+WORKDIR /app
+COPY --from=builder /app/out/json/ .
+COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN pnpm install --prod --frozen-lockfile --config.confirmModulesPurge=false
 
-FROM base AS runner
-ENV NODE_ENV=production
+FROM node:24-alpine AS runner
+RUN apk add --no-cache ca-certificates
 WORKDIR /app/apps/services/review
-COPY --from=build /app/node_modules /app/node_modules
-COPY --from=build /app/packages /app/packages
-COPY --from=build /app/apps/services/review /app/apps/services/review
+ENV NODE_ENV=production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 --ingroup nodejs nestjs
+USER nestjs
+
+COPY --from=installer /app/apps/services/review/package.json ./package.json
+COPY --from=installer /app/apps/services/review/dist ./dist
+COPY --from=installer /app/packages/contracts/package.json /app/packages/contracts/package.json
+COPY --from=installer /app/packages/contracts/dist /app/packages/contracts/dist
+COPY --from=production-deps /app/node_modules /app/node_modules
+COPY --from=production-deps /app/apps/services/review/node_modules ./node_modules
+
+EXPOSE 4061 4062
+
 CMD ["node", "dist/main"]

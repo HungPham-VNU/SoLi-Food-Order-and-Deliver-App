@@ -50,7 +50,7 @@ export class EmailTemplateService {
           <!-- Header -->
           <tr>
             <td style="background:#f97316;padding:20px 32px;">
-              <span style="color:#fff;font-size:22px;font-weight:bold;letter-spacing:-0.5px;">SoLi Food</span>
+              <span style="color:#fff;font-size:22px;font-weight:bold;letter-spacing:-0.5px;">UITFood</span>
             </td>
           </tr>
           <!-- Body -->
@@ -60,7 +60,7 @@ export class EmailTemplateService {
               <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#374151;">${safeBody}</p>
               <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 24px;" />
               <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">
-                Đây là email tự động từ SoLi Food. Vui lòng không trả lời email này.<br />
+                Đây là email tự động từ UITFood. Vui lòng không trả lời email này.<br />
                 Bạn nhận được email này vì tài khoản của bạn đã bật thông báo qua email.
               </p>
             </td>
@@ -68,7 +68,7 @@ export class EmailTemplateService {
           <!-- Footer -->
           <tr>
             <td style="background:#f9fafb;padding:16px 32px;text-align:center;">
-              <span style="font-size:11px;color:#9ca3af;">© SoLi Food. Giao hàng nhanh, chất lượng đảm bảo.</span>
+              <span style="font-size:11px;color:#9ca3af;">© UITFood. Giao hàng nhanh, chất lượng đảm bảo.</span>
             </td>
           </tr>
         </table>
@@ -78,7 +78,7 @@ export class EmailTemplateService {
 </body>
 </html>`;
 
-    const text = `${title}\n\n${body}\n\n---\nSoLi Food — Đây là email tự động, vui lòng không trả lời.`;
+    const text = `${title}\n\n${body}\n\n---\nUITFood — Đây là email tự động, vui lòng không trả lời.`;
 
     return { html, text };
   }

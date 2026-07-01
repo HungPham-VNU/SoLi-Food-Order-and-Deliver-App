@@ -3,9 +3,9 @@ export interface DateWindow {
   end: Date;
 }
 
-export type AnalyticsRange = 'today' | 'yesterday' | '7d';
+export type AnalyticsRange = 'today' | 'yesterday' | '7d' | '30d';
 
-export const ANALYTICS_RANGES = ['today', 'yesterday', '7d'] as const;
+export const ANALYTICS_RANGES = ['today', 'yesterday', '7d', '30d'] as const;
 
 function startOfDayUtc(d: Date): Date {
   const out = new Date(d);
@@ -44,6 +44,13 @@ export function computeWindows(
       return {
         current: { start: ago7, end: now },
         baseline: { start: addDays(todayStart, -14), end: ago7 },
+      };
+    }
+    case '30d': {
+      const ago30 = addDays(todayStart, -30);
+      return {
+        current: { start: ago30, end: now },
+        baseline: { start: addDays(todayStart, -60), end: ago30 },
       };
     }
   }

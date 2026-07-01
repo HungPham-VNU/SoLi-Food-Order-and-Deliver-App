@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { OllamaAiProvider } from '@/lib/ai/ollama-ai.provider';
 import { AiSearchIntentService } from './ai-search-intent.service';
@@ -20,6 +21,7 @@ describe('AiSearchIntentService', () => {
     expect(intent.nutrition.proteinMinG).toBe(25);
     expect(intent.sort).toBe('protein_desc');
     expect(intent.foodNameOnly).toBe(false);
+    expect(intent.itemKinds).toEqual(['food']);
     expect(intent.needsFallback).toBe(false);
   });
 
@@ -49,9 +51,7 @@ describe('AiSearchIntentService', () => {
     expect(intent.foodTerms).toEqual(
       expect.arrayContaining(['spicy', 'noodle']),
     );
-    expect(intent.dietaryTags).toEqual(
-      expect.arrayContaining(['spicy', 'noodle']),
-    );
+    expect(intent.dietaryTags).toEqual([]);
   });
 
   it('treats generic food queries as valid browse intent', () => {
@@ -61,6 +61,72 @@ describe('AiSearchIntentService', () => {
     expect(intent.confidence).toBeGreaterThanOrEqual(0.65);
     expect(intent.foodTerms).toEqual([]);
     expect(intent.foodNameOnly).toBe(false);
+    expect(intent.itemKinds).toEqual(['food']);
+  });
+
+  it.each([
+    'food for weight loss',
+    'food for weight lost',
+    'food to lose weight',
+  ])('treats %s as food-only lower-calorie intent', (query) => {
+    const intent = service.parseIntent(query);
+
+    expect(intent.itemKinds).toEqual(['food']);
+    expect(intent.nutrition.lowerCalorie).toBe(true);
+    expect(intent.nutrition.caloriesMax).toBe(500);
+    expect(intent.sort).toBe('calories_asc');
+  });
+
+  it('supports Vietnamese lower-calorie intent', () => {
+    const intent = service.parseIntent('món ăn giảm cân');
+
+    expect(intent.itemKinds).toEqual(['food']);
+    expect(intent.nutrition.lowerCalorie).toBe(true);
+  });
+
+  it('distinguishes beverages and leaves dessert type-agnostic', () => {
+    const drinkIntent = service.parseIntent('drink');
+    expect(drinkIntent.itemKinds).toEqual(['beverage']);
+    expect(drinkIntent.foodTerms).toEqual([]);
+    expect(drinkIntent.needsFallback).toBe(false);
+    expect(service.parseIntent('low calorie drink').itemKinds).toEqual([
+      'beverage',
+    ]);
+    expect(service.parseIntent('dessert for weight loss').itemKinds).toEqual(
+      [],
+    );
+  });
+
+  it('parses calorie caps without treating them as prices', () => {
+    const intent = service.parseIntent('food under 500 calories');
+
+    expect(intent.nutrition.caloriesMax).toBe(500);
+    expect(intent.nutrition.lowerCalorie).toBe(true);
+    expect(intent.price.maxPriceVnd).toBeUndefined();
+    expect(intent.sort).toBe('calories_asc');
+  });
+
+  it('separates exclusions from positive dietary tags', () => {
+    const intent = service.parseIntent('no seafood please');
+    const multiword = service.parseIntent('food without fish sauce');
+
+    expect(intent.excludedTerms).toEqual(['seafood']);
+    expect(intent.dietaryTags).not.toContain('seafood');
+    expect(intent.foodTerms).not.toContain('seafood');
+    expect(intent.semanticConstraints).toContain('no seafood please');
+    expect(multiword.excludedTerms).toEqual(['fish sauce']);
+  });
+
+  it('parses explicit price ranges, rating thresholds, and low-fat defaults', () => {
+    const range = service.parseIntent('food from 30000 to 60000');
+    const rating = service.parseIntent('restaurants rated 4.5 or higher');
+    const lowFat = service.parseIntent('low fat meal');
+
+    expect(range.price).toEqual(
+      expect.objectContaining({ minPriceVnd: 30_000, maxPriceVnd: 60_000 }),
+    );
+    expect(rating.rating.minAverageRating).toBe(4.5);
+    expect(lowFat.nutrition.fatMaxG).toBe(15);
   });
 
   it('marks bare food names for standard search fallback', () => {
@@ -85,25 +151,28 @@ describe('AiSearchIntentService', () => {
   it('uses the shared AI provider when AI search is enabled', async () => {
     const provider = {
       isConfigured: jest.fn(() => true),
-      chat: jest.fn(async () => ({
-        model: 'gpt-oss:120b',
-        content: JSON.stringify({
-          rewrittenQuery: 'high protein chicken nearby',
-          language: 'en',
-          foodTerms: ['chicken'],
-          cuisineTerms: [],
-          dietaryTags: ['chicken'],
-          excludedTerms: [],
-          nutrition: { highProtein: true, proteinMinG: 35 },
-          price: {},
-          rating: {},
-          geo: { nearbyIntent: true, radiusKm: 4 },
-          sort: 'protein_desc',
-          confidence: 0.92,
-          needsFallback: false,
-          foodNameOnly: false,
+      chat: jest.fn(() =>
+        Promise.resolve({
+          model: 'gpt-oss:120b',
+          content: JSON.stringify({
+            rewrittenQuery: 'high protein chicken nearby',
+            language: 'en',
+            itemKinds: [],
+            foodTerms: ['chicken'],
+            cuisineTerms: [],
+            dietaryTags: ['chicken'],
+            excludedTerms: [],
+            nutrition: { highProtein: true, proteinMinG: 35 },
+            price: {},
+            rating: {},
+            geo: { nearbyIntent: true, radiusKm: 4 },
+            sort: 'protein_desc',
+            confidence: 0.92,
+            needsFallback: false,
+            foodNameOnly: false,
+          }),
         }),
-      })),
+      ),
     } as unknown as OllamaAiProvider;
     const config = buildConfig({
       AI_SEARCH_ENABLED: true,
@@ -133,25 +202,28 @@ describe('AiSearchIntentService', () => {
   it('uses the provider food-name-only classification', async () => {
     const provider = {
       isConfigured: jest.fn(() => true),
-      chat: jest.fn(async () => ({
-        model: 'gpt-oss:120b',
-        content: JSON.stringify({
-          rewrittenQuery: 'pho',
-          language: 'vi',
-          foodTerms: ['pho'],
-          cuisineTerms: [],
-          dietaryTags: [],
-          excludedTerms: [],
-          nutrition: {},
-          price: {},
-          rating: {},
-          geo: {},
-          sort: 'relevance',
-          confidence: 0.91,
-          needsFallback: false,
-          foodNameOnly: true,
+      chat: jest.fn(() =>
+        Promise.resolve({
+          model: 'gpt-oss:120b',
+          content: JSON.stringify({
+            rewrittenQuery: 'pho',
+            language: 'vi',
+            itemKinds: [],
+            foodTerms: ['pho'],
+            cuisineTerms: [],
+            dietaryTags: [],
+            excludedTerms: [],
+            nutrition: {},
+            price: {},
+            rating: {},
+            geo: {},
+            sort: 'relevance',
+            confidence: 0.91,
+            needsFallback: false,
+            foodNameOnly: true,
+          }),
         }),
-      })),
+      ),
     } as unknown as OllamaAiProvider;
     const providerService = new AiSearchIntentService(
       provider,
@@ -163,20 +235,55 @@ describe('AiSearchIntentService', () => {
     expect(intent.foodNameOnly).toBe(true);
     expect(intent.confidence).toBe(0.91);
   });
-  it('falls back to deterministic parsing when the provider fails', async () => {
+
+  it('does not let the provider force a type for an ambiguous dessert query', async () => {
     const provider = {
       isConfigured: jest.fn(() => true),
-      chat: jest.fn(async () => {
-        throw new Error('provider offline');
-      }),
+      chat: jest.fn(() =>
+        Promise.resolve({
+          model: 'gpt-oss:120b',
+          content: JSON.stringify({
+            rewrittenQuery: 'dessert for weight loss',
+            language: 'en',
+            itemKinds: ['beverage'],
+            foodTerms: ['dessert'],
+            cuisineTerms: [],
+            dietaryTags: [],
+            excludedTerms: [],
+            nutrition: { lowerCalorie: true },
+            price: {},
+            rating: {},
+            geo: {},
+            sort: 'calories_asc',
+            confidence: 0.9,
+            needsFallback: false,
+            foodNameOnly: false,
+          }),
+        }),
+      ),
     } as unknown as OllamaAiProvider;
     const providerService = new AiSearchIntentService(
       provider,
       buildConfig({ AI_SEARCH_ENABLED: true }),
     );
-    jest
-      .spyOn((providerService as any).logger, 'warn')
-      .mockImplementation(() => undefined);
+
+    const intent = await providerService.parseIntentWithProvider(
+      'dessert for weight loss',
+    );
+
+    expect(intent.itemKinds).toEqual([]);
+    expect(intent.nutrition.lowerCalorie).toBe(true);
+  });
+  it('falls back to deterministic parsing when the provider fails', async () => {
+    const provider = {
+      isConfigured: jest.fn(() => true),
+      chat: jest.fn(() => Promise.reject(new Error('provider offline'))),
+    } as unknown as OllamaAiProvider;
+    const providerService = new AiSearchIntentService(
+      provider,
+      buildConfig({ AI_SEARCH_ENABLED: true }),
+    );
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     const intent = await providerService.parseIntentWithProvider('budget food');
 

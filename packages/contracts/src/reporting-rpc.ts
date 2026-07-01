@@ -9,6 +9,7 @@ import { z } from 'zod';
  */
 export const REPORTING_RPC_PATTERNS = {
   getPlatformAnalytics: 'reporting.analytics.platform.v1',
+  getRestaurantAnalytics: 'reporting.analytics.restaurant.v1',
 } as const;
 
 export type ReportingRpcPattern =
@@ -25,8 +26,19 @@ export type ReportingRpcError = z.infer<typeof reportingRpcErrorSchema>;
 
 export const platformAnalyticsRequestSchema = z.object({
   internalAuth: z.string().min(1),
-  range: z.enum(['today', 'yesterday', '7d']).optional().default('today'),
+  range: z
+    .enum(['today', 'yesterday', '7d', '30d'])
+    .optional()
+    .default('today'),
 });
 export type PlatformAnalyticsRequest = z.infer<
   typeof platformAnalyticsRequestSchema
+>;
+
+export const restaurantAnalyticsRequestSchema =
+  platformAnalyticsRequestSchema.extend({
+    restaurantId: z.string().uuid(),
+  });
+export type RestaurantAnalyticsRequest = z.infer<
+  typeof restaurantAnalyticsRequestSchema
 >;

@@ -260,7 +260,7 @@ export function ProfileTab() {
             <button
               type="submit"
               disabled={!isDirty || isSubmitting}
-              className="px-6 py-3 rounded-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold shadow-lg shadow-primary/20 hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 rounded-full bg-gradient-to-r from-primary to-primary-container text-white font-bold shadow-lg shadow-primary/20 hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Saving…' : 'Save Changes'}
             </button>

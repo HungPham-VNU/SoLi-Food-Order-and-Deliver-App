@@ -64,7 +64,47 @@ export function ProductEssenceCard({ categories = [], restaurantId }: ProductEss
           {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="item-kind" className="text-sm font-bold text-muted-foreground">
+              Item Type
+            </Label>
+            <Select
+              value={watch('itemKind') ?? ''}
+              onValueChange={(value) =>
+                setValue(
+                  'itemKind',
+                  value as CreateMenuItemFormValues['itemKind'],
+                  { shouldDirty: true, shouldValidate: true },
+                )
+              }
+            >
+              <SelectTrigger
+                id="item-kind"
+                aria-invalid={Boolean(errors.itemKind)}
+                className="w-full !h-12 bg-surface-container border-none rounded-xl px-4 focus:ring-2 focus:ring-primary/30 focus:bg-card transition-all outline-none"
+              >
+                <span className={!watch('itemKind') ? 'text-muted-foreground' : ''}>
+                  {watch('itemKind') === 'food'
+                    ? 'Food'
+                    : watch('itemKind') === 'beverage'
+                      ? 'Beverage'
+                      : watch('itemKind') === 'mixed'
+                        ? 'Food + beverage'
+                        : 'Select item type'}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="food">Food</SelectItem>
+                <SelectItem value="beverage">Beverage</SelectItem>
+                <SelectItem value="mixed">Food + beverage</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.itemKind ? (
+              <p className="text-xs text-destructive">{errors.itemKind.message}</p>
+            ) : null}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="category" className="text-sm font-bold text-muted-foreground">
               Category
@@ -76,7 +116,7 @@ export function ProductEssenceCard({ categories = [], restaurantId }: ProductEss
               >
                 <SelectTrigger
                   id="category"
-                  className="flex-1 h-12 bg-surface-container border-none rounded-xl px-4 focus:ring-2 focus:ring-primary/30 focus:bg-card transition-all outline-none"
+                  className="flex-1 !h-12 bg-surface-container border-none rounded-xl px-4 focus:ring-2 focus:ring-primary/30 focus:bg-card transition-all outline-none"
                 >
                   <span className={!watch('categoryId') ? 'text-muted-foreground' : ''}>
                     {watch('categoryId')

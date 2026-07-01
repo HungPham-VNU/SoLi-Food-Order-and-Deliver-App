@@ -14,7 +14,11 @@ export function useApproveRestaurant() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: restaurantsApi.approve,
-    onSuccess: () => qc.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onSuccess: (_restaurant, id) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: [QUERY_KEY] }),
+        qc.invalidateQueries({ queryKey: ['restaurant', id] }),
+      ]),
   });
 }
 
@@ -22,7 +26,11 @@ export function useUnapproveRestaurant() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: restaurantsApi.unapprove,
-    onSuccess: () => qc.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onSuccess: (_restaurant, id) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: [QUERY_KEY] }),
+        qc.invalidateQueries({ queryKey: ['restaurant', id] }),
+      ]),
   });
 }
 

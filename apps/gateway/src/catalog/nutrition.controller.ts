@@ -55,6 +55,17 @@ export class NutritionController {
     });
   }
 
+  @Post('manual-session')
+  startManualSession(
+    @Req() req: GatewayRequestWithSession,
+    @Param('menuItemId') menuItemId: string,
+  ) {
+    return this.catalog.send(CATALOG_RPC_PATTERNS.startManualNutrition, {
+      internalAuth: this.token(req),
+      menuItemId,
+    });
+  }
+
   @Post('calculate')
   calculate(
     @Req() req: GatewayRequestWithSession,

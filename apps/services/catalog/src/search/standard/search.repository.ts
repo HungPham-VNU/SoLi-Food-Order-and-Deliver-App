@@ -352,6 +352,7 @@ export class SearchRepository {
           name: menuItems.name,
           description: menuItems.description,
           price: menuItems.price,
+          itemKind: menuItems.itemKind,
           imageUrl: menuItems.imageUrl,
           tags: menuItems.tags,
           // Category name — LEFT JOIN since items may have no category.
@@ -390,6 +391,7 @@ export class SearchRepository {
       name: row.name,
       description: row.description,
       price: row.price,
+      itemKind: row.itemKind,
       imageUrl: row.imageUrl,
       tags: row.tags,
       categoryName: row.categoryName,

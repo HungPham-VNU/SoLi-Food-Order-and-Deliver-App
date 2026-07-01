@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   View,
   Text,
@@ -6,18 +6,18 @@ import {
   StatusBar,
   ScrollView,
   Dimensions,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Image } from "expo-image";
-import Svg, { Path } from "react-native-svg";
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
+import Svg, { Path } from 'react-native-svg';
 import {
   Truck,
   Leaf,
   ShieldCheck,
   ArrowRight,
   Sprout,
-} from "lucide-react-native";
+} from 'lucide-react-native';
 
 // ─── Google Icon ─────────────────────────────────────────────────────────────
 const GoogleIcon = () => (
@@ -64,7 +64,7 @@ function FeatureBadge({ icon, label }: FeatureBadgeProps) {
       </View>
       <Text
         className="text-[#707a6c] text-center uppercase tracking-wider"
-        style={{ fontFamily: "Inter_700Bold", fontSize: 8 }}
+        style={{ fontFamily: 'Inter_700Bold', fontSize: 8 }}
       >
         {label}
       </Text>
@@ -81,7 +81,7 @@ export function WelcomeScreen({
   onPrivacyPress,
 }: WelcomeScreenProps) {
   const insets = useSafeAreaInsets();
-  const screenHeight = Dimensions.get("window").height;
+  const screenHeight = Dimensions.get('window').height;
   const heroHeight = screenHeight * 0.45;
 
   return (
@@ -105,25 +105,25 @@ export function WelcomeScreen({
             className="relative w-full overflow-hidden"
           >
             <Image
-              source={require("../../../../assets/images/welcome-hero.jpg")}
-              style={{ width: "100%", height: "100%" }}
+              source={require('../../../../assets/images/welcome-hero.jpg')}
+              style={{ width: '100%', height: '100%' }}
               contentFit="cover"
             />
 
             {/* Gradient fade to background color */}
             <LinearGradient
               colors={[
-                "rgba(249, 249, 249, 0)",
-                "rgba(249, 249, 249, 0.9)",
-                "rgba(249, 249, 249, 1)",
+                'rgba(249, 249, 249, 0)',
+                'rgba(249, 249, 249, 0.9)',
+                'rgba(249, 249, 249, 1)',
               ]}
               locations={[0, 0.6, 1]}
               style={{
-                position: "absolute",
+                position: 'absolute',
                 bottom: 0,
                 left: 0,
                 right: 0,
-                height: "100%",
+                height: '100%',
               }}
             />
 
@@ -134,22 +134,24 @@ export function WelcomeScreen({
             >
               <View
                 className="flex-row items-center gap-x-2 px-5 py-2 rounded-full"
-                style={{
-                  backgroundColor: "rgba(255, 255, 255, 0.8)",
-                  backdropFilter: "blur(12px)",
-                  shadowColor: "#1a1c1c",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.06,
-                  shadowRadius: 8,
-                  elevation: 3,
-                } as any}
+                style={
+                  {
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                    backdropFilter: 'blur(12px)',
+                    shadowColor: '#1a1c1c',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.06,
+                    shadowRadius: 8,
+                    elevation: 3,
+                  } as any
+                }
               >
                 <Sprout size={20} color="#00490e" />
                 <Text
                   className="text-[#00490e] text-lg tracking-tight"
-                  style={{ fontFamily: "PlusJakartaSans_800ExtraBold" }}
+                  style={{ fontFamily: 'PlusJakartaSans_800ExtraBold' }}
                 >
-                  Harvest Market
+                  UIT Food
                 </Text>
               </View>
             </View>
@@ -164,13 +166,13 @@ export function WelcomeScreen({
             <View className="mb-6 items-center" style={{ gap: 10 }}>
               <Text
                 className="text-[#1a1c1c] text-3xl text-center leading-tight tracking-tight"
-                style={{ fontFamily: "PlusJakartaSans_800ExtraBold" }}
+                style={{ fontFamily: 'PlusJakartaSans_800ExtraBold' }}
               >
-                Fresh from our fields{"\n"}to your home.
+                Fresh from our fields{'\n'}to your home.
               </Text>
               <Text
                 className="text-[#40493d] text-base text-center leading-relaxed px-2"
-                style={{ fontFamily: "Inter_400Regular" }}
+                style={{ fontFamily: 'Inter_400Regular' }}
               >
                 Discover the finest local harvest at your fingertips.
               </Text>
@@ -184,7 +186,7 @@ export function WelcomeScreen({
                 activeOpacity={0.88}
                 className="w-full rounded-full overflow-hidden flex-row items-center justify-center"
                 style={{
-                  shadowColor: "#0d631b",
+                  shadowColor: '#0d631b',
                   shadowOffset: { width: 0, height: 10 },
                   shadowOpacity: 0.3,
                   shadowRadius: 25,
@@ -192,21 +194,21 @@ export function WelcomeScreen({
                 }}
               >
                 <LinearGradient
-                  colors={["#00490e", "#0d631b"]}
+                  colors={['#00490e', '#0d631b']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={{
-                    width: "100%",
+                    width: '100%',
                     paddingVertical: 16,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     gap: 8,
                   }}
                 >
                   <Text
                     className="text-white text-base"
-                    style={{ fontFamily: "PlusJakartaSans_700Bold" }}
+                    style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
                   >
                     Get Started
                   </Text>
@@ -221,12 +223,12 @@ export function WelcomeScreen({
                 className="w-full rounded-full py-4 items-center justify-center bg-[#ffffff]"
                 style={{
                   borderWidth: 2,
-                  borderColor: "rgba(0, 73, 14, 0.05)",
+                  borderColor: 'rgba(0, 73, 14, 0.05)',
                 }}
               >
                 <Text
                   className="text-[#00490e] text-base"
-                  style={{ fontFamily: "PlusJakartaSans_700Bold" }}
+                  style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
                 >
                   Sign In
                 </Text>
@@ -241,13 +243,13 @@ export function WelcomeScreen({
                   paddingVertical: 14,
                   gap: 12,
                   borderWidth: 1,
-                  borderColor: "rgba(191, 202, 186, 0.5)",
+                  borderColor: 'rgba(191, 202, 186, 0.5)',
                 }}
               >
                 <GoogleIcon />
                 <Text
                   className="text-[#1a1c1c] text-base"
-                  style={{ fontFamily: "PlusJakartaSans_700Bold" }}
+                  style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
                 >
                   Continue with Google
                 </Text>
@@ -296,23 +298,23 @@ export function WelcomeScreen({
             <Text
               className="text-[#707a6c] text-center leading-tight"
               style={{
-                fontFamily: "Inter_400Regular",
+                fontFamily: 'Inter_400Regular',
                 fontSize: 10,
                 maxWidth: 240,
               }}
             >
-              By continuing, you agree to Harvest Market&apos;s
+              By continuing, you agree to UIT Food&apos;s
               <Text
                 className="text-[#0d631b]"
-                style={{ fontFamily: "Inter_500Medium" }}
+                style={{ fontFamily: 'Inter_500Medium' }}
                 onPress={onTermsPress}
               >
                 Terms of Service
-              </Text>{" "}
-              and{" "}
+              </Text>{' '}
+              and{' '}
               <Text
                 className="text-[#0d631b]"
-                style={{ fontFamily: "Inter_500Medium" }}
+                style={{ fontFamily: 'Inter_500Medium' }}
                 onPress={onPrivacyPress}
               >
                 Privacy Policy

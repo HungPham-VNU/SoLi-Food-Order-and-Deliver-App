@@ -6,7 +6,7 @@ import { cancellationReasonEnum } from '../../order/order.schema';
 // Query DTO
 // ---------------------------------------------------------------------------
 
-export const ANALYTICS_RANGES = ['today', 'yesterday', '7d'] as const;
+export const ANALYTICS_RANGES = ['today', 'yesterday', '7d', '30d'] as const;
 export type AnalyticsRange = (typeof ANALYTICS_RANGES)[number];
 
 export class AnalyticsQueryDto {

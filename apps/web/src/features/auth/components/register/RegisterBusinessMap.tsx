@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
-import { useFormContext } from 'react-hook-form';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { useFormContext, useWatch } from 'react-hook-form';
 import { MapPin, LocateFixed, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { RestaurantFormValues } from '@/features/restaurant/schemas/restaurant.schema';
@@ -17,12 +17,33 @@ L.Icon.Default.mergeOptions({
 
 const DEFAULT_CENTER = { lat: 10.762622, lng: 106.660172 }; // Ho Chi Minh City
 
-import { useWatch } from 'react-hook-form';
-
+const reverseGeocode = async (lat: number, lng: number, setValue: any) => {
+  try {
+    const response = await fetch(`https://photon.komoot.io/reverse?lon=${lng}&lat=${lat}`);
+    const data = await response.json();
+    if (data.features && data.features.length > 0) {
+      const props = data.features[0].properties;
+      const addressParts = [
+        props.housenumber,
+        props.street || props.name,
+        props.district,
+        props.city,
+        props.state,
+        props.country
+      ].filter(Boolean);
+      if (addressParts.length > 0) {
+        setValue('address', addressParts.join(', '), { shouldValidate: true, shouldDirty: true });
+      }
+    }
+  } catch (error) {
+    console.error('Reverse geocoding error:', error);
+  }
+};
 
 function LocationMarker() {
   const { setValue } = useFormContext<RestaurantFormValues>();
   const map = useMap();
+  const markerRef = useRef<L.Marker>(null);
 
   const lat = useWatch<RestaurantFormValues, 'latitude'>({ name: 'latitude' });
   const lng = useWatch<RestaurantFormValues, 'longitude'>({ name: 'longitude' });
@@ -32,19 +53,49 @@ function LocationMarker() {
     ? new L.LatLng(lat!, lng!)
     : new L.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng);
 
-  useEffect(() => {
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      setValue('latitude', DEFAULT_CENTER.lat);
-      setValue('longitude', DEFAULT_CENTER.lng);
-      return;
-    }
-    const newPos = new L.LatLng(lat!, lng!);
-    if (map.getCenter().distanceTo(newPos) > 500) {
-      map.flyTo(newPos, 15);
-    }
-  }, [lat, lng, map, setValue]);
+  const handleLocationUpdate = useCallback((newLat: number, newLng: number) => {
+    setValue('latitude', newLat, { shouldValidate: true, shouldDirty: true });
+    setValue('longitude', newLng, { shouldValidate: true, shouldDirty: true });
+    reverseGeocode(newLat, newLng, setValue);
+  }, [setValue]);
 
-  return <Marker draggable={false} position={position} />;
+  useMapEvents({
+    click(e) {
+      handleLocationUpdate(e.latlng.lat, e.latlng.lng);
+      map.flyTo(e.latlng, map.getZoom());
+    },
+  });
+
+  const eventHandlers = useMemo(
+    () => ({
+      dragend() {
+        const marker = markerRef.current;
+        if (marker != null) {
+          const newPos = marker.getLatLng();
+          handleLocationUpdate(newPos.lat, newPos.lng);
+        }
+      },
+    }),
+    [handleLocationUpdate]
+  );
+
+  useEffect(() => {
+    if (hasValidCoords) {
+      const newPos = new L.LatLng(lat!, lng!);
+      if (map.getCenter().distanceTo(newPos) > 500) {
+        map.flyTo(newPos, 15);
+      }
+    }
+  }, [lat, lng, map, hasValidCoords]);
+
+  return (
+    <Marker 
+      draggable={true} 
+      eventHandlers={eventHandlers} 
+      position={position} 
+      ref={markerRef} 
+    />
+  );
 }
 
 function LocateControl() {
@@ -56,6 +107,7 @@ function LocateControl() {
       map.flyTo(e.latlng, map.getZoom());
       setValue('latitude', e.latlng.lat, { shouldValidate: true, shouldDirty: true });
       setValue('longitude', e.latlng.lng, { shouldValidate: true, shouldDirty: true });
+      reverseGeocode(e.latlng.lat, e.latlng.lng, setValue);
     });
   };
 

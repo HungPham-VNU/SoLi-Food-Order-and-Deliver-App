@@ -1,11 +1,90 @@
 import { apiClient } from '@/lib/api-client';
 import type {
+  DeliveryAddress,
   OrderDetail,
   OrderHistoryFilters,
   OrderListItem,
   OrderListResponse,
+  OrderModifier,
+  PaymentMethod,
   OrderStatusLogEntry,
 } from '../types';
+
+type RawOrder = {
+  id: string;
+  status: OrderDetail['status'];
+  restaurantId: string;
+  restaurantName: string;
+  paymentMethod: PaymentMethod;
+  totalAmount: number | string;
+  shippingFee: number | string;
+  estimatedDeliveryMinutes?: number | null;
+  note?: string | null;
+  paymentUrl?: string | null;
+  deliveryAddress: DeliveryAddress;
+  shipperId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type RawOrderItem = {
+  id?: string;
+  orderItemId?: string;
+  menuItemId: string;
+  itemName: string;
+  imageUrl?: string | null;
+  unitPrice: number | string;
+  modifiersPrice?: number | string | null;
+  quantity: number;
+  subtotal: number | string;
+  modifiers?: OrderModifier[] | null;
+};
+
+type RawCustomer = {
+  customerId: string;
+  name: string;
+  phone?: string | null;
+};
+
+type RawOrderDetailResponse = {
+  order: RawOrder;
+  items: RawOrderItem[];
+  customer?: RawCustomer | null;
+};
+
+type MenuItemImageResponse = {
+  imageUrl?: string | null;
+};
+
+async function loadMissingMenuItemImages(items: RawOrderItem[]) {
+  const menuItemIds = [
+    ...new Set(
+      items
+        .filter((item) => !item.imageUrl)
+        .map((item) => item.menuItemId)
+        .filter(Boolean),
+    ),
+  ];
+
+  if (menuItemIds.length === 0) {
+    return new Map<string, string | null>();
+  }
+
+  const pairs = await Promise.all(
+    menuItemIds.map(async (menuItemId) => {
+      try {
+        const response = await apiClient.get<MenuItemImageResponse>(
+          `/api/menu-items/${menuItemId}`,
+        );
+        return [menuItemId, response.data.imageUrl ?? null] as const;
+      } catch {
+        return [menuItemId, null] as const;
+      }
+    }),
+  );
+
+  return new Map<string, string | null>(pairs);
+}
 
 export const ordersApi = {
   // -------------------------------------------------------------------------
@@ -36,9 +115,11 @@ export const ordersApi = {
    */
   getOrderDetail: (id: string) =>
     apiClient
-      .get<{ order: any; items: any[] }>(`/api/orders/${id}`)
-      .then((r): Omit<OrderDetail, 'timeline'> => {
-        const { order, items } = r.data;
+      .get<RawOrderDetailResponse>(`/api/orders/${id}`)
+      .then(async (r): Promise<Omit<OrderDetail, 'timeline'>> => {
+        const { order, items, customer } = r.data;
+        const imageUrlByMenuItemId = await loadMissingMenuItemImages(items);
+
         return {
           orderId: order.id,
           status: order.status,
@@ -51,15 +132,26 @@ export const ordersApi = {
           note: order.note ?? null,
           paymentUrl: order.paymentUrl ?? null,
           deliveryAddress: order.deliveryAddress,
+          customer: customer
+            ? {
+                customerId: customer.customerId,
+                name: customer.name,
+                phone: customer.phone ?? null,
+              }
+            : null,
           shipperId: order.shipperId ?? null,
           createdAt: order.createdAt,
           updatedAt: order.updatedAt,
           items: items.map((item) => ({
-            orderItemId: item.id,
+            orderItemId: item.orderItemId ?? item.id ?? item.menuItemId,
             menuItemId: item.menuItemId,
             itemName: item.itemName,
+            imageUrl:
+              item.imageUrl ??
+              imageUrlByMenuItemId.get(item.menuItemId) ??
+              null,
             unitPrice: Number(item.unitPrice),
-            modifiersPrice: Number(item.modifiersPrice),
+            modifiersPrice: Number(item.modifiersPrice ?? 0),
             quantity: item.quantity,
             subtotal: Number(item.subtotal),
             modifiers: item.modifiers || [],

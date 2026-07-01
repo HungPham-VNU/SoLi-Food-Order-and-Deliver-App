@@ -229,13 +229,12 @@ export function StoreTab() {
     });
   };
 
-  const currentCoverUrl = useWatch<
-    UpdateRestaurantFormValues,
-    'coverImageUrl'
-  >({
-    control: methods.control,
-    name: 'coverImageUrl',
-  });
+  const currentCoverUrl = useWatch<UpdateRestaurantFormValues, 'coverImageUrl'>(
+    {
+      control: methods.control,
+      name: 'coverImageUrl',
+    },
+  );
 
   if (isLoading) {
     return (
@@ -487,7 +486,7 @@ export function StoreTab() {
             form="store-form"
             type="submit"
             disabled={!isDirty || isSubmitting}
-            className="px-6 py-3 rounded-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold shadow-lg shadow-primary/20 hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 rounded-full bg-gradient-to-r text-white from-primary to-primary-container font-bold shadow-lg shadow-primary/20 hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'Saving…' : 'Save Changes'}
           </button>

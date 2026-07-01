@@ -17,6 +17,7 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
+    "@huggingface/inference": "^4.13.19",
     "@nestjs/common": "^11.1.21",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.21",
@@ -46,6 +47,7 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^25.8.0",
     "@types/pg": "^8.20.0",
+    "cloudinary": "^2.10.0",
     "drizzle-kit": "^0.31.10",
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
@@ -60,11 +62,21 @@
     "typescript-eslint": "^8.59.3"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "mjs", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "mjs",
+      "json",
+      "ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j|mj)s$": ["ts-jest", { "tsconfig": "tsconfig.test.json" }]
+      "^.+\\.(t|j|mj)s$": [
+        "ts-jest",
+        {
+          "tsconfig": "tsconfig.test.json"
+        }
+      ]
     },
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/$1",

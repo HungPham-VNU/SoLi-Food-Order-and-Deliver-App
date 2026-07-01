@@ -1,5 +1,4 @@
 import type { CalculateNutritionDto } from './dto/calculate-nutrition.dto';
-import type { SaveMenuItemNutritionDto } from './dto/save-menu-item-nutrition.dto';
 import type {
   NewNutritionAnalysisIngredient,
   NutritionAnalysisIngredient,
@@ -17,6 +16,7 @@ import {
   type ExtractedRecipe,
   type ExtractedRecipeIngredient,
   type IngredientCategory,
+  type NutritionAmount,
   type NutritionUnit,
   type PreparationState,
 } from './types/nutrition.types';
@@ -78,39 +78,23 @@ export function toCalculatedAnalysisIngredientRow(
 
 export function toSaveMenuItemNutritionValues(
   menuItemId: string,
-  dto: SaveMenuItemNutritionDto,
+  servings: number,
+  nutrition: NutritionAmount,
+  source: MenuItemNutrition['source'] = 'AI_ESTIMATED',
 ) {
   return {
     menuItemId,
-    servings: dto.servings,
-    calories: dto.nutrition.calories,
-    protein: dto.nutrition.protein,
-    carbs: dto.nutrition.carbs,
-    fat: dto.nutrition.fat,
-    fiber: dto.nutrition.fiber ?? null,
-    sugar: dto.nutrition.sugar ?? null,
-    sodium: dto.nutrition.sodium ?? null,
+    servings,
+    calories: nutrition.calories,
+    protein: nutrition.protein,
+    carbs: nutrition.carbs,
+    fat: nutrition.fat,
+    fiber: nutrition.fiber,
+    sugar: nutrition.sugar,
+    sodium: nutrition.sodium,
+    source,
     verifiedByRestaurant: true,
   };
-}
-
-export function toSavedAnalysisIngredientRows(
-  analysisSessionId: string,
-  dto: SaveMenuItemNutritionDto,
-): NewNutritionAnalysisIngredient[] {
-  return dto.ingredients.map((ingredient) => ({
-    analysisSessionId,
-    rawText: null,
-    extractedName: ingredient.name,
-    correctedName: ingredient.name,
-    quantity: ingredient.quantityGram,
-    unit: 'g',
-    quantityGram: ingredient.quantityGram,
-    matchedNutritionFoodId: ingredient.matchedFoodId ?? null,
-    confidence: 1,
-    requiresConfirmation: false,
-    notes: [],
-  }));
 }
 
 export function toMenuItemNutritionResponse(nutrition: MenuItemNutrition) {

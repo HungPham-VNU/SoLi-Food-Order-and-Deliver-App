@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { RestaurantSearchResultDto } from '../../restaurant/dto/restaurant.dto';
+import { MENU_ITEM_KINDS, type MenuItemKind } from '../../menu/dto/menu.dto';
 
 // ---------------------------------------------------------------------------
 // RestaurantSummaryDto
@@ -86,6 +87,9 @@ export class ItemSearchRowDto {
     example: 35000,
   })
   price!: number;
+
+  @ApiProperty({ enum: MENU_ITEM_KINDS, enumName: 'MenuItemKind' })
+  itemKind!: MenuItemKind;
 
   @ApiPropertyOptional({ example: 'https://cdn.example.com/item.jpg' })
   imageUrl?: string | null;

@@ -2,8 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -16,6 +14,8 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, MapPin, Search, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { KeyboardAwareScrollView } from '@/src/components/keyboard-aware-scroll-view';
+import { keyboardAvoidingBehavior } from '@/src/lib/keyboard';
 import { useAddressSearch } from '../hooks';
 import { useAddressStore } from '../store/address-store';
 
@@ -123,7 +123,7 @@ export function AddLocationScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={keyboardAvoidingBehavior}
       className="flex-1 bg-surface-container-lowest"
     >
       <View
@@ -143,11 +143,10 @@ export function AddLocationScreen() {
         </Text>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 24) + 80 }}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
       >
         <View className="relative h-48 w-full overflow-hidden">
           {MLRNMap && MLRNCamera ? (
@@ -385,7 +384,7 @@ export function AddLocationScreen() {
             </Text>
           </View>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <View
         className="absolute bottom-0 left-0 right-0 z-20 border-t border-surface-container-high bg-surface-container-lowest p-5"

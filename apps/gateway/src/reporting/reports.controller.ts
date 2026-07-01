@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Inject,
+  Param,
   Query,
   Req,
   UseGuards,
@@ -37,6 +38,19 @@ export class ReportsController {
   ) {
     return this.reporting.send(REPORTING_RPC_PATTERNS.getPlatformAnalytics, {
       internalAuth: this.internalJwt.issueForRequest(req, 'reporting'),
+      range,
+    });
+  }
+
+  @Get('restaurant/:id')
+  getRestaurantAnalytics(
+    @Req() req: GatewayRequestWithSession,
+    @Param('id') restaurantId: string,
+    @Query('range') range?: string,
+  ) {
+    return this.reporting.send(REPORTING_RPC_PATTERNS.getRestaurantAnalytics, {
+      internalAuth: this.internalJwt.issueForRequest(req, 'reporting'),
+      restaurantId,
       range,
     });
   }

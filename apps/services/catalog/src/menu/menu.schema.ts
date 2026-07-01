@@ -45,6 +45,12 @@ export const menuItemStatusEnum = pgEnum('menu_item_status', [
   'out_of_stock',
 ]);
 
+export const menuItemKindEnum = pgEnum('menu_item_kind', [
+  'food',
+  'beverage',
+  'mixed',
+]);
+
 // ---------------------------------------------------------------------------
 // menu_categories — per-restaurant categories (D-2 fix, replaces global enum)
 // ---------------------------------------------------------------------------
@@ -98,6 +104,7 @@ export const menuItems = pgTable(
     categoryId: uuid('category_id').references(() => menuCategories.id, {
       onDelete: 'set null',
     }),
+    itemKind: menuItemKindEnum('item_kind').notNull(),
     status: menuItemStatusEnum('status').notNull().default('available'),
     imageUrl: text('image_url'),
     tags: text('tags').array(),
@@ -106,6 +113,7 @@ export const menuItems = pgTable(
   },
   (table) => [
     index('menu_items_price_idx').on(table.price),
+    index('menu_items_item_kind_idx').on(table.itemKind),
     // GIN index enables efficient array-contains queries on tags, e.g.
     // WHERE 'vegetarian' = ANY(tags) (Issue #15).
     index('menu_items_tags_gin_idx').using('gin', table.tags),

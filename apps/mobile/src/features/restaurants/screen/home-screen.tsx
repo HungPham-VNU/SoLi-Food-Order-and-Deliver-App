@@ -1,7 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  RefreshControl,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from '@/src/components/keyboard-aware-scroll-view';
 import { FloatingCartButton } from '@/src/features/cart';
 import { useAddressStore } from '@/src/features/location';
 import {
@@ -16,11 +21,12 @@ import {
 import {
   useAiSearch,
   useDeliveryEstimates,
-  useNearbyRestaurants,
-  useUnifiedSearch,
+  useInfiniteNearbyRestaurants,
+  useInfiniteUnifiedSearch,
 } from '../api';
 import { useDebouncedValue } from '../hooks';
 import { useSearchModeStore } from '../store';
+import { keyboardAvoidingBehavior } from '@/src/lib/keyboard';
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -47,9 +53,13 @@ export function HomeScreen() {
     error,
     refetch: refetchNearby,
     isRefetching: isRefetchingNearby,
-  } = useNearbyRestaurants({
+    fetchNextPage: fetchNextNearby,
+    hasNextPage: hasNextNearby,
+    isFetchingNextPage: isFetchingNextNearby,
+  } = useInfiniteNearbyRestaurants({
     latitude,
     longitude,
+    tag: selectedCategory !== 'all' ? selectedCategory : undefined,
   });
 
   const {
@@ -58,10 +68,14 @@ export function HomeScreen() {
     error: searchError,
     refetch: refetchSearch,
     isRefetching: isRefetchingSearch,
-  } = useUnifiedSearch({
+    fetchNextPage: fetchNextSearch,
+    hasNextPage: hasNextSearch,
+    isFetchingNextPage: isFetchingNextSearch,
+  } = useInfiniteUnifiedSearch({
     q: debouncedQuery,
     latitude,
     longitude,
+    tag: selectedCategory !== 'all' ? selectedCategory : undefined,
     enabled: isClassicSearchActive && !isAiSearchMode,
   });
 
@@ -101,9 +115,21 @@ export function HomeScreen() {
   }, [toggleSearchMode]);
 
   const restaurants = useMemo(
-    () => restaurantsData?.restaurants ?? [],
-    [restaurantsData?.restaurants],
+    () => restaurantsData?.pages.flatMap((page) => page.restaurants) ?? [],
+    [restaurantsData],
   );
+  
+  const searchRestaurants = useMemo(
+    () => searchData?.pages.flatMap((page) => page.restaurants) ?? [],
+    [searchData],
+  );
+
+  const searchItems = useMemo(
+    () => searchData?.pages.flatMap((page) => page.items) ?? [],
+    [searchData],
+  );
+
+  const searchTotal = searchData?.pages[0]?.total;
   const restaurantIds = useMemo(
     () => restaurants.map((restaurant) => restaurant.id),
     [restaurants],
@@ -162,12 +188,41 @@ export function HomeScreen() {
 
   const refreshing = isRefetchingNearby || isRefetchingSearch;
 
+  const handleScroll = React.useCallback(
+    (event: any) => {
+      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+      const paddingToBottom = 500;
+      if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
+        if (isSearchActive && !isAiSearchMode && hasNextSearch && !isFetchingNextSearch) {
+          fetchNextSearch();
+        } else if (!isSearchActive && hasNextNearby && !isFetchingNextNearby) {
+          fetchNextNearby();
+        }
+      }
+    },
+    [
+      isSearchActive,
+      isAiSearchMode,
+      hasNextSearch,
+      isFetchingNextSearch,
+      fetchNextSearch,
+      hasNextNearby,
+      isFetchingNextNearby,
+      fetchNextNearby,
+    ],
+  );
+
   return (
-    <View className="flex-1 bg-background font-inter text-on-surface">
+    <KeyboardAvoidingView
+      behavior={keyboardAvoidingBehavior}
+      className="flex-1 bg-background font-inter text-on-surface"
+    >
       <HomeTopBar insetsTop={insets.top} />
 
-      <ScrollView
+      <KeyboardAwareScrollView
         className="flex-1"
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{
           paddingTop: insets.top + 80,
           paddingBottom: insets.bottom + 80,
@@ -211,9 +266,9 @@ export function HomeScreen() {
         ) : isSearchActive ? (
           <HomeSearchResults
             query={debouncedQuery}
-            restaurants={searchData?.restaurants ?? []}
-            items={searchData?.items ?? []}
-            total={searchData?.total}
+            restaurants={searchRestaurants}
+            items={searchItems}
+            total={searchTotal}
             isLoading={isSearchLoading}
             hasError={Boolean(searchError)}
             onRestaurantPress={handleRestaurantPress}
@@ -236,10 +291,10 @@ export function HomeScreen() {
             />
           </>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <FloatingCartButton />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

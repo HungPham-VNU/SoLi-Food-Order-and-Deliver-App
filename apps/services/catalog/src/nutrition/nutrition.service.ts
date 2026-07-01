@@ -36,7 +36,6 @@ import {
   toMenuItemNutritionResponse,
   toReviewIngredientResponse,
   toReviewIngredients,
-  toSavedAnalysisIngredientRows,
   toSaveMenuItemNutritionValues,
 } from './nutrition.mapper';
 import { applyRecipeReviewRules } from './review/nutrition-review.policy';
@@ -166,6 +165,40 @@ export class NutritionService {
     };
   }
 
+  async startManualIngredientSession(
+    menuItemId: string,
+    requesterId: string,
+    isAdmin: boolean,
+  ) {
+    const menuItem = await this.assertMenuItemOwnership(
+      menuItemId,
+      requesterId,
+      isAdmin,
+    );
+    const session = await this.repo.createSession({
+      menuItemId,
+      restaurantId: menuItem.restaurantId,
+      inputType: 'manual',
+      rawRecipeText: '',
+      aiExtractedJson: {
+        recipeName: null,
+        servings: 1,
+        ingredients: [],
+        warnings: [],
+      },
+      status: 'NEEDS_REVIEW',
+    });
+
+    return {
+      analysisSessionId: session.id,
+      recipeName: null,
+      servings: 1,
+      ingredients: [],
+      warnings: [],
+      status: session.status,
+    };
+  }
+
   async saveMenuItemNutrition(
     menuItemId: string,
     requesterId: string,
@@ -183,12 +216,55 @@ export class NutritionService {
       menuItemId,
       dto.analysisSessionId,
     );
+    if (session.status !== 'CALCULATED') {
+      throw new BadRequestException(
+        'Nutrition must be calculated from confirmed ingredients before saving.',
+      );
+    }
+
+    const extractedRecipe = parseExtractedRecipe(session.aiExtractedJson);
+    const servings = extractedRecipe?.servings;
+    if (!servings || servings <= 0) {
+      throw new BadRequestException(
+        'Calculated nutrition is missing a valid serving count.',
+      );
+    }
+
+    const persistedIngredients = await this.repo.listIngredientsBySessionId(
+      session.id,
+    );
+    const calculationInputs = await Promise.all(
+      persistedIngredients.map(async (ingredient) => ({
+        inputName: ingredient.correctedName ?? ingredient.extractedName,
+        quantityGram: ingredient.quantityGram,
+        food: ingredient.matchedNutritionFoodId
+          ? await this.repo.findNutritionFoodById(
+              ingredient.matchedNutritionFoodId,
+            )
+          : null,
+      })),
+    );
+    if (
+      !calculationInputs.some(
+        (ingredient) =>
+          ingredient.food !== null && ingredient.quantityGram !== null,
+      )
+    ) {
+      throw new BadRequestException(
+        'At least one measured, matched ingredient is required before saving nutrition.',
+      );
+    }
+    const calculation = this.calculator.calculate(servings, calculationInputs);
 
     const savedNutrition = await this.repo.saveMenuItemNutrition(
-      toSaveMenuItemNutritionValues(menuItemId, dto),
+      toSaveMenuItemNutritionValues(
+        menuItemId,
+        servings,
+        calculation.nutrition.perServing,
+        session.inputType === 'manual' ? 'MANUALLY_ENTERED' : 'AI_ESTIMATED',
+      ),
       {
         analysisSessionId: session.id,
-        ingredients: toSavedAnalysisIngredientRows(session.id, dto),
       },
     );
 

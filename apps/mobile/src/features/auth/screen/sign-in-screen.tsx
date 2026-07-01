@@ -1,22 +1,27 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
   StatusBar,
   ActivityIndicator,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft, ArrowRight, Mail, Lock, Sprout } from "lucide-react-native";
-import Svg, { Path } from "react-native-svg";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+  KeyboardAvoidingView,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowLeft, ArrowRight, Mail, Lock, Sprout } from 'lucide-react-native';
+import Svg, { Path } from 'react-native-svg';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
-import { SignInField } from "@/src/features/auth/components";
-import type { SignInScreenProps, SignInFormData } from "@/src/features/auth/types";
-import { signInSchema } from "@/src/features/auth/types";
+import { SignInField } from '@/src/features/auth/components';
+import type {
+  SignInScreenProps,
+  SignInFormData,
+} from '@/src/features/auth/types';
+import { signInSchema } from '@/src/features/auth/types';
+import { keyboardAvoidingBehavior } from '@/src/lib/keyboard';
+import { KeyboardAwareScrollView } from '@/src/components/keyboard-aware-scroll-view';
 
 // ─── Google Icon ──────────────────────────────────────────────────────────────
 const GoogleIcon = () => (
@@ -60,10 +65,10 @@ export function SignInScreen({
   } = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
-      email: "",
-      password: "",
+      email: '',
+      password: '',
     },
-    mode: "onBlur",
+    mode: 'onBlur',
   });
 
   const handleSignIn = (data: SignInFormData) => {
@@ -72,7 +77,10 @@ export function SignInScreen({
   };
 
   return (
-    <View className="flex-1 bg-surface">
+    <KeyboardAvoidingView
+      behavior={keyboardAvoidingBehavior}
+      className="flex-1 bg-surface"
+    >
       <StatusBar
         translucent
         backgroundColor="transparent"
@@ -91,12 +99,12 @@ export function SignInScreen({
         <Text
           className="text-lg text-[#1a4d20] absolute left-0 right-0 text-center"
           style={{
-            fontFamily: "PlusJakartaSans_700Bold",
+            fontFamily: 'PlusJakartaSans_700Bold',
             top: insets.top + 16,
           }}
           pointerEvents="none"
         >
-          Harvest Market
+          UIT Food
         </Text>
 
         {/* Symmetry spacer */}
@@ -104,21 +112,20 @@ export function SignInScreen({
       </View>
 
       {/* ── Scrollable Body ───────────────────────────────────────────────── */}
-      <ScrollView
+      <KeyboardAwareScrollView
         className="flex-1"
         contentContainerStyle={{
           paddingHorizontal: 24,
           paddingBottom: insets.bottom + 32,
         }}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
       >
         {/* Hero / Branding */}
         <View className="items-center mb-10 mt-6">
           <View
             className="w-20 h-20 rounded-full bg-primary-fixed items-center justify-center mb-6"
             style={{
-              shadowColor: "#1a1c1c",
+              shadowColor: '#1a1c1c',
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.08,
               shadowRadius: 8,
@@ -131,7 +138,7 @@ export function SignInScreen({
           <Text
             className="text-[#1a1c1c] text-3xl font-bold text-center mb-2"
             style={{
-              fontFamily: "PlusJakartaSans_800ExtraBold",
+              fontFamily: 'PlusJakartaSans_800ExtraBold',
               letterSpacing: -0.5,
             }}
           >
@@ -139,7 +146,7 @@ export function SignInScreen({
           </Text>
           <Text
             className="text-[#40493d] text-center leading-relaxed px-4"
-            style={{ fontFamily: "Inter_400Regular", fontSize: 14 }}
+            style={{ fontFamily: 'Inter_400Regular', fontSize: 14 }}
           >
             Log in to your local pantry
           </Text>
@@ -154,11 +161,11 @@ export function SignInScreen({
               <SignInField
                 label="Email Address"
                 icon={<Mail size={20} color="#707a6c" />}
-                isFocused={focusedField === "email"}
+                isFocused={focusedField === 'email'}
                 placeholder="hello@example.com"
                 value={value}
                 onChangeText={onChange}
-                onFocus={() => setFocusedField("email")}
+                onFocus={() => setFocusedField('email')}
                 onBlur={() => {
                   onBlur();
                   setFocusedField(null);
@@ -176,14 +183,14 @@ export function SignInScreen({
             <View className="flex-row items-center justify-between ml-1 mr-1">
               <Text
                 className="text-[#40493d] text-sm"
-                style={{ fontFamily: "PlusJakartaSans_600SemiBold" }}
+                style={{ fontFamily: 'PlusJakartaSans_600SemiBold' }}
               >
                 Password
               </Text>
               <TouchableOpacity onPress={onForgotPassword} activeOpacity={0.7}>
                 <Text
                   className="text-[#0d631b] text-xs"
-                  style={{ fontFamily: "Inter_600SemiBold" }}
+                  style={{ fontFamily: 'Inter_600SemiBold' }}
                 >
                   Forgot Password?
                 </Text>
@@ -197,11 +204,11 @@ export function SignInScreen({
                 <SignInField
                   label=""
                   icon={<Lock size={20} color="#707a6c" />}
-                  isFocused={focusedField === "password"}
+                  isFocused={focusedField === 'password'}
                   placeholder="••••••••"
                   value={value}
                   onChangeText={onChange}
-                  onFocus={() => setFocusedField("password")}
+                  onFocus={() => setFocusedField('password')}
                   onBlur={() => {
                     onBlur();
                     setFocusedField(null);
@@ -221,7 +228,7 @@ export function SignInScreen({
               activeOpacity={0.88}
               className="rounded-full overflow-hidden"
               style={{
-                shadowColor: "#0d631b",
+                shadowColor: '#0d631b',
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.25,
                 shadowRadius: 12,
@@ -229,23 +236,23 @@ export function SignInScreen({
               }}
             >
               <LinearGradient
-                colors={["#0d631b", "#2e7d32"]}
+                colors={['#0d631b', '#2e7d32']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={{
                   paddingVertical: 16,
                   paddingHorizontal: 24,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   gap: 8,
                 }}
               >
                 <Text
                   className="text-white text-[15px] font-bold"
-                  style={{ fontFamily: "PlusJakartaSans_700Bold" }}
+                  style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
                 >
-                  {isLoading ? "Signing In..." : "Sign In"}
+                  {isLoading ? 'Signing In...' : 'Sign In'}
                 </Text>
                 {isLoading ? (
                   <ActivityIndicator size="small" color="#ffffff" />
@@ -262,7 +269,7 @@ export function SignInScreen({
           <View className="flex-1 h-px bg-[#e2e2e2]" />
           <Text
             className="text-[#9ca3a0] tracking-widest"
-            style={{ fontFamily: "Inter_700Bold", fontSize: 10 }}
+            style={{ fontFamily: 'Inter_700Bold', fontSize: 10 }}
           >
             OR
           </Text>
@@ -276,13 +283,13 @@ export function SignInScreen({
             activeOpacity={0.8}
             className="w-14 h-14 rounded-full bg-white items-center justify-center"
             style={{
-              shadowColor: "#1a1c1c",
+              shadowColor: '#1a1c1c',
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.08,
               shadowRadius: 4,
               elevation: 2,
               borderWidth: 1,
-              borderColor: "rgba(191, 202, 186, 0.3)",
+              borderColor: 'rgba(191, 202, 186, 0.3)',
             }}
           >
             <GoogleIcon />
@@ -293,19 +300,19 @@ export function SignInScreen({
         <View className="items-center">
           <Text
             className="text-[#40493d] text-sm"
-            style={{ fontFamily: "Inter_400Regular" }}
+            style={{ fontFamily: 'Inter_400Regular' }}
           >
-            Don&apos;t have an account?{" "}
+            Don&apos;t have an account?{' '}
             <Text
               className="text-[#8b5000]"
-              style={{ fontFamily: "PlusJakartaSans_700Bold" }}
+              style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
               onPress={onSignUp}
             >
               Sign up
             </Text>
           </Text>
         </View>
-      </ScrollView>
-    </View>
+      </KeyboardAwareScrollView>
+    </KeyboardAvoidingView>
   );
 }

@@ -2,11 +2,11 @@ import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -18,7 +18,6 @@ import {
   LocateFixed,
   Map,
   MapPin,
-  MoreVertical,
   Pencil,
   Plus,
   Search,
@@ -27,6 +26,8 @@ import {
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { KeyboardAwareScrollView } from '@/src/components/keyboard-aware-scroll-view';
+import { keyboardAvoidingBehavior } from '@/src/lib/keyboard';
 import { useAddressSearch, useCurrentLocation } from '../hooks';
 import type { SavedAddress } from '../store/address-store';
 import { useAddressStore } from '../store/address-store';
@@ -80,9 +81,6 @@ function LocationRow({
         >
           {subtitle}
         </Text>
-      </View>
-      <View className="p-1">
-        <MoreVertical size={20} color="#40493d" />
       </View>
     </TouchableOpacity>
   );
@@ -248,7 +246,10 @@ export function AddressSelectionScreen() {
   };
 
   return (
-    <View className="flex-1 bg-surface">
+    <KeyboardAvoidingView
+      behavior={keyboardAvoidingBehavior}
+      className="flex-1 bg-surface"
+    >
       <View
         className="z-10 bg-surface px-4 pb-3"
         style={{ paddingTop: Math.max(insets.top, 12) + 8 }}
@@ -322,7 +323,7 @@ export function AddressSelectionScreen() {
         </View>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         className="flex-1"
         contentContainerStyle={{
           paddingHorizontal: 16,
@@ -515,7 +516,7 @@ export function AddressSelectionScreen() {
             )}
           </View>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <LinearGradient
         colors={['rgba(249,249,249,0)', '#f9f9f9']}
@@ -543,6 +544,6 @@ export function AddressSelectionScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

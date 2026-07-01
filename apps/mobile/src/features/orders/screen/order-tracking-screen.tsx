@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   ActivityIndicator,
   TouchableOpacity,
   TextInput,
   Alert,
   Animated,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,6 +37,8 @@ import {
   buildVNPayStatusRouteParams,
   VNPAY_STATUS_ROUTE,
 } from '@/src/features/payment';
+import { KeyboardAwareScrollView } from '@/src/components/keyboard-aware-scroll-view';
+import { keyboardAvoidingBehavior } from '@/src/lib/keyboard';
 
 // ─── Status rank map ─────────────────────────────────────────────────────────
 
@@ -132,6 +134,10 @@ function getStepState(step: StepConfig, currentRank: number): StepState {
   if (currentRank >= step.completedAtRank) return 'completed';
   if (step.activeAtRanks.includes(currentRank)) return 'active';
   return 'pending';
+}
+
+function firstRouteParam(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
 }
 
 // ─── Pulse ring for active step ───────────────────────────────────────────────
@@ -591,11 +597,12 @@ function OrderTrackingItemCard({
 }
 
 export function OrderTrackingScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams<{ id?: string | string[] }>();
+  const orderId = firstRouteParam(id);
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const { data: order, isLoading, isError } = useMyOrderDetail(id ?? '');
+  const { data: order, isLoading, isError } = useMyOrderDetail(orderId);
 
   const shortId = order?.orderId.slice(0, 8).toUpperCase() ?? '';
   const isPendingVNPayOrder =
@@ -616,7 +623,11 @@ export function OrderTrackingScreen() {
   }, [isPendingVNPayOrder, order, router]);
 
   return (
-    <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
+    <KeyboardAvoidingView
+      behavior={keyboardAvoidingBehavior}
+      className="flex-1 bg-background"
+      style={{ paddingTop: insets.top }}
+    >
       {/* Header */}
       <View className="flex-row items-center px-4 h-16 w-full bg-surface/80 z-50">
         <TouchableOpacity
@@ -653,7 +664,7 @@ export function OrderTrackingScreen() {
       ) : (
         <OrderTrackingContent order={order} insets={insets} />
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -671,10 +682,10 @@ function OrderTrackingContent({
   const discount = Math.max(0, subtotal + order.shippingFee - order.totalAmount);
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       className="flex-1"
       contentContainerStyle={{
-        paddingBottom: insets.bottom + 24,
+        paddingBottom: insets.bottom + 96,
         paddingTop: 24,
       }}
       showsVerticalScrollIndicator={false}
@@ -839,6 +850,6 @@ function OrderTrackingContent({
           <RateSection orderId={order.orderId} />
         )}
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }

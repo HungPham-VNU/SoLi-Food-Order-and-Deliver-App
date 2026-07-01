@@ -51,6 +51,8 @@ export function OrderDetailPage() {
   const { street, district, city } = deliveryAddress;
   const addressStr = [street, district, city].filter(Boolean).join(", ");
   const itemsTotal = order.totalAmount - order.shippingFee;
+  const customerName = order.customer?.name?.trim() || "Customer";
+  const customerPhone = order.customer?.phone?.trim() || "—";
 
   const handleCancel = (reason: string, reasonCode: string) => {
     cancelOrder.mutate(
@@ -82,8 +84,8 @@ export function OrderDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <OrderDetailCustomer
               customer={{
-                name: "Customer",
-                phone: "—",
+                name: customerName,
+                phone: customerPhone,
                 address: addressStr,
               }}
             />

@@ -8,6 +8,7 @@ import {
   useAnalyzeNutrition,
   useCalculateNutrition,
   useSaveNutrition,
+  useStartManualNutritionSession,
 } from '../../hooks/useMenuMutations';
 import { useMenuItemNutritionAnalysis } from '../../hooks/useMenu';
 import type {
@@ -146,6 +147,7 @@ export function NutritionAssistantCard({
   const { data: latestAnalysis, isLoading: isLoadingNutritionAnalysis } =
     useMenuItemNutritionAnalysis(menuItemId);
   const analyzeNutrition = useAnalyzeNutrition(menuItemId);
+  const startManualNutrition = useStartManualNutritionSession(menuItemId);
   const calculateNutrition = useCalculateNutrition(menuItemId ?? '');
   const saveNutrition = useSaveNutrition(menuItemId ?? '');
 
@@ -215,6 +217,24 @@ export function NutritionAssistantCard({
     );
   };
 
+  const handleStartManualEntry = async () => {
+    setSaveMessage(null);
+    setCalculation(null);
+    const targetMenuItemId = menuItemId ?? (await onSaveBeforeAnalyze?.());
+
+    if (!targetMenuItemId) return;
+
+    startManualNutrition.mutate(targetMenuItemId, {
+      onSuccess: (result) => {
+        setRecipeText('');
+        setAnalysis(result);
+        setIngredients(normalizeReviewIngredients(result.ingredients));
+        setServingsInput(formatServingsInput(result.servings));
+        setHydratedAnalysisSessionId(result.analysisSessionId);
+      },
+    });
+  };
+
   const updateIngredient = (
     index: number,
     patch: Partial<NutritionReviewIngredient>,
@@ -274,20 +294,12 @@ export function NutritionAssistantCard({
     saveNutrition.mutate(
       {
         analysisSessionId: analysis.analysisSessionId,
-        servings: parsedServings,
-        nutrition: calculation.nutrition.perServing,
-        ingredients: calculation.matchedIngredients
-          .filter((ingredient) => ingredient.quantityGram !== null)
-          .map((ingredient) => ({
-            name: ingredient.inputName,
-            quantityGram: ingredient.quantityGram!,
-            matchedFoodId: ingredient.matchedFoodId,
-          })),
         verifiedByRestaurant: true,
       },
       {
         onSuccess: (nutrition) => {
           onNutritionSaved?.(nutrition);
+          setCalculation(null);
           setSaveMessage('Nutrition saved.');
         },
       },
@@ -345,11 +357,34 @@ export function NutritionAssistantCard({
                 ? 'Analyze recipe'
                 : 'Save and analyze recipe'}
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleStartManualEntry}
+          disabled={
+            startManualNutrition.isPending ||
+            isSavingItem ||
+            (!menuItemId && !onSaveBeforeAnalyze)
+          }
+          className="w-full gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          {isSavingItem
+            ? 'Saving'
+            : startManualNutrition.isPending
+              ? 'Preparing ingredient table'
+              : 'Enter ingredients manually'}
+        </Button>
         {analyzeNutrition.error && (
           <p className="text-sm text-destructive">
             {analyzeNutrition.error.message}
           </p>
         )}
+        {startManualNutrition.error ? (
+          <p className="text-sm text-destructive">
+            {startManualNutrition.error.message}
+          </p>
+        ) : null}
         {isLoadingNutritionAnalysis && (
           <p className="text-xs text-muted-foreground">
             Loading saved recipe analysis...

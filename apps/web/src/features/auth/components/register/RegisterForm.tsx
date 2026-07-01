@@ -13,12 +13,17 @@ const schema = z.object({
   email: z.email('Enter a valid email address'),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string().min(8, 'Please confirm your password'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 type FormValues = z.infer<typeof schema>;
 
 export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { signUpWithEmail, isPending, error } = useSignUp();
 
   const {
@@ -95,23 +100,63 @@ export function RegisterForm() {
               className="w-full h-14 px-4 pr-12 bg-surface-container-high border-0 rounded-lg focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:bg-surface-container-lowest transition-all placeholder:text-stone-400"
               {...register('password')}
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-primary hover:bg-transparent transition-colors"
-            >
-              {showPassword ? (
-                <EyeOff className="w-5 h-5" />
-              ) : (
-                <Eye className="w-5 h-5" />
-              )}
-            </Button>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                onClick={() => setShowPassword((v) => !v)}
+                className="text-stone-400 hover:text-primary hover:bg-transparent transition-colors"
+              >
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </Button>
+            </div>
           </div>
           {errors.password && (
             <p className="text-xs text-destructive ml-1">{errors.password.message}</p>
+          )}
+        </div>
+
+        {/* Confirm Password */}
+        <div className="space-y-2">
+          <Label
+            htmlFor="confirmPasswordInput"
+            className="font-label font-semibold text-xs text-on-surface-variant uppercase tracking-wider ml-1"
+          >
+            Confirm Password
+          </Label>
+          <div className="relative">
+            <Input
+              id="confirmPasswordInput"
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              className="w-full h-14 px-4 pr-12 bg-surface-container-high border-0 rounded-lg focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:bg-surface-container-lowest transition-all placeholder:text-stone-400"
+              {...register('confirmPassword')}
+            />
+            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                className="text-stone-400 hover:text-primary hover:bg-transparent transition-colors"
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </Button>
+            </div>
+          </div>
+          {errors.confirmPassword && (
+            <p className="text-xs text-destructive ml-1">{errors.confirmPassword.message}</p>
           )}
         </div>
 

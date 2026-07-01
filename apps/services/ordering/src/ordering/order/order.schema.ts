@@ -200,6 +200,7 @@ export const orderItems = pgTable('order_items', {
   itemName: text('item_name').notNull(), // snapshot
   // Base price in integer VND, snapshotted from ACL at checkout time.
   unitPrice: integer('unit_price').notNull(),
+  imageUrl: text('image_url'),
   /**
    * Sum of all selected modifier option prices (integer VND).
    */

@@ -7,6 +7,7 @@ import {
 import type {
   PlatformAnalyticsResponseDto,
   PlatformKpisDto,
+  RestaurantAnalyticsResponseDto,
 } from './dto/admin-analytics.dto';
 
 @Injectable()
@@ -91,6 +92,49 @@ export class AdminAnalyticsService {
         district: d.district,
         orderCount: d.orderCount,
       })),
+    };
+  }
+
+  async getRestaurantAnalytics(
+    restaurantId: string,
+    range: AnalyticsRange = 'today',
+  ): Promise<RestaurantAnalyticsResponseDto> {
+    const now = new Date();
+    const { current } = computeWindows(range, now);
+
+    const data = await this.repo.getRestaurantAnalyticsData(
+      restaurantId,
+      current.start,
+      current.end,
+    );
+
+    const avgOrderValue =
+      data.deliveredCount > 0
+        ? Math.round(data.totalRevenue / data.deliveredCount)
+        : 0;
+    const terminalCount = data.deliveredCount + data.cancelledCount;
+    const successRate =
+      terminalCount > 0 ? (data.deliveredCount / terminalCount) * 100 : null;
+    const cancelRate =
+      data.orderCount > 0 ? (data.cancelledCount / data.orderCount) * 100 : 0;
+
+    return {
+      range,
+      generatedAt: now.toISOString(),
+      windowStart: current.start.toISOString(),
+      windowEnd: current.end.toISOString(),
+      totalRevenue: data.totalRevenue,
+      orderCount: data.orderCount,
+      deliveredCount: data.deliveredCount,
+      cancelledCount: data.cancelledCount,
+      avgOrderValue,
+      successRate:
+        successRate === null ? null : Math.round(successRate * 100) / 100,
+      cancelRate: Math.round(cancelRate * 100) / 100,
+      avgPrepMinutes: data.avgPrepMinutes,
+      revenueByDay: data.revenueByDay,
+      ordersByDay: data.ordersByDay,
+      topItems: data.topItems,
     };
   }
 }

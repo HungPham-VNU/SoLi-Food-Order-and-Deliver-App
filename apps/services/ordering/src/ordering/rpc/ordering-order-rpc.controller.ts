@@ -1,4 +1,9 @@
-import { Controller, Inject, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  ForbiddenException,
+  Inject,
+  NotFoundException,
+} from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
@@ -7,6 +12,7 @@ import {
   type OrderTransitionRequest,
 } from '@uitfood/contracts';
 import { TransitionOrderCommand } from '@/ordering/order-lifecycle/commands/transition-order.command';
+import { OrderLifecycleService } from '@/ordering/order-lifecycle/services/order-lifecycle.service';
 import { OrderRepository } from '@/ordering/order-lifecycle/repositories/order.repository';
 import { InternalAuthService } from '@/auth/internal-auth.service';
 import {
@@ -44,6 +50,7 @@ export class OrderingOrderRpcController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly orderRepo: OrderRepository,
+    private readonly lifecycleService: OrderLifecycleService,
     private readonly auth: InternalAuthService,
     @Inject(PAYMENT_INITIATION_PORT)
     private readonly payments: IPaymentInitiationPort,
@@ -73,9 +80,24 @@ export class OrderingOrderRpcController {
   @MessagePattern(ORDERING_RPC_PATTERNS.getOrder)
   async getOrder(@Payload() p: Auth & { orderId: string }) {
     try {
-      this.auth.verifyOrderingToken(p.internalAuth);
-      const result = await this.orderRepo.findWithItems(p.orderId);
+      const caller = this.auth.verifyOrderingToken(p.internalAuth);
+      const result = await this.orderRepo.findWithItemsAndCustomer(p.orderId);
       if (!result) throw new NotFoundException(`Order ${p.orderId} not found.`);
+      const actorRole = resolveActorRole(caller.roles);
+      if (actorRole === 'shipper') {
+        if (
+          result.order.status !== 'ready_for_pickup' &&
+          result.order.shipperId !== caller.userId
+        ) {
+          throw new ForbiddenException('You do not have access to this order.');
+        }
+      } else {
+        await this.lifecycleService.assertOwnership(
+          result.order,
+          caller.userId,
+          actorRole,
+        );
+      }
       return result;
     } catch (e) {
       throw asOrderingRpcException(e);

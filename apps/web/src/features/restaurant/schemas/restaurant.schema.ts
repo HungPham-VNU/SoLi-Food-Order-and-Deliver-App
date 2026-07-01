@@ -1,10 +1,9 @@
 import { z } from 'zod';
 
-const optionalUrl = z.preprocess(
-  (value) =>
-    typeof value === 'string' && value.trim() === '' ? undefined : value,
-  z.string().trim().url('Must be a valid URL').optional(),
-);
+const optionalUrl = z.union([
+  z.string().trim().url('Must be a valid URL'),
+  z.literal('').transform(() => undefined),
+]).optional();
 
 export const restaurantFormSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters'),
@@ -12,8 +11,8 @@ export const restaurantFormSchema = z.object({
   phone: z.string().trim().min(7, 'Phone number is required'),
   description: z.string().trim().optional(),
   cuisineType: z.string().trim().optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  latitude: z.number({ required_error: 'Please set your location on the map' }),
+  longitude: z.number({ required_error: 'Please set your location on the map' }),
   logoUrl: optionalUrl,
   coverImageUrl: optionalUrl,
 });

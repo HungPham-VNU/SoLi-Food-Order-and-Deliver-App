@@ -49,6 +49,20 @@ export class NutritionRpcController {
     }
   }
 
+  // @MessagePattern(CATALOG_RPC_PATTERNS.startManualNutrition)
+  async startManual(@Payload() p: Mutation) {
+    try {
+      const c = this.auth.verifyCatalogToken(p.internalAuth);
+      return await this.service.startManualIngredientSession(
+        p.menuItemId,
+        c.userId,
+        c.isAdmin,
+      );
+    } catch (e) {
+      throw asCatalogRpcException(e);
+    }
+  }
+
   @MessagePattern(CATALOG_RPC_PATTERNS.calculateNutrition)
   async calculate(@Payload() p: Mutation & { dto: CalculateNutritionDto }) {
     try {

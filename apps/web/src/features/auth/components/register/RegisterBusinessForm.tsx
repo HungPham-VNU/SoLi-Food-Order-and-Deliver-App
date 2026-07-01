@@ -15,7 +15,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { RestaurantFormValues } from '@/features/restaurant/schemas/restaurant.schema';
 
-export function RegisterBusinessForm() {
+export interface RegisterBusinessFormProps {
+  title?: string;
+  description?: string;
+}
+
+export function RegisterBusinessForm({
+  title = 'Describe your restaurant',
+  description = 'Fill in the form below to describe your restaurant. The information will be used to verify your restaurant.',
+}: RegisterBusinessFormProps) {
   const {
     register,
     formState: { errors },
@@ -53,11 +61,10 @@ export function RegisterBusinessForm() {
     <div className="xl:col-span-7 space-y-8">
       <div>
         <h1 className="text-3xl font-extrabold text-on-surface tracking-tight mb-3 font-headline">
-          Describe your restaurant
+          {title}
         </h1>
         <p className="text-on-surface-variant">
-          Fill in the form below to describe your restaurant. The information
-          will be used to verify your restaurant.
+          {description}
         </p>
       </div>
 

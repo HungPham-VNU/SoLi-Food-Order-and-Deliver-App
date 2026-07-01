@@ -173,6 +173,7 @@ async function restoreCheckoutCartFromOrder(
         restaurantId: order.restaurantId,
         restaurantName: order.restaurantName,
         itemName: item.itemName,
+        imageUrl: item.imageUrl,
         unitPrice: item.unitPrice,
         quantity: item.quantity,
         selectedModifiers: item.modifiers.map((modifier) => ({
@@ -256,8 +257,7 @@ export function VNPayPaymentStatusScreen() {
   const tone = getToneClasses(copy.tone);
   const Icon = copy.icon;
   const goHome = () => {
-    router.dismissAll();
-    router.replace('/(customer)/(tabs)');
+    router.navigate('/(customer)/(tabs)');
   };
 
   const handleCancelPayment = async () => {
@@ -302,7 +302,6 @@ export function VNPayPaymentStatusScreen() {
         text2: 'Your checkout details were restored.',
       });
 
-      router.dismissAll();
       router.replace('/(customer)/checkout');
     } catch (error) {
       const message =

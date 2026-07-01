@@ -26,6 +26,9 @@ export const MENU_ITEM_STATUSES = [
 
 export type MenuItemStatus = (typeof MENU_ITEM_STATUSES)[number];
 
+export const MENU_ITEM_KINDS = ['food', 'beverage', 'mixed'] as const;
+export type MenuItemKind = (typeof MENU_ITEM_KINDS)[number];
+
 // ---------------------------------------------------------------------------
 // MenuCategory DTOs (per-restaurant categories replacing global enum)
 // ---------------------------------------------------------------------------
@@ -104,6 +107,16 @@ export class CreateMenuItemDto {
   })
   @IsVNDAmount()
   price!: number;
+
+  @ApiProperty({
+    description:
+      'Canonical item classification independent from restaurant categories',
+    enum: MENU_ITEM_KINDS,
+    enumName: 'MenuItemKind',
+    example: 'food',
+  })
+  @IsEnum(MENU_ITEM_KINDS)
+  itemKind!: MenuItemKind;
 
   @ApiPropertyOptional({
     description: 'UUID of the per-restaurant category this item belongs to',
@@ -247,6 +260,13 @@ export class MenuItemResponseDto {
 
   @ApiProperty({ example: 12.5 })
   price!: number;
+
+  @ApiProperty({
+    enum: MENU_ITEM_KINDS,
+    enumName: 'MenuItemKind',
+    example: 'food',
+  })
+  itemKind!: MenuItemKind;
 
   @ApiPropertyOptional({ example: 'PIZZA-MARG-01' })
   sku?: string | null;

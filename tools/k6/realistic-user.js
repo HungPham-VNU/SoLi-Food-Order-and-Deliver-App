@@ -77,8 +77,8 @@ const DELIVERY_ADDRESS = {
   street:    '123 Nguyen Hue Blvd',
   district:  'District 1',
   city:      'Ho Chi Minh City',
-  latitude:  10.7769,
-  longitude: 106.7009,
+  latitude:  10.8928,
+  longitude: 106.7915,
 };
 
 // ---------------------------------------------------------------------------

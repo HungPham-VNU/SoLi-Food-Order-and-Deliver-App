@@ -1,3 +1,443 @@
-# Default Compose entrypoint for local development.
-include:
-  - docker-compose.dev.yml
+# Production-like docker-compose
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.2-pg18-trixie
+    container_name: uitfoodms_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-uitfoodms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-uitfoodmssecret}
+      POSTGRES_DB: ${POSTGRES_DB:-uitfoodms}
+    ports:
+      - '5432:5432'
+    volumes:
+      - uitfoodms_db:/var/lib/postgresql
+      - ./infra/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/01-init-test-db.sql:ro
+      - ./infra/postgres/pg_hba.local.conf:/etc/postgresql/pg_hba.local.conf:ro
+    command: ['postgres', '-c', 'hba_file=/etc/postgresql/pg_hba.local.conf']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: uitfoodms_redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - uitfoodms_redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+
+  notification-redis:
+    image: redis:7-alpine
+    container_name: uitfoodms_notification_redis
+    ports:
+      - '6380:6379'
+    volumes:
+      - uitfoodms_notification_redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: uitfoodms_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    volumes:
+      - uitfoodms_rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  identity:
+    build:
+      context: .
+      dockerfile: apps/services/identity/Dockerfile
+    container_name: uitfoodms_identity
+    environment:
+      DATABASE_URL: postgresql://uitfood_identity:identity_secret@postgres:5432/uitfood_identity
+      IDENTITY_TCP_PORT: 4011
+      IDENTITY_MANAGEMENT_PORT: 4012
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-a_very_long_secret_for_test_purposes_only_32_chars}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:8080}
+    ports:
+      - '4011:4011'
+      - '4012:4012'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  media:
+    build:
+      context: .
+      dockerfile: apps/services/media/Dockerfile
+    container_name: uitfoodms_media
+    environment:
+      DATABASE_URL: postgresql://uitfood_media:media_secret@postgres:5432/uitfood_media
+      MEDIA_TCP_PORT: 4001
+      MEDIA_MANAGEMENT_PORT: 4002
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-STUB_CLOUD}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-STUB_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-STUB_SECRET}
+    ports:
+      - '4001:4001'
+      - '4002:4002'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  notification:
+    build:
+      context: .
+      dockerfile: apps/services/notification/Dockerfile
+    container_name: uitfoodms_notification
+    environment:
+      DATABASE_URL: postgresql://uitfood_notification:notification_secret@postgres:5432/uitfood_notification
+      REDIS_URL: redis://notification-redis:6379
+      REDIS_HOST: notification-redis
+      REDIS_PORT: 6379
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
+      RABBITMQ_EXCHANGE: uitfood.domain-events
+      NOTIFICATION_TCP_PORT: 4021
+      NOTIFICATION_MANAGEMENT_PORT: 4022
+      IDENTITY_TCP_HOST: identity
+      IDENTITY_TCP_PORT: 4011
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway
+      CORS_ORIGIN: http://localhost:5173,http://localhost:5174
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@soli.dev}
+      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
+    ports:
+      - '4021:4021'
+      - '4022:4022'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      notification-redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      identity:
+        condition: service_started
+    restart: unless-stopped
+
+  catalog:
+    build:
+      context: .
+      dockerfile: apps/services/catalog/Dockerfile
+    container_name: uitfoodms_catalog
+    environment:
+      DATABASE_URL: postgresql://uitfood_catalog:catalog_secret@postgres:5432/uitfood_catalog
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
+      RABBITMQ_EXCHANGE: uitfood.domain-events
+      CATALOG_TCP_PORT: 4031
+      CATALOG_MANAGEMENT_PORT: 4032
+      IDENTITY_TCP_HOST: identity
+      IDENTITY_TCP_PORT: 4011
+      MEDIA_TCP_HOST: media
+      MEDIA_TCP_PORT: 4001
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway
+      INTERNAL_AUTH_JWT_ISSUER: uitfood-catalog
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-https://ollama.com}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+      AI_SEARCH_ENABLED: ${AI_SEARCH_ENABLED:-false}
+      AI_SEARCH_EMBEDDING_WORKER_ENABLED: ${AI_SEARCH_EMBEDDING_WORKER_ENABLED:-false}
+    ports:
+      - '4031:4031'
+      - '4032:4032'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      identity:
+        condition: service_started
+      media:
+        condition: service_started
+    restart: unless-stopped
+
+  promotion:
+    build:
+      context: .
+      dockerfile: apps/services/promotion/Dockerfile
+    container_name: uitfoodms_promotion
+    environment:
+      DATABASE_URL: postgresql://uitfood_promotion:promotion_secret@postgres:5432/uitfood_promotion
+      PROMOTION_TCP_PORT: 4041
+      PROMOTION_MANAGEMENT_PORT: 4042
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway,uitfood-ordering
+      INTERNAL_AUTH_JWT_ISSUER: uitfood-promotion
+    ports:
+      - '4041:4041'
+      - '4042:4042'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  payment:
+    build:
+      context: .
+      dockerfile: apps/services/payment/Dockerfile
+    container_name: uitfoodms_payment
+    environment:
+      DATABASE_URL: postgresql://uitfood_payment:payment_secret@postgres:5432/uitfood_payment
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
+      RABBITMQ_EXCHANGE: uitfood.domain-events
+      PAYMENT_TCP_PORT: 4051
+      PAYMENT_MANAGEMENT_PORT: 4052
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway,uitfood-ordering
+      INTERNAL_AUTH_JWT_ISSUER: uitfood-payment
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-STUB_TMN}
+      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-STUB_SECRET}
+      VNPAY_URL: ${VNPAY_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      VNPAY_RETURN_URL: ${VNPAY_RETURN_URL:-http://localhost:8080/api/payments/vnpay/return}
+      MOBILE_PAYMENT_RETURN_URL: ${MOBILE_PAYMENT_RETURN_URL:-uitfood://payment/vnpay-return}
+      PAYMENT_SESSION_TIMEOUT_SECONDS: ${PAYMENT_SESSION_TIMEOUT_SECONDS:-1800}
+      VNPAY_REFUND_ENABLED: ${VNPAY_REFUND_ENABLED:-false}
+      VNPAY_API_URL: ${VNPAY_API_URL:-https://sandbox.vnpayment.vn/merchant_webapi/api/transaction}
+      VNPAY_REFUND_MAX_RETRIES: ${VNPAY_REFUND_MAX_RETRIES:-5}
+    ports:
+      - '4051:4051'
+      - '4052:4052'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ordering:
+    build:
+      context: .
+      dockerfile: apps/services/ordering/Dockerfile
+    container_name: uitfoodms_ordering
+    environment:
+      DATABASE_URL: postgresql://uitfood_ordering:ordering_secret@postgres:5432/uitfood_ordering
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
+      RABBITMQ_EXCHANGE: uitfood.domain-events
+      ORDERING_TCP_PORT: 4071
+      ORDERING_MANAGEMENT_PORT: 4072
+      PROMOTION_TCP_HOST: promotion
+      PROMOTION_TCP_PORT: 4041
+      PROMOTION_RPC_REQUIRED: 'true'
+      PAYMENT_TCP_HOST: payment
+      PAYMENT_TCP_PORT: 4051
+      PAYMENT_RPC_REQUIRED: 'true'
+      IDENTITY_TCP_HOST: identity
+      IDENTITY_TCP_PORT: 4011
+      IDENTITY_RPC_REQUIRED: 'true'
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway,uitfood-review
+      INTERNAL_AUTH_JWT_ISSUER: uitfood-ordering
+    ports:
+      - '4071:4071'
+      - '4072:4072'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      promotion:
+        condition: service_started
+      payment:
+        condition: service_started
+      identity:
+        condition: service_started
+    restart: unless-stopped
+
+  review:
+    build:
+      context: .
+      dockerfile: apps/services/review/Dockerfile
+    container_name: uitfoodms_review
+    environment:
+      DATABASE_URL: postgresql://uitfood_review:review_secret@postgres:5432/uitfood_review
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
+      RABBITMQ_EXCHANGE: uitfood.domain-events
+      REVIEW_TCP_PORT: 4061
+      REVIEW_MANAGEMENT_PORT: 4062
+      ORDERING_TCP_HOST: ordering
+      ORDERING_TCP_PORT: 4071
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway
+      INTERNAL_AUTH_JWT_ISSUER: uitfood-review
+    ports:
+      - '4061:4061'
+      - '4062:4062'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      ordering:
+        condition: service_started
+    restart: unless-stopped
+
+  reporting:
+    build:
+      context: .
+      dockerfile: apps/services/reporting/Dockerfile
+    container_name: uitfoodms_reporting
+    environment:
+      DATABASE_URL: postgresql://uitfood_reporting:reporting_secret@postgres:5432/uitfood_reporting
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672}
+      RABBITMQ_EXCHANGE: uitfood.domain-events
+      REPORTING_TCP_PORT: 4081
+      REPORTING_MANAGEMENT_PORT: 4082
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_TRUSTED_ISSUERS: uitfood-gateway
+      INTERNAL_AUTH_JWT_ISSUER: uitfood-reporting
+    ports:
+      - '4081:4081'
+      - '4082:4082'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
+    container_name: uitfoodms_gateway
+    environment:
+      PORT: 8080
+      MEDIA_ROUTES_ENABLED: 'true'
+      MEDIA_TCP_HOST: media
+      MEDIA_TCP_PORT: 4001
+      MEDIA_MANAGEMENT_PORT: 4002
+      IDENTITY_ROUTES_ENABLED: 'true'
+      IDENTITY_TCP_HOST: identity
+      IDENTITY_TCP_PORT: 4011
+      IDENTITY_MANAGEMENT_PORT: 4012
+      NOTIFICATION_ROUTES_ENABLED: 'true'
+      NOTIFICATION_TCP_HOST: notification
+      NOTIFICATION_TCP_PORT: 4021
+      NOTIFICATION_MANAGEMENT_PORT: 4022
+      CATALOG_ROUTES_ENABLED: 'true'
+      CATALOG_TCP_HOST: catalog
+      CATALOG_TCP_PORT: 4031
+      CATALOG_MANAGEMENT_PORT: 4032
+      PROMOTION_ROUTES_ENABLED: 'true'
+      PROMOTION_TCP_HOST: promotion
+      PROMOTION_TCP_PORT: 4041
+      PROMOTION_MANAGEMENT_PORT: 4042
+      PAYMENT_ROUTES_ENABLED: 'true'
+      PAYMENT_TCP_HOST: payment
+      PAYMENT_TCP_PORT: 4051
+      PAYMENT_MANAGEMENT_PORT: 4052
+      REVIEW_ROUTES_ENABLED: 'true'
+      REVIEW_TCP_HOST: review
+      REVIEW_TCP_PORT: 4061
+      REVIEW_MANAGEMENT_PORT: 4062
+      ORDERING_ROUTES_ENABLED: 'true'
+      ORDERING_TCP_HOST: ordering
+      ORDERING_TCP_PORT: 4071
+      ORDERING_MANAGEMENT_PORT: 4072
+      REPORTING_ROUTES_ENABLED: 'true'
+      REPORTING_TCP_HOST: reporting
+      REPORTING_TCP_PORT: 4081
+      REPORTING_MANAGEMENT_PORT: 4082
+      INTERNAL_AUTH_JWT_SECRET: ${INTERNAL_AUTH_JWT_SECRET:-internal_auth_secret_for_local_dev_only_32_chars}
+      INTERNAL_AUTH_JWT_ISSUER: uitfood-gateway
+    ports:
+      - '8080:8080'
+    depends_on:
+      media:
+        condition: service_started
+      identity:
+        condition: service_started
+      notification:
+        condition: service_started
+      catalog:
+        condition: service_started
+      promotion:
+        condition: service_started
+      payment:
+        condition: service_started
+      review:
+        condition: service_started
+      ordering:
+        condition: service_started
+      reporting:
+        condition: service_started
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8080
+    container_name: uitfoodms_web
+    ports:
+      - '5173:80'
+    depends_on:
+      gateway:
+        condition: service_started
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8080
+    container_name: uitfoodms_admin
+    ports:
+      - '5174:80'
+    depends_on:
+      gateway:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  uitfoodms_db:
+    driver: local
+  uitfoodms_redis:
+    driver: local
+  uitfoodms_notification_redis:
+    driver: local
+  uitfoodms_rabbitmq:
+    driver: local

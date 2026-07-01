@@ -416,6 +416,7 @@ export class NutritionRepository {
       fiber?: number | null;
       sugar?: number | null;
       sodium?: number | null;
+      source: MenuItemNutrition['source'];
       verifiedByRestaurant: boolean;
     },
     options: SaveMenuItemNutritionOptions = {},
@@ -423,10 +424,7 @@ export class NutritionRepository {
     return this.db.transaction(async (tx) => {
       const [row] = await tx
         .insert(menuItemNutrition)
-        .values({
-          ...values,
-          source: 'AI_ESTIMATED',
-        })
+        .values(values)
         .onConflictDoUpdate({
           target: menuItemNutrition.menuItemId,
           set: {
@@ -438,7 +436,7 @@ export class NutritionRepository {
             fiber: values.fiber ?? null,
             sugar: values.sugar ?? null,
             sodium: values.sodium ?? null,
-            source: 'AI_ESTIMATED',
+            source: values.source,
             verifiedByRestaurant: values.verifiedByRestaurant,
             updatedAt: new Date(),
           },

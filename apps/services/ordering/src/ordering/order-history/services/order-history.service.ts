@@ -66,6 +66,7 @@ function mapItem(item: OrderItem): OrderItemResponseDto {
     orderItemId: item.id,
     menuItemId: item.menuItemId,
     itemName: item.itemName,
+    imageUrl: item.imageUrl,
     unitPrice: Number(item.unitPrice),
     modifiersPrice: Number(item.modifiersPrice),
     quantity: item.quantity,

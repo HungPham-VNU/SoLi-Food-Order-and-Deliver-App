@@ -43,6 +43,7 @@ export interface BackfillResult {
 interface MenuItemSearchDocumentRow {
   id: string;
   name: string;
+  itemKind: 'food' | 'beverage' | 'mixed';
   description: string | null;
   tags: string[] | null;
   categoryName: string | null;
@@ -535,6 +536,7 @@ export class AiSearchIndexRepository {
       .select({
         id: menuItems.id,
         name: menuItems.name,
+        itemKind: menuItems.itemKind,
         description: menuItems.description,
         tags: menuItems.tags,
         categoryName: menuCategories.name,
@@ -582,6 +584,7 @@ export class AiSearchIndexRepository {
   ): SearchDocumentResult {
     return buildSearchDocument({
       primaryName: row.name,
+      itemKind: row.itemKind,
       description: row.description,
       tags: row.tags,
       categoryName: row.categoryName,

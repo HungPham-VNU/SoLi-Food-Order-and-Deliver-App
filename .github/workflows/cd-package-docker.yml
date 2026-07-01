@@ -36,39 +36,7 @@ on:
         required: false
         type: string
         default: ''
-      vite_grafana_faro_collector_url:
-        required: false
-        type: string
-        default: ''
-      vite_grafana_faro_app_name:
-        required: false
-        type: string
-        default: 'uitfood-web'
-      grafana_faro_sourcemap_endpoint:
-        required: false
-        type: string
-        default: ''
-      grafana_faro_app_id:
-        required: false
-        type: string
-        default: ''
-      grafana_cloud_stack_id:
-        required: false
-        type: string
-        default: ''
-      vite_posthog_key:
-        required: false
-        type: string
-        default: ''
-      vite_posthog_host:
-        required: false
-        type: string
-        default: 'https://app.posthog.com'
-    secrets:
-      POSTHOG_WEB_KEY:
-        required: false
-      GRAFANA_FARO_SOURCEMAP_API_KEY:
-        required: false
+    secrets: {}
 
 permissions:
   contents: read
@@ -160,14 +128,5 @@ jobs:
             VITE_APP_ENV=${{ inputs.vite_app_env }}
             VITE_APP_VERSION=${{ inputs.vite_app_version }}
             VITE_COMMIT_SHA=${{ inputs.vite_commit_sha || github.sha }}
-            VITE_GRAFANA_FARO_COLLECTOR_URL=${{ inputs.vite_grafana_faro_collector_url }}
-            VITE_GRAFANA_FARO_APP_NAME=${{ inputs.vite_grafana_faro_app_name }}
-            GRAFANA_FARO_SOURCEMAP_ENDPOINT=${{ inputs.grafana_faro_sourcemap_endpoint }}
-            GRAFANA_FARO_APP_ID=${{ inputs.grafana_faro_app_id }}
-            GRAFANA_CLOUD_STACK_ID=${{ inputs.grafana_cloud_stack_id }}
-            VITE_POSTHOG_KEY=${{ secrets.POSTHOG_WEB_KEY || inputs.vite_posthog_key }}
-            VITE_POSTHOG_HOST=${{ inputs.vite_posthog_host }}
-          secrets: |
-            grafana_faro_sourcemap_api_key=${{ secrets.GRAFANA_FARO_SOURCEMAP_API_KEY }}
           cache-from: type=gha,scope=${{ inputs.app }}
           cache-to: type=gha,mode=max,scope=${{ inputs.app }}

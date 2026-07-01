@@ -12,7 +12,6 @@ import { runObserved } from '@/observability/trace';
 import type { Namespace, Socket } from 'socket.io';
 import { UserPresenceService } from '../services/user-presence.service';
 import {
-  WS_CONNECTION_ESTABLISHED,
   WS_NOTIFICATION_PING,
 } from './notification-payload.dto';
 
@@ -78,12 +77,6 @@ export class NotificationGateway
             this.sessionTimers.set(client.id, timer);
           }
         }
-
-        this.server.to(room).emit(WS_CONNECTION_ESTABLISHED, {
-          userId,
-          room,
-          connectedAt: new Date().toISOString(),
-        });
       },
     );
   }

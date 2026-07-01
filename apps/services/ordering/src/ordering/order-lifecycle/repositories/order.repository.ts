@@ -3,6 +3,10 @@ import { and, eq, inArray, lt, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { ORDERING_DATABASE } from '@/drizzle/database.constants';
 import {
+  USER_DIRECTORY_PORT,
+  type IUserDirectoryPort,
+} from '@/shared/ports/user-directory.port';
+import {
   orders,
   orderItems,
   orderStatusLogs,
@@ -10,6 +14,12 @@ import {
   type OrderItem,
   type OrderStatusLog,
 } from '../../order/order.schema';
+
+export type OrderCustomerContact = {
+  customerId: string;
+  name: string;
+  phone: string | null;
+};
 
 /**
  * OrderRepository — Phase 5 read model for the order lifecycle.
@@ -24,7 +34,11 @@ import {
  */
 @Injectable()
 export class OrderRepository {
-  constructor(@Inject(ORDERING_DATABASE) private readonly db: NodePgDatabase) {}
+  constructor(
+    @Inject(ORDERING_DATABASE) private readonly db: NodePgDatabase,
+    @Inject(USER_DIRECTORY_PORT)
+    private readonly userDirectory: IUserDirectoryPort,
+  ) {}
 
   /**
    * Load a single order by primary key.
@@ -73,6 +87,30 @@ export class OrderRepository {
       .where(eq(orderItems.orderId, orderId));
 
     return { order, items };
+  }
+
+  async findWithItemsAndCustomer(orderId: string): Promise<{
+    order: Order;
+    items: OrderItem[];
+    customer: OrderCustomerContact | null;
+  } | null> {
+    const detail = await this.findWithItems(orderId);
+    if (!detail) return null;
+
+    const contact = await this.userDirectory.findContact(
+      detail.order.customerId,
+    );
+
+    return {
+      ...detail,
+      customer: contact
+        ? {
+            customerId: contact.id,
+            name: contact.name,
+            phone: contact.phoneNumber,
+          }
+        : null,
+    };
   }
 
   /**

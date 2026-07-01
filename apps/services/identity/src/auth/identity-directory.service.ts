@@ -27,6 +27,7 @@ export class IdentityDirectoryService {
     const rows = await this.database
       .select({
         id: user.id,
+        name: user.name,
         email: user.email,
         phoneNumber: user.phoneNumber,
         role: user.role,
@@ -39,6 +40,7 @@ export class IdentityDirectoryService {
     if (!found) {
       return {
         userId: request.userId,
+        name: null,
         email: null,
         phoneNumber: null,
         role: null,
@@ -47,6 +49,7 @@ export class IdentityDirectoryService {
 
     return {
       userId: found.id,
+      name: found.name,
       email: found.email,
       phoneNumber: found.phoneNumber,
       role: found.role,

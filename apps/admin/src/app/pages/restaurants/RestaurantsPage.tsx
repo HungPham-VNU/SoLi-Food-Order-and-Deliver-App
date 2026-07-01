@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   useRestaurants,
   useApproveRestaurant,
@@ -84,7 +85,12 @@ function OwnerInfo({ ownerId }: { ownerId: string }) {
   const { data: owner, isLoading } = useUser(ownerId);
 
   const initials = owner?.name
-    ? owner.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+    ? owner.name
+        .split(' ')
+        .map((w) => w[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
     : 'OW';
 
   return (
@@ -210,11 +216,14 @@ function RestaurantDetailSheet({
                       {formatRelativeDate(restaurant.createdAt)}
                     </span>{' '}
                     —{' '}
-                    {new Date(restaurant.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
+                    {new Date(restaurant.createdAt).toLocaleDateString(
+                      'en-US',
+                      {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      },
+                    )}
                   </span>
                 </div>
               </div>
@@ -232,8 +241,8 @@ function RestaurantDetailSheet({
                 </Button>
               ) : (
                 <Button
-                  variant="outline"
-                  className="w-full gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+                  variant="destructive"
+                  className="w-full gap-2"
                   onClick={() => onUnapprove(restaurant.id)}
                   disabled={isUnapproving}
                 >
@@ -282,12 +291,16 @@ export function RestaurantsPage() {
 
   async function handleApprove(id: string) {
     await approveMutation.mutateAsync(id);
-    setSelected((prev) => (prev?.id === id ? { ...prev, isApproved: true } : prev));
+    setSelected((prev) =>
+      prev?.id === id ? { ...prev, isApproved: true } : prev,
+    );
   }
 
   async function handleUnapprove(id: string) {
     await unapproveMutation.mutateAsync(id);
-    setSelected((prev) => (prev?.id === id ? { ...prev, isApproved: false } : prev));
+    setSelected((prev) =>
+      prev?.id === id ? { ...prev, isApproved: false } : prev,
+    );
   }
 
   return (
@@ -374,7 +387,10 @@ export function RestaurantsPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={5} className="py-16 text-center text-muted-foreground">
+                <td
+                  colSpan={5}
+                  className="py-16 text-center text-muted-foreground"
+                >
                   <span className="material-symbols-outlined animate-spin text-3xl">
                     progress_activity
                   </span>
@@ -382,7 +398,10 @@ export function RestaurantsPage() {
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-16 text-center text-muted-foreground">
+                <td
+                  colSpan={5}
+                  className="py-16 text-center text-muted-foreground"
+                >
                   No restaurants found
                 </td>
               </tr>
@@ -401,8 +420,12 @@ export function RestaurantsPage() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                        <p className="font-medium text-on-surface truncate">{r.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{r.address}</p>
+                        <p className="font-medium text-on-surface truncate">
+                          {r.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {r.address}
+                        </p>
                       </div>
                     </div>
                   </td>
@@ -417,21 +440,25 @@ export function RestaurantsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setSelected(r)}
-                      >
-                        Review
+                      <Button size="sm" variant="outline" asChild>
+                        <Link to={`/restaurants/${r.id}`}>Details</Link>
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                          >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuGroup>
+                            <DropdownMenuItem onClick={() => setSelected(r)}>
+                              <Store className="mr-2 h-4 w-4" />
+                              Quick review
+                            </DropdownMenuItem>
                             {!r.isApproved ? (
                               <DropdownMenuItem
                                 onClick={() => approveMutation.mutate(r.id)}
@@ -507,7 +534,9 @@ function StatCard({ icon, label, value, color }: StatCardProps) {
     blue: 'bg-blue-50 border-blue-200',
   };
   return (
-    <div className={`rounded-xl border p-4 flex items-center gap-3 ${bg[color]}`}>
+    <div
+      className={`rounded-xl border p-4 flex items-center gap-3 ${bg[color]}`}
+    >
       <div className="shrink-0">{icon}</div>
       <div>
         <p className="text-2xl font-bold text-on-surface">{value}</p>

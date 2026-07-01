@@ -49,17 +49,23 @@ export type AiSearchSort =
   | 'distance'
   | 'rating'
   | 'price_asc'
-  | 'protein_desc';
+  | 'protein_desc'
+  | 'calories_asc';
+
+export type AiSearchItemKind = 'food' | 'beverage' | 'mixed';
 
 export interface AiSearchIntent {
   rewrittenQuery: string;
   language: 'en' | 'vi' | 'unknown';
+  itemKinds: AiSearchItemKind[];
   foodTerms: string[];
   cuisineTerms: string[];
   dietaryTags: string[];
   excludedTerms: string[];
+  semanticConstraints?: string[];
   nutrition: {
     highProtein?: boolean;
+    lowerCalorie?: boolean;
     proteinMinG?: number;
     caloriesMax?: number;
     fatMaxG?: number;

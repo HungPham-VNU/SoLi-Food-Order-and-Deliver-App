@@ -17,6 +17,7 @@ const SYNONYMS: Record<string, string[]> = {
 
 export interface SearchDocumentInput {
   primaryName: string;
+  itemKind?: 'food' | 'beverage' | 'mixed' | null;
   description?: string | null;
   tags?: string[] | null;
   categoryName?: string | null;
@@ -42,6 +43,7 @@ export function buildSearchDocument(
 ): SearchDocumentResult {
   const parts = [
     input.primaryName,
+    input.itemKind ? `item type ${input.itemKind}` : null,
     input.description,
     input.restaurantName,
     input.cuisineType,

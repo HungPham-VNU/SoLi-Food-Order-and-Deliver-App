@@ -8,6 +8,7 @@ import type {
   MenuItemListResponse,
   MenuItemNutrition,
   MenuItemNutritionAnalysis,
+  MenuItemKind,
   ModifierGroup,
   ModifierOption,
   SaveNutritionRequest,
@@ -17,6 +18,7 @@ export interface CreateMenuItemDto {
   restaurantId: string;
   name: string;
   price: number;
+  itemKind: MenuItemKind;
   categoryId?: string;
   description?: string;
   sku?: string;
@@ -27,6 +29,7 @@ export interface CreateMenuItemDto {
 export interface UpdateMenuItemDto {
   name?: string;
   price?: number;
+  itemKind?: MenuItemKind;
   categoryId?: string;
   description?: string;
   sku?: string;
@@ -166,6 +169,13 @@ export const menuApi = {
       .post<AnalyzeRecipeResponse>(
         `/api/restaurant/menu-items/${menuItemId}/nutrition/analyze-recipe`,
         { recipeText },
+      )
+      .then((r) => r.data),
+
+  startManualNutritionSession: (menuItemId: string) =>
+    apiClient
+      .post<AnalyzeRecipeResponse>(
+        `/api/restaurant/menu-items/${menuItemId}/nutrition/manual-session`,
       )
       .then((r) => r.data),
 

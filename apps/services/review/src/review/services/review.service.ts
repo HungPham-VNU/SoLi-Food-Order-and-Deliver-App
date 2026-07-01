@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import type {
+  AdminReviewListRequest,
+  AdminReviewListResponse,
   ListRestaurantReviewsRequest,
   PublicReviewListResponse,
   ReviewResponse,
@@ -56,6 +58,26 @@ export class ReviewService {
       total,
       page: request.page,
       limit: request.limit,
+    };
+  }
+
+  async listRestaurantReviewsAdmin(
+    request: AdminReviewListRequest,
+  ): Promise<AdminReviewListResponse> {
+    const { data, total, averageRating, ratingDistribution } =
+      await this.reviewRepo.findAdminByRestaurantId(
+        request.restaurantId,
+        request.page,
+        request.limit,
+      );
+    return {
+      data: data.map((r) => ({
+        ...this.toResponseDto(r),
+        moderationReason: r.moderationReason,
+      })),
+      total,
+      averageRating,
+      ratingDistribution,
     };
   }
 

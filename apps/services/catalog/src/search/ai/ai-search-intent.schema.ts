@@ -4,13 +4,19 @@ export const aiSearchIntentSchema = z
   .object({
     rewrittenQuery: z.string().min(1).max(300),
     language: z.enum(['en', 'vi', 'unknown']),
+    itemKinds: z.array(z.enum(['food', 'beverage', 'mixed'])).max(3),
     foodTerms: z.array(z.string().min(1).max(80)).max(20),
     cuisineTerms: z.array(z.string().min(1).max(80)).max(10),
     dietaryTags: z.array(z.string().min(1).max(80)).max(20),
     excludedTerms: z.array(z.string().min(1).max(80)).max(20),
+    semanticConstraints: z
+      .array(z.string().min(1).max(160))
+      .max(10)
+      .default([]),
     nutrition: z
       .object({
         highProtein: z.boolean().optional(),
+        lowerCalorie: z.boolean().optional(),
         proteinMinG: z.number().min(0).max(300).optional(),
         caloriesMax: z.number().min(0).max(5000).optional(),
         fatMaxG: z.number().min(0).max(500).optional(),
@@ -42,6 +48,7 @@ export const aiSearchIntentSchema = z
       'rating',
       'price_asc',
       'protein_desc',
+      'calories_asc',
     ]),
     confidence: z.number().min(0).max(1),
     needsFallback: z.boolean(),

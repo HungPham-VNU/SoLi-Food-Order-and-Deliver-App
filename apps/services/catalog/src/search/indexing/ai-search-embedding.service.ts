@@ -4,8 +4,10 @@ import {
   LOCAL_OLLAMA_BASE_URL,
   OllamaAiProvider,
 } from '@/lib/ai/ollama-ai.provider';
+import { HuggingFaceAiProvider } from '@/lib/ai/hugging-face-ai.provider';
 
 export interface AiSearchEmbeddingConfig {
+  provider: 'ollama' | 'huggingface';
   baseURL: string;
   model: string;
   version: string;
@@ -20,13 +22,19 @@ export interface AiSearchEmbeddingConfig {
 export class AiSearchEmbeddingService {
   constructor(
     @Inject(OllamaAiProvider)
-    private readonly aiProvider: OllamaAiProvider,
+    private readonly ollamaProvider: OllamaAiProvider,
+    @Inject(HuggingFaceAiProvider)
+    private readonly huggingFaceProvider: HuggingFaceAiProvider,
     @Inject(ConfigService)
     private readonly config: ConfigService,
   ) {}
 
   getConfig(): AiSearchEmbeddingConfig {
     return {
+      provider:
+        this.config.get<'ollama' | 'huggingface'>(
+          'AI_SEARCH_EMBEDDING_PROVIDER',
+        ) ?? 'ollama',
       baseURL: this.readString(
         'AI_SEARCH_EMBEDDING_BASE_URL',
         LOCAL_OLLAMA_BASE_URL,
@@ -49,10 +57,15 @@ export class AiSearchEmbeddingService {
 
   async embedSearchDocument(text: string): Promise<number[]> {
     const embeddingConfig = this.getConfig();
-    const response = await this.aiProvider.embed({
+    const isHuggingFace = embeddingConfig.provider === 'huggingface';
+    const provider = isHuggingFace
+      ? this.huggingFaceProvider
+      : this.ollamaProvider;
+
+    const response = await provider.embed({
       input: text,
       model: embeddingConfig.model,
-      baseURL: embeddingConfig.baseURL,
+      baseURL: isHuggingFace ? undefined : embeddingConfig.baseURL,
       timeoutMs: embeddingConfig.timeoutMs,
       dimensions: embeddingConfig.dimensions,
       truncate: true,

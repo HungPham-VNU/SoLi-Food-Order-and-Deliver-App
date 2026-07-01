@@ -1,3 +1,7 @@
+import { Pencil } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+
 export function RegisterPendingHeader() {
   return (
     <div className="bg-surface-container-lowest rounded-xl p-8 text-center flex flex-col items-center gap-4 relative overflow-hidden">
@@ -22,6 +26,13 @@ export function RegisterPendingHeader() {
         maintain high quality standards to ensure the best experience for our
         community.
       </p>
+
+      <Button variant="outline" className="mt-4 gap-2" asChild>
+        <Link to="/pending-approval/edit">
+          <Pencil className="w-4 h-4" />
+          Edit Application Details
+        </Link>
+      </Button>
     </div>
   );
 }

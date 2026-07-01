@@ -24,6 +24,7 @@ import { OrderLifecycleService } from './services/order-lifecycle.service';
 import { OrderRepository } from './repositories/order.repository';
 import { PaymentIntegrationModule } from '@/integration/payment/payment-integration.module';
 import { PromotionClientModule } from '@/integration/promotion/promotion-client.module';
+import { IdentityClientModule } from '@/integration/identity/identity-client.module';
 
 /**
  * OrderLifecycleModule — Phase 5 implementation.
@@ -45,6 +46,7 @@ import { PromotionClientModule } from '@/integration/promotion/promotion-client.
     CqrsModule,
     DatabaseModule,
     OutboxModule,
+    IdentityClientModule,
     PaymentIntegrationModule,
     PromotionClientModule,
   ],
@@ -77,6 +79,6 @@ import { PromotionClientModule } from '@/integration/promotion/promotion-client.
   // OrderRepository exported so the TCP order RPC controller can read
   // order+items and the status timeline; PAYMENT port re-exported for the
   // mobile pending-payment cancellation.
-  exports: [OrderRepository, PaymentIntegrationModule],
+  exports: [OrderRepository, OrderLifecycleService, PaymentIntegrationModule],
 })
 export class OrderLifecycleModule {}

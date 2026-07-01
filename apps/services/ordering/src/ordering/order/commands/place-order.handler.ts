@@ -843,6 +843,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
   ): Array<{
     menuItemId: string;
     itemName: string;
+    imageUrl: string | null;
     unitPrice: number;
     modifiersPrice: number;
     quantity: number;
@@ -893,6 +894,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
       return {
         menuItemId: cartItem.menuItemId,
         itemName: snapshot.name,
+        imageUrl: cartItem.imageUrl ?? null,
         unitPrice,
         modifiersPrice,
         quantity: cartItem.quantity,
@@ -929,6 +931,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     items: Array<{
       menuItemId: string;
       itemName: string;
+      imageUrl: string | null;
       unitPrice: number;
       modifiersPrice: number;
       quantity: number;
@@ -986,6 +989,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
           orderId: insertedOrder.id,
           menuItemId: item.menuItemId,
           itemName: item.itemName,
+          imageUrl: item.imageUrl,
           unitPrice: item.unitPrice,
           modifiersPrice: item.modifiersPrice, // Case 13 fix — kept separate from unitPrice
           quantity: item.quantity,

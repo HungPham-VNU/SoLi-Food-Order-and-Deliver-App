@@ -55,6 +55,7 @@ export const identityUserContactRequestSchema = z.object({
 
 export const identityUserContactResponseSchema = z.object({
   userId: z.string().uuid(),
+  name: z.string().nullable(),
   email: z.string().email().nullable(),
   phoneNumber: z.string().nullable(),
   role: z.string().nullable(),

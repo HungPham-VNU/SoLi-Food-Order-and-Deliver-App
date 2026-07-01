@@ -11,6 +11,7 @@ import { z } from 'zod';
 export const REVIEW_RPC_PATTERNS = {
   submitReview: 'review.submit.v1',
   listRestaurantReviews: 'review.restaurant.list.v1',
+  listRestaurantReviewsAdmin: 'review.restaurant.list-admin.v1',
   getMyReview: 'review.mine.get.v1',
 } as const;
 
@@ -101,6 +102,29 @@ export const publicReviewListResponseSchema = z.object({
 });
 export type PublicReviewListResponse = z.infer<
   typeof publicReviewListResponseSchema
+>;
+
+export const adminReviewItemSchema = reviewResponseSchema.extend({
+  moderationReason: z.string().nullable(),
+});
+export type AdminReviewItem = z.infer<typeof adminReviewItemSchema>;
+
+export const adminReviewListRequestSchema =
+  listRestaurantReviewsRequestSchema.extend({
+    internalAuth: z.string().min(1),
+  });
+export type AdminReviewListRequest = z.infer<
+  typeof adminReviewListRequestSchema
+>;
+
+export const adminReviewListResponseSchema = z.object({
+  data: z.array(adminReviewItemSchema),
+  total: z.number().int().nonnegative(),
+  averageRating: z.number(),
+  ratingDistribution: z.record(z.string(), z.number().int().nonnegative()),
+});
+export type AdminReviewListResponse = z.infer<
+  typeof adminReviewListResponseSchema
 >;
 
 export const getMyReviewRequestSchema = z.object({

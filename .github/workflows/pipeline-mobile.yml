@@ -37,8 +37,6 @@ jobs:
       - name: Check (Lint & Typecheck)
         run: pnpm turbo run lint typecheck --filter=mobile --cache-dir=".turbo"
         env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
       - name: Security Scan (Audit)
         run: pnpm audit --audit-level high
@@ -46,39 +44,14 @@ jobs:
       - name: Unit Test
         run: pnpm turbo run test --filter=mobile --cache-dir=".turbo"
         env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
       - name: Build
         run: pnpm turbo run build --filter=mobile --cache-dir=".turbo"
         env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
-          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
           EXPO_PUBLIC_APP_ENV: production
           EXPO_PUBLIC_APP_VERSION: ${{ vars.APP_VERSION || '1.0.0' }}
           EXPO_PUBLIC_COMMIT_SHA: ${{ github.sha }}
-          EXPO_PUBLIC_SENTRY_ENVIRONMENT: production
-          EXPO_PUBLIC_SENTRY_RELEASE: sha-${{ github.sha }}
-          EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE || '0.1' }}
-
-      - name: Upload Sentry Source Maps
-        working-directory: apps/mobile
-        shell: bash
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ vars.SENTRY_MOBILE_PROJECT }}
-          SENTRY_RELEASE: sha-${{ github.sha }}
-        run: |
-          if [[ -z "${SENTRY_AUTH_TOKEN}" || -z "${SENTRY_ORG}" || -z "${SENTRY_PROJECT}" ]]; then
-            echo "Sentry mobile sourcemap upload skipped: missing Sentry CI configuration."
-            exit 0
-          fi
-          pnpm exec sentry-cli releases new "${SENTRY_RELEASE}" || true
-          pnpm exec sentry-cli sourcemaps upload dist --release "${SENTRY_RELEASE}" --rewrite
-          pnpm exec sentry-cli releases finalize "${SENTRY_RELEASE}"
 
   publish:
     name: Publish Mobile Build
@@ -88,4 +61,3 @@ jobs:
     uses: ./.github/workflows/cd-package-mobile.yml
     secrets:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}

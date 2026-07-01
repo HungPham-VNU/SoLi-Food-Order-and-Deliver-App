@@ -4,9 +4,9 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Star } from 'lucide-react-native';
@@ -21,6 +21,8 @@ import {
   useMyReview,
   useSubmitReview,
 } from '@/src/features/review/hooks/use-review';
+import { KeyboardAwareScrollView } from '@/src/components/keyboard-aware-scroll-view';
+import { keyboardAvoidingBehavior } from '@/src/lib/keyboard';
 import { useMyOrderDetail } from '@/src/features/orders/hooks/use-order-history';
 
 export function RateOrderScreen() {
@@ -106,7 +108,11 @@ export function RateOrderScreen() {
       : tags;
 
   return (
-    <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
+    <KeyboardAvoidingView
+      behavior={keyboardAvoidingBehavior}
+      className="flex-1 bg-background"
+      style={{ paddingTop: insets.top }}
+    >
       <View className="flex-row items-center px-4 h-16 w-full bg-surface/80 z-50">
         <TouchableOpacity
           onPress={() => router.back()}
@@ -127,7 +133,10 @@ export function RateOrderScreen() {
           <ActivityIndicator size="large" color="#0d631b" />
         </View>
       ) : (
-        <ScrollView className="flex-1 px-4 py-6">
+        <KeyboardAwareScrollView
+          className="flex-1 px-4 py-6"
+          contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+        >
           {reviewLoadError && (
             <View className="bg-error/10 p-4 rounded-2xl mb-4">
               <Text
@@ -286,8 +295,8 @@ export function RateOrderScreen() {
               )}
             </TouchableOpacity>
           )}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }

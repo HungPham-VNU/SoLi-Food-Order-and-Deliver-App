@@ -6,6 +6,9 @@ export const createMenuItemSchema = z.object({
     .number({ invalid_type_error: 'Price is required' })
     .int('Price must be a whole number')
     .min(1000, 'Minimum price is 1,000₫'),
+  itemKind: z.enum(['food', 'beverage', 'mixed'], {
+    required_error: 'Item type is required',
+  }),
   categoryId: z.string().uuid().optional(),
   description: z.string().optional(),
   sku: z.string().optional(),

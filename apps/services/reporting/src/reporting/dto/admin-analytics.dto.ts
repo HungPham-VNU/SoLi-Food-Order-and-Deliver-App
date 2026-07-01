@@ -150,3 +150,84 @@ export class PlatformAnalyticsResponseDto {
   @ApiProperty({ type: [OrderDistrictDto] })
   ordersByDistrict!: OrderDistrictDto[];
 }
+
+export class TopItemDto {
+  @ApiProperty({ format: 'uuid' })
+  menuItemId!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty()
+  quantity!: number;
+
+  @ApiProperty({
+    description: 'Gross item sales before order-level promotions (VND).',
+  })
+  revenue!: number;
+}
+
+export class DailyPointDto {
+  @ApiProperty()
+  date!: string;
+
+  @ApiPropertyOptional()
+  revenue?: number;
+
+  @ApiPropertyOptional()
+  count?: number;
+}
+
+export class RestaurantAnalyticsResponseDto {
+  @ApiProperty({ enum: ANALYTICS_RANGES })
+  range!: AnalyticsRange;
+
+  @ApiProperty()
+  generatedAt!: string;
+
+  @ApiProperty()
+  windowStart!: string;
+
+  @ApiProperty()
+  windowEnd!: string;
+
+  @ApiProperty({
+    description:
+      'Delivered order total minus delivery fees, after promotions (VND).',
+  })
+  totalRevenue!: number;
+
+  @ApiProperty()
+  orderCount!: number;
+
+  @ApiProperty()
+  deliveredCount!: number;
+
+  @ApiProperty()
+  cancelledCount!: number;
+
+  @ApiProperty()
+  avgOrderValue!: number;
+
+  @ApiProperty({
+    nullable: true,
+    description:
+      'Delivered orders as a percentage of terminal orders. Null when no orders have reached a terminal state.',
+  })
+  successRate!: number | null;
+
+  @ApiProperty()
+  cancelRate!: number;
+
+  @ApiPropertyOptional()
+  avgPrepMinutes!: number | null;
+
+  @ApiProperty({ type: [DailyPointDto] })
+  revenueByDay!: DailyPointDto[];
+
+  @ApiProperty({ type: [DailyPointDto] })
+  ordersByDay!: DailyPointDto[];
+
+  @ApiProperty({ type: [TopItemDto] })
+  topItems!: TopItemDto[];
+}

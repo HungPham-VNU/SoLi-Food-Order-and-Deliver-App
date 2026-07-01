@@ -82,11 +82,18 @@ export interface OrderModifier {
   price: number;
 }
 
+export interface OrderCustomer {
+  customerId: string;
+  name: string;
+  phone: string | null;
+}
+
 // Mirrors OrderItemResponseDto
 export interface OrderItem {
   orderItemId: string;
   menuItemId: string;
   itemName: string;
+  imageUrl?: string | null;
   unitPrice: number;
   modifiersPrice: number;
   quantity: number;
@@ -153,6 +160,7 @@ export interface OrderDetail {
   note: string | null;
   paymentUrl: string | null;
   deliveryAddress: DeliveryAddress;
+  customer: OrderCustomer | null;
   shipperId: string | null;
   createdAt: string;
   updatedAt: string;

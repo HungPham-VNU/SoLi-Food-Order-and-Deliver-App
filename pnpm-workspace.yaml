@@ -2,6 +2,7 @@ packages:
   - 'apps/*'
   - 'apps/services/*'
   - 'packages/*'
+nodeLinker: hoisted
 allowBuilds:
   '@firebase/util': true
   '@nestjs/core': true

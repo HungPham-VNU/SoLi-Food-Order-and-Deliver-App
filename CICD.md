@@ -1,4 +1,4 @@
-﻿# Turborepo CI/CD and Render Deployment
+# Turborepo CI/CD and Render Deployment
 
 This document explains how this repository builds, validates, packages, and deploys the UITFood food ordering platform. It covers the GitHub Actions CI/CD workflows, the Turborepo task model, Docker image publication to GitHub Container Registry, Render image deploy hooks, Expo mobile packaging, and the Terraform configuration that manages Render infrastructure.
 
@@ -74,16 +74,15 @@ Important task behavior:
 The reusable full validation workflow uses:
 
 ```bash
-pnpm turbo run lint typecheck --affected --cache-dir=".turbo"
-pnpm turbo run test --affected --cache-dir=".turbo"
-pnpm turbo run build --affected --cache-dir=".turbo"
-pnpm turbo run test:e2e --filter=api --cache-dir=".turbo" -- --detectOpenHandles --forceExit
+pnpm turbo run lint typecheck --affected
+pnpm turbo run test --affected
+pnpm turbo run build --affected
+pnpm turbo run test:e2e --filter=api -- --detectOpenHandles --forceExit
 ```
 
 `--affected` scopes work to packages affected by the current change set. The workflow checks out with `fetch-depth: 0` in `ci-validate.yml`, which gives Turborepo enough Git history to determine affected packages.
 
-The workflows also cache `.turbo` with `actions/cache`. Remote Turborepo caching is supported through `TURBO_TOKEN` and `TURBO_TEAM`.
-
+The workflows also cache `.turbo` with `actions/cache`.
 ## 4. Shared CI Environment Setup
 
 All major validation and packaging workflows use `.github/actions/setup-environment/action.yml`.
@@ -321,8 +320,6 @@ It then runs:
 8. API `db:push` migration sync against CI Postgres.
 9. API E2E tests.
 
-The workflow declares `TURBO_TOKEN` and `TURBO_TEAM` as required workflow-call secrets. Because of that, `pipeline-main.yml` currently needs those secrets even if remote caching is not essential. If remote cache should be optional, change those workflow-call secrets to `required: false` and keep the environment variables empty when unavailable.
-
 ## 12. Docker Image Packaging
 
 File: `.github/workflows/cd-package-docker.yml`
@@ -408,250 +405,7 @@ The Web Dockerfile is also a pruned monorepo build:
 
 Because Vite embeds `VITE_*` values at build time, changing `VITE_API_BASE_URL` requires rebuilding and republishing the Web image.
 
-## 13. Render Image Deploy Hooks
-
-File: `.github/workflows/cd-render-image.yml`
-
-This workflow is the app deployment path for Render image-backed services. It
-does not run Terraform and does not mutate Render infrastructure state.
-
-Inputs:
-
-- `app`: app suffix used for the GHCR image name, such as `api` or `web`.
-- `gh_repository`: GitHub repository in `<owner>/<repo>` form.
-- `image_url`: optional explicit image repository, without a tag.
-- `image_tag`: optional explicit image tag.
-
-Required secret:
-
-- `RENDER_DEPLOY_HOOK`: the service deploy hook URL from Render settings.
-
-The API and Web pipelines pass this secret from service-specific GitHub secrets:
-
-```text
-RENDER_API_DEPLOY_HOOK
-RENDER_WEB_DEPLOY_HOOK
-```
-
-Default image resolution:
-
-1. If `image_url` is provided, use it.
-2. Else derive `ghcr.io/<github-owner>/<github-repo>-<app>`.
-3. If `image_tag` is provided, use it.
-4. Else use `sha-<short-sha>` from the current commit.
-
-The workflow calls the Render deploy hook with `imgURL=<image_url>:<image_tag>`.
-For image-backed services, this tells Render to pull and deploy the exact image
-that GitHub Actions just pushed to GHCR.
-
-## 14. Render Terraform IaC
-
-Directory: `infra/render`
-
-The Render IaC configuration manages:
-
-- `UITFood API` Render web service.
-- `UITFood Web` Render web service.
-- `UITFood Postgres` Render Postgres database.
-- Optional Render environment group link for API runtime secrets.
-
-### Terraform Version And Provider
-
-File: `infra/render/versions.tf`
-
-The configuration requires:
-
-- Terraform `>= 1.6.0`
-- Render provider `render-oss/render` version `~> 1.8`
-
-The reusable GitHub workflow currently installs Terraform `1.15.4`.
-
-### HCP Terraform State
-
-The Terraform block uses HCP Terraform:
-
-```hcl
-terraform {
-  cloud {
-    workspaces {
-      tags = ["uitfood", "render", "production"]
-    }
-  }
-}
-```
-
-The workflow sets:
-
-```text
-TF_CLOUD_ORGANIZATION
-TF_WORKSPACE
-```
-
-The cloud block maps this configuration to an HCP Terraform workspace using the configured organization and workspace selection. HCP Terraform provides persistent remote state, which is required because GitHub-hosted runners are ephemeral.
-
-### Render Provider Credentials
-
-File: `infra/render/provider.tf`
-
-The provider reads credentials from environment variables:
-
-```text
-RENDER_API_KEY
-RENDER_OWNER_ID
-```
-
-These should be stored as GitHub Actions secrets. If the HCP Terraform workspace uses remote execution, also store them as sensitive environment variables in the HCP Terraform workspace, because the provider runs inside HCP Terraform.
-
-### Render Resources
-
-File: `infra/render/main.tf`
-
-`render_postgres.main` creates or manages the production database:
-
-- Name: `UITFood Postgres` by default.
-- Region: `singapore` by default.
-- Plan: `free` by default.
-- Version: `18` by default.
-- Database name: `uitfood_db` by default.
-- Database user: `nestjs` by default.
-- Optional `project_environment_id` to place it into an existing Render project environment.
-- `postgres_ip_allow_list` defaults to `0.0.0.0/0`.
-
-`render_web_service.api` creates or manages the API service:
-
-- Name: `UITFood API` by default.
-- Runtime source: GHCR Docker image.
-- Image URL: `var.api_image_url`.
-- Image tag: `var.api_image_tag`.
-- Optional custom domains.
-- Optional health check path.
-- `DATABASE_URL` set from the internal Render Postgres connection string.
-- `NODE_ENV` set to `production`.
-
-`render_web_service.web` creates or manages the Web service:
-
-- Name: `UITFood Web` by default.
-- Runtime source: GHCR Docker image.
-- Image URL: `var.web_image_url`.
-- Image tag: `var.web_image_tag`.
-- Optional custom domains.
-- Optional health check path.
-
-`render_env_group_link.api_runtime_secrets` optionally links an existing Render environment group to the API service when `api_env_group_id` is set.
-
-### Terraform Secret Boundary
-
-The API and Web services use:
-
-```hcl
-lifecycle {
-  ignore_changes = [
-    env_vars,
-    secret_files,
-  ]
-}
-```
-
-This is a deliberate security boundary.
-
-Terraform creates the initial API `DATABASE_URL` and `NODE_ENV`, but it does not keep managing every runtime environment variable afterward. Runtime application secrets should stay in Render service settings or a Render environment group, not in Terraform state.
-
-Keep these values out of Terraform variable files and Terraform-managed `env_vars`:
-
-- `BETTER_AUTH_SECRET`
-- `BETTER_AUTH_URL`
-- `CORS_ORIGIN`
-- `REDIS_HOST`
-- `REDIS_PORT`
-- `FIREBASE_SERVICE_ACCOUNT_PATH`
-- `CLOUDINARY_*`
-- `SMTP_*`
-- `VNPAY_*`
-
-If a secret is placed into Terraform configuration, it can end up in Terraform state. HCP Terraform protects sensitive variables, but the safest project policy is still to avoid using Terraform as the application secret store.
-
-### Terraform Outputs
-
-File: `infra/render/outputs.tf`
-
-The module outputs:
-
-- API service ID.
-- API service URL.
-- Web service ID.
-- Web service URL.
-- Postgres ID.
-- Sensitive internal Postgres connection string.
-
-## 15. Reusable Render Terraform Workflow
-
-File: `.github/workflows/cd-render-iac.yml`
-
-This workflow is the automation entry point for Terraform infrastructure
-changes. It is no longer used by the API, Web, or Main pipelines for app image
-promotion.
-
-Inputs:
-
-- `apply`: whether to apply or only plan.
-- `use_github_sha_tag`: use the current commit SHA tag for both API and Web.
-- `api_use_github_sha_tag`: use the current commit SHA tag for API only.
-- `web_use_github_sha_tag`: use the current commit SHA tag for Web only.
-- `api_image_tag`: explicit API image tag.
-- `web_image_tag`: explicit Web image tag.
-- `api_image_url`: optional explicit API image repository, without a tag.
-- `web_image_url`: optional explicit Web image repository, without a tag.
-- `working_directory`: defaults to `infra/render`.
-- `terraform_version`: defaults to `1.15.4`.
-
-Required secrets:
-
-- `RENDER_API_KEY`
-- `RENDER_OWNER_ID`
-- `TF_API_TOKEN`
-
-Environment:
-
-- `RENDER_API_KEY`
-- `RENDER_OWNER_ID`
-- `TF_CLOUD_ORGANIZATION`
-- `TF_WORKSPACE`
-
-Steps:
-
-1. Checkout.
-2. Install Terraform with `hashicorp/setup-terraform`.
-3. Configure HCP Terraform CLI credentials from `TF_API_TOKEN`.
-4. Run `terraform fmt -check -recursive`.
-5. Run `terraform init -input=false`.
-6. Resolve API and Web image tags.
-7. Run `terraform validate -no-color`.
-8. Run `terraform plan -input=false -no-color` when `apply` is false.
-9. Run `terraform apply -input=false -auto-approve` when `apply` is true.
-
-### Image Tag Resolution
-
-The workflow calculates `short_sha` from the first seven characters of `GITHUB_SHA`.
-
-For each service, the image tag is resolved in this order:
-
-1. If `use_github_sha_tag` or the service-specific SHA flag is true, use `sha-<short-sha>`.
-2. Else use explicit workflow input such as `api_image_tag`.
-3. Else use repository variables such as `RENDER_API_IMAGE_TAG`.
-4. Else read the current image tag from Terraform state with `terraform state pull`.
-
-Resolved tags are exported as:
-
-```text
-TF_VAR_api_image_tag
-TF_VAR_web_image_tag
-```
-
-Terraform automatically maps `TF_VAR_*` environment variables to matching Terraform input variables.
-
-This fallback behavior allows infrastructure-only applies to keep the currently deployed app images instead of accidentally requiring a new image tag.
-
-## 16. End-To-End Release Flow
+## 13. End-To-End Release Flow
 
 ### API Release
 
@@ -691,107 +445,7 @@ sha-<short-sha>
 4. If the workflow runs against `master`, Render deploy hooks are triggered for both API and Web images from the current commit.
 5. Mobile EAS local build runs and uploads the APK artifact.
 
-### Infrastructure Release
-
-1. A commit lands on `master` under `infra/render/**` or the Render workflow files.
-2. `pipeline-render-iac.yml` starts.
-3. `cd-render-iac.yml` runs `terraform fmt`, `init`, `validate`, and `apply`.
-4. Image tags are preserved from inputs, repository variables, or existing Terraform state unless explicitly overridden.
-5. Render infrastructure changes are applied.
-
-## 17. First-Time Render Terraform Setup
-
-Before the automated Render pipeline can safely apply, complete these steps.
-
-### 1. Create Or Select HCP Terraform Workspace
-
-Create an HCP Terraform workspace for Render production state.
-
-The workspace should match the cloud block selection:
-
-- Tags: `uitfood`, `render`, `production`
-- Organization: repository variable `TF_CLOUD_ORGANIZATION`
-- Workspace: repository variable `TF_WORKSPACE`
-
-### 2. Configure GitHub Secrets
-
-Set these in GitHub repository secrets:
-
-- `RENDER_API_KEY`: Render API key for the Terraform provider.
-- `RENDER_OWNER_ID`: Render owner ID for the Terraform provider.
-- `TF_API_TOKEN`: HCP Terraform API token for CLI-driven remote runs.
-- `EXPO_TOKEN`: Expo token for EAS packaging.
-- `TURBO_TOKEN`: Turborepo remote cache token. Currently required by `ci-validate.yml`.
-- `TURBO_TEAM`: Turborepo team slug. Currently required by `ci-validate.yml`.
-
-Set application test secrets used by API CI:
-
-- `BETTER_AUTH_SECRET`
-- `BETTER_AUTH_URL`
-- `VNPAY_TMN_CODE`
-- `VNPAY_HASH_SECRET`
-- `VNPAY_URL`
-- `VNPAY_RETURN_URL`
-- `CLOUDINARY_CLOUD_NAME`
-- `CLOUDINARY_API_KEY`
-- `CLOUDINARY_API_SECRET`
-
-### 3. Configure GitHub Variables
-
-Set these in GitHub repository variables:
-
-- `TF_CLOUD_ORGANIZATION`
-- `TF_WORKSPACE`
-- `VITE_API_BASE_URL`
-
-Optional variables:
-
-- `RENDER_API_IMAGE_TAG`
-- `RENDER_WEB_IMAGE_TAG`
-
-The optional image tag variables are useful for manual infrastructure applies when no new Docker image was published in the same workflow.
-
-### 4. Configure HCP Terraform Variables
-
-Set Terraform variables in the HCP workspace as needed:
-
-- `project_environment_id`
-- `api_image_tag`
-- `web_image_tag`
-- `api_env_group_id`
-- custom domain variables
-- health check path variables
-- plan or region overrides
-
-Set these as sensitive HCP Terraform environment variables if remote execution is enabled:
-
-- `RENDER_API_KEY`
-- `RENDER_OWNER_ID`
-
-### 5. Import Existing Render Resources
-
-If the Render services or database already exist, import them before applying.
-
-From `infra/render`:
-
-```powershell
-$env:TF_CLOUD_ORGANIZATION = "your-hcp-terraform-org"
-$env:TF_WORKSPACE = "uitfood-render-production"
-$env:RENDER_API_KEY = "rnd_xxx"
-$env:RENDER_OWNER_ID = "usr_or_team_xxx"
-
-terraform init
-terraform import -var-file=production.tfvars render_web_service.api srv_xxxxxxxxxxxxxxxxxxxx
-terraform import -var-file=production.tfvars render_web_service.web srv_xxxxxxxxxxxxxxxxxxxx
-terraform import -var-file=production.tfvars render_postgres.main dpg_xxxxxxxxxxxxxxxxxxxx
-terraform plan -var-file=production.tfvars
-```
-
-Do not apply until the plan shows no unexpected replacement or deletion.
-
-Without imports, Terraform treats the resources as new and may create duplicates.
-
-## 18. Local Operator Commands
+## 14. Local Operator Commands
 
 ### Validate the Monorepo Locally
 
@@ -889,7 +543,6 @@ These are current behaviors to be aware of:
 
 - `pipeline-main.yml` is manual only. There is no full automatic pipeline for every push or pull request.
 - The API, Web, and Mobile pipelines are path-specific. Root-level changes such as `package.json`, `pnpm-lock.yaml`, `turbo.json`, or shared workflow changes may require manually running the main pipeline unless their workflow path filters are expanded.
-- `ci-validate.yml` requires `TURBO_TOKEN` and `TURBO_TEAM`. If remote caching is optional for the team, make those workflow-call secrets optional.
 - The deploy hook workflow requires each Render service's configured image URL to match the GHCR image URL used by Docker publish and deploy. If the Render image repository differs from `ghcr.io/<owner>/<repo>-<app>`, update the Render service image URL.
 - The Web and Mobile test scripts currently do not run real tests.
 - `pipeline-mobile.yml` uploads an artifact named `mobile-production-build`, but the reusable mobile package workflow builds the `preview` EAS profile.

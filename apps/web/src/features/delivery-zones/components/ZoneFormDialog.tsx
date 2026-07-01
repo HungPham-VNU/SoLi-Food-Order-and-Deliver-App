@@ -325,7 +325,7 @@ export function ZoneFormDialog({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-[2] bg-gradient-to-r from-primary to-primary-container text-on-primary py-3 font-bold rounded-full shadow-lg shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-60"
+              className="flex-[2] bg-gradient-to-r from-primary to-primary-container text-white py-3 font-bold rounded-full shadow-lg shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-60"
             >
               {isSubmitting
                 ? isEdit

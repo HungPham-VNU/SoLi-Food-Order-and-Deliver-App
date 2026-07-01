@@ -12,8 +12,8 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { restaurants } from '../../restaurant/restaurant.schema';
-import { menuItems } from '../../menu/menu.schema';
+import { restaurants } from '@/restaurant/restaurant.schema';
+import { menuItems } from '@/menu/menu.schema';
 
 export const nutritionFoodStateEnum = pgEnum('nutrition_food_state', [
   'raw',
@@ -27,6 +27,7 @@ export const nutritionFoodStateEnum = pgEnum('nutrition_food_state', [
 export const nutritionInputTypeEnum = pgEnum('nutrition_input_type', [
   'text',
   'image',
+  'manual',
 ]);
 
 export const nutritionAnalysisStatusEnum = pgEnum('nutrition_analysis_status', [
@@ -48,7 +49,7 @@ export const nutritionFoods = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     nameVi: text('name_vi').notNull(),
     nameEn: text('name_en').notNull(),
-    source: text('source').notNull().default('CUSTOM'),
+    source: text('source').notNull().default('LEGACY'),
     sourceFoodId: text('source_food_id'),
     aliases: text('aliases')
       .array()
