@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ordersApi } from '../api/orders.api';
 import { orderKeys } from './useOrders';
-import { trackEvent } from '@/lib/analytics';
 
 function useTransition() {
   const qc = useQueryClient();
@@ -18,10 +17,6 @@ export function useConfirmOrder() {
   return useMutation({
     mutationFn: (id: string) => ordersApi.confirmOrder(id),
     onSuccess: (_, id) => {
-      trackEvent('order_status_changed', {
-        order_id: id,
-        status: 'confirmed',
-      });
       invalidate(id);
     },
   });
@@ -33,10 +28,6 @@ export function useStartPreparing() {
   return useMutation({
     mutationFn: (id: string) => ordersApi.startPreparing(id),
     onSuccess: (_, id) => {
-      trackEvent('order_status_changed', {
-        order_id: id,
-        status: 'preparing',
-      });
       invalidate(id);
     },
   });
@@ -48,10 +39,6 @@ export function useMarkReady() {
   return useMutation({
     mutationFn: (id: string) => ordersApi.markReady(id),
     onSuccess: (_, id) => {
-      trackEvent('order_status_changed', {
-        order_id: id,
-        status: 'ready_for_pickup',
-      });
       invalidate(id);
     },
   });
@@ -64,10 +51,6 @@ export function useCancelOrder() {
     mutationFn: ({ id, reason, reasonCode }: { id: string; reason: string; reasonCode?: string }) =>
       ordersApi.cancelOrder(id, reason, reasonCode),
     onSuccess: (_, { id }) => {
-      trackEvent('order_status_changed', {
-        order_id: id,
-        status: 'cancelled',
-      });
       invalidate(id);
     },
   });

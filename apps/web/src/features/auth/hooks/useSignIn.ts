@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signIn, signOut, useSession } from '@/lib/auth-client';
 import { ApiError } from '@/lib/api-client';
-import { identifyUser, trackEvent } from '@/lib/analytics';
-import { setObservabilityUser, pushObservabilityEvent } from '@/lib/observability';
 
 export interface SignInInput {
   email: string;
@@ -45,12 +43,6 @@ export function useSignIn() {
         );
       }
 
-      trackEvent('login_success', { method: 'email' });
-      pushObservabilityEvent('user.sign_in', { method: 'credentials' });
-      if (result.data?.user?.id) {
-        identifyUser(result.data.user.id);
-        setObservabilityUser(result.data.user.id);
-      }
       await refetchSession();
       navigate('/auth/onboarding', { replace: true });
 
@@ -59,11 +51,6 @@ export function useSignIn() {
       const nextError =
         caught instanceof Error ? caught : new Error('Sign-in failed');
       setError(nextError);
-      trackEvent('login_failure', {
-        method: 'email',
-        code: nextError instanceof ApiError ? nextError.code : 'UNKNOWN',
-        status: nextError instanceof ApiError ? nextError.status : 0,
-      });
       return null;
     } finally {
       setIsPending(false);
