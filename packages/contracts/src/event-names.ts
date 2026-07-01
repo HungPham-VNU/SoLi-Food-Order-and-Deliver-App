@@ -15,6 +15,7 @@ export const EVENT_NAMES = {
   OrderingOrderReadyForPickup: 'ordering.order-ready-for-pickup.v1',
   OrderingOrderCancelledAfterPayment:
     'ordering.order-cancelled-after-payment.v1',
+  OrderingOrderDelivered: 'ordering.order.delivered.v1',
 
   // Payment
   PaymentConfirmed: 'payment.confirmed.v1',

@@ -2,7 +2,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { AiSearchRankingStatsService } from './ai-search-ranking-stats.service';
 
 describe('AiSearchRankingStatsService', () => {
-  it('refreshes ranking stats from delivered non-test orders only', async () => {
+  it('refreshes ranking stats from local delivered-order snapshots', async () => {
     const execute = jest.fn(() => Promise.resolve());
     const db = {
       transaction: jest.fn(async (callback: (tx: unknown) => Promise<void>) =>
@@ -23,9 +23,10 @@ describe('AiSearchRankingStatsService', () => {
     const serializedQueries = execute.mock.calls
       .map(([query]) => JSON.stringify(query))
       .join('\n');
-    expect(serializedQueries).toContain("o.status = 'delivered'");
-    expect(serializedQueries).toContain('%@test.com');
-    expect(serializedQueries).toContain('%@test.soli');
-    expect(serializedQueries).toContain('%@demo.com');
+    expect(serializedQueries).toContain('delivered_order_snapshots');
+    expect(serializedQueries).toContain('delivered_order_item_snapshots');
+    // No cross-DB references to ordering tables
+    expect(serializedQueries).not.toContain('FROM orders');
+    expect(serializedQueries).not.toContain('"user"');
   });
 });

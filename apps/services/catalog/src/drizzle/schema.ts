@@ -22,6 +22,7 @@ export * from '../dietary-tags/domain/dietary-tag.schema';
 // AI search: embedding jobs + ranking stats
 export * from '../search/indexing/ai-search-embedding-job.schema';
 export * from '../search/ai/ai-search-ranking-stats.schema';
+export * from '../search/ai/delivered-order-snapshot.schema';
 
 // Messaging infrastructure (per-service transactional outbox + inbox)
 export * from '../messaging/schema/outbox.schema';

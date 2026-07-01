@@ -22,15 +22,6 @@ export class AiSearchRankingStatsService {
       await tx.execute(sql`DELETE FROM ai_search_restaurant_ranking_stats`);
 
       await tx.execute(sql`
-        WITH production_orders AS (
-          SELECT o.id, o.restaurant_id, o.created_at
-          FROM orders o
-          INNER JOIN "user" u ON u.id = o.customer_id
-          WHERE o.status = 'delivered'
-            AND LOWER(COALESCE(u.email, '')) NOT LIKE '%@test.com'
-            AND LOWER(COALESCE(u.email, '')) NOT LIKE '%@test.soli'
-            AND LOWER(COALESCE(u.email, '')) NOT LIKE '%@demo.com'
-        )
         INSERT INTO ai_search_item_ranking_stats (
           menu_item_id,
           restaurant_id,
@@ -43,36 +34,27 @@ export class AiSearchRankingStatsService {
         )
         SELECT
           oi.menu_item_id,
-          po.restaurant_id,
-          COUNT(DISTINCT po.id) FILTER (
-            WHERE po.created_at >= ${window30dStart}
+          o.restaurant_id,
+          COUNT(DISTINCT o.order_id) FILTER (
+            WHERE o.delivered_at >= ${window30dStart}
           )::int,
-          COUNT(DISTINCT po.id) FILTER (
-            WHERE po.created_at >= ${window90dStart}
+          COUNT(DISTINCT o.order_id) FILTER (
+            WHERE o.delivered_at >= ${window90dStart}
           )::int,
           COALESCE(SUM(oi.quantity) FILTER (
-            WHERE po.created_at >= ${window30dStart}
+            WHERE o.delivered_at >= ${window30dStart}
           ), 0)::int,
           COALESCE(SUM(oi.quantity) FILTER (
-            WHERE po.created_at >= ${window90dStart}
+            WHERE o.delivered_at >= ${window90dStart}
           ), 0)::int,
-          MAX(po.created_at),
+          MAX(o.delivered_at),
           ${now}
-        FROM production_orders po
-        INNER JOIN order_items oi ON oi.order_id = po.id
-        GROUP BY oi.menu_item_id, po.restaurant_id
+        FROM delivered_order_snapshots o
+        INNER JOIN delivered_order_item_snapshots oi ON oi.order_id = o.order_id
+        GROUP BY oi.menu_item_id, o.restaurant_id
       `);
 
       await tx.execute(sql`
-        WITH production_orders AS (
-          SELECT o.id, o.restaurant_id, o.created_at
-          FROM orders o
-          INNER JOIN "user" u ON u.id = o.customer_id
-          WHERE o.status = 'delivered'
-            AND LOWER(COALESCE(u.email, '')) NOT LIKE '%@test.com'
-            AND LOWER(COALESCE(u.email, '')) NOT LIKE '%@test.soli'
-            AND LOWER(COALESCE(u.email, '')) NOT LIKE '%@demo.com'
-        )
         INSERT INTO ai_search_restaurant_ranking_stats (
           restaurant_id,
           delivered_order_count_30d,
@@ -83,24 +65,24 @@ export class AiSearchRankingStatsService {
           updated_at
         )
         SELECT
-          po.restaurant_id,
-          COUNT(DISTINCT po.id) FILTER (
-            WHERE po.created_at >= ${window30dStart}
+          o.restaurant_id,
+          COUNT(DISTINCT o.order_id) FILTER (
+            WHERE o.delivered_at >= ${window30dStart}
           )::int,
-          COUNT(DISTINCT po.id) FILTER (
-            WHERE po.created_at >= ${window90dStart}
+          COUNT(DISTINCT o.order_id) FILTER (
+            WHERE o.delivered_at >= ${window90dStart}
           )::int,
           COALESCE(SUM(oi.quantity) FILTER (
-            WHERE po.created_at >= ${window30dStart}
+            WHERE o.delivered_at >= ${window30dStart}
           ), 0)::int,
           COALESCE(SUM(oi.quantity) FILTER (
-            WHERE po.created_at >= ${window90dStart}
+            WHERE o.delivered_at >= ${window90dStart}
           ), 0)::int,
-          MAX(po.created_at),
+          MAX(o.delivered_at),
           ${now}
-        FROM production_orders po
-        INNER JOIN order_items oi ON oi.order_id = po.id
-        GROUP BY po.restaurant_id
+        FROM delivered_order_snapshots o
+        INNER JOIN delivered_order_item_snapshots oi ON oi.order_id = o.order_id
+        GROUP BY o.restaurant_id
       `);
     });
 

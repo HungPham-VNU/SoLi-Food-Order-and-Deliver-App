@@ -6,6 +6,7 @@ import {
   ORDER_READY_FOR_PICKUP_V1,
   ORDER_PLACED_V1,
   ORDER_CANCELLED_AFTER_PAYMENT_V1,
+  ORDER_DELIVERED_V1,
 } from './events/ordering';
 import { PAYMENT_CONFIRMED_V1, PAYMENT_FAILED_V1 } from './events/payment';
 import {
@@ -48,6 +49,7 @@ export const EVENT_PAYLOAD_SCHEMAS: Record<DomainEventName, ZodType> = {
   [EVENT_NAMES.OrderingOrderReadyForPickup]: ORDER_READY_FOR_PICKUP_V1.schema,
   [EVENT_NAMES.OrderingOrderCancelledAfterPayment]:
     ORDER_CANCELLED_AFTER_PAYMENT_V1.schema,
+  [EVENT_NAMES.OrderingOrderDelivered]: ORDER_DELIVERED_V1.schema,
   [EVENT_NAMES.PaymentConfirmed]: PAYMENT_CONFIRMED_V1.schema,
   [EVENT_NAMES.PaymentFailed]: PAYMENT_FAILED_V1.schema,
   [EVENT_NAMES.CatalogRestaurantChanged]: CATALOG_RESTAURANT_CHANGED_V1.schema,

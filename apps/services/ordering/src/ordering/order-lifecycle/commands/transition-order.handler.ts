@@ -16,10 +16,11 @@ import {
   ORDER_STATUS_CHANGED_V1,
   ORDER_READY_FOR_PICKUP_V1,
   ORDER_CANCELLED_AFTER_PAYMENT_V1,
+  ORDER_DELIVERED_V1,
 } from '@uitfood/contracts';
 import { ORDERING_DATABASE } from '@/drizzle/database.constants';
 import { OutboxWriter } from '@/messaging/outbox/outbox.writer';
-import { orders, orderStatusLogs, type Order } from '../../order/order.schema';
+import { orders, orderItems as orderItemsTable, orderStatusLogs, type Order } from '../../order/order.schema';
 import { TransitionOrderCommand } from './transition-order.command';
 import { OrderRepository } from '../repositories/order.repository';
 import { OrderLifecycleService } from '../services/order-lifecycle.service';
@@ -287,6 +288,39 @@ export class TransitionOrderHandler implements ICommandHandler<TransitionOrderCo
               paidAmount: order.totalAmount,
               cancelledByRole: actorRole,
               cancelledAt: now.toISOString(),
+            },
+          }),
+        );
+      }
+
+      // ORDER_DELIVERED_V1: publish enriched event with order items for downstream
+      // projections (e.g. catalog ranking stats materialisation).
+      if (toStatus === 'delivered') {
+        const items = await tx
+          .select({
+            menuItemId: orderItemsTable.menuItemId,
+            quantity: orderItemsTable.quantity,
+          })
+          .from(orderItemsTable)
+          .where(eq(orderItemsTable.orderId, orderId));
+
+        await this.outbox.write(
+          tx,
+          createEnvelope({
+            eventType: ORDER_DELIVERED_V1.eventType,
+            eventVersion: ORDER_DELIVERED_V1.eventVersion,
+            aggregateId: orderId,
+            aggregateVersion: newVersion,
+            producer: 'ordering',
+            payload: {
+              orderId,
+              customerId: order.customerId,
+              restaurantId: order.restaurantId,
+              items: items.map((i) => ({
+                menuItemId: i.menuItemId,
+                quantity: i.quantity,
+              })),
+              deliveredAt: now.toISOString(),
             },
           }),
         );
