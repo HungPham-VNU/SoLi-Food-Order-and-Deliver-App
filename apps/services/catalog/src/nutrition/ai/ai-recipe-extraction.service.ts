@@ -14,6 +14,8 @@ import {
   type ExtractedRecipeIngredient,
   type NutritionUnit,
 } from '../types/nutrition.types';
+import { streamObject, type DeepPartial } from 'ai';
+import { createOllama } from 'ollama-ai-provider';
 
 const EXTRACTION_TIMEOUT_MS = 120_000;
 const MAX_AI_ATTEMPTS = 2;
@@ -183,7 +185,9 @@ export class AiRecipeExtractionService {
 
   constructor(private readonly aiProvider: OllamaAiProvider) {}
 
-  async extractRecipe(recipeText: string): Promise<ExtractedRecipe> {
+  async extractRecipe(
+    recipeText: string,
+  ): Promise<AsyncIterable<DeepPartial<AiExtractedRecipe>>> {
     if (!this.aiProvider.isConfigured()) {
       throw new ServiceUnavailableException({
         message:
@@ -196,8 +200,8 @@ export class AiRecipeExtractionService {
 
     for (let attempt = 1; attempt <= MAX_AI_ATTEMPTS; attempt += 1) {
       try {
-        const object = await this.generate(recipeText);
-        return this.normalizeRecipe(object);
+        const stream = await this.generateStream(recipeText);
+        return stream;
       } catch (error) {
         lastError = error;
         this.logger.warn(
@@ -215,19 +219,26 @@ export class AiRecipeExtractionService {
     });
   }
 
-  private async generate(recipeText: string): Promise<AiExtractedRecipe> {
-    const response = await this.aiProvider.chat({
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: recipeText },
-      ],
-      timeoutMs: EXTRACTION_TIMEOUT_MS,
+  private async generateStream(
+    recipeText: string,
+  ): Promise<AsyncIterable<DeepPartial<AiExtractedRecipe>>> {
+    const config = this.aiProvider.getRuntimeConfig();
+    const ollama = createOllama({
+      baseURL: config.endpoint.baseURL,
+      headers: config.apiKey
+        ? { Authorization: `Bearer ${config.apiKey}` }
+        : undefined,
+    });
+
+    const result = await streamObject({
+      model: ollama(config.model),
+      schema: extractedRecipeSchema,
+      system: SYSTEM_PROMPT,
+      prompt: recipeText,
       temperature: 0,
     });
 
-    return extractedRecipeSchema.parse(
-      this.parseOllamaContent(response.content),
-    );
+    return result.partialObjectStream as any;
   }
 
   private parseOllamaContent(content: string): unknown {
@@ -594,16 +605,19 @@ export class AiRecipeExtractionService {
     return Math.round(quantity * 1000) / 1000;
   }
 
-  private normalizeRecipe(recipe: AiExtractedRecipe): ExtractedRecipe {
+  public normalizeRecipe(recipe: AiExtractedRecipe): ExtractedRecipe {
     const ingredients: ExtractedRecipeIngredient[] = recipe.ingredients.map(
-      (ingredient) => ({
-        ...ingredient,
-        canonicalNameEn: ingredient.canonicalNameEn ?? null,
-        canonicalNameConfidence: ingredient.canonicalNameConfidence ?? null,
-        unit: ingredient.unit ?? 'unknown',
-        preparation: ingredient.preparation ?? 'unknown',
-        category: ingredient.category ?? 'main',
-      }),
+      (ingredient) => {
+        const normalized = this.normalizeLooseIngredientJson(ingredient) as any;
+        return {
+          ...normalized,
+          canonicalNameEn: normalized.canonicalNameEn ?? null,
+          canonicalNameConfidence: normalized.canonicalNameConfidence ?? null,
+          unit: normalized.unit ?? 'unknown',
+          preparation: normalized.preparation ?? 'unknown',
+          category: normalized.category ?? 'main',
+        };
+      },
     );
 
     return {

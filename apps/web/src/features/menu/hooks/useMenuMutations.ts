@@ -159,6 +159,7 @@ type AnalyzeNutritionVariables =
   | {
       menuItemId?: string;
       recipeText: string;
+      onUpdate?: (data: any) => void;
     };
 
 export function useAnalyzeNutrition(defaultMenuItemId?: string) {
@@ -171,11 +172,14 @@ export function useAnalyzeNutrition(defaultMenuItemId?: string) {
       const recipeText =
         typeof variables === 'string' ? variables : variables.recipeText;
 
+      const onUpdate =
+        typeof variables === 'string' ? undefined : variables.onUpdate;
+
       if (!menuItemId) {
         throw new Error('Save this item before analyzing the recipe.');
       }
 
-      return menuApi.analyzeNutrition(menuItemId, recipeText);
+      return menuApi.analyzeNutrition(menuItemId, recipeText, onUpdate);
     },
   });
 }

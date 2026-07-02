@@ -164,13 +164,62 @@ export const menuApi = {
   deleteModifierOption: (menuItemId: string, groupId: string, optionId: string) =>
     apiClient.delete(`/api/menu-items/${menuItemId}/modifier-groups/${groupId}/options/${optionId}`),
 
-  analyzeNutrition: (menuItemId: string, recipeText: string) =>
-    apiClient
-      .post<AnalyzeRecipeResponse>(
-        `/api/restaurant/menu-items/${menuItemId}/nutrition/analyze-recipe`,
-        { recipeText },
-      )
-      .then((r) => r.data),
+  analyzeNutrition: async (
+    menuItemId: string,
+    recipeText: string,
+    onUpdate?: (partialData: any) => void,
+  ) => {
+    const response = await fetch(
+      `${apiClient.defaults.baseURL || ''}/api/restaurant/menu-items/${menuItemId}/nutrition/analyze-recipe`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipeText }),
+        credentials: 'include',
+      },
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to analyze nutrition: ${errorText}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No response body');
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalData: AnalyzeRecipeResponse | null = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const parsed = JSON.parse(line.slice(6));
+            if (parsed.type === 'partial') {
+              onUpdate?.(parsed.data);
+            } else if (parsed.type === 'final') {
+              finalData = parsed.data;
+            } else if (parsed.type === 'error') {
+              throw new Error(parsed.data?.message || 'Analysis error');
+            }
+          } catch (e) {
+            // handle JSON parse error if partial chunk is split incorrectly
+          }
+        }
+      }
+    }
+
+    if (!finalData) throw new Error('No final data received from stream');
+    return finalData;
+  },
 
   startManualNutritionSession: (menuItemId: string) =>
     apiClient

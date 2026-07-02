@@ -205,6 +205,15 @@ export function NutritionAssistantCard({
       {
         menuItemId: targetMenuItemId,
         recipeText,
+        onUpdate: (partialData: any) => {
+          setAnalysis((prev) => ({ ...prev, ...partialData }));
+          if (partialData.ingredients) {
+            setIngredients(normalizeReviewIngredients(partialData.ingredients));
+          }
+          if (partialData.servings != null) {
+            setServingsInput(formatServingsInput(partialData.servings));
+          }
+        },
       },
       {
         onSuccess: (result) => {

@@ -8,7 +8,11 @@ import {
   Put,
   Req,
   UseGuards,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CATALOG_RPC_PATTERNS } from '@uitfood/contracts';
 import type { CatalogRpcGateway } from './catalog.interfaces';
@@ -43,16 +47,23 @@ export class NutritionController {
   }
 
   @Post('analyze-recipe')
+  @Sse('analyze-recipe')
   analyze(
     @Req() req: GatewayRequestWithSession,
     @Param('menuItemId') menuItemId: string,
     @Body() dto: unknown,
-  ) {
-    return this.catalog.send(CATALOG_RPC_PATTERNS.analyzeNutrition, {
-      internalAuth: this.token(req),
-      menuItemId,
-      dto,
-    });
+  ): Observable<MessageEvent> {
+    return this.catalog
+      .stream(CATALOG_RPC_PATTERNS.analyzeNutrition, {
+        internalAuth: this.token(req),
+        menuItemId,
+        dto,
+      })
+      .pipe(
+        map((response: any) => {
+          return { data: response } as MessageEvent;
+        }),
+      );
   }
 
   @Post('manual-session')

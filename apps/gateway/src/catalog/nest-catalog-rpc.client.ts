@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom, timeout } from 'rxjs';
+import { firstValueFrom, timeout, Observable } from 'rxjs';
 import {
   catalogRpcErrorSchema,
   type CatalogRpcPattern,
@@ -61,5 +61,12 @@ export class NestCatalogRpcClient
         cause: error,
       });
     }
+  }
+
+  stream<T = unknown>(
+    pattern: CatalogRpcPattern,
+    payload: unknown,
+  ): Observable<T> {
+    return this.client.send<T>(pattern, payload);
   }
 }
