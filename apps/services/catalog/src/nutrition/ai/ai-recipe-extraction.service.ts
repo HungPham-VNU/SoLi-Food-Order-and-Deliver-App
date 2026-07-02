@@ -608,7 +608,8 @@ export class AiRecipeExtractionService {
   }
 
   public normalizeRecipe(recipe: AiExtractedRecipe): ExtractedRecipe {
-    const ingredients: ExtractedRecipeIngredient[] = recipe.ingredients.map(
+    const rawIngredients = recipe.ingredients || [];
+    const ingredients: ExtractedRecipeIngredient[] = rawIngredients.map(
       (ingredient) => {
         const normalized = this.normalizeLooseIngredientJson(
           ingredient,
@@ -625,10 +626,10 @@ export class AiRecipeExtractionService {
     );
 
     return {
-      recipeName: recipe.recipeName,
-      servings: recipe.servings,
+      recipeName: recipe.recipeName ?? null,
+      servings: recipe.servings ?? null,
       ingredients,
-      warnings: recipe.warnings,
+      warnings: recipe.warnings || [],
     };
   }
 }
