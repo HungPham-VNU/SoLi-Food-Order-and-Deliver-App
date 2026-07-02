@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { NutritionService } from './nutrition.service';
 import { UnitConversionService } from './matching/unit-conversion.service';
@@ -8,6 +9,7 @@ import { NutritionCalculatorService } from './calculator/nutrition-calculator.se
 import type { NutritionFood } from './domain/nutrition.schema';
 import type { NutritionRepository } from './repositories/nutrition.repository';
 import type { ExtractedRecipe } from './types/nutrition.types';
+import { lastValueFrom } from 'rxjs';
 
 const menuItemId = '11111111-1111-4111-8111-111111111111';
 const restaurantId = '22222222-2222-4222-8222-222222222222';
@@ -131,14 +133,22 @@ describe('NutritionService', () => {
     };
     const service = makeService({
       aiExtraction: {
-        extractRecipe: jest.fn().mockResolvedValue(extractedRecipe),
+        extractRecipe: jest.fn().mockImplementation(async function* () {
+          await Promise.resolve();
+          yield extractedRecipe;
+        }),
+        normalizeRecipe: jest.fn().mockImplementation((r) => r),
       },
       repo,
     });
 
-    const result = await service.analyzeRecipe(menuItemId, 'admin-user', true, {
-      recipeText: 'Bun cha',
-    });
+    const result = (
+      await lastValueFrom(
+        service.analyzeRecipe(menuItemId, 'admin-user', true, {
+          recipeText: 'Bun cha',
+        }),
+      )
+    ).data as { status: string; warnings: string[]; ingredients: any[] };
 
     expect(result.status).toBe('NEEDS_REVIEW');
     expect(result.warnings).toContain(
@@ -199,14 +209,22 @@ describe('NutritionService', () => {
     };
     const service = makeService({
       aiExtraction: {
-        extractRecipe: jest.fn().mockResolvedValue(extractedRecipe),
+        extractRecipe: jest.fn().mockImplementation(async function* () {
+          await Promise.resolve();
+          yield extractedRecipe;
+        }),
+        normalizeRecipe: jest.fn().mockImplementation((r) => r),
       },
       repo,
     });
 
-    const result = await service.analyzeRecipe(menuItemId, 'admin-user', true, {
-      recipeText: 'Com tam',
-    });
+    const result = (
+      await lastValueFrom(
+        service.analyzeRecipe(menuItemId, 'admin-user', true, {
+          recipeText: 'Com tam',
+        }),
+      )
+    ).data as { status: string; warnings: string[]; ingredients: any[] };
 
     expect(result.status).toBe('ANALYZED');
     expect(result.warnings).toEqual([]);
@@ -561,14 +579,21 @@ describe('NutritionService', () => {
     };
     const service = makeService({
       aiExtraction: {
-        extractRecipe: jest.fn().mockRejectedValue(new Error('AI offline')),
+        extractRecipe: jest.fn().mockImplementation(() => {
+          throw new Error('AI offline');
+        }),
+        normalizeRecipe: jest.fn().mockImplementation((r) => r),
       },
       repo,
     });
 
-    const result = await service.analyzeRecipe(menuItemId, 'admin-user', true, {
-      recipeText: '  Bun cha\0 text  ',
-    });
+    const result = (
+      await lastValueFrom(
+        service.analyzeRecipe(menuItemId, 'admin-user', true, {
+          recipeText: '  Bun cha\0 text  ',
+        }),
+      )
+    ).data as { status: string; warnings: string[]; ingredients: any[] };
 
     expect(repo.createSession).toHaveBeenCalledWith({
       menuItemId,

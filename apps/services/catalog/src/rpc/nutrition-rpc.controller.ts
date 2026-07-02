@@ -35,10 +35,10 @@ export class NutritionRpcController {
   }
 
   @MessagePattern(CATALOG_RPC_PATTERNS.analyzeNutrition)
-  async analyze(@Payload() p: Mutation & { dto: AnalyzeRecipeDto }) {
+  analyze(@Payload() p: Mutation & { dto: AnalyzeRecipeDto }) {
     try {
       const c = this.auth.verifyCatalogToken(p.internalAuth);
-      return await this.service.analyzeRecipe(
+      return this.service.analyzeRecipe(
         p.menuItemId,
         c.userId,
         c.isAdmin,

@@ -1,3 +1,4 @@
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { apiClient } from '@/lib/api-client';
 import type {
   AnalyzeRecipeResponse,
@@ -164,13 +165,53 @@ export const menuApi = {
   deleteModifierOption: (menuItemId: string, groupId: string, optionId: string) =>
     apiClient.delete(`/api/menu-items/${menuItemId}/modifier-groups/${groupId}/options/${optionId}`),
 
-  analyzeNutrition: (menuItemId: string, recipeText: string) =>
-    apiClient
-      .post<AnalyzeRecipeResponse>(
-        `/api/restaurant/menu-items/${menuItemId}/nutrition/analyze-recipe`,
-        { recipeText },
-      )
-      .then((r) => r.data),
+  analyzeNutrition: async (
+    menuItemId: string,
+    recipeText: string,
+    onUpdate?: (partialData: any) => void,
+  ) => {
+    return new Promise<AnalyzeRecipeResponse>((resolve, reject) => {
+      let finalData: AnalyzeRecipeResponse | null = null;
+      fetchEventSource(
+        `${apiClient.defaults.baseURL || ''}/api/restaurant/menu-items/${menuItemId}/nutrition/analyze-recipe`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recipeText }),
+          credentials: 'include',
+          async onopen(response) {
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`Failed to analyze nutrition: ${errorText}`);
+            }
+          },
+          onmessage(ev) {
+            if (!ev.data) return;
+            try {
+              const parsed = JSON.parse(ev.data);
+              if (parsed.type === 'partial') {
+                onUpdate?.(parsed.data);
+              } else if (parsed.type === 'final') {
+                finalData = parsed.data;
+              } else if (parsed.type === 'error') {
+                throw new Error(parsed.data?.message || 'Analysis error');
+              }
+            } catch (err) {
+              console.warn('Failed to parse SSE event data', err);
+            }
+          },
+          onclose() {
+            if (finalData) resolve(finalData);
+            else reject(new Error('No final data received from stream'));
+          },
+          onerror(err) {
+            reject(err);
+            throw err; // Stop retrying
+          },
+        }
+      );
+    });
+  },
 
   startManualNutritionSession: (menuItemId: string) =>
     apiClient

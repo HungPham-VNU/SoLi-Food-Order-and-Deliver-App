@@ -4,10 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import { MenuService } from '@/menu/menu.service';
 import { RestaurantService } from '@/restaurant/restaurant.service';
 import type { MenuItem } from '@/menu/menu.schema';
 import { AiRecipeExtractionService } from './ai/ai-recipe-extraction.service';
+import type { AiExtractedRecipe } from './ai/ai-recipe.schema';
 import { NutritionRepository } from './repositories/nutrition.repository';
 import { UnitConversionService } from './matching/unit-conversion.service';
 import { IngredientMatchingService } from './matching/ingredient-matching.service';
@@ -24,10 +26,10 @@ import type { CalculateNutritionDto } from './dto/calculate-nutrition.dto';
 import type { SaveMenuItemNutritionDto } from './dto/save-menu-item-nutrition.dto';
 import {
   NUTRITION_DISCLAIMER,
-  type ExtractedRecipe,
   type NutritionAnalysisStatus,
 } from './types/nutrition.types';
 import type { NutritionAnalysisSession } from './domain/nutrition.schema';
+import { type DeepPartial } from 'ai';
 import {
   buildConfirmedRecipe,
   parseExtractedRecipe,
@@ -55,63 +57,88 @@ export class NutritionService {
     private readonly calculator: NutritionCalculatorService,
   ) {}
 
-  async analyzeRecipe(
+  analyzeRecipe(
     menuItemId: string,
     requesterId: string,
     isAdmin: boolean,
     dto: AnalyzeRecipeDto,
-  ) {
-    const menuItem = await this.assertMenuItemOwnership(
-      menuItemId,
-      requesterId,
-      isAdmin,
-    );
-    const recipeText = this.sanitizeRecipeText(dto.recipeText);
+  ): Observable<any> {
+    return new Observable((subscriber) => {
+      (async () => {
+        try {
+          const menuItem = await this.assertMenuItemOwnership(
+            menuItemId,
+            requesterId,
+            isAdmin,
+          );
+          const recipeText = this.sanitizeRecipeText(dto.recipeText);
 
-    let extracted: ExtractedRecipe;
-    try {
-      extracted = await this.aiExtraction.extractRecipe(recipeText);
-    } catch {
-      return this.createFailedAnalysisResponse({
-        menuItemId,
-        restaurantId: menuItem.restaurantId,
-        recipeText,
-      });
-    }
+          let stream: AsyncIterable<DeepPartial<AiExtractedRecipe>>;
+          try {
+            stream = this.aiExtraction.extractRecipe(recipeText);
+          } catch {
+            const failedResponse = await this.createFailedAnalysisResponse({
+              menuItemId,
+              restaurantId: menuItem.restaurantId,
+              recipeText,
+            });
+            subscriber.next({ type: 'error', data: failedResponse });
+            subscriber.complete();
+            return;
+          }
 
-    const reviewed = applyRecipeReviewRules(extracted, {
-      unitConversion: this.unitConversion,
-      ingredientMatching: this.ingredientMatching,
+          let lastPartial: DeepPartial<AiExtractedRecipe> = {};
+          for await (const partial of stream) {
+            lastPartial = partial;
+            subscriber.next({ type: 'partial', data: partial });
+          }
+
+          const extracted = this.aiExtraction.normalizeRecipe(
+            lastPartial as AiExtractedRecipe,
+          );
+
+          const reviewed = applyRecipeReviewRules(extracted, {
+            unitConversion: this.unitConversion,
+            ingredientMatching: this.ingredientMatching,
+          });
+          const status: NutritionAnalysisStatus = reviewed.hasReviewIssues
+            ? 'NEEDS_REVIEW'
+            : 'ANALYZED';
+
+          const session = await this.repo.createSession({
+            menuItemId,
+            restaurantId: menuItem.restaurantId,
+            inputType: 'text',
+            rawRecipeText: recipeText,
+            aiExtractedJson: extracted,
+            status,
+          });
+
+          await this.repo.insertIngredients(
+            reviewed.ingredients.map((ingredient) =>
+              toAnalysisIngredientRow(session.id, ingredient),
+            ),
+          );
+
+          subscriber.next({
+            type: 'final',
+            data: {
+              analysisSessionId: session.id,
+              recipeName: extracted.recipeName,
+              servings: extracted.servings,
+              ingredients: reviewed.ingredients.map((ingredient) =>
+                toReviewIngredientResponse(ingredient),
+              ),
+              warnings: reviewed.warnings,
+              status,
+            },
+          });
+          subscriber.complete();
+        } catch (err) {
+          subscriber.error(err);
+        }
+      })().catch((err) => subscriber.error(err));
     });
-    const status: NutritionAnalysisStatus = reviewed.hasReviewIssues
-      ? 'NEEDS_REVIEW'
-      : 'ANALYZED';
-
-    const session = await this.repo.createSession({
-      menuItemId,
-      restaurantId: menuItem.restaurantId,
-      inputType: 'text',
-      rawRecipeText: recipeText,
-      aiExtractedJson: extracted,
-      status,
-    });
-
-    await this.repo.insertIngredients(
-      reviewed.ingredients.map((ingredient) =>
-        toAnalysisIngredientRow(session.id, ingredient),
-      ),
-    );
-
-    return {
-      analysisSessionId: session.id,
-      recipeName: extracted.recipeName,
-      servings: extracted.servings,
-      ingredients: reviewed.ingredients.map((ingredient) =>
-        toReviewIngredientResponse(ingredient),
-      ),
-      warnings: reviewed.warnings,
-      status,
-    };
   }
 
   async calculateNutrition(
