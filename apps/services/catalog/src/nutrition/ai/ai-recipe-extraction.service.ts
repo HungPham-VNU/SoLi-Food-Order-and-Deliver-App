@@ -17,7 +17,6 @@ import {
 import { streamObject, type DeepPartial } from 'ai';
 import { createOllama } from 'ollama-ai-provider';
 
-const EXTRACTION_TIMEOUT_MS = 120_000;
 const MAX_AI_ATTEMPTS = 2;
 
 interface ParsedQuantity {
@@ -185,9 +184,9 @@ export class AiRecipeExtractionService {
 
   constructor(private readonly aiProvider: OllamaAiProvider) {}
 
-  async extractRecipe(
+  extractRecipe(
     recipeText: string,
-  ): Promise<AsyncIterable<DeepPartial<AiExtractedRecipe>>> {
+  ): AsyncIterable<DeepPartial<AiExtractedRecipe>> {
     if (!this.aiProvider.isConfigured()) {
       throw new ServiceUnavailableException({
         message:
@@ -200,7 +199,7 @@ export class AiRecipeExtractionService {
 
     for (let attempt = 1; attempt <= MAX_AI_ATTEMPTS; attempt += 1) {
       try {
-        const stream = await this.generateStream(recipeText);
+        const stream = this.generateStream(recipeText);
         return stream;
       } catch (error) {
         lastError = error;
@@ -219,9 +218,9 @@ export class AiRecipeExtractionService {
     });
   }
 
-  private async generateStream(
+  private generateStream(
     recipeText: string,
-  ): Promise<AsyncIterable<DeepPartial<AiExtractedRecipe>>> {
+  ): AsyncIterable<DeepPartial<AiExtractedRecipe>> {
     const config = this.aiProvider.getRuntimeConfig();
     const ollama = createOllama({
       baseURL: config.endpoint.baseURL,
@@ -230,7 +229,7 @@ export class AiRecipeExtractionService {
         : undefined,
     });
 
-    const result = await streamObject({
+    const result = streamObject({
       model: ollama(config.model),
       schema: extractedRecipeSchema,
       system: SYSTEM_PROMPT,
@@ -238,7 +237,9 @@ export class AiRecipeExtractionService {
       temperature: 0,
     });
 
-    return result.partialObjectStream as any;
+    return result.partialObjectStream as AsyncIterable<
+      DeepPartial<AiExtractedRecipe>
+    >;
   }
 
   private parseOllamaContent(content: string): unknown {
@@ -608,7 +609,9 @@ export class AiRecipeExtractionService {
   public normalizeRecipe(recipe: AiExtractedRecipe): ExtractedRecipe {
     const ingredients: ExtractedRecipeIngredient[] = recipe.ingredients.map(
       (ingredient) => {
-        const normalized = this.normalizeLooseIngredientJson(ingredient) as any;
+        const normalized = this.normalizeLooseIngredientJson(
+          ingredient,
+        ) as Partial<ExtractedRecipeIngredient>;
         return {
           ...normalized,
           canonicalNameEn: normalized.canonicalNameEn ?? null,

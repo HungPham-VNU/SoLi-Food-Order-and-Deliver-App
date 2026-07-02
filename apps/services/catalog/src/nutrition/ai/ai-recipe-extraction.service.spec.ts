@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { ServiceUnavailableException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { OllamaAiProvider } from '@/lib/ai/ollama-ai.provider';
@@ -30,7 +31,7 @@ describe('AiRecipeExtractionService', () => {
     jest.restoreAllMocks();
   });
 
-  it('calls direct Ollama Cloud and does not send unsupported structured-output format', async () => {
+  it('calls direct Ollama Cloud and does not send unsupported structured-output format', () => {
     const makeRequestMock = jest
       .spyOn(OllamaAiProvider.prototype as any, 'makeRequest')
       .mockResolvedValue(
@@ -56,26 +57,29 @@ describe('AiRecipeExtractionService', () => {
       OLLAMA_API_KEY: 'test-key',
     });
 
-    const result = await service.extractRecipe('Com ga\n- 500 g uc ga');
+    const result = service.extractRecipe('Com ga\n- 500 g uc ga');
 
     expect(result.recipeName).toBe('Com ga');
     expect(makeRequestMock).toHaveBeenCalledTimes(1);
 
-    const [url, options] = makeRequestMock.mock.calls[0] as [string, any];
+    const [url, options] = makeRequestMock.mock.calls[0] as [
+      string,
+      { headers: Record<string, string>; body: string },
+    ];
     expect(url).toBe('https://ollama.com/api/chat');
     expect(options.headers).toMatchObject({
       'Content-Type': 'application/json',
       Authorization: 'Bearer test-key',
     });
 
-    const body = JSON.parse(options.body as string) as Record<string, unknown>;
+    const body = JSON.parse(options.body) as Record<string, unknown>;
     expect(body.model).toBe('gemma4:31b');
     expect(body.stream).toBe(false);
     expect(body.think).toBe(false);
     expect(body).not.toHaveProperty('format');
   });
 
-  it('normalizes loose cloud JSON with review-safe defaults', async () => {
+  it('normalizes loose cloud JSON with review-safe defaults', () => {
     jest
       .spyOn(OllamaAiProvider.prototype as any, 'makeRequest')
       .mockResolvedValue(
@@ -96,7 +100,7 @@ describe('AiRecipeExtractionService', () => {
       OLLAMA_API_KEY: 'test-key',
     });
 
-    const result = await service.extractRecipe('Canh rau\n- rau muong');
+    const result = service.extractRecipe('Canh rau\n- rau muong');
 
     expect(result).toMatchObject({
       recipeName: 'Canh rau',
@@ -115,7 +119,7 @@ describe('AiRecipeExtractionService', () => {
     });
   });
 
-  it('normalizes common Vietnamese household units before schema validation', async () => {
+  it('normalizes common Vietnamese household units before schema validation', () => {
     jest
       .spyOn(OllamaAiProvider.prototype as any, 'makeRequest')
       .mockResolvedValue(
@@ -180,7 +184,7 @@ describe('AiRecipeExtractionService', () => {
       OLLAMA_API_KEY: 'test-key',
     });
 
-    const result = await service.extractRecipe('Bún chả');
+    const result = service.extractRecipe('Bún chả');
 
     expect(result.ingredients).toEqual(
       expect.arrayContaining([
@@ -211,7 +215,7 @@ describe('AiRecipeExtractionService', () => {
         }),
       ]),
     );
-    expect(result.ingredients[5]).toMatchObject({
+    expect((result as any).ingredients[5]).toMatchObject({
       rawText: 'vài nhánh mùi tàu',
       quantity: 3,
       unit: 'piece',
@@ -220,7 +224,7 @@ describe('AiRecipeExtractionService', () => {
     });
   });
 
-  it('does not fabricate ingredients when the cloud response omits them', async () => {
+  it('does not fabricate ingredients when the cloud response omits them', () => {
     jest
       .spyOn(OllamaAiProvider.prototype as any, 'makeRequest')
       .mockResolvedValue(
@@ -235,12 +239,12 @@ describe('AiRecipeExtractionService', () => {
       OLLAMA_API_KEY: 'test-key',
     });
 
-    const result = await service.extractRecipe('Canh rau');
+    const result = service.extractRecipe('Canh rau');
 
     expect(result.ingredients).toEqual([]);
   });
 
-  it('does not call Ollama Cloud when the API key is missing', async () => {
+  it('does not call Ollama Cloud when the API key is missing', () => {
     const makeRequestMock = jest.spyOn(
       OllamaAiProvider.prototype as any,
       'makeRequest',
