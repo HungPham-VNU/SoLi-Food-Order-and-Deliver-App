@@ -31,15 +31,26 @@ export async function uploadSeedImages(
       'Cloudinary config missing, using source URLs directly for seed images.',
     );
     return new Map(
-      imageDefs.map((def) => [
-        def.publicId,
-        {
-          publicId: def.publicId,
-          secureUrl: def.sourceUrl,
-          width: def.width,
-          height: def.height,
-        },
-      ]),
+      imageDefs.map((def) => {
+        // Local file paths aren't browser-loadable; fall back to a placeholder
+        // image instead of leaking a file:// path into the database.
+        const isBrowserLoadable = /^https?:\/\//i.test(def.sourceUrl);
+        const foodName =
+          def.publicId.split('/').pop()?.replace(/-/g, ' ') || 'food';
+        const secureUrl = isBrowserLoadable
+          ? def.sourceUrl
+          : `https://placehold.co/${def.width}x${def.height}/EEE/31343C?text=${encodeURIComponent(foodName)}`;
+
+        return [
+          def.publicId,
+          {
+            publicId: def.publicId,
+            secureUrl,
+            width: def.width,
+            height: def.height,
+          },
+        ];
+      }),
     );
   }
 
