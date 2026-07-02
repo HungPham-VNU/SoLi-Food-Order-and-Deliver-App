@@ -88,10 +88,16 @@ export class NutritionService {
           }
 
           let lastPartial: DeepPartial<AiExtractedRecipe> = {};
+          let lastEmitTime = 0;
           for await (const partial of stream) {
             lastPartial = partial;
-            subscriber.next({ type: 'partial', data: partial });
+            const now = Date.now();
+            if (now - lastEmitTime > 200) {
+              subscriber.next({ type: 'partial', data: partial });
+              lastEmitTime = now;
+            }
           }
+          subscriber.next({ type: 'partial', data: lastPartial });
 
           const extracted = this.aiExtraction.normalizeRecipe(
             lastPartial as AiExtractedRecipe,
