@@ -133,7 +133,11 @@ describe('NutritionService', () => {
     };
     const service = makeService({
       aiExtraction: {
-        extractRecipe: jest.fn().mockResolvedValue(extractedRecipe),
+        extractRecipe: jest.fn().mockImplementation(async function* () {
+          await Promise.resolve();
+          yield extractedRecipe;
+        }),
+        normalizeRecipe: jest.fn().mockImplementation((r) => r),
       },
       repo,
     });
@@ -205,7 +209,11 @@ describe('NutritionService', () => {
     };
     const service = makeService({
       aiExtraction: {
-        extractRecipe: jest.fn().mockResolvedValue(extractedRecipe),
+        extractRecipe: jest.fn().mockImplementation(async function* () {
+          await Promise.resolve();
+          yield extractedRecipe;
+        }),
+        normalizeRecipe: jest.fn().mockImplementation((r) => r),
       },
       repo,
     });
@@ -571,7 +579,10 @@ describe('NutritionService', () => {
     };
     const service = makeService({
       aiExtraction: {
-        extractRecipe: jest.fn().mockRejectedValue(new Error('AI offline')),
+        extractRecipe: jest.fn().mockImplementation(() => {
+          throw new Error('AI offline');
+        }),
+        normalizeRecipe: jest.fn().mockImplementation((r) => r),
       },
       repo,
     });

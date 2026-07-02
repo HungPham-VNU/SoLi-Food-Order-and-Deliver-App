@@ -425,6 +425,7 @@ export class AiRecipeExtractionService {
 
     normalized.quantity = quantity;
     normalized.unit = unit;
+
     normalized.canonicalNameEn = this.normalizeCanonicalNameEn(
       normalized.canonicalNameEn,
     );

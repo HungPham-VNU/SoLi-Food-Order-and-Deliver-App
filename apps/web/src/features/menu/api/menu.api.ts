@@ -1,3 +1,4 @@
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { apiClient } from '@/lib/api-client';
 import type {
   AnalyzeRecipeResponse,
@@ -169,56 +170,47 @@ export const menuApi = {
     recipeText: string,
     onUpdate?: (partialData: any) => void,
   ) => {
-    const response = await fetch(
-      `${apiClient.defaults.baseURL || ''}/api/restaurant/menu-items/${menuItemId}/nutrition/analyze-recipe`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipeText }),
-        credentials: 'include',
-      },
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to analyze nutrition: ${errorText}`);
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error('No response body');
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let finalData: AnalyzeRecipeResponse | null = null;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() ?? '';
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const parsed = JSON.parse(line.slice(6));
-            if (parsed.type === 'partial') {
-              onUpdate?.(parsed.data);
-            } else if (parsed.type === 'final') {
-              finalData = parsed.data;
-            } else if (parsed.type === 'error') {
-              throw new Error(parsed.data?.message || 'Analysis error');
+    return new Promise<AnalyzeRecipeResponse>((resolve, reject) => {
+      let finalData: AnalyzeRecipeResponse | null = null;
+      fetchEventSource(
+        `${apiClient.defaults.baseURL || ''}/api/restaurant/menu-items/${menuItemId}/nutrition/analyze-recipe`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recipeText }),
+          credentials: 'include',
+          async onopen(response) {
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`Failed to analyze nutrition: ${errorText}`);
             }
-          } catch {
-            // handle JSON parse error if partial chunk is split incorrectly
-          }
+          },
+          onmessage(ev) {
+            if (!ev.data) return;
+            try {
+              const parsed = JSON.parse(ev.data);
+              if (parsed.type === 'partial') {
+                onUpdate?.(parsed.data);
+              } else if (parsed.type === 'final') {
+                finalData = parsed.data;
+              } else if (parsed.type === 'error') {
+                throw new Error(parsed.data?.message || 'Analysis error');
+              }
+            } catch (err) {
+              console.warn('Failed to parse SSE event data', err);
+            }
+          },
+          onclose() {
+            if (finalData) resolve(finalData);
+            else reject(new Error('No final data received from stream'));
+          },
+          onerror(err) {
+            reject(err);
+            throw err; // Stop retrying
+          },
         }
-      }
-    }
-
-    if (!finalData) throw new Error('No final data received from stream');
-    return finalData;
+      );
+    });
   },
 
   startManualNutritionSession: (menuItemId: string) =>
