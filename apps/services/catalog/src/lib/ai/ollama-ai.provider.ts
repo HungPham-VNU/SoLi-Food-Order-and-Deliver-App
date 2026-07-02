@@ -402,7 +402,6 @@ export class OllamaAiProvider {
       });
 
       req.on('error', (err) => {
-        if (options.signal.aborted) return;
         reject(err);
       });
 
