@@ -15,6 +15,9 @@ import type {
   SaveNutritionRequest,
 } from '../types';
 
+/** Matches the backend's per-attempt idle timeout for AI recipe extraction. */
+const NUTRITION_ANALYSIS_IDLE_TIMEOUT_MS = 45_000;
+
 export interface CreateMenuItemDto {
   restaurantId: string;
   name: string;
@@ -172,6 +175,21 @@ export const menuApi = {
   ) => {
     return new Promise<AnalyzeRecipeResponse>((resolve, reject) => {
       let finalData: AnalyzeRecipeResponse | null = null;
+      const controller = new AbortController();
+      // Mirrors the backend's idle timeout: reset on every SSE message so a
+      // slow-but-progressing analysis isn't cut off, but a hung connection
+      // (no analyze-recipe timeout exists end-to-end otherwise) can't spin
+      // the UI forever.
+      let idleTimer: ReturnType<typeof setTimeout>;
+      const armIdleTimer = () => {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(
+          () => controller.abort(),
+          NUTRITION_ANALYSIS_IDLE_TIMEOUT_MS,
+        );
+      };
+      armIdleTimer();
+
       fetchEventSource(
         `${apiClient.defaults.baseURL || ''}/api/restaurant/menu-items/${menuItemId}/nutrition/analyze-recipe`,
         {
@@ -179,6 +197,7 @@ export const menuApi = {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ recipeText }),
           credentials: 'include',
+          signal: controller.signal,
           async onopen(response) {
             if (!response.ok) {
               const errorText = await response.text();
@@ -186,6 +205,7 @@ export const menuApi = {
             }
           },
           onmessage(ev) {
+            armIdleTimer();
             if (!ev.data) return;
             try {
               const parsed = JSON.parse(ev.data);
@@ -201,11 +221,17 @@ export const menuApi = {
             }
           },
           onclose() {
+            clearTimeout(idleTimer);
             if (finalData) resolve(finalData);
             else reject(new Error('No final data received from stream'));
           },
           onerror(err) {
-            reject(err);
+            clearTimeout(idleTimer);
+            reject(
+              controller.signal.aborted
+                ? new Error('Nutrition analysis timed out. Please try again.')
+                : err,
+            );
             throw err; // Stop retrying
           },
         }

@@ -18,6 +18,8 @@ import { streamObject, type DeepPartial } from 'ai';
 import { createOllama } from 'ollama-ai-provider';
 
 const MAX_AI_ATTEMPTS = 2;
+/** Aborts a generation attempt if no new chunk arrives within this window. */
+const AI_NUTRITION_IDLE_TIMEOUT_MS = 45_000;
 
 interface ParsedQuantity {
   value: number | null;
@@ -200,11 +202,55 @@ export class AiRecipeExtractionService {
     for (let attempt = 1; attempt <= MAX_AI_ATTEMPTS; attempt += 1) {
       try {
         const stream = this.generateStream(recipeText);
-        return stream;
+        return this.consumeWithRetry(recipeText, stream);
       } catch (error) {
         lastError = error;
         this.logger.warn(
           `AI recipe extraction attempt ${attempt} failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+
+    throw new ServiceUnavailableException({
+      message:
+        'AI analysis service is currently unavailable. Please try again or enter ingredients manually.',
+      cause: lastError instanceof Error ? lastError.message : String(lastError),
+    });
+  }
+
+  /**
+   * Construction (streamObject(...)) rarely throws synchronously — the real
+   * failure mode is a hung or dropped connection discovered only once the
+   * stream is iterated. That happens after extractRecipe() has already
+   * returned, so it can't be caught by the construction-time retry loop
+   * above. This wrapper retries the remaining attempts around iteration
+   * itself, so a mid-stream timeout/abort actually gets a fresh attempt
+   * instead of being surfaced as a single unrecoverable failure.
+   */
+  private async *consumeWithRetry(
+    recipeText: string,
+    firstStream: AsyncIterable<DeepPartial<AiExtractedRecipe>>,
+  ): AsyncGenerator<DeepPartial<AiExtractedRecipe>> {
+    let lastError: unknown;
+    let stream: AsyncIterable<DeepPartial<AiExtractedRecipe>> | undefined =
+      firstStream;
+
+    for (let attempt = 1; attempt <= MAX_AI_ATTEMPTS; attempt += 1) {
+      try {
+        if (!stream) {
+          stream = this.generateStream(recipeText);
+        }
+        for await (const partial of stream) {
+          yield partial;
+        }
+        return;
+      } catch (error) {
+        lastError = error;
+        stream = undefined;
+        this.logger.warn(
+          `AI recipe extraction attempt ${attempt} failed mid-stream: ${
             error instanceof Error ? error.message : String(error)
           }`,
         );
@@ -229,17 +275,52 @@ export class AiRecipeExtractionService {
         : undefined,
     });
 
+    const controller = new AbortController();
     const result = streamObject({
       model: ollama(config.model),
       schema: extractedRecipeSchema,
       system: SYSTEM_PROMPT,
       prompt: recipeText,
       temperature: 0,
+      abortSignal: controller.signal,
     });
 
-    return result.partialObjectStream as AsyncIterable<
-      DeepPartial<AiExtractedRecipe>
-    >;
+    return this.withIdleTimeout(
+      result.partialObjectStream as AsyncIterable<
+        DeepPartial<AiExtractedRecipe>
+      >,
+      controller,
+    );
+  }
+
+  /**
+   * Aborts generation if no chunk arrives within AI_NUTRITION_IDLE_TIMEOUT_MS.
+   * The timer resets on every chunk, so a slow-but-progressing cloud model
+   * is left alone while a stalled/hung connection is bounded instead of
+   * blocking the request (and the SSE stream to the browser) indefinitely.
+   */
+  private async *withIdleTimeout<T>(
+    stream: AsyncIterable<T>,
+    controller: AbortController,
+  ): AsyncGenerator<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const armTimer = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(
+        () => controller.abort(),
+        AI_NUTRITION_IDLE_TIMEOUT_MS,
+      );
+    };
+
+    try {
+      armTimer();
+      for await (const chunk of stream) {
+        armTimer();
+        yield chunk;
+      }
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   private parseOllamaContent(content: string): unknown {

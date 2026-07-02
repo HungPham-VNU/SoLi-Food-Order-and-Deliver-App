@@ -67,6 +67,9 @@ export class NestCatalogRpcClient
     pattern: CatalogRpcPattern,
     payload: unknown,
   ): Observable<T> {
-    return this.client.send<T>(pattern, payload);
+    const timeoutMs = this.config.get('CATALOG_RPC_TIMEOUT_MS', {
+      infer: true,
+    });
+    return this.client.send<T>(pattern, payload).pipe(timeout(timeoutMs));
   }
 }
