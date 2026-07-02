@@ -206,7 +206,7 @@ export function NutritionAssistantCard({
         menuItemId: targetMenuItemId,
         recipeText,
         onUpdate: (partialData: any) => {
-          setAnalysis((prev) => ({ ...prev, ...partialData }));
+          setAnalysis((prev) => ({ status: 'ANALYZING', ...prev, ...partialData }));
           if (partialData.ingredients) {
             setIngredients(normalizeReviewIngredients(partialData.ingredients));
           }
@@ -324,7 +324,7 @@ export function NutritionAssistantCard({
             AI Nutrition
           </h3>
         </div>
-        {analysis && (
+        {analysis?.status && (
           <Badge
             variant={analysis.status === 'ANALYZED' ? 'default' : 'secondary'}
             className="shrink-0"
