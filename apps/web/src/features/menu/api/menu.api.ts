@@ -210,7 +210,7 @@ export const menuApi = {
             } else if (parsed.type === 'error') {
               throw new Error(parsed.data?.message || 'Analysis error');
             }
-          } catch (e) {
+          } catch {
             // handle JSON parse error if partial chunk is split incorrectly
           }
         }

@@ -26,10 +26,10 @@ import type { CalculateNutritionDto } from './dto/calculate-nutrition.dto';
 import type { SaveMenuItemNutritionDto } from './dto/save-menu-item-nutrition.dto';
 import {
   NUTRITION_DISCLAIMER,
-  type ExtractedRecipe,
   type NutritionAnalysisStatus,
 } from './types/nutrition.types';
 import type { NutritionAnalysisSession } from './domain/nutrition.schema';
+import { type DeepPartial } from 'ai';
 import {
   buildConfirmedRecipe,
   parseExtractedRecipe,
@@ -73,10 +73,10 @@ export class NutritionService {
           );
           const recipeText = this.sanitizeRecipeText(dto.recipeText);
 
-          let stream;
+          let stream: AsyncIterable<DeepPartial<AiExtractedRecipe>>;
           try {
-            stream = await this.aiExtraction.extractRecipe(recipeText);
-          } catch (error) {
+            stream = this.aiExtraction.extractRecipe(recipeText);
+          } catch {
             const failedResponse = await this.createFailedAnalysisResponse({
               menuItemId,
               restaurantId: menuItem.restaurantId,
@@ -87,7 +87,7 @@ export class NutritionService {
             return;
           }
 
-          let lastPartial: any = {};
+          let lastPartial: DeepPartial<AiExtractedRecipe> = {};
           for await (const partial of stream) {
             lastPartial = partial;
             subscriber.next({ type: 'partial', data: partial });
@@ -134,10 +134,10 @@ export class NutritionService {
             },
           });
           subscriber.complete();
-        } catch (error) {
-          subscriber.error(error);
+        } catch (err) {
+          subscriber.error(err);
         }
-      })();
+      })().catch((err) => subscriber.error(err));
     });
   }
 

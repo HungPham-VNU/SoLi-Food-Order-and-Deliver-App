@@ -405,9 +405,15 @@ export class CartService {
         if (defaultOpt) {
           autoInjected.push({
             groupId: group.groupId,
-            groupName: group.groupName || (group as any).name,
+            groupName:
+              group.groupName ||
+              (group as unknown as { name?: string }).name ||
+              '',
             optionId: defaultOpt.optionId,
-            optionName: defaultOpt.optionName || (defaultOpt as any).name, // optionName (ModifierOptionSnapshot) → optionName (SelectedModifier)
+            optionName:
+              defaultOpt.optionName ||
+              (defaultOpt as unknown as { name?: string }).name ||
+              '', // optionName (ModifierOptionSnapshot) → optionName (SelectedModifier)
             price: defaultOpt.price,
           });
           // Register injected count so minSelections check passes for this group
@@ -468,9 +474,13 @@ export class CartService {
 
       resolved.push({
         groupId: group.groupId,
-        groupName: group.groupName || (group as any).name,
+        groupName:
+          group.groupName || (group as unknown as { name?: string }).name || '',
         optionId: option.optionId,
-        optionName: option.optionName || (option as any).name, // optionName (ModifierOptionSnapshot) → optionName (SelectedModifier)
+        optionName:
+          option.optionName ||
+          (option as unknown as { name?: string }).name ||
+          '', // optionName (ModifierOptionSnapshot) → optionName (SelectedModifier)
         price: option.price,
       });
     }
